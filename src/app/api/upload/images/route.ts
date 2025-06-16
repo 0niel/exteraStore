@@ -34,6 +34,8 @@ export async function POST(request: NextRequest) {
 			if (!file) continue;
 
 			try {
+				console.log(`Processing file: ${file.name}, type: ${file.type}, size: ${file.size}`);
+				
 				if (!ImageUtils.isImage(file.type)) {
 					errors.push(`File ${file.name} is not an image`);
 					continue;
@@ -47,28 +49,40 @@ export async function POST(request: NextRequest) {
 					continue;
 				}
 
+				const safeFileName = ImageUtils.generateFileName(file.name, `${pluginSlug}-${imageType}`);
+				console.log(`Generated safe filename: ${safeFileName}`);
+
 				let uploadedUrl: string;
 
 				if (imageType === "screenshot") {
-					uploadedUrl = await YandexStorage.uploadPluginImage(
+					uploadedUrl = await YandexStorage.uploadFile(
 						buffer,
-						pluginSlug,
-						"screenshot",
+						safeFileName,
+						file.type || "image/jpeg",
 					);
 				} else {
-					uploadedUrl = await YandexStorage.uploadPluginImage(
+					uploadedUrl = await YandexStorage.uploadFile(
 						buffer,
-						pluginSlug,
-						"icon",
+						safeFileName,
+						file.type || "image/jpeg",
 					);
 				}
 
 				uploadedUrls.push(uploadedUrl);
 			} catch (error) {
 				console.error(`Error uploading file ${file.name}:`, error);
-				errors.push(
-					`Failed to upload ${file.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
-				);
+
+				let errorMessage = "Unknown error";
+				if (error instanceof Error) {
+					errorMessage = error.message;
+					console.error(`Upload error details for ${file.name}:`, {
+						name: error.name,
+						message: error.message,
+						stack: error.stack,
+					});
+				}
+				
+				errors.push(`Error uploading file ${file.name}: ${errorMessage}`);
 			}
 		}
 
