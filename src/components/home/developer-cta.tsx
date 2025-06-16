@@ -6,7 +6,6 @@ import { Button } from "~/components/ui/button";
 export function DeveloperCTA() {
 	return (
 		<section className="relative overflow-hidden bg-muted/20 py-24">
-			
 			<div className="container relative mx-auto px-4 text-center">
 				<div className="mx-auto max-w-4xl space-y-12">
 					<div className="space-y-6">
@@ -18,7 +17,8 @@ export function DeveloperCTA() {
 							Создайте свой плагин
 						</h2>
 						<p className="mx-auto max-w-3xl text-muted-foreground text-xl leading-relaxed sm:text-2xl">
-							Присоединяйтесь к сообществу разработчиков и создавайте плагины для exteraGram
+							Присоединяйтесь к сообществу разработчиков и создавайте плагины
+							для exteraGram
 						</p>
 					</div>
 
@@ -53,11 +53,18 @@ export function DeveloperCTA() {
 					</div>
 
 					<div className="flex flex-col items-center justify-center gap-6 sm:flex-row">
-						<Button size="lg" className="bg-red-600 px-10 py-4 text-lg text-white shadow-xl transition-colors hover:bg-red-700">
+						<Button
+							size="lg"
+							className="bg-red-600 px-10 py-4 text-lg text-white shadow-xl transition-colors hover:bg-red-700"
+						>
 							<Code className="mr-2 h-5 w-5" />
 							Начать разработку
 						</Button>
-						<Button size="lg" variant="outline" className="border-2 px-10 py-4 text-lg hover:bg-primary/5">
+						<Button
+							size="lg"
+							variant="outline"
+							className="border-2 px-10 py-4 text-lg hover:bg-primary/5"
+						>
 							<Bot className="mr-2 h-5 w-5" />
 							Документация
 						</Button>
@@ -70,13 +77,13 @@ export function DeveloperCTA() {
 						<div className="flex flex-wrap justify-center gap-4">
 							<Button variant="ghost" size="sm" asChild>
 								<Link href="https://t.me/exteraForum">
-									<TelegramIcon className="h-4 w-4 mr-2" />
+									<TelegramIcon className="mr-2 h-4 w-4" />
 									Telegram чат
 								</Link>
 							</Button>
 							<Button variant="ghost" size="sm" asChild>
 								<Link href="https://github.com/exteraSquad/exteraGram-plugins">
-									<Code className="h-4 w-4 mr-2" />
+									<Code className="mr-2 h-4 w-4" />
 									GitHub
 								</Link>
 							</Button>

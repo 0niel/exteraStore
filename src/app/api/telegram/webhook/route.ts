@@ -1,7 +1,12 @@
 import { and, desc, eq, like, or, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
-import { type plugins as Plugin, pluginVersions, plugins, users } from "~/server/db/schema";
+import {
+	type plugins as Plugin,
+	pluginVersions,
+	plugins,
+	users,
+} from "~/server/db/schema";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const API_URL = `https://api.telegram.org/bot${BOT_TOKEN}`;

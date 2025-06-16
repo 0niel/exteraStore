@@ -1,7 +1,17 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Code, ExternalLink, FileText, Image as ImageIcon, Info, Loader2, Tag, Tags, UploadCloud } from "lucide-react";
+import {
+	Code,
+	ExternalLink,
+	FileText,
+	Image as ImageIcon,
+	Info,
+	Loader2,
+	Tag,
+	Tags,
+	UploadCloud,
+} from "lucide-react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -13,36 +23,66 @@ import { MarkdownEditor } from "~/components/markdown-editor";
 import { ScreenshotUploader } from "~/components/screenshot-uploader";
 import { TagInput } from "~/components/tag-input";
 import { Button } from "~/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "~/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "~/components/ui/form";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "~/components/ui/card";
+import {
+	Form,
+	FormControl,
+	FormField,
+	FormItem,
+	FormLabel,
+	FormMessage,
+} from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "~/components/ui/select";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "~/components/ui/select";
 import { api } from "~/trpc/react";
 
 const formSchema = z.object({
-	name: z.string()
+	name: z
+		.string()
 		.min(1, "Название плагина обязательно")
 		.max(256, "Название не должно превышать 256 символов"),
-	shortDescription: z.string()
+	shortDescription: z
+		.string()
 		.min(1, "Краткое описание обязательно")
 		.max(500, "Краткое описание не должно превышать 500 символов"),
 	description: z.string().optional(),
 	categorySlug: z.string().optional(),
 	tags: z.array(z.string()).optional(),
-	version: z.string()
+	version: z
+		.string()
 		.min(1, "Версия обязательна")
 		.max(50, "Версия не должна превышать 50 символов"),
 	changelog: z.string().optional(),
-	githubUrl: z.string()
+	githubUrl: z
+		.string()
 		.optional()
-		.refine((val) => !val || val === "" || z.string().url().safeParse(val).success, {
-			message: "Введите корректный URL GitHub репозитория"
-		}),
-	documentationUrl: z.string()
+		.refine(
+			(val) => !val || val === "" || z.string().url().safeParse(val).success,
+			{
+				message: "Введите корректный URL GitHub репозитория",
+			},
+		),
+	documentationUrl: z
+		.string()
 		.optional()
-		.refine((val) => !val || val === "" || z.string().url().safeParse(val).success, {
-			message: "Введите корректный URL документации"
-		}),
+		.refine(
+			(val) => !val || val === "" || z.string().url().safeParse(val).success,
+			{
+				message: "Введите корректный URL документации",
+			},
+		),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -53,7 +93,8 @@ export default function UploadPluginPage() {
 	const [fileContent, setFileContent] = useState("");
 	const [screenshots, setScreenshots] = useState<string[]>([]);
 
-	const { data: categories, isLoading: areCategoriesLoading } = api.categories.getAll.useQuery();
+	const { data: categories, isLoading: areCategoriesLoading } =
+		api.categories.getAll.useQuery();
 
 	const form = useForm<FormData>({
 		resolver: zodResolver(formSchema),
@@ -77,36 +118,35 @@ export default function UploadPluginPage() {
 		},
 		onError: (error) => {
 			console.error("Plugin creation error:", error);
-			
+
 			try {
 				const errorData = JSON.parse(error.message);
 				if (Array.isArray(errorData)) {
 					const fieldErrors = errorData.map((err: any) => {
 						const fieldName = err.path?.[0];
 						const message = err.message;
-						
+
 						switch (fieldName) {
-							case 'githubUrl':
-								return 'GitHub URL: введите корректную ссылку или оставьте поле пустым';
-							case 'documentationUrl':
-								return 'URL документации: введите корректную ссылку или оставьте поле пустым';
-							case 'name':
+							case "githubUrl":
+								return "GitHub URL: введите корректную ссылку или оставьте поле пустым";
+							case "documentationUrl":
+								return "URL документации: введите корректную ссылку или оставьте поле пустым";
+							case "name":
 								return `Название: ${message}`;
-							case 'shortDescription':
+							case "shortDescription":
 								return `Краткое описание: ${message}`;
 							default:
 								return `${fieldName}: ${message}`;
 						}
 					});
-					
-					toast.error(`Ошибки в форме:\n${fieldErrors.join('\n')}`);
+
+					toast.error(`Ошибки в форме:\n${fieldErrors.join("\n")}`);
 					return;
 				}
-			} catch (e) {
-			}
-			
+			} catch (e) {}
+
 			toast.error(`Ошибка создания плагина: ${error.message}`);
-		}
+		},
 	});
 
 	const onSubmit = async (data: FormData) => {
@@ -120,11 +160,10 @@ export default function UploadPluginPage() {
 			return;
 		}
 
-		
 		const cleanedData = {
 			...data,
-			category: data.categorySlug || "utility", 
-			description: data.description || data.shortDescription, 
+			category: data.categorySlug || "utility",
+			description: data.description || data.shortDescription,
 			githubUrl: data.githubUrl?.trim() || undefined,
 			documentationUrl: data.documentationUrl?.trim() || undefined,
 			screenshots: JSON.stringify(screenshots),
@@ -146,7 +185,7 @@ export default function UploadPluginPage() {
 			toast.error("Пожалуйста, выберите корректный .py файл.");
 		}
 	};
-	
+
 	if (!session) {
 		return (
 			<div className="flex min-h-screen items-center justify-center">
@@ -171,14 +210,12 @@ export default function UploadPluginPage() {
 		<section className="min-h-screen bg-muted/40 py-12">
 			<div className="container mx-auto max-w-6xl px-4">
 				<div className="mb-8 text-center">
-					<h1 className="mb-2 font-bold text-4xl">
-						Загрузить плагин
-					</h1>
+					<h1 className="mb-2 font-bold text-4xl">Загрузить плагин</h1>
 					<p className="text-muted-foreground text-xl">
 						Поделитесь своим творением с сообществом exteraGram
 					</p>
 				</div>
-				
+
 				<Form {...form}>
 					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
 						<div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -207,7 +244,7 @@ export default function UploadPluginPage() {
 												</FormItem>
 											)}
 										/>
-										
+
 										<FormField
 											control={form.control}
 											name="shortDescription"
@@ -225,7 +262,7 @@ export default function UploadPluginPage() {
 												</FormItem>
 											)}
 										/>
-										
+
 										<FormField
 											control={form.control}
 											name="description"
@@ -247,7 +284,10 @@ export default function UploadPluginPage() {
 								</Card>
 
 								{/* Скриншоты */}
-								<ScreenshotUploader screenshots={screenshots} onScreenshotsChange={setScreenshots} />
+								<ScreenshotUploader
+									screenshots={screenshots}
+									onScreenshotsChange={setScreenshots}
+								/>
 
 								{/* Версия и изменения */}
 								<Card>
@@ -264,28 +304,27 @@ export default function UploadPluginPage() {
 												<FormItem>
 													<FormLabel>Версия</FormLabel>
 													<FormControl>
-														<Input
-															placeholder="1.0.0"
-															{...field}
-														/>
+														<Input placeholder="1.0.0" {...field} />
 													</FormControl>
 													<FormMessage />
 												</FormItem>
 											)}
 										/>
-										
+
 										<FormField
 											control={form.control}
 											name="changelog"
 											render={({ field }) => (
 												<FormItem>
-													<FormLabel>Список изменений (необязательно)</FormLabel>
+													<FormLabel>
+														Список изменений (необязательно)
+													</FormLabel>
 													<FormControl>
-														<MarkdownEditor 
-															value={field.value || ""} 
-															onChange={field.onChange} 
-															height={200} 
-															placeholder="- Добавлена функция X&#10;- Исправлена ошибка Y" 
+														<MarkdownEditor
+															value={field.value || ""}
+															onChange={field.onChange}
+															height={200}
+															placeholder="- Добавлена функция X&#10;- Исправлена ошибка Y"
 														/>
 													</FormControl>
 													<FormMessage />
@@ -311,7 +350,10 @@ export default function UploadPluginPage() {
 											render={({ field }) => (
 												<FormItem>
 													<FormLabel>Категория</FormLabel>
-													<Select onValueChange={field.onChange} value={field.value}>
+													<Select
+														onValueChange={field.onChange}
+														value={field.value}
+													>
 														<FormControl>
 															<SelectTrigger>
 																<SelectValue placeholder="Выберите категорию" />
@@ -319,9 +361,11 @@ export default function UploadPluginPage() {
 														</FormControl>
 														<SelectContent>
 															{areCategoriesLoading ? (
-																<SelectItem value="loading" disabled>Загрузка...</SelectItem>
+																<SelectItem value="loading" disabled>
+																	Загрузка...
+																</SelectItem>
 															) : (
-																categories?.map(cat => (
+																categories?.map((cat) => (
 																	<SelectItem key={cat.id} value={cat.slug}>
 																		{cat.name}
 																	</SelectItem>
@@ -333,7 +377,7 @@ export default function UploadPluginPage() {
 												</FormItem>
 											)}
 										/>
-										
+
 										<FormField
 											control={form.control}
 											name="tags"
@@ -341,10 +385,10 @@ export default function UploadPluginPage() {
 												<FormItem>
 													<FormLabel>Теги</FormLabel>
 													<FormControl>
-														<TagInput 
-															value={field.value || []} 
-															onChange={field.onChange} 
-															placeholder="Добавьте до 5 тегов..." 
+														<TagInput
+															value={field.value || []}
+															onChange={field.onChange}
+															placeholder="Добавьте до 5 тегов..."
 														/>
 													</FormControl>
 													<FormMessage />
@@ -358,7 +402,8 @@ export default function UploadPluginPage() {
 								<Card>
 									<CardHeader>
 										<CardTitle className="flex items-center gap-2">
-											<ExternalLink className="h-5 w-5" /> Ссылки (необязательно)
+											<ExternalLink className="h-5 w-5" /> Ссылки
+											(необязательно)
 										</CardTitle>
 									</CardHeader>
 									<CardContent className="space-y-4">
@@ -379,7 +424,7 @@ export default function UploadPluginPage() {
 												</FormItem>
 											)}
 										/>
-										
+
 										<FormField
 											control={form.control}
 											name="documentationUrl"
@@ -406,7 +451,9 @@ export default function UploadPluginPage() {
 										<CardTitle className="flex items-center gap-2">
 											<Code className="h-5 w-5" /> Файл плагина *
 										</CardTitle>
-										<CardDescription>Загрузите `.py` файл вашего плагина.</CardDescription>
+										<CardDescription>
+											Загрузите `.py` файл вашего плагина.
+										</CardDescription>
 									</CardHeader>
 									<CardContent>
 										<Input
@@ -428,15 +475,19 @@ export default function UploadPluginPage() {
 						</div>
 
 						<div className="flex justify-end gap-4">
-							<Button type="button" variant="outline" onClick={() => router.back()}>
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => router.back()}
+							>
 								Отмена
 							</Button>
-							<Button 
-								type="submit" 
+							<Button
+								type="submit"
 								disabled={createPlugin.isPending || !fileContent}
 							>
 								{createPlugin.isPending ? (
-									<Loader2 className="mr-2 h-4 w-4 animate-spin"/>
+									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 								) : (
 									<UploadCloud className="mr-2 h-4 w-4" />
 								)}

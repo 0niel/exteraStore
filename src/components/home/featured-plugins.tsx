@@ -2,7 +2,7 @@ import { Code, Download, Star } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { type plugins as Plugin } from "~/server/db/schema";
+import type { plugins as Plugin } from "~/server/db/schema";
 import { api } from "~/trpc/react";
 
 export function FeaturedPlugins() {

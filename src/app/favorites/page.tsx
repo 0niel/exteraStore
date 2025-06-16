@@ -5,7 +5,6 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { type plugins as Plugin } from "~/server/db/schema";
 import { PluginCard } from "~/components/plugin-card";
 import { Button } from "~/components/ui/button";
 import {
@@ -17,6 +16,7 @@ import {
 } from "~/components/ui/card";
 import { EmptyState } from "~/components/ui/empty-state";
 import { Input } from "~/components/ui/input";
+import type { plugins as Plugin } from "~/server/db/schema";
 import { api } from "~/trpc/react";
 
 export default function FavoritesPage() {

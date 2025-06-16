@@ -13,10 +13,9 @@ import { createQueryClient } from "./query-client";
 let clientQueryClientSingleton: QueryClient | undefined = undefined;
 const getQueryClient = () => {
 	if (typeof window === "undefined") {
-		
 		return createQueryClient();
 	}
-	
+
 	clientQueryClientSingleton ??= createQueryClient();
 
 	return clientQueryClientSingleton;

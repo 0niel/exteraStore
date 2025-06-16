@@ -28,7 +28,7 @@ import {
 import { EmptyState } from "~/components/ui/empty-state";
 import { Input } from "~/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { type plugins as Plugin } from "~/server/db/schema";
+import type { plugins as Plugin } from "~/server/db/schema";
 import { api } from "~/trpc/react";
 
 export default function MyPluginsPage() {
@@ -74,7 +74,9 @@ export default function MyPluginsPage() {
 	const publishedPlugins = filteredPlugins.filter(
 		(p: typeof Plugin.$inferSelect) => p.status === "approved",
 	);
-	const pendingPlugins = filteredPlugins.filter((p: typeof Plugin.$inferSelect) => p.status === "pending");
+	const pendingPlugins = filteredPlugins.filter(
+		(p: typeof Plugin.$inferSelect) => p.status === "pending",
+	);
 	const rejectedPlugins = filteredPlugins.filter(
 		(p: typeof Plugin.$inferSelect) => p.status === "rejected",
 	);
@@ -144,9 +146,11 @@ export default function MyPluginsPage() {
 								/>
 							) : (
 								<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-									{publishedPlugins.map((plugin: typeof Plugin.$inferSelect) => (
-										<PluginCard key={plugin.id} plugin={plugin} />
-									))}
+									{publishedPlugins.map(
+										(plugin: typeof Plugin.$inferSelect) => (
+											<PluginCard key={plugin.id} plugin={plugin} />
+										),
+									)}
 								</div>
 							)}
 						</TabsContent>

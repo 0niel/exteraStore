@@ -27,7 +27,7 @@ import {
 	SheetTrigger,
 } from "~/components/ui/sheet";
 import { Skeleton } from "~/components/ui/skeleton";
-import { type pluginCategories } from "~/server/db/schema";
+import type { pluginCategories } from "~/server/db/schema";
 import { api } from "~/trpc/react";
 
 function PluginsContent() {
@@ -109,11 +109,13 @@ function PluginsContent() {
 										</SelectTrigger>
 										<SelectContent>
 											<SelectItem value="all">Все категории</SelectItem>
-											{categories?.map((cat: typeof pluginCategories.$inferSelect) => (
-												<SelectItem key={cat.id} value={cat.slug}>
-													{cat.name}
-												</SelectItem>
-											))}
+											{categories?.map(
+												(cat: typeof pluginCategories.$inferSelect) => (
+													<SelectItem key={cat.id} value={cat.slug}>
+														{cat.name}
+													</SelectItem>
+												),
+											)}
 										</SelectContent>
 									</Select>
 								</div>
@@ -167,11 +169,13 @@ function PluginsContent() {
 												</SelectTrigger>
 												<SelectContent>
 													<SelectItem value="all">Все категории</SelectItem>
-													{categories?.map((cat: typeof pluginCategories.$inferSelect) => (
-														<SelectItem key={cat.id} value={cat.slug}>
-															{cat.name}
-														</SelectItem>
-													))}
+													{categories?.map(
+														(cat: typeof pluginCategories.$inferSelect) => (
+															<SelectItem key={cat.id} value={cat.slug}>
+																{cat.name}
+															</SelectItem>
+														),
+													)}
 												</SelectContent>
 											</Select>
 										</div>
@@ -240,7 +244,13 @@ function PluginsContent() {
 									onClick={() => handleCategoryChange("all")}
 								>
 									Категория:{" "}
-									{categories?.find((c: typeof pluginCategories.$inferSelect) => c.slug === category)?.name} ×
+									{
+										categories?.find(
+											(c: typeof pluginCategories.$inferSelect) =>
+												c.slug === category,
+										)?.name
+									}{" "}
+									×
 								</Badge>
 							)}
 							{searchParams.get("featured") && (
