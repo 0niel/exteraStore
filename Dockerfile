@@ -36,7 +36,7 @@ COPY --from=builder /app/next.config.js ./next.config.js
 COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
 COPY --from=builder /app/src/env.js ./src/env.js
-COPY --from=builder /app/scripts ./scripts
+
 RUN npm install -g pnpm@10.11.0
 RUN mkdir -p /app/data && chown -R nextjs:nodejs /app
 
