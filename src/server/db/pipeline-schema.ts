@@ -1,4 +1,5 @@
-import { relations, sql } from "drizzle-orm";
+import { relations } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import {
 	boolean,
 	index,
@@ -26,7 +27,9 @@ export const pluginPipelineChecks = pgTable(
 		llmPrompt: text("llm_prompt"),
 		llmResponse: text("llm_response"),
 		executionTime: integer("execution_time"),
-		createdAt: integer("created_at").notNull(),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
 		completedAt: integer("completed_at"),
 	},
 	(t) => [
@@ -51,7 +54,9 @@ export const pluginPipelineQueue = pgTable(
 		scheduledAt: integer("scheduled_at"),
 		startedAt: integer("started_at"),
 		completedAt: integer("completed_at"),
-		createdAt: integer("created_at").notNull(),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
 	},
 	(t) => [
 		index("queue_status_idx").on(t.status),
@@ -73,7 +78,9 @@ export const userPluginSubscriptions = pgTable(
 		subscriptionType: text("subscription_type").notNull(),
 		isActive: boolean("is_active").default(true).notNull(),
 		telegramChatId: text("telegram_chat_id"),
-		createdAt: integer("created_at").notNull(),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
 	},
 	(t) => [
 		index("subscription_user_idx").on(t.userId),
@@ -104,7 +111,9 @@ export const notifications = pgTable(
 		isRead: boolean("is_read").default(false).notNull(),
 		sentToTelegram: boolean("sent_to_telegram").default(false).notNull(),
 		telegramMessageId: text("telegram_message_id"),
-		createdAt: integer("created_at").notNull(),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
 	},
 	(t) => [
 		index("notification_user_idx").on(t.userId),
@@ -135,7 +144,9 @@ export const userNotificationSettings = pgTable(
 			.default(true)
 			.notNull(),
 		telegramChatId: text("telegram_chat_id"),
-		createdAt: integer("created_at").notNull(),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
 		updatedAt: integer("updated_at"),
 	},
 	(t) => [index("notification_settings_user_idx").on(t.userId)],

@@ -109,7 +109,10 @@ export default function FavoritesPage() {
 					<>
 						<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
 							{filteredFavorites.map((plugin: typeof Plugin.$inferSelect) => (
-								<PluginCard key={plugin.id} plugin={plugin} />
+								<PluginCard
+									key={plugin.id}
+									plugin={{ ...plugin, createdAt: new Date(plugin.createdAt) }}
+								/>
 							))}
 						</div>
 

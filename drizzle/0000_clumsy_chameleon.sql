@@ -20,7 +20,7 @@ CREATE TABLE "extera_plugins_plugin_category" (
 	"description" text,
 	"icon" text,
 	"color" text,
-	"created_at" integer DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"created_at" integer DEFAULT (extract(epoch from now())) NOT NULL,
 	CONSTRAINT "extera_plugins_plugin_category_name_unique" UNIQUE("name"),
 	CONSTRAINT "extera_plugins_plugin_category_slug_unique" UNIQUE("slug")
 );
@@ -31,14 +31,14 @@ CREATE TABLE "extera_plugins_plugin_download" (
 	"user_id" text,
 	"ip_address" text,
 	"user_agent" text,
-	"downloaded_at" integer DEFAULT CURRENT_TIMESTAMP NOT NULL
+	"downloaded_at" integer DEFAULT (extract(epoch from now())) NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "extera_plugins_plugin_favorite" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"plugin_id" integer NOT NULL,
 	"user_id" text NOT NULL,
-	"created_at" integer DEFAULT CURRENT_TIMESTAMP NOT NULL
+	"created_at" integer DEFAULT (extract(epoch from now())) NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "extera_plugins_plugin_file" (
@@ -51,7 +51,7 @@ CREATE TABLE "extera_plugins_plugin_file" (
 	"hash" text NOT NULL,
 	"mime_type" text DEFAULT 'text/x-python' NOT NULL,
 	"git_path" text,
-	"created_at" integer DEFAULT CURRENT_TIMESTAMP NOT NULL
+	"created_at" integer DEFAULT (extract(epoch from now())) NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "extera_plugins_plugin_git_repo" (
@@ -65,7 +65,7 @@ CREATE TABLE "extera_plugins_plugin_git_repo" (
 	"last_commit_hash" text,
 	"auto_sync" boolean DEFAULT false NOT NULL,
 	"sync_interval" integer DEFAULT 3600 NOT NULL,
-	"created_at" integer DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"created_at" integer DEFAULT (extract(epoch from now())) NOT NULL,
 	"updated_at" integer
 );
 --> statement-breakpoint
@@ -77,7 +77,7 @@ CREATE TABLE "extera_plugins_plugin_review" (
 	"title" text,
 	"comment" text,
 	"helpful" integer DEFAULT 0 NOT NULL,
-	"created_at" integer DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"created_at" integer DEFAULT (extract(epoch from now())) NOT NULL,
 	"updated_at" integer
 );
 --> statement-breakpoint
@@ -94,7 +94,7 @@ CREATE TABLE "extera_plugins_plugin_version" (
 	"git_tag" text,
 	"is_stable" boolean DEFAULT true NOT NULL,
 	"download_count" integer DEFAULT 0 NOT NULL,
-	"created_at" integer DEFAULT CURRENT_TIMESTAMP NOT NULL,
+	"created_at" integer DEFAULT (extract(epoch from now())) NOT NULL,
 	"created_by_id" text NOT NULL
 );
 --> statement-breakpoint
@@ -122,7 +122,7 @@ CREATE TABLE "extera_plugins_plugin" (
 	"screenshots" text,
 	"requirements" text,
 	"changelog" text,
-	"created_at" integer NOT NULL,
+	"created_at" integer DEFAULT (extract(epoch from now())) NOT NULL,
 	"updated_at" integer,
 	CONSTRAINT "extera_plugins_plugin_slug_unique" UNIQUE("slug")
 );
@@ -131,7 +131,7 @@ CREATE TABLE "extera_plugins_post" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" text,
 	"created_by_id" text NOT NULL,
-	"created_at" integer NOT NULL,
+	"created_at" integer DEFAULT (extract(epoch from now())) NOT NULL,
 	"updated_at" integer
 );
 --> statement-breakpoint
@@ -157,7 +157,7 @@ CREATE TABLE "extera_plugins_user" (
 	"links" text,
 	"role" text DEFAULT 'user' NOT NULL,
 	"is_verified" boolean DEFAULT false NOT NULL,
-	"created_at" integer NOT NULL,
+	"created_at" integer DEFAULT (extract(epoch from now())) NOT NULL,
 	"updated_at" integer,
 	CONSTRAINT "extera_plugins_user_telegram_id_unique" UNIQUE("telegram_id")
 );
@@ -180,7 +180,7 @@ CREATE TABLE "extera_plugins_notification" (
 	"is_read" boolean DEFAULT false NOT NULL,
 	"sent_to_telegram" boolean DEFAULT false NOT NULL,
 	"telegram_message_id" text,
-	"created_at" integer NOT NULL
+	"created_at" integer DEFAULT (extract(epoch from now())) NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "extera_plugins_plugin_pipeline_check" (
@@ -195,7 +195,7 @@ CREATE TABLE "extera_plugins_plugin_pipeline_check" (
 	"llm_prompt" text,
 	"llm_response" text,
 	"execution_time" integer,
-	"created_at" integer NOT NULL,
+	"created_at" integer DEFAULT (extract(epoch from now())) NOT NULL,
 	"completed_at" integer
 );
 --> statement-breakpoint
@@ -210,7 +210,7 @@ CREATE TABLE "extera_plugins_plugin_pipeline_queue" (
 	"scheduled_at" integer,
 	"started_at" integer,
 	"completed_at" integer,
-	"created_at" integer NOT NULL
+	"created_at" integer DEFAULT (extract(epoch from now())) NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "extera_plugins_user_notification_setting" (
@@ -221,7 +221,7 @@ CREATE TABLE "extera_plugins_user_notification_setting" (
 	"enable_review_notifications" boolean DEFAULT false NOT NULL,
 	"enable_telegram_notifications" boolean DEFAULT true NOT NULL,
 	"telegram_chat_id" text,
-	"created_at" integer NOT NULL,
+	"created_at" integer DEFAULT (extract(epoch from now())) NOT NULL,
 	"updated_at" integer,
 	CONSTRAINT "extera_plugins_user_notification_setting_user_id_unique" UNIQUE("user_id")
 );
@@ -233,7 +233,7 @@ CREATE TABLE "extera_plugins_user_plugin_subscription" (
 	"subscription_type" text NOT NULL,
 	"is_active" boolean DEFAULT true NOT NULL,
 	"telegram_chat_id" text,
-	"created_at" integer NOT NULL
+	"created_at" integer DEFAULT (extract(epoch from now())) NOT NULL
 );
 --> statement-breakpoint
 ALTER TABLE "extera_plugins_account" ADD CONSTRAINT "extera_plugins_account_user_id_extera_plugins_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."extera_plugins_user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint

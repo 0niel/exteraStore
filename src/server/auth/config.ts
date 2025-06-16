@@ -146,6 +146,7 @@ export const authConfig = {
 					const inserted = await db
 						.insert(users)
 						.values({
+							id: telegramId,
 							telegramId: telegramId,
 							name: fullName,
 							email: `${telegramId}@telegram.user`,
@@ -171,10 +172,10 @@ export const authConfig = {
 		strategy: "jwt",
 	},
 	adapter: DrizzleAdapter(db, {
-		usersTable: users,
-		accountsTable: accounts,
-		sessionsTable: sessions,
-		verificationTokensTable: verificationTokens,
+		usersTable: users as any,
+		accountsTable: accounts as any,
+		sessionsTable: sessions as any,
+		verificationTokensTable: verificationTokens as any,
 	}),
 	callbacks: {
 		jwt: async ({ token, user }) => {

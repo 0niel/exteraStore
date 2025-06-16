@@ -70,7 +70,7 @@ export const adminPluginsRouter = createTRPCRouter({
 			if (!isAdmin) throw new Error("Unauthorized");
 			const [plugin] = await ctx.db
 				.update(plugins)
-				.set({ status: "approved", updatedAt: new Date() })
+				.set({ status: "approved", updatedAt: sql`extract(epoch from now())` })
 				.where(eq(plugins.id, input.id))
 				.returning();
 			revalidatePath(`/plugins/${plugin.slug}`);
@@ -87,7 +87,7 @@ export const adminPluginsRouter = createTRPCRouter({
 			if (!isAdmin) throw new Error("Unauthorized");
 			const [plugin] = await ctx.db
 				.update(plugins)
-				.set({ status: "rejected", updatedAt: new Date() })
+				.set({ status: "rejected", updatedAt: sql`extract(epoch from now())` })
 				.where(eq(plugins.id, input.id))
 				.returning();
 			revalidatePath(`/plugins/${plugin.slug}`);

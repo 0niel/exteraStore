@@ -26,7 +26,9 @@ export const posts = pgTable(
 		createdById: text("created_by_id")
 			.notNull()
 			.references(() => users.id),
-		createdAt: integer("created_at").notNull(),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
 		updatedAt: integer("updated_at"),
 	},
 	(t) => [
@@ -61,7 +63,9 @@ export const plugins = pgTable(
 		screenshots: text("screenshots"),
 		requirements: text("requirements"),
 		changelog: text("changelog"),
-		createdAt: integer("created_at").notNull(),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
 		updatedAt: integer("updated_at"),
 	},
 	(t) => [
@@ -87,7 +91,9 @@ export const pluginReviews = pgTable(
 		title: text("title"),
 		comment: text("comment"),
 		helpful: integer("helpful").default(0).notNull(),
-		createdAt: integer("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
 		updatedAt: integer("updated_at"),
 	},
 	(t) => [
@@ -106,7 +112,9 @@ export const pluginCategories = pgTable(
 		description: text("description"),
 		icon: text("icon"),
 		color: text("color"),
-		createdAt: integer("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
 	},
 	(t) => [index("category_slug_idx").on(t.slug)],
 );
@@ -122,7 +130,7 @@ export const pluginDownloads = pgTable(
 		ipAddress: text("ip_address"),
 		userAgent: text("user_agent"),
 		downloadedAt: integer("downloaded_at")
-			.default(sql`CURRENT_TIMESTAMP`)
+			.default(sql`extract(epoch from now())`)
 			.notNull(),
 	},
 	(t) => [
@@ -142,7 +150,9 @@ export const pluginFavorites = pgTable(
 		userId: text("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
-		createdAt: integer("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
 	},
 	(t) => [
 		index("favorite_plugin_idx").on(t.pluginId),
@@ -168,7 +178,9 @@ export const pluginVersions = pgTable(
 		gitTag: text("git_tag"),
 		isStable: boolean("is_stable").default(true).notNull(),
 		downloadCount: integer("download_count").default(0).notNull(),
-		createdAt: integer("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
 		createdById: text("created_by_id")
 			.notNull()
 			.references(() => users.id),
@@ -197,7 +209,9 @@ export const pluginFiles = pgTable(
 		hash: text("hash").notNull(),
 		mimeType: text("mime_type").default("text/x-python").notNull(),
 		gitPath: text("git_path"),
-		createdAt: integer("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
 	},
 	(t) => [
 		index("file_plugin_idx").on(t.pluginId),
@@ -221,7 +235,9 @@ export const pluginGitRepos = pgTable(
 		lastCommitHash: text("last_commit_hash"),
 		autoSync: boolean("auto_sync").default(false).notNull(),
 		syncInterval: integer("sync_interval").default(3600).notNull(),
-		createdAt: integer("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
 		updatedAt: integer("updated_at"),
 	},
 	(t) => [
@@ -248,7 +264,9 @@ export const users = pgTable(
 		links: text("links"),
 		role: text("role").default("user").notNull(),
 		isVerified: boolean("is_verified").default(false).notNull(),
-		createdAt: integer("created_at").notNull(),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
 		updatedAt: integer("updated_at"),
 	},
 	(t) => [

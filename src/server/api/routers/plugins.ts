@@ -295,7 +295,7 @@ export const pluginsRouter = createTRPCRouter({
 					category: input.categorySlug,
 					tags: input.tags,
 					screenshots: input.screenshots,
-					updatedAt: new Date(),
+					updatedAt: sql`extract(epoch from now())`,
 				})
 				.where(eq(plugins.id, input.id))
 				.returning();
