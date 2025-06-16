@@ -8,8 +8,8 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "~/env.js";
 
 if (!env.YANDEX_STORAGE_ACCESS_KEY || !env.YANDEX_STORAGE_SECRET_KEY) {
-	console.error('Missing Yandex Storage credentials');
-	throw new Error('Yandex Storage credentials not configured');
+	console.error("Missing Yandex Storage credentials");
+	throw new Error("Yandex Storage credentials not configured");
 }
 
 const s3Client = new S3Client({
@@ -24,25 +24,21 @@ const s3Client = new S3Client({
 
 const BUCKET_NAME = env.YANDEX_STORAGE_BUCKET || "exteragram-plugins";
 
-console.log('Yandex Storage initialized:', {
+console.log("Yandex Storage initialized:", {
 	bucket: BUCKET_NAME,
 	hasAccessKey: !!env.YANDEX_STORAGE_ACCESS_KEY,
 	hasSecretKey: !!env.YANDEX_STORAGE_SECRET_KEY,
 });
 
 export class YandexStorage {
-	/**
-	 * Загрузить файл в Yandex Object Storage
-	 */
 	static async uploadFile(
 		file: Buffer,
 		fileName: string,
 		contentType = "image/jpeg",
 	): Promise<string> {
 		try {
-			// Генерируем безопасное имя файла
 			const timestamp = Date.now();
-			const safeName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
+			const safeName = fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
 			const key = `images/${timestamp}-${safeName}`;
 
 			console.log(`Uploading file to Yandex Storage: ${key}`);
@@ -57,17 +53,19 @@ export class YandexStorage {
 			});
 
 			const result = await s3Client.send(command);
-			console.log('Upload successful:', result);
+			console.log("Upload successful:", result);
 
 			return `https://storage.yandexcloud.net/${BUCKET_NAME}/${key}`;
 		} catch (error) {
 			console.error("Error uploading file to Yandex Storage:", error);
 			console.error("Error details:", {
-				name: error instanceof Error ? error.name : 'Unknown',
-				message: error instanceof Error ? error.message : 'Unknown error',
+				name: error instanceof Error ? error.name : "Unknown",
+				message: error instanceof Error ? error.message : "Unknown error",
 				stack: error instanceof Error ? error.stack : undefined,
 			});
-			throw new Error(`Failed to upload file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			throw new Error(
+				`Failed to upload file: ${error instanceof Error ? error.message : "Unknown error"}`,
+			);
 		}
 	}
 

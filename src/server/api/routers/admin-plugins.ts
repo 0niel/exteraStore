@@ -2,8 +2,9 @@ import { and, count, desc, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { env } from "~/env";
+import { TelegramNotifications } from "~/lib/telegram-notifications";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { plugins } from "~/server/db/schema";
+import { plugins, users } from "~/server/db/schema";
 
 const ADMINS = (env.INITIAL_ADMINS ?? "i_am_oniel")
 	.split(",")
@@ -68,16 +69,50 @@ export const adminPluginsRouter = createTRPCRouter({
 					(ctx.session.user.telegramUsername ?? "").toLowerCase(),
 				);
 			if (!isAdmin) throw new Error("Unauthorized");
-			const [plugin] = await ctx.db
+
+			const pluginWithAuthor = await ctx.db
+				.select({
+					plugin: plugins,
+					author: users,
+				})
+				.from(plugins)
+				.leftJoin(users, eq(plugins.authorId, users.id))
+				.where(eq(plugins.id, input.id))
+				.limit(1);
+
+			if (!pluginWithAuthor[0]) {
+				throw new Error("Plugin not found");
+			}
+
+			const [updatedPlugin] = await ctx.db
 				.update(plugins)
 				.set({ status: "approved", updatedAt: sql`extract(epoch from now())` })
 				.where(eq(plugins.id, input.id))
 				.returning();
-			revalidatePath(`/plugins/${plugin.slug}`);
-			return plugin;
+
+			if (pluginWithAuthor[0].author?.telegramId) {
+				try {
+					await TelegramNotifications.notifyPluginApproved(
+						pluginWithAuthor[0].author.telegramId,
+						updatedPlugin.name,
+						updatedPlugin.slug,
+						updatedPlugin.author,
+					);
+				} catch (error) {
+					console.error("Failed to send approval notification:", error);
+				}
+			}
+
+			revalidatePath(`/plugins/${updatedPlugin.slug}`);
+			return updatedPlugin;
 		}),
 	reject: protectedProcedure
-		.input(z.object({ id: z.number() }))
+		.input(
+			z.object({
+				id: z.number(),
+				reason: z.string().optional(),
+			}),
+		)
 		.mutation(async ({ ctx, input }) => {
 			const isAdmin =
 				ctx.session.user.role === "admin" ||
@@ -85,13 +120,42 @@ export const adminPluginsRouter = createTRPCRouter({
 					(ctx.session.user.telegramUsername ?? "").toLowerCase(),
 				);
 			if (!isAdmin) throw new Error("Unauthorized");
-			const [plugin] = await ctx.db
+
+			const pluginWithAuthor = await ctx.db
+				.select({
+					plugin: plugins,
+					author: users,
+				})
+				.from(plugins)
+				.leftJoin(users, eq(plugins.authorId, users.id))
+				.where(eq(plugins.id, input.id))
+				.limit(1);
+
+			if (!pluginWithAuthor[0]) {
+				throw new Error("Plugin not found");
+			}
+
+			const [updatedPlugin] = await ctx.db
 				.update(plugins)
 				.set({ status: "rejected", updatedAt: sql`extract(epoch from now())` })
 				.where(eq(plugins.id, input.id))
 				.returning();
-			revalidatePath(`/plugins/${plugin.slug}`);
-			return plugin;
+
+			if (pluginWithAuthor[0].author?.telegramId) {
+				try {
+					await TelegramNotifications.notifyPluginRejected(
+						pluginWithAuthor[0].author.telegramId,
+						updatedPlugin.name,
+						updatedPlugin.author,
+						input.reason,
+					);
+				} catch (error) {
+					console.error("Failed to send rejection notification:", error);
+				}
+			}
+
+			revalidatePath(`/plugins/${updatedPlugin.slug}`);
+			return updatedPlugin;
 		}),
 	delete: protectedProcedure
 		.input(z.object({ id: z.number() }))

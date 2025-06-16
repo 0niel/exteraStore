@@ -34,8 +34,10 @@ export async function POST(request: NextRequest) {
 			if (!file) continue;
 
 			try {
-				console.log(`Processing file: ${file.name}, type: ${file.type}, size: ${file.size}`);
-				
+				console.log(
+					`Processing file: ${file.name}, type: ${file.type}, size: ${file.size}`,
+				);
+
 				if (!ImageUtils.isImage(file.type)) {
 					errors.push(`File ${file.name} is not an image`);
 					continue;
@@ -49,7 +51,10 @@ export async function POST(request: NextRequest) {
 					continue;
 				}
 
-				const safeFileName = ImageUtils.generateFileName(file.name, `${pluginSlug}-${imageType}`);
+				const safeFileName = ImageUtils.generateFileName(
+					file.name,
+					`${pluginSlug}-${imageType}`,
+				);
 				console.log(`Generated safe filename: ${safeFileName}`);
 
 				let uploadedUrl: string;
@@ -81,7 +86,7 @@ export async function POST(request: NextRequest) {
 						stack: error.stack,
 					});
 				}
-				
+
 				errors.push(`Error uploading file ${file.name}: ${errorMessage}`);
 			}
 		}
