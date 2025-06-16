@@ -4,7 +4,7 @@ import { client, db, postgresClient } from "~/server/db";
 
 export async function GET() {
 	try {
-		await db.select({ test: sql`1` }).limit(1);
+		await db.select({ test: sql`1` });
 
 		const dbType = postgresClient ? "postgresql" : "sqlite";
 

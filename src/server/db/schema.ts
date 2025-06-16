@@ -1,6 +1,15 @@
 import crypto from "node:crypto";
 import { relations, sql } from "drizzle-orm";
-import { index, primaryKey, sqliteTableCreator } from "drizzle-orm/sqlite-core";
+import {
+	boolean,
+	index,
+	integer,
+	pgTable,
+	primaryKey,
+	real,
+	serial,
+	text,
+} from "drizzle-orm/pg-core";
 import type { AdapterAccount } from "next-auth/adapters";
 
 /**
@@ -9,63 +18,52 @@ import type { AdapterAccount } from "next-auth/adapters";
  *
  * @see https:
  */
-export const createTable = sqliteTableCreator(
-	(name) => `extera_plugins_${name}`,
-);
-
-export const posts = createTable(
-	"post",
-	(d) => ({
-		id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
-		name: d.text({ length: 256 }),
-		createdById: d
-			.text({ length: 255 })
+export const posts = pgTable(
+	"extera_plugins_post",
+	{
+		id: serial("id").primaryKey(),
+		name: text("name"),
+		createdById: text("created_by_id")
 			.notNull()
 			.references(() => users.id),
-		createdAt: d
-			.integer({ mode: "timestamp" })
-			.default(sql`(unixepoch())`)
-			.notNull(),
-		updatedAt: d.integer({ mode: "timestamp" }).$onUpdate(() => new Date()),
-	}),
+		createdAt: integer("created_at").notNull(),
+		updatedAt: integer("updated_at"),
+	},
 	(t) => [
 		index("created_by_idx").on(t.createdById),
 		index("name_idx").on(t.name),
 	],
 );
 
-export const plugins = createTable(
-	"plugin",
-	(d) => ({
-		id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
-		name: d.text({ length: 256 }).notNull(),
-		slug: d.text({ length: 256 }).notNull().unique(),
-		description: d.text().notNull(),
-		shortDescription: d.text({ length: 500 }),
-		version: d.text({ length: 50 }).notNull(),
-		author: d.text({ length: 256 }).notNull(),
-		authorId: d.text({ length: 255 }).references(() => users.id),
-		category: d.text({ length: 100 }).notNull(),
-		tags: d.text(),
-		downloadCount: d.integer().default(0).notNull(),
-		rating: d.real().default(0).notNull(),
-		ratingCount: d.integer().default(0).notNull(),
-		price: d.real().default(0).notNull(),
-		featured: d.integer({ mode: "boolean" }).default(false).notNull(),
-		verified: d.integer({ mode: "boolean" }).default(false).notNull(),
-		status: d.text({ length: 50 }).default("pending").notNull(),
-		telegramBotDeeplink: d.text({ length: 500 }),
-		githubUrl: d.text({ length: 500 }),
-		documentationUrl: d.text({ length: 500 }),
-		screenshots: d.text(),
-		requirements: d.text(),
-		changelog: d.text(),
-		createdAt: d
-			.integer({ mode: "timestamp" })
-			.default(sql`(unixepoch())`)
-			.notNull(),
-		updatedAt: d.integer({ mode: "timestamp" }).$onUpdate(() => new Date()),
-	}),
+export const plugins = pgTable(
+	"extera_plugins_plugin",
+	{
+		id: serial("id").primaryKey(),
+		name: text("name").notNull(),
+		slug: text("slug").notNull().unique(),
+		description: text("description").notNull(),
+		shortDescription: text("short_description"),
+		version: text("version").notNull(),
+		author: text("author").notNull(),
+		authorId: text("author_id").references(() => users.id),
+		category: text("category").notNull(),
+		tags: text("tags"),
+		downloadCount: integer("download_count").default(0).notNull(),
+		rating: real("rating").default(0).notNull(),
+		ratingCount: integer("rating_count").default(0).notNull(),
+		price: real("price").default(0).notNull(),
+		featured: boolean("featured").default(false).notNull(),
+		verified: boolean("verified").default(false).notNull(),
+		status: text("status").default("pending").notNull(),
+		telegramBotDeeplink: text("telegram_bot_deeplink"),
+		githubUrl: text("github_url"),
+		documentationUrl: text("documentation_url"),
+		screenshots: text("screenshots"),
+		requirements: text("requirements"),
+		changelog: text("changelog"),
+		createdAt: integer("created_at").notNull(),
+		updatedAt: integer("updated_at"),
+	},
 	(t) => [
 		index("plugin_slug_idx").on(t.slug),
 		index("plugin_category_idx").on(t.category),
@@ -75,69 +73,58 @@ export const plugins = createTable(
 	],
 );
 
-export const pluginReviews = createTable(
-	"plugin_review",
-	(d) => ({
-		id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
-		pluginId: d
-			.integer()
+export const pluginReviews = pgTable(
+	"extera_plugins_plugin_review",
+	{
+		id: serial("id").primaryKey(),
+		pluginId: integer("plugin_id")
 			.notNull()
 			.references(() => plugins.id, { onDelete: "cascade" }),
-		userId: d
-			.text({ length: 255 })
+		userId: text("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
-		rating: d.integer().notNull(),
-		title: d.text({ length: 256 }),
-		comment: d.text(),
-		helpful: d.integer().default(0).notNull(),
-		createdAt: d
-			.integer({ mode: "timestamp" })
-			.default(sql`(unixepoch())`)
-			.notNull(),
-		updatedAt: d.integer({ mode: "timestamp" }).$onUpdate(() => new Date()),
-	}),
+		rating: integer("rating").notNull(),
+		title: text("title"),
+		comment: text("comment"),
+		helpful: integer("helpful").default(0).notNull(),
+		createdAt: integer("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+		updatedAt: integer("updated_at"),
+	},
 	(t) => [
 		index("review_plugin_idx").on(t.pluginId),
 		index("review_user_idx").on(t.userId),
-
 		index("review_unique_idx").on(t.pluginId, t.userId),
 	],
 );
 
-export const pluginCategories = createTable(
-	"plugin_category",
-	(d) => ({
-		id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
-		name: d.text({ length: 100 }).notNull().unique(),
-		slug: d.text({ length: 100 }).notNull().unique(),
-		description: d.text(),
-		icon: d.text({ length: 100 }),
-		color: d.text({ length: 50 }),
-		createdAt: d
-			.integer({ mode: "timestamp" })
-			.default(sql`(unixepoch())`)
-			.notNull(),
-	}),
+export const pluginCategories = pgTable(
+	"extera_plugins_plugin_category",
+	{
+		id: serial("id").primaryKey(),
+		name: text("name").notNull().unique(),
+		slug: text("slug").notNull().unique(),
+		description: text("description"),
+		icon: text("icon"),
+		color: text("color"),
+		createdAt: integer("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+	},
 	(t) => [index("category_slug_idx").on(t.slug)],
 );
 
-export const pluginDownloads = createTable(
-	"plugin_download",
-	(d) => ({
-		id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
-		pluginId: d
-			.integer()
+export const pluginDownloads = pgTable(
+	"extera_plugins_plugin_download",
+	{
+		id: serial("id").primaryKey(),
+		pluginId: integer("plugin_id")
 			.notNull()
 			.references(() => plugins.id, { onDelete: "cascade" }),
-		userId: d.text({ length: 255 }).references(() => users.id),
-		ipAddress: d.text({ length: 45 }),
-		userAgent: d.text({ length: 500 }),
-		downloadedAt: d
-			.integer({ mode: "timestamp" })
-			.default(sql`(unixepoch())`)
+		userId: text("user_id").references(() => users.id),
+		ipAddress: text("ip_address"),
+		userAgent: text("user_agent"),
+		downloadedAt: integer("downloaded_at")
+			.default(sql`CURRENT_TIMESTAMP`)
 			.notNull(),
-	}),
+	},
 	(t) => [
 		index("download_plugin_idx").on(t.pluginId),
 		index("download_user_idx").on(t.userId),
@@ -145,58 +132,47 @@ export const pluginDownloads = createTable(
 	],
 );
 
-export const pluginFavorites = createTable(
-	"plugin_favorite",
-	(d) => ({
-		id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
-		pluginId: d
-			.integer()
+export const pluginFavorites = pgTable(
+	"extera_plugins_plugin_favorite",
+	{
+		id: serial("id").primaryKey(),
+		pluginId: integer("plugin_id")
 			.notNull()
 			.references(() => plugins.id, { onDelete: "cascade" }),
-		userId: d
-			.text({ length: 255 })
+		userId: text("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
-		createdAt: d
-			.integer({ mode: "timestamp" })
-			.default(sql`(unixepoch())`)
-			.notNull(),
-	}),
+		createdAt: integer("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+	},
 	(t) => [
 		index("favorite_plugin_idx").on(t.pluginId),
 		index("favorite_user_idx").on(t.userId),
-
 		index("favorite_unique_idx").on(t.pluginId, t.userId),
 	],
 );
 
-export const pluginVersions = createTable(
-	"plugin_version",
-	(d) => ({
-		id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
-		pluginId: d
-			.integer()
+export const pluginVersions = pgTable(
+	"extera_plugins_plugin_version",
+	{
+		id: serial("id").primaryKey(),
+		pluginId: integer("plugin_id")
 			.notNull()
 			.references(() => plugins.id, { onDelete: "cascade" }),
-		version: d.text({ length: 50 }).notNull(),
-		changelog: d.text(),
-		fileContent: d.text().notNull(),
-		fileSize: d.integer().notNull(),
-		fileHash: d.text({ length: 64 }).notNull(),
-		gitCommitHash: d.text({ length: 40 }),
-		gitBranch: d.text({ length: 100 }),
-		gitTag: d.text({ length: 100 }),
-		isStable: d.integer({ mode: "boolean" }).default(true).notNull(),
-		downloadCount: d.integer().default(0).notNull(),
-		createdAt: d
-			.integer({ mode: "timestamp" })
-			.default(sql`(unixepoch())`)
-			.notNull(),
-		createdById: d
-			.text({ length: 255 })
+		version: text("version").notNull(),
+		changelog: text("changelog"),
+		fileContent: text("file_content").notNull(),
+		fileSize: integer("file_size").notNull(),
+		fileHash: text("file_hash").notNull(),
+		gitCommitHash: text("git_commit_hash"),
+		gitBranch: text("git_branch"),
+		gitTag: text("git_tag"),
+		isStable: boolean("is_stable").default(true).notNull(),
+		downloadCount: integer("download_count").default(0).notNull(),
+		createdAt: integer("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+		createdById: text("created_by_id")
 			.notNull()
 			.references(() => users.id),
-	}),
+	},
 	(t) => [
 		index("version_plugin_idx").on(t.pluginId),
 		index("version_created_idx").on(t.createdAt),
@@ -205,28 +181,24 @@ export const pluginVersions = createTable(
 	],
 );
 
-export const pluginFiles = createTable(
-	"plugin_file",
-	(d) => ({
-		id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
-		pluginId: d
-			.integer()
+export const pluginFiles = pgTable(
+	"extera_plugins_plugin_file",
+	{
+		id: serial("id").primaryKey(),
+		pluginId: integer("plugin_id")
 			.notNull()
 			.references(() => plugins.id, { onDelete: "cascade" }),
-		versionId: d
-			.integer()
-			.references(() => pluginVersions.id, { onDelete: "cascade" }),
-		filename: d.text({ length: 255 }).notNull(),
-		content: d.text().notNull(),
-		size: d.integer().notNull(),
-		hash: d.text({ length: 64 }).notNull(),
-		mimeType: d.text({ length: 100 }).default("text/x-python").notNull(),
-		gitPath: d.text({ length: 500 }),
-		createdAt: d
-			.integer({ mode: "timestamp" })
-			.default(sql`(unixepoch())`)
-			.notNull(),
-	}),
+		versionId: integer("version_id").references(() => pluginVersions.id, {
+			onDelete: "cascade",
+		}),
+		filename: text("filename").notNull(),
+		content: text("content").notNull(),
+		size: integer("size").notNull(),
+		hash: text("hash").notNull(),
+		mimeType: text("mime_type").default("text/x-python").notNull(),
+		gitPath: text("git_path"),
+		createdAt: integer("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+	},
 	(t) => [
 		index("file_plugin_idx").on(t.pluginId),
 		index("file_version_idx").on(t.versionId),
@@ -234,60 +206,56 @@ export const pluginFiles = createTable(
 	],
 );
 
-export const pluginGitRepos = createTable(
-	"plugin_git_repo",
-	(d) => ({
-		id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
-		pluginId: d
-			.integer()
+export const pluginGitRepos = pgTable(
+	"extera_plugins_plugin_git_repo",
+	{
+		id: serial("id").primaryKey(),
+		pluginId: integer("plugin_id")
 			.notNull()
 			.references(() => plugins.id, { onDelete: "cascade" }),
-		repoUrl: d.text({ length: 500 }).notNull(),
-		branch: d.text({ length: 100 }).default("main").notNull(),
-		filePath: d.text({ length: 500 }).notNull(),
-		accessToken: d.text({ length: 500 }),
-		lastSyncAt: d.integer({ mode: "timestamp" }),
-		lastCommitHash: d.text({ length: 40 }),
-		autoSync: d.integer({ mode: "boolean" }).default(false).notNull(),
-		syncInterval: d.integer().default(3600).notNull(),
-		createdAt: d
-			.integer({ mode: "timestamp" })
-			.default(sql`(unixepoch())`)
-			.notNull(),
-		updatedAt: d.integer({ mode: "timestamp" }).$onUpdate(() => new Date()),
-	}),
+		repoUrl: text("repo_url").notNull(),
+		branch: text("branch").default("main").notNull(),
+		filePath: text("file_path").notNull(),
+		accessToken: text("access_token"),
+		lastSyncAt: integer("last_sync_at"),
+		lastCommitHash: text("last_commit_hash"),
+		autoSync: boolean("auto_sync").default(false).notNull(),
+		syncInterval: integer("sync_interval").default(3600).notNull(),
+		createdAt: integer("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
+		updatedAt: integer("updated_at"),
+	},
 	(t) => [
 		index("git_repo_plugin_idx").on(t.pluginId),
 		index("git_repo_sync_idx").on(t.lastSyncAt),
 	],
 );
 
-export const users = createTable("user", (d) => ({
-	id: d
-		.text({ length: 255 })
-		.notNull()
-		.primaryKey()
-		.$defaultFn(() => crypto.randomUUID()),
-	name: d.text({ length: 255 }),
-	email: d.text({ length: 255 }),
-	emailVerified: d.integer({ mode: "timestamp" }).default(sql`(unixepoch())`),
-	image: d.text({ length: 255 }),
-	telegramId: d.text({ length: 255 }).unique(),
-	telegramUsername: d.text({ length: 255 }),
-	telegramFirstName: d.text({ length: 255 }),
-	telegramLastName: d.text({ length: 255 }),
-	githubUsername: d.text({ length: 255 }),
-	bio: d.text({ length: 1000 }),
-	website: d.text({ length: 500 }),
-	links: d.text(),
-	role: d.text({ length: 50 }).default("user").notNull(),
-	isVerified: d.integer({ mode: "boolean" }).default(false).notNull(),
-	createdAt: d
-		.integer({ mode: "timestamp" })
-		.default(sql`(unixepoch())`)
-		.notNull(),
-	updatedAt: d.integer({ mode: "timestamp" }).$onUpdate(() => new Date()),
-}));
+export const users = pgTable(
+	"extera_plugins_user",
+	{
+		id: text("id").notNull().primaryKey(),
+		name: text("name"),
+		email: text("email"),
+		emailVerified: integer("email_verified"),
+		image: text("image"),
+		telegramId: text("telegram_id").unique(),
+		telegramUsername: text("telegram_username"),
+		telegramFirstName: text("telegram_first_name"),
+		telegramLastName: text("telegram_last_name"),
+		githubUsername: text("github_username"),
+		bio: text("bio"),
+		website: text("website"),
+		links: text("links"),
+		role: text("role").default("user").notNull(),
+		isVerified: boolean("is_verified").default(false).notNull(),
+		createdAt: integer("created_at").notNull(),
+		updatedAt: integer("updated_at"),
+	},
+	(t) => [
+		index("created_at_idx").on(t.createdAt),
+		index("updated_at_idx").on(t.updatedAt),
+	],
+);
 
 export const usersRelations = relations(users, ({ many }) => ({
 	accounts: many(accounts),
@@ -377,28 +345,25 @@ export const pluginFavoritesRelations = relations(
 	}),
 );
 
-export const accounts = createTable(
-	"account",
-	(d) => ({
-		userId: d
-			.text({ length: 255 })
+export const accounts = pgTable(
+	"extera_plugins_account",
+	{
+		userId: text("user_id")
 			.notNull()
 			.references(() => users.id),
-		type: d.text({ length: 255 }).$type<AdapterAccount["type"]>().notNull(),
-		provider: d.text({ length: 255 }).notNull(),
-		providerAccountId: d.text({ length: 255 }).notNull(),
-		refresh_token: d.text(),
-		access_token: d.text(),
-		expires_at: d.integer(),
-		token_type: d.text({ length: 255 }),
-		scope: d.text({ length: 255 }),
-		id_token: d.text(),
-		session_state: d.text({ length: 255 }),
-	}),
+		type: text("type").notNull(),
+		provider: text("provider").notNull(),
+		providerAccountId: text("provider_account_id").notNull(),
+		refresh_token: text("refresh_token"),
+		access_token: text("access_token"),
+		expires_at: integer("expires_at"),
+		token_type: text("token_type"),
+		scope: text("scope"),
+		id_token: text("id_token"),
+		session_state: text("session_state"),
+	},
 	(t) => [
-		primaryKey({
-			columns: [t.provider, t.providerAccountId],
-		}),
+		primaryKey(t.provider, t.providerAccountId),
 		index("account_user_id_idx").on(t.userId),
 	],
 );
@@ -407,31 +372,30 @@ export const accountsRelations = relations(accounts, ({ one }) => ({
 	user: one(users, { fields: [accounts.userId], references: [users.id] }),
 }));
 
-export const sessions = createTable(
-	"session",
-	(d) => ({
-		sessionToken: d.text({ length: 255 }).notNull().primaryKey(),
-		userId: d
-			.text({ length: 255 })
+export const sessions = pgTable(
+	"extera_plugins_session",
+	{
+		sessionToken: text("session_token").notNull().primaryKey(),
+		userId: text("user_id")
 			.notNull()
 			.references(() => users.id),
-		expires: d.integer({ mode: "timestamp" }).notNull(),
-	}),
-	(t) => [index("session_userId_idx").on(t.userId)],
+		expires: integer("expires").notNull(),
+	},
+	(t) => [index("session_user_id_idx").on(t.userId)],
 );
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
 	user: one(users, { fields: [sessions.userId], references: [users.id] }),
 }));
 
-export const verificationTokens = createTable(
-	"verification_token",
-	(d) => ({
-		identifier: d.text({ length: 255 }).notNull(),
-		token: d.text({ length: 255 }).notNull(),
-		expires: d.integer({ mode: "timestamp" }).notNull(),
-	}),
-	(t) => [primaryKey({ columns: [t.identifier, t.token] })],
+export const verificationTokens = pgTable(
+	"extera_plugins_verification_token",
+	{
+		identifier: text("identifier").notNull(),
+		token: text("token").notNull(),
+		expires: integer("expires").notNull(),
+	},
+	(t) => [primaryKey(t.identifier, t.token)],
 );
 
 export * from "./pipeline-schema";

@@ -1,34 +1,34 @@
 import { relations, sql } from "drizzle-orm";
-import { index, sqliteTableCreator } from "drizzle-orm/sqlite-core";
+import {
+	boolean,
+	index,
+	integer,
+	pgTable,
+	real,
+	serial,
+	text,
+} from "drizzle-orm/pg-core";
 import { plugins, users } from "./schema";
 
-export const createTable = sqliteTableCreator(
-	(name) => `extera_plugins_${name}`,
-);
-
-export const pluginPipelineChecks = createTable(
-	"plugin_pipeline_check",
-	(d) => ({
-		id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
-		pluginId: d
-			.integer()
+export const pluginPipelineChecks = pgTable(
+	"extera_plugins_plugin_pipeline_check",
+	{
+		id: serial("id").primaryKey(),
+		pluginId: integer("plugin_id")
 			.notNull()
 			.references(() => plugins.id, { onDelete: "cascade" }),
-		checkType: d.text({ length: 100 }).notNull(),
-		status: d.text({ length: 50 }).default("pending").notNull(),
-		score: d.real(),
-		details: d.text(),
-		errorMessage: d.text(),
-		llmModel: d.text({ length: 100 }),
-		llmPrompt: d.text(),
-		llmResponse: d.text(),
-		executionTime: d.integer(),
-		createdAt: d
-			.integer({ mode: "timestamp" })
-			.default(sql`(unixepoch())`)
-			.notNull(),
-		completedAt: d.integer({ mode: "timestamp" }),
-	}),
+		checkType: text("check_type").notNull(),
+		status: text("status").default("pending").notNull(),
+		score: real("score"),
+		details: text("details"),
+		errorMessage: text("error_message"),
+		llmModel: text("llm_model"),
+		llmPrompt: text("llm_prompt"),
+		llmResponse: text("llm_response"),
+		executionTime: integer("execution_time"),
+		createdAt: integer("created_at").notNull(),
+		completedAt: integer("completed_at"),
+	},
 	(t) => [
 		index("pipeline_plugin_idx").on(t.pluginId),
 		index("pipeline_status_idx").on(t.status),
@@ -36,27 +36,23 @@ export const pluginPipelineChecks = createTable(
 	],
 );
 
-export const pluginPipelineQueue = createTable(
-	"plugin_pipeline_queue",
-	(d) => ({
-		id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
-		pluginId: d
-			.integer()
+export const pluginPipelineQueue = pgTable(
+	"extera_plugins_plugin_pipeline_queue",
+	{
+		id: serial("id").primaryKey(),
+		pluginId: integer("plugin_id")
 			.notNull()
 			.references(() => plugins.id, { onDelete: "cascade" }),
-		priority: d.integer().default(5).notNull(),
-		status: d.text({ length: 50 }).default("queued").notNull(),
-		retryCount: d.integer().default(0).notNull(),
-		maxRetries: d.integer().default(3).notNull(),
-		errorMessage: d.text(),
-		scheduledAt: d.integer({ mode: "timestamp" }),
-		startedAt: d.integer({ mode: "timestamp" }),
-		completedAt: d.integer({ mode: "timestamp" }),
-		createdAt: d
-			.integer({ mode: "timestamp" })
-			.default(sql`(unixepoch())`)
-			.notNull(),
-	}),
+		priority: integer("priority").default(5).notNull(),
+		status: text("status").default("queued").notNull(),
+		retryCount: integer("retry_count").default(0).notNull(),
+		maxRetries: integer("max_retries").default(3).notNull(),
+		errorMessage: text("error_message"),
+		scheduledAt: integer("scheduled_at"),
+		startedAt: integer("started_at"),
+		completedAt: integer("completed_at"),
+		createdAt: integer("created_at").notNull(),
+	},
 	(t) => [
 		index("queue_status_idx").on(t.status),
 		index("queue_priority_idx").on(t.priority),
@@ -64,31 +60,25 @@ export const pluginPipelineQueue = createTable(
 	],
 );
 
-export const userPluginSubscriptions = createTable(
-	"user_plugin_subscription",
-	(d) => ({
-		id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
-		userId: d
-			.text({ length: 255 })
+export const userPluginSubscriptions = pgTable(
+	"extera_plugins_user_plugin_subscription",
+	{
+		id: serial("id").primaryKey(),
+		userId: text("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
-		pluginId: d
-			.integer()
+		pluginId: integer("plugin_id")
 			.notNull()
 			.references(() => plugins.id, { onDelete: "cascade" }),
-		subscriptionType: d.text({ length: 50 }).notNull(),
-		isActive: d.integer({ mode: "boolean" }).default(true).notNull(),
-		telegramChatId: d.text({ length: 255 }),
-		createdAt: d
-			.integer({ mode: "timestamp" })
-			.default(sql`(unixepoch())`)
-			.notNull(),
-	}),
+		subscriptionType: text("subscription_type").notNull(),
+		isActive: boolean("is_active").default(true).notNull(),
+		telegramChatId: text("telegram_chat_id"),
+		createdAt: integer("created_at").notNull(),
+	},
 	(t) => [
 		index("subscription_user_idx").on(t.userId),
 		index("subscription_plugin_idx").on(t.pluginId),
 		index("subscription_type_idx").on(t.subscriptionType),
-
 		index("subscription_unique_idx").on(
 			t.userId,
 			t.pluginId,
@@ -97,27 +87,25 @@ export const userPluginSubscriptions = createTable(
 	],
 );
 
-export const notifications = createTable(
-	"notification",
-	(d) => ({
-		id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
-		userId: d
-			.text({ length: 255 })
+export const notifications = pgTable(
+	"extera_plugins_notification",
+	{
+		id: serial("id").primaryKey(),
+		userId: text("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" }),
-		pluginId: d.integer().references(() => plugins.id, { onDelete: "cascade" }),
-		type: d.text({ length: 50 }).notNull(),
-		title: d.text({ length: 256 }).notNull(),
-		message: d.text().notNull(),
-		data: d.text(),
-		isRead: d.integer({ mode: "boolean" }).default(false).notNull(),
-		sentToTelegram: d.integer({ mode: "boolean" }).default(false).notNull(),
-		telegramMessageId: d.text({ length: 100 }),
-		createdAt: d
-			.integer({ mode: "timestamp" })
-			.default(sql`(unixepoch())`)
-			.notNull(),
-	}),
+		pluginId: integer("plugin_id").references(() => plugins.id, {
+			onDelete: "cascade",
+		}),
+		type: text("type").notNull(),
+		title: text("title").notNull(),
+		message: text("message").notNull(),
+		data: text("data"),
+		isRead: boolean("is_read").default(false).notNull(),
+		sentToTelegram: boolean("sent_to_telegram").default(false).notNull(),
+		telegramMessageId: text("telegram_message_id"),
+		createdAt: integer("created_at").notNull(),
+	},
 	(t) => [
 		index("notification_user_idx").on(t.userId),
 		index("notification_plugin_idx").on(t.pluginId),
@@ -126,35 +114,30 @@ export const notifications = createTable(
 	],
 );
 
-export const userNotificationSettings = createTable(
-	"user_notification_setting",
-	(d) => ({
-		id: d.integer({ mode: "number" }).primaryKey({ autoIncrement: true }),
-		userId: d
-			.text({ length: 255 })
+export const userNotificationSettings = pgTable(
+	"extera_plugins_user_notification_setting",
+	{
+		id: serial("id").primaryKey(),
+		userId: text("user_id")
 			.notNull()
 			.references(() => users.id, { onDelete: "cascade" })
 			.unique(),
-		enablePluginUpdates: d.integer({ mode: "boolean" }).default(true).notNull(),
-		enableSecurityAlerts: d
-			.integer({ mode: "boolean" })
+		enablePluginUpdates: boolean("enable_plugin_updates")
 			.default(true)
 			.notNull(),
-		enableReviewNotifications: d
-			.integer({ mode: "boolean" })
+		enableSecurityAlerts: boolean("enable_security_alerts")
+			.default(true)
+			.notNull(),
+		enableReviewNotifications: boolean("enable_review_notifications")
 			.default(false)
 			.notNull(),
-		enableTelegramNotifications: d
-			.integer({ mode: "boolean" })
+		enableTelegramNotifications: boolean("enable_telegram_notifications")
 			.default(true)
 			.notNull(),
-		telegramChatId: d.text({ length: 255 }),
-		createdAt: d
-			.integer({ mode: "timestamp" })
-			.default(sql`(unixepoch())`)
-			.notNull(),
-		updatedAt: d.integer({ mode: "timestamp" }).$onUpdate(() => new Date()),
-	}),
+		telegramChatId: text("telegram_chat_id"),
+		createdAt: integer("created_at").notNull(),
+		updatedAt: integer("updated_at"),
+	},
 	(t) => [index("notification_settings_user_idx").on(t.userId)],
 );
 
