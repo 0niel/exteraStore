@@ -207,27 +207,33 @@ export default function UploadPluginPage() {
 	}
 
 	return (
-		<section className="min-h-screen bg-muted/40 py-12">
-			<div className="container mx-auto max-w-6xl px-4">
-				<div className="mb-8 text-center">
-					<h1 className="mb-2 font-bold text-4xl">Загрузить плагин</h1>
-					<p className="text-muted-foreground text-xl">
+		<section className="min-h-screen bg-muted/40 py-4 sm:py-8 md:py-12">
+			<div className="container mx-auto max-w-6xl px-3 sm:px-4">
+				<div className="mb-6 text-center sm:mb-8">
+					<h1 className="mb-2 font-bold text-2xl sm:text-3xl md:text-4xl">
+						Загрузить плагин
+					</h1>
+					<p className="text-base text-muted-foreground sm:text-lg md:text-xl">
 						Поделитесь своим творением с сообществом exteraGram
 					</p>
 				</div>
 
 				<Form {...form}>
-					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-						<div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-							<div className="space-y-6 lg:col-span-2">
+					<form
+						onSubmit={form.handleSubmit(onSubmit)}
+						className="space-y-4 sm:space-y-6"
+					>
+						<div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-3">
+							<div className="space-y-4 sm:space-y-6 lg:col-span-2">
 								{/* Основная информация */}
 								<Card>
 									<CardHeader>
-										<CardTitle className="flex items-center gap-2">
-											<Info className="h-5 w-5" /> Основная информация
+										<CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+											<Info className="h-4 w-4 sm:h-5 sm:w-5" /> Основная
+											информация
 										</CardTitle>
 									</CardHeader>
-									<CardContent className="space-y-6">
+									<CardContent className="space-y-4 sm:space-y-6">
 										<FormField
 											control={form.control}
 											name="name"
@@ -292,11 +298,12 @@ export default function UploadPluginPage() {
 								{/* Версия и изменения */}
 								<Card>
 									<CardHeader>
-										<CardTitle className="flex items-center gap-2">
-											<FileText className="h-5 w-5" /> Версия и список изменений
+										<CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+											<FileText className="h-4 w-4 sm:h-5 sm:w-5" /> Версия и
+											список изменений
 										</CardTitle>
 									</CardHeader>
-									<CardContent className="space-y-6">
+									<CardContent className="space-y-4 sm:space-y-6">
 										<FormField
 											control={form.control}
 											name="version"
@@ -335,15 +342,15 @@ export default function UploadPluginPage() {
 								</Card>
 							</div>
 
-							<div className="space-y-6 lg:col-span-1">
+							<div className="space-y-4 sm:space-y-6 lg:col-span-1">
 								{/* Организация */}
 								<Card>
 									<CardHeader>
-										<CardTitle className="flex items-center gap-2">
-											<Tags className="h-5 w-5" /> Организация
+										<CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+											<Tags className="h-4 w-4 sm:h-5 sm:w-5" /> Организация
 										</CardTitle>
 									</CardHeader>
-									<CardContent className="space-y-6">
+									<CardContent className="space-y-4 sm:space-y-6">
 										<FormField
 											control={form.control}
 											name="categorySlug"
@@ -401,12 +408,12 @@ export default function UploadPluginPage() {
 								{/* Ссылки */}
 								<Card>
 									<CardHeader>
-										<CardTitle className="flex items-center gap-2">
-											<ExternalLink className="h-5 w-5" /> Ссылки
-											(необязательно)
+										<CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+											<ExternalLink className="h-4 w-4 sm:h-5 sm:w-5" /> Ссылки
+											<span className="hidden sm:inline">(необязательно)</span>
 										</CardTitle>
 									</CardHeader>
-									<CardContent className="space-y-4">
+									<CardContent className="space-y-3 sm:space-y-4">
 										<FormField
 											control={form.control}
 											name="githubUrl"
@@ -448,10 +455,10 @@ export default function UploadPluginPage() {
 								{/* Загрузка файла */}
 								<Card>
 									<CardHeader>
-										<CardTitle className="flex items-center gap-2">
-											<Code className="h-5 w-5" /> Файл плагина *
+										<CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+											<Code className="h-4 w-4 sm:h-5 sm:w-5" /> Файл плагина *
 										</CardTitle>
-										<CardDescription>
+										<CardDescription className="text-sm">
 											Загрузите `.py` файл вашего плагина.
 										</CardDescription>
 									</CardHeader>
@@ -474,24 +481,27 @@ export default function UploadPluginPage() {
 							</div>
 						</div>
 
-						<div className="flex justify-end gap-4">
+						<div className="flex flex-col justify-end gap-3 sm:flex-row sm:gap-4">
 							<Button
 								type="button"
 								variant="outline"
 								onClick={() => router.back()}
+								className="w-full sm:w-auto"
 							>
 								Отмена
 							</Button>
 							<Button
 								type="submit"
 								disabled={createPlugin.isPending || !fileContent}
+								className="w-full sm:w-auto"
 							>
 								{createPlugin.isPending ? (
 									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 								) : (
 									<UploadCloud className="mr-2 h-4 w-4" />
 								)}
-								Отправить на модерацию
+								<span className="hidden sm:inline">Отправить на модерацию</span>
+								<span className="sm:hidden">Отправить</span>
 							</Button>
 						</div>
 					</form>

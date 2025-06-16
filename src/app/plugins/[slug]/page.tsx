@@ -240,37 +240,41 @@ export default function PluginDetailPage() {
 
 	return (
 		<div className="min-h-screen bg-background">
-			<div className="container mx-auto px-4 py-8">
-				<div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+			<div className="container mx-auto px-3 py-4 sm:px-4 sm:py-6 md:py-8">
+				<div className="grid grid-cols-1 gap-4 sm:gap-6 md:gap-8 lg:grid-cols-3">
 					{/* Main Content */}
-					<div className="space-y-6 lg:col-span-2">
+					<div className="space-y-4 sm:space-y-6 lg:col-span-2">
 						{/* Header */}
-						<div className="space-y-4">
-							<div className="flex items-start justify-between gap-4">
-								<div className="space-y-2">
-									<div className="flex items-center gap-2">
-										<h1 className="font-bold text-3xl">{plugin.name}</h1>
+						<div className="space-y-3 sm:space-y-4">
+							<div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+								<div className="space-y-1 sm:space-y-2">
+									<div className="flex flex-wrap items-center gap-2">
+										<h1 className="font-bold text-xl sm:text-2xl md:text-3xl">
+											{plugin.name}
+										</h1>
 										{plugin.verified && (
-											<Badge className="bg-blue-600">
+											<Badge className="bg-blue-600 text-xs sm:text-sm">
 												<Shield className="mr-1 h-3 w-3" />
 												Проверен
 											</Badge>
 										)}
 										{plugin.featured && (
-											<Badge className="bg-yellow-500">⭐ Рекомендуемый</Badge>
+											<Badge className="bg-yellow-500 text-xs sm:text-sm">
+												⭐ Рекомендуемый
+											</Badge>
 										)}
 									</div>
-									<div className="flex items-center gap-4 text-muted-foreground text-sm">
+									<div className="flex flex-wrap items-center gap-2 text-muted-foreground text-xs sm:gap-4 sm:text-sm">
 										<div className="flex items-center gap-1">
-											<User className="h-4 w-4" />
+											<User className="h-3 w-3 sm:h-4 sm:w-4" />
 											<span>{plugin.author}</span>
 										</div>
 										<div className="flex items-center gap-1">
-											<Calendar className="h-4 w-4" />
+											<Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
 											<span>{formatDate(new Date(plugin.createdAt))}</span>
 										</div>
 										<div className="flex items-center gap-1">
-											<Tag className="h-4 w-4" />
+											<Tag className="h-3 w-3 sm:h-4 sm:w-4" />
 											<span>v{plugin.version}</span>
 										</div>
 									</div>
@@ -278,38 +282,53 @@ export default function PluginDetailPage() {
 
 								<div className="flex items-center gap-2">
 									{session?.user?.id === plugin.authorId && (
-										<Button variant="outline" size="sm" asChild>
+										<Button
+											variant="outline"
+											size="sm"
+											asChild
+											className="h-8 text-xs"
+										>
 											<Link href={`/my-plugins/${plugin.slug}/manage`}>
-												<Edit className="mr-2 h-4 w-4" />
-												Редактировать
+												<Edit className="mr-1 h-3 w-3 sm:mr-2 sm:h-4 sm:w-4" />
+												<span className="xs:inline hidden">Редактировать</span>
+												<span className="xs:hidden">Ред.</span>
 											</Link>
 										</Button>
 									)}
 									<Button
 										variant="outline"
-										size="sm"
+										size="icon"
 										onClick={handleToggleFavorite}
-										className={isFavorited ? "border-red-500 text-red-500" : ""}
+										className={`h-8 w-8 ${isFavorited ? "border-red-500 text-red-500" : ""}`}
 									>
 										<Heart
 											className={`h-4 w-4 ${isFavorited ? "fill-red-500" : ""}`}
 										/>
 									</Button>
-									<Button variant="outline" size="sm" onClick={handleShare}>
+									<Button
+										variant="outline"
+										size="icon"
+										onClick={handleShare}
+										className="h-8 w-8"
+									>
 										<Share2 className="h-4 w-4" />
 									</Button>
 								</div>
 							</div>
 
-							<p className="text-lg text-muted-foreground">
+							<p className="text-muted-foreground text-sm sm:text-base md:text-lg">
 								{plugin.shortDescription || plugin.description}
 							</p>
 
 							{/* Tags */}
 							{tags.length > 0 && (
-								<div className="flex flex-wrap gap-2">
+								<div className="flex flex-wrap gap-1 sm:gap-2">
 									{tags.map((tag) => (
-										<Badge key={tag} variant="outline">
+										<Badge
+											key={tag}
+											variant="outline"
+											className="h-5 py-0 text-xs sm:h-6 sm:text-sm"
+										>
 											{tag}
 										</Badge>
 									))}
@@ -471,16 +490,46 @@ export default function PluginDetailPage() {
 
 						{/* Tabs */}
 						<Tabs defaultValue="description" className="w-full">
-							<TabsList className="grid w-full grid-cols-6">
-								<TabsTrigger value="description">Описание</TabsTrigger>
-								<TabsTrigger value="versions">Версии</TabsTrigger>
-								<TabsTrigger value="pipeline">Проверки</TabsTrigger>
-								<TabsTrigger value="reviews">
-									Отзывы ({plugin.ratingCount})
-								</TabsTrigger>
-								<TabsTrigger value="changelog">Изменения</TabsTrigger>
-								<TabsTrigger value="requirements">Требования</TabsTrigger>
-							</TabsList>
+							<div className="scrollbar-hide overflow-x-auto">
+								<TabsList className="inline-flex h-auto w-max min-w-full justify-start p-1">
+									<TabsTrigger
+										value="description"
+										className="whitespace-nowrap px-3 py-2 text-xs sm:text-sm"
+									>
+										Описание
+									</TabsTrigger>
+									<TabsTrigger
+										value="versions"
+										className="whitespace-nowrap px-3 py-2 text-xs sm:text-sm"
+									>
+										Версии
+									</TabsTrigger>
+									<TabsTrigger
+										value="pipeline"
+										className="whitespace-nowrap px-3 py-2 text-xs sm:text-sm"
+									>
+										Проверки
+									</TabsTrigger>
+									<TabsTrigger
+										value="reviews"
+										className="whitespace-nowrap px-3 py-2 text-xs sm:text-sm"
+									>
+										Отзывы ({plugin.ratingCount})
+									</TabsTrigger>
+									<TabsTrigger
+										value="changelog"
+										className="whitespace-nowrap px-3 py-2 text-xs sm:text-sm"
+									>
+										Изменения
+									</TabsTrigger>
+									<TabsTrigger
+										value="requirements"
+										className="whitespace-nowrap px-3 py-2 text-xs sm:text-sm"
+									>
+										Требования
+									</TabsTrigger>
+								</TabsList>
+							</div>
 
 							<TabsContent value="description" className="mt-6">
 								<div className="prose prose-neutral dark:prose-invert max-w-none">
@@ -689,8 +738,8 @@ export default function PluginDetailPage() {
 						</Tabs>
 					</div>
 
-					{/* Sidebar */}
-					<div className="space-y-6">
+					{/* Sidebar - show at the top on mobile, and on the side on desktop */}
+					<div className="order-first mb-4 space-y-4 sm:space-y-6 lg:order-none lg:mb-0">
 						{/* Telegram Bot Integration */}
 						<TelegramBotIntegration
 							pluginId={plugin.id}
@@ -703,36 +752,43 @@ export default function PluginDetailPage() {
 						{/* Plugin Stats */}
 						<Card>
 							<CardHeader>
-								<CardTitle>Статистика</CardTitle>
+								<CardTitle className="text-base sm:text-lg">
+									Статистика
+								</CardTitle>
 							</CardHeader>
-							<CardContent className="space-y-3">
+							<CardContent className="space-y-2 pt-0 sm:space-y-3">
 								<div className="flex items-center justify-between">
-									<span className="text-muted-foreground text-sm">
+									<span className="text-muted-foreground text-xs sm:text-sm">
 										Загрузки:
 									</span>
-									<span className="font-medium">
+									<span className="font-medium text-xs sm:text-sm">
 										{formatNumber(plugin.downloadCount)}
 									</span>
 								</div>
 								<div className="flex items-center justify-between">
-									<span className="text-muted-foreground text-sm">
+									<span className="text-muted-foreground text-xs sm:text-sm">
 										Рейтинг:
 									</span>
 									<div className="flex items-center gap-1">
-										<Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-										<span className="font-medium">
+										<Star className="h-3 w-3 fill-yellow-400 text-yellow-400 sm:h-4 sm:w-4" />
+										<span className="font-medium text-xs sm:text-sm">
 											{plugin.rating.toFixed(1)} ({plugin.ratingCount})
 										</span>
 									</div>
 								</div>
 								<div className="flex items-center justify-between">
-									<span className="text-muted-foreground text-sm">
+									<span className="text-muted-foreground text-xs sm:text-sm">
 										Категория:
 									</span>
-									<Badge variant="outline">{plugin.category}</Badge>
+									<Badge
+										variant="outline"
+										className="h-5 py-0 text-xs sm:text-sm"
+									>
+										{plugin.category}
+									</Badge>
 								</div>
 								<div className="flex items-center justify-between">
-									<span className="text-muted-foreground text-sm">
+									<span className="text-muted-foreground text-xs sm:text-sm">
 										Интеграция:
 									</span>
 									<BotIntegrationStatus
@@ -745,18 +801,20 @@ export default function PluginDetailPage() {
 						{/* Author Info */}
 						<Card>
 							<CardHeader>
-								<CardTitle>Автор</CardTitle>
+								<CardTitle className="text-base sm:text-lg">Автор</CardTitle>
 							</CardHeader>
-							<CardContent>
+							<CardContent className="pt-0">
 								<div className="flex items-center gap-3">
-									<Avatar>
-										<AvatarFallback>
+									<Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+										<AvatarFallback className="text-xs sm:text-sm">
 											{plugin.author.slice(0, 2).toUpperCase()}
 										</AvatarFallback>
 									</Avatar>
 									<div>
-										<div className="font-medium">{plugin.author}</div>
-										<div className="text-muted-foreground text-sm">
+										<div className="font-medium text-sm sm:text-base">
+											{plugin.author}
+										</div>
+										<div className="text-muted-foreground text-xs sm:text-sm">
 											Разработчик
 										</div>
 									</div>
@@ -764,39 +822,46 @@ export default function PluginDetailPage() {
 							</CardContent>
 						</Card>
 
-						{/* Subscription */}
-						<PluginSubscription pluginId={plugin.id} pluginName={plugin.name} />
+						{/* Subscription - показывать только если пользователь вошел */}
+						{session && (
+							<PluginSubscription
+								pluginId={plugin.id}
+								pluginName={plugin.name}
+							/>
+						)}
 
-						{/* Links */}
-						<Card>
-							<CardHeader>
-								<CardTitle>Ссылки</CardTitle>
-							</CardHeader>
-							<CardContent className="space-y-3">
-								{plugin.githubUrl && (
-									<Link
-										href={plugin.githubUrl}
-										target="_blank"
-										className="flex items-center gap-2 text-sm hover:text-primary"
-									>
-										<Github className="h-4 w-4" />
-										<span>Исходный код</span>
-										<ExternalLink className="h-3 w-3" />
-									</Link>
-								)}
-								{plugin.documentationUrl && (
-									<Link
-										href={plugin.documentationUrl}
-										target="_blank"
-										className="flex items-center gap-2 text-sm hover:text-primary"
-									>
-										<FileText className="h-4 w-4" />
-										<span>Документация</span>
-										<ExternalLink className="h-3 w-3" />
-									</Link>
-								)}
-							</CardContent>
-						</Card>
+						{/* Links - показывать только если есть ссылки */}
+						{(plugin.githubUrl || plugin.documentationUrl) && (
+							<Card>
+								<CardHeader>
+									<CardTitle className="text-base sm:text-lg">Ссылки</CardTitle>
+								</CardHeader>
+								<CardContent className="space-y-2 pt-0 sm:space-y-3">
+									{plugin.githubUrl && (
+										<Link
+											href={plugin.githubUrl}
+											target="_blank"
+											className="flex items-center gap-2 text-xs hover:text-primary sm:text-sm"
+										>
+											<Github className="h-3 w-3 sm:h-4 sm:w-4" />
+											<span>Исходный код</span>
+											<ExternalLink className="h-2 w-2 sm:h-3 sm:w-3" />
+										</Link>
+									)}
+									{plugin.documentationUrl && (
+										<Link
+											href={plugin.documentationUrl}
+											target="_blank"
+											className="flex items-center gap-2 text-xs hover:text-primary sm:text-sm"
+										>
+											<FileText className="h-3 w-3 sm:h-4 sm:w-4" />
+											<span>Документация</span>
+											<ExternalLink className="h-2 w-2 sm:h-3 sm:w-3" />
+										</Link>
+									)}
+								</CardContent>
+							</Card>
+						)}
 					</div>
 				</div>
 			</div>

@@ -83,12 +83,20 @@ export default async function RootLayout({
 
 	return (
 		<html lang={locale} className={`${inter.variable}`}>
-			<body className="min-h-screen bg-background font-sans antialiased">
+			<head>
+				<meta
+					name="viewport"
+					content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
+				/>
+			</head>
+			<body className="min-h-screen overflow-x-hidden bg-background font-sans antialiased">
 				<NextIntlClientProvider messages={messages}>
 					<SessionProvider session={session}>
 						<TRPCReactProvider>
 							<Navigation />
-							<main>{children}</main>
+							<main className="w-full max-w-full overflow-x-hidden">
+								{children}
+							</main>
 							<Toaster />
 						</TRPCReactProvider>
 					</SessionProvider>

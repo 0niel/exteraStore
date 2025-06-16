@@ -93,7 +93,9 @@
 	"PluginVersions": {
 		"versions": "Версии",
 		"description": "Просматривайте и загружайте различные версии плагина.",
-		"upload_version": "Загрузить новую версию"
+		"upload_version": "Загрузить новую версию",
+		"no_versions_found": "Версии не найдены",
+		"no_versions_description": "Для этого плагина пока нет доступных версий."
 	},
 	"ScreenshotUploader": {
 		"screenshots": "Скриншоты",

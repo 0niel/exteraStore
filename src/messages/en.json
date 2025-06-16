@@ -93,7 +93,9 @@
 	"PluginVersions": {
 		"versions": "Versions",
 		"description": "Browse and download different versions of the plugin.",
-		"upload_version": "Upload New Version"
+		"upload_version": "Upload New Version",
+		"no_versions_found": "No versions found",
+		"no_versions_description": "There are no available versions for this plugin yet."
 	},
 	"ScreenshotUploader": {
 		"screenshots": "Screenshots",
