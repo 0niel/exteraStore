@@ -1,0 +1,1940 @@
+{
+	"version": "6",
+	"dialect": "sqlite",
+	"id": "1657bbed-43e8-49c2-9d4d-0a1ecbfe5cef",
+	"prevId": "1eeb698a-0a61-47c2-b12b-d88893c7866c",
+	"tables": {
+		"extera_plugins_account": {
+			"name": "extera_plugins_account",
+			"columns": {
+				"userId": {
+					"name": "userId",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"type": {
+					"name": "type",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"provider": {
+					"name": "provider",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"providerAccountId": {
+					"name": "providerAccountId",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"refresh_token": {
+					"name": "refresh_token",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"access_token": {
+					"name": "access_token",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"expires_at": {
+					"name": "expires_at",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"token_type": {
+					"name": "token_type",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"scope": {
+					"name": "scope",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"id_token": {
+					"name": "id_token",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"session_state": {
+					"name": "session_state",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"account_user_id_idx": {
+					"name": "account_user_id_idx",
+					"columns": ["userId"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"extera_plugins_account_userId_extera_plugins_user_id_fk": {
+					"name": "extera_plugins_account_userId_extera_plugins_user_id_fk",
+					"tableFrom": "extera_plugins_account",
+					"tableTo": "extera_plugins_user",
+					"columnsFrom": ["userId"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {
+				"extera_plugins_account_provider_providerAccountId_pk": {
+					"columns": ["provider", "providerAccountId"],
+					"name": "extera_plugins_account_provider_providerAccountId_pk"
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"extera_plugins_plugin_category": {
+			"name": "extera_plugins_plugin_category",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"name": {
+					"name": "name",
+					"type": "text(100)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"slug": {
+					"name": "slug",
+					"type": "text(100)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"description": {
+					"name": "description",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"icon": {
+					"name": "icon",
+					"type": "text(100)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"color": {
+					"name": "color",
+					"type": "text(50)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"createdAt": {
+					"name": "createdAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(unixepoch())"
+				}
+			},
+			"indexes": {
+				"extera_plugins_plugin_category_name_unique": {
+					"name": "extera_plugins_plugin_category_name_unique",
+					"columns": ["name"],
+					"isUnique": true
+				},
+				"extera_plugins_plugin_category_slug_unique": {
+					"name": "extera_plugins_plugin_category_slug_unique",
+					"columns": ["slug"],
+					"isUnique": true
+				},
+				"category_slug_idx": {
+					"name": "category_slug_idx",
+					"columns": ["slug"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"extera_plugins_plugin_download": {
+			"name": "extera_plugins_plugin_download",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"pluginId": {
+					"name": "pluginId",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"userId": {
+					"name": "userId",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"ipAddress": {
+					"name": "ipAddress",
+					"type": "text(45)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"userAgent": {
+					"name": "userAgent",
+					"type": "text(500)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"downloadedAt": {
+					"name": "downloadedAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(unixepoch())"
+				}
+			},
+			"indexes": {
+				"download_plugin_idx": {
+					"name": "download_plugin_idx",
+					"columns": ["pluginId"],
+					"isUnique": false
+				},
+				"download_user_idx": {
+					"name": "download_user_idx",
+					"columns": ["userId"],
+					"isUnique": false
+				},
+				"download_date_idx": {
+					"name": "download_date_idx",
+					"columns": ["downloadedAt"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"extera_plugins_plugin_download_pluginId_extera_plugins_plugin_id_fk": {
+					"name": "extera_plugins_plugin_download_pluginId_extera_plugins_plugin_id_fk",
+					"tableFrom": "extera_plugins_plugin_download",
+					"tableTo": "extera_plugins_plugin",
+					"columnsFrom": ["pluginId"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"extera_plugins_plugin_download_userId_extera_plugins_user_id_fk": {
+					"name": "extera_plugins_plugin_download_userId_extera_plugins_user_id_fk",
+					"tableFrom": "extera_plugins_plugin_download",
+					"tableTo": "extera_plugins_user",
+					"columnsFrom": ["userId"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"extera_plugins_plugin_favorite": {
+			"name": "extera_plugins_plugin_favorite",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"pluginId": {
+					"name": "pluginId",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"userId": {
+					"name": "userId",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"createdAt": {
+					"name": "createdAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(unixepoch())"
+				}
+			},
+			"indexes": {
+				"favorite_plugin_idx": {
+					"name": "favorite_plugin_idx",
+					"columns": ["pluginId"],
+					"isUnique": false
+				},
+				"favorite_user_idx": {
+					"name": "favorite_user_idx",
+					"columns": ["userId"],
+					"isUnique": false
+				},
+				"favorite_unique_idx": {
+					"name": "favorite_unique_idx",
+					"columns": ["pluginId", "userId"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"extera_plugins_plugin_favorite_pluginId_extera_plugins_plugin_id_fk": {
+					"name": "extera_plugins_plugin_favorite_pluginId_extera_plugins_plugin_id_fk",
+					"tableFrom": "extera_plugins_plugin_favorite",
+					"tableTo": "extera_plugins_plugin",
+					"columnsFrom": ["pluginId"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"extera_plugins_plugin_favorite_userId_extera_plugins_user_id_fk": {
+					"name": "extera_plugins_plugin_favorite_userId_extera_plugins_user_id_fk",
+					"tableFrom": "extera_plugins_plugin_favorite",
+					"tableTo": "extera_plugins_user",
+					"columnsFrom": ["userId"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"extera_plugins_plugin_file": {
+			"name": "extera_plugins_plugin_file",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"pluginId": {
+					"name": "pluginId",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"versionId": {
+					"name": "versionId",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"filename": {
+					"name": "filename",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"content": {
+					"name": "content",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"size": {
+					"name": "size",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"hash": {
+					"name": "hash",
+					"type": "text(64)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"mimeType": {
+					"name": "mimeType",
+					"type": "text(100)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'text/x-python'"
+				},
+				"gitPath": {
+					"name": "gitPath",
+					"type": "text(500)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"createdAt": {
+					"name": "createdAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(unixepoch())"
+				}
+			},
+			"indexes": {
+				"file_plugin_idx": {
+					"name": "file_plugin_idx",
+					"columns": ["pluginId"],
+					"isUnique": false
+				},
+				"file_version_idx": {
+					"name": "file_version_idx",
+					"columns": ["versionId"],
+					"isUnique": false
+				},
+				"file_hash_idx": {
+					"name": "file_hash_idx",
+					"columns": ["hash"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"extera_plugins_plugin_file_pluginId_extera_plugins_plugin_id_fk": {
+					"name": "extera_plugins_plugin_file_pluginId_extera_plugins_plugin_id_fk",
+					"tableFrom": "extera_plugins_plugin_file",
+					"tableTo": "extera_plugins_plugin",
+					"columnsFrom": ["pluginId"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"extera_plugins_plugin_file_versionId_extera_plugins_plugin_version_id_fk": {
+					"name": "extera_plugins_plugin_file_versionId_extera_plugins_plugin_version_id_fk",
+					"tableFrom": "extera_plugins_plugin_file",
+					"tableTo": "extera_plugins_plugin_version",
+					"columnsFrom": ["versionId"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"extera_plugins_plugin_git_repo": {
+			"name": "extera_plugins_plugin_git_repo",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"pluginId": {
+					"name": "pluginId",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"repoUrl": {
+					"name": "repoUrl",
+					"type": "text(500)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"branch": {
+					"name": "branch",
+					"type": "text(100)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'main'"
+				},
+				"filePath": {
+					"name": "filePath",
+					"type": "text(500)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"accessToken": {
+					"name": "accessToken",
+					"type": "text(500)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"lastSyncAt": {
+					"name": "lastSyncAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"lastCommitHash": {
+					"name": "lastCommitHash",
+					"type": "text(40)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"autoSync": {
+					"name": "autoSync",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": false
+				},
+				"syncInterval": {
+					"name": "syncInterval",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 3600
+				},
+				"createdAt": {
+					"name": "createdAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(unixepoch())"
+				},
+				"updatedAt": {
+					"name": "updatedAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"git_repo_plugin_idx": {
+					"name": "git_repo_plugin_idx",
+					"columns": ["pluginId"],
+					"isUnique": false
+				},
+				"git_repo_sync_idx": {
+					"name": "git_repo_sync_idx",
+					"columns": ["lastSyncAt"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"extera_plugins_plugin_git_repo_pluginId_extera_plugins_plugin_id_fk": {
+					"name": "extera_plugins_plugin_git_repo_pluginId_extera_plugins_plugin_id_fk",
+					"tableFrom": "extera_plugins_plugin_git_repo",
+					"tableTo": "extera_plugins_plugin",
+					"columnsFrom": ["pluginId"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"extera_plugins_plugin_review": {
+			"name": "extera_plugins_plugin_review",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"pluginId": {
+					"name": "pluginId",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"userId": {
+					"name": "userId",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"rating": {
+					"name": "rating",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"title": {
+					"name": "title",
+					"type": "text(256)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"comment": {
+					"name": "comment",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"helpful": {
+					"name": "helpful",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 0
+				},
+				"createdAt": {
+					"name": "createdAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(unixepoch())"
+				},
+				"updatedAt": {
+					"name": "updatedAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"review_plugin_idx": {
+					"name": "review_plugin_idx",
+					"columns": ["pluginId"],
+					"isUnique": false
+				},
+				"review_user_idx": {
+					"name": "review_user_idx",
+					"columns": ["userId"],
+					"isUnique": false
+				},
+				"review_unique_idx": {
+					"name": "review_unique_idx",
+					"columns": ["pluginId", "userId"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"extera_plugins_plugin_review_pluginId_extera_plugins_plugin_id_fk": {
+					"name": "extera_plugins_plugin_review_pluginId_extera_plugins_plugin_id_fk",
+					"tableFrom": "extera_plugins_plugin_review",
+					"tableTo": "extera_plugins_plugin",
+					"columnsFrom": ["pluginId"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"extera_plugins_plugin_review_userId_extera_plugins_user_id_fk": {
+					"name": "extera_plugins_plugin_review_userId_extera_plugins_user_id_fk",
+					"tableFrom": "extera_plugins_plugin_review",
+					"tableTo": "extera_plugins_user",
+					"columnsFrom": ["userId"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"extera_plugins_plugin_version": {
+			"name": "extera_plugins_plugin_version",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"pluginId": {
+					"name": "pluginId",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"version": {
+					"name": "version",
+					"type": "text(50)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"changelog": {
+					"name": "changelog",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"fileContent": {
+					"name": "fileContent",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"fileSize": {
+					"name": "fileSize",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"fileHash": {
+					"name": "fileHash",
+					"type": "text(64)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"gitCommitHash": {
+					"name": "gitCommitHash",
+					"type": "text(40)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"gitBranch": {
+					"name": "gitBranch",
+					"type": "text(100)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"gitTag": {
+					"name": "gitTag",
+					"type": "text(100)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"isStable": {
+					"name": "isStable",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": true
+				},
+				"downloadCount": {
+					"name": "downloadCount",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 0
+				},
+				"createdAt": {
+					"name": "createdAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(unixepoch())"
+				},
+				"createdById": {
+					"name": "createdById",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"version_plugin_idx": {
+					"name": "version_plugin_idx",
+					"columns": ["pluginId"],
+					"isUnique": false
+				},
+				"version_created_idx": {
+					"name": "version_created_idx",
+					"columns": ["createdAt"],
+					"isUnique": false
+				},
+				"version_stable_idx": {
+					"name": "version_stable_idx",
+					"columns": ["isStable"],
+					"isUnique": false
+				},
+				"version_unique_idx": {
+					"name": "version_unique_idx",
+					"columns": ["pluginId", "version"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"extera_plugins_plugin_version_pluginId_extera_plugins_plugin_id_fk": {
+					"name": "extera_plugins_plugin_version_pluginId_extera_plugins_plugin_id_fk",
+					"tableFrom": "extera_plugins_plugin_version",
+					"tableTo": "extera_plugins_plugin",
+					"columnsFrom": ["pluginId"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"extera_plugins_plugin_version_createdById_extera_plugins_user_id_fk": {
+					"name": "extera_plugins_plugin_version_createdById_extera_plugins_user_id_fk",
+					"tableFrom": "extera_plugins_plugin_version",
+					"tableTo": "extera_plugins_user",
+					"columnsFrom": ["createdById"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"extera_plugins_plugin": {
+			"name": "extera_plugins_plugin",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"name": {
+					"name": "name",
+					"type": "text(256)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"slug": {
+					"name": "slug",
+					"type": "text(256)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"description": {
+					"name": "description",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"shortDescription": {
+					"name": "shortDescription",
+					"type": "text(500)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"version": {
+					"name": "version",
+					"type": "text(50)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"author": {
+					"name": "author",
+					"type": "text(256)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"authorId": {
+					"name": "authorId",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"category": {
+					"name": "category",
+					"type": "text(100)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"tags": {
+					"name": "tags",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"downloadCount": {
+					"name": "downloadCount",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 0
+				},
+				"rating": {
+					"name": "rating",
+					"type": "real",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 0
+				},
+				"ratingCount": {
+					"name": "ratingCount",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 0
+				},
+				"price": {
+					"name": "price",
+					"type": "real",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 0
+				},
+				"featured": {
+					"name": "featured",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": false
+				},
+				"verified": {
+					"name": "verified",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": false
+				},
+				"status": {
+					"name": "status",
+					"type": "text(50)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'pending'"
+				},
+				"telegramBotDeeplink": {
+					"name": "telegramBotDeeplink",
+					"type": "text(500)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"githubUrl": {
+					"name": "githubUrl",
+					"type": "text(500)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"documentationUrl": {
+					"name": "documentationUrl",
+					"type": "text(500)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"screenshots": {
+					"name": "screenshots",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"requirements": {
+					"name": "requirements",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"changelog": {
+					"name": "changelog",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"createdAt": {
+					"name": "createdAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(unixepoch())"
+				},
+				"updatedAt": {
+					"name": "updatedAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"extera_plugins_plugin_slug_unique": {
+					"name": "extera_plugins_plugin_slug_unique",
+					"columns": ["slug"],
+					"isUnique": true
+				},
+				"plugin_slug_idx": {
+					"name": "plugin_slug_idx",
+					"columns": ["slug"],
+					"isUnique": false
+				},
+				"plugin_category_idx": {
+					"name": "plugin_category_idx",
+					"columns": ["category"],
+					"isUnique": false
+				},
+				"plugin_author_idx": {
+					"name": "plugin_author_idx",
+					"columns": ["authorId"],
+					"isUnique": false
+				},
+				"plugin_status_idx": {
+					"name": "plugin_status_idx",
+					"columns": ["status"],
+					"isUnique": false
+				},
+				"plugin_featured_idx": {
+					"name": "plugin_featured_idx",
+					"columns": ["featured"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"extera_plugins_plugin_authorId_extera_plugins_user_id_fk": {
+					"name": "extera_plugins_plugin_authorId_extera_plugins_user_id_fk",
+					"tableFrom": "extera_plugins_plugin",
+					"tableTo": "extera_plugins_user",
+					"columnsFrom": ["authorId"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"extera_plugins_post": {
+			"name": "extera_plugins_post",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"name": {
+					"name": "name",
+					"type": "text(256)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"createdById": {
+					"name": "createdById",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"createdAt": {
+					"name": "createdAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(unixepoch())"
+				},
+				"updatedAt": {
+					"name": "updatedAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"created_by_idx": {
+					"name": "created_by_idx",
+					"columns": ["createdById"],
+					"isUnique": false
+				},
+				"name_idx": {
+					"name": "name_idx",
+					"columns": ["name"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"extera_plugins_post_createdById_extera_plugins_user_id_fk": {
+					"name": "extera_plugins_post_createdById_extera_plugins_user_id_fk",
+					"tableFrom": "extera_plugins_post",
+					"tableTo": "extera_plugins_user",
+					"columnsFrom": ["createdById"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"extera_plugins_session": {
+			"name": "extera_plugins_session",
+			"columns": {
+				"sessionToken": {
+					"name": "sessionToken",
+					"type": "text(255)",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"userId": {
+					"name": "userId",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"expires": {
+					"name": "expires",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"session_userId_idx": {
+					"name": "session_userId_idx",
+					"columns": ["userId"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"extera_plugins_session_userId_extera_plugins_user_id_fk": {
+					"name": "extera_plugins_session_userId_extera_plugins_user_id_fk",
+					"tableFrom": "extera_plugins_session",
+					"tableTo": "extera_plugins_user",
+					"columnsFrom": ["userId"],
+					"columnsTo": ["id"],
+					"onDelete": "no action",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"extera_plugins_user": {
+			"name": "extera_plugins_user",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "text(255)",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"name": {
+					"name": "name",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"email": {
+					"name": "email",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"emailVerified": {
+					"name": "emailVerified",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false,
+					"default": "(unixepoch())"
+				},
+				"image": {
+					"name": "image",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"telegramId": {
+					"name": "telegramId",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"telegramUsername": {
+					"name": "telegramUsername",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"telegramFirstName": {
+					"name": "telegramFirstName",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"telegramLastName": {
+					"name": "telegramLastName",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"githubUsername": {
+					"name": "githubUsername",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"role": {
+					"name": "role",
+					"type": "text(50)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'user'"
+				},
+				"isVerified": {
+					"name": "isVerified",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": false
+				},
+				"createdAt": {
+					"name": "createdAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(unixepoch())"
+				},
+				"updatedAt": {
+					"name": "updatedAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"extera_plugins_user_telegramId_unique": {
+					"name": "extera_plugins_user_telegramId_unique",
+					"columns": ["telegramId"],
+					"isUnique": true
+				}
+			},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"extera_plugins_verification_token": {
+			"name": "extera_plugins_verification_token",
+			"columns": {
+				"identifier": {
+					"name": "identifier",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"token": {
+					"name": "token",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"expires": {
+					"name": "expires",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				}
+			},
+			"indexes": {},
+			"foreignKeys": {},
+			"compositePrimaryKeys": {
+				"extera_plugins_verification_token_identifier_token_pk": {
+					"columns": ["identifier", "token"],
+					"name": "extera_plugins_verification_token_identifier_token_pk"
+				}
+			},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"extera_plugins_notification": {
+			"name": "extera_plugins_notification",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"userId": {
+					"name": "userId",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"pluginId": {
+					"name": "pluginId",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"type": {
+					"name": "type",
+					"type": "text(50)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"title": {
+					"name": "title",
+					"type": "text(256)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"message": {
+					"name": "message",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"data": {
+					"name": "data",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"isRead": {
+					"name": "isRead",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": false
+				},
+				"sentToTelegram": {
+					"name": "sentToTelegram",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": false
+				},
+				"telegramMessageId": {
+					"name": "telegramMessageId",
+					"type": "text(100)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"createdAt": {
+					"name": "createdAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(unixepoch())"
+				}
+			},
+			"indexes": {
+				"notification_user_idx": {
+					"name": "notification_user_idx",
+					"columns": ["userId"],
+					"isUnique": false
+				},
+				"notification_plugin_idx": {
+					"name": "notification_plugin_idx",
+					"columns": ["pluginId"],
+					"isUnique": false
+				},
+				"notification_type_idx": {
+					"name": "notification_type_idx",
+					"columns": ["type"],
+					"isUnique": false
+				},
+				"notification_read_idx": {
+					"name": "notification_read_idx",
+					"columns": ["isRead"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"extera_plugins_notification_userId_extera_plugins_user_id_fk": {
+					"name": "extera_plugins_notification_userId_extera_plugins_user_id_fk",
+					"tableFrom": "extera_plugins_notification",
+					"tableTo": "extera_plugins_user",
+					"columnsFrom": ["userId"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"extera_plugins_notification_pluginId_extera_plugins_plugin_id_fk": {
+					"name": "extera_plugins_notification_pluginId_extera_plugins_plugin_id_fk",
+					"tableFrom": "extera_plugins_notification",
+					"tableTo": "extera_plugins_plugin",
+					"columnsFrom": ["pluginId"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"extera_plugins_plugin_pipeline_check": {
+			"name": "extera_plugins_plugin_pipeline_check",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"pluginId": {
+					"name": "pluginId",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"checkType": {
+					"name": "checkType",
+					"type": "text(100)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"status": {
+					"name": "status",
+					"type": "text(50)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'pending'"
+				},
+				"score": {
+					"name": "score",
+					"type": "real",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"details": {
+					"name": "details",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"errorMessage": {
+					"name": "errorMessage",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"llmModel": {
+					"name": "llmModel",
+					"type": "text(100)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"llmPrompt": {
+					"name": "llmPrompt",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"llmResponse": {
+					"name": "llmResponse",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"executionTime": {
+					"name": "executionTime",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"createdAt": {
+					"name": "createdAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(unixepoch())"
+				},
+				"completedAt": {
+					"name": "completedAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"pipeline_plugin_idx": {
+					"name": "pipeline_plugin_idx",
+					"columns": ["pluginId"],
+					"isUnique": false
+				},
+				"pipeline_status_idx": {
+					"name": "pipeline_status_idx",
+					"columns": ["status"],
+					"isUnique": false
+				},
+				"pipeline_type_idx": {
+					"name": "pipeline_type_idx",
+					"columns": ["checkType"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"extera_plugins_plugin_pipeline_check_pluginId_extera_plugins_plugin_id_fk": {
+					"name": "extera_plugins_plugin_pipeline_check_pluginId_extera_plugins_plugin_id_fk",
+					"tableFrom": "extera_plugins_plugin_pipeline_check",
+					"tableTo": "extera_plugins_plugin",
+					"columnsFrom": ["pluginId"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"extera_plugins_plugin_pipeline_queue": {
+			"name": "extera_plugins_plugin_pipeline_queue",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"pluginId": {
+					"name": "pluginId",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"priority": {
+					"name": "priority",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 5
+				},
+				"status": {
+					"name": "status",
+					"type": "text(50)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "'queued'"
+				},
+				"retryCount": {
+					"name": "retryCount",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 0
+				},
+				"maxRetries": {
+					"name": "maxRetries",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": 3
+				},
+				"errorMessage": {
+					"name": "errorMessage",
+					"type": "text",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"scheduledAt": {
+					"name": "scheduledAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"startedAt": {
+					"name": "startedAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"completedAt": {
+					"name": "completedAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"createdAt": {
+					"name": "createdAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(unixepoch())"
+				}
+			},
+			"indexes": {
+				"queue_status_idx": {
+					"name": "queue_status_idx",
+					"columns": ["status"],
+					"isUnique": false
+				},
+				"queue_priority_idx": {
+					"name": "queue_priority_idx",
+					"columns": ["priority"],
+					"isUnique": false
+				},
+				"queue_scheduled_idx": {
+					"name": "queue_scheduled_idx",
+					"columns": ["scheduledAt"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"extera_plugins_plugin_pipeline_queue_pluginId_extera_plugins_plugin_id_fk": {
+					"name": "extera_plugins_plugin_pipeline_queue_pluginId_extera_plugins_plugin_id_fk",
+					"tableFrom": "extera_plugins_plugin_pipeline_queue",
+					"tableTo": "extera_plugins_plugin",
+					"columnsFrom": ["pluginId"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"extera_plugins_user_notification_setting": {
+			"name": "extera_plugins_user_notification_setting",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"userId": {
+					"name": "userId",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"enablePluginUpdates": {
+					"name": "enablePluginUpdates",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": true
+				},
+				"enableSecurityAlerts": {
+					"name": "enableSecurityAlerts",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": true
+				},
+				"enableReviewNotifications": {
+					"name": "enableReviewNotifications",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": false
+				},
+				"enableTelegramNotifications": {
+					"name": "enableTelegramNotifications",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": true
+				},
+				"telegramChatId": {
+					"name": "telegramChatId",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"createdAt": {
+					"name": "createdAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(unixepoch())"
+				},
+				"updatedAt": {
+					"name": "updatedAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				}
+			},
+			"indexes": {
+				"extera_plugins_user_notification_setting_userId_unique": {
+					"name": "extera_plugins_user_notification_setting_userId_unique",
+					"columns": ["userId"],
+					"isUnique": true
+				},
+				"notification_settings_user_idx": {
+					"name": "notification_settings_user_idx",
+					"columns": ["userId"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"extera_plugins_user_notification_setting_userId_extera_plugins_user_id_fk": {
+					"name": "extera_plugins_user_notification_setting_userId_extera_plugins_user_id_fk",
+					"tableFrom": "extera_plugins_user_notification_setting",
+					"tableTo": "extera_plugins_user",
+					"columnsFrom": ["userId"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		},
+		"extera_plugins_user_plugin_subscription": {
+			"name": "extera_plugins_user_plugin_subscription",
+			"columns": {
+				"id": {
+					"name": "id",
+					"type": "integer",
+					"primaryKey": true,
+					"notNull": true,
+					"autoincrement": true
+				},
+				"userId": {
+					"name": "userId",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"pluginId": {
+					"name": "pluginId",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"subscriptionType": {
+					"name": "subscriptionType",
+					"type": "text(50)",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false
+				},
+				"isActive": {
+					"name": "isActive",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": true
+				},
+				"telegramChatId": {
+					"name": "telegramChatId",
+					"type": "text(255)",
+					"primaryKey": false,
+					"notNull": false,
+					"autoincrement": false
+				},
+				"createdAt": {
+					"name": "createdAt",
+					"type": "integer",
+					"primaryKey": false,
+					"notNull": true,
+					"autoincrement": false,
+					"default": "(unixepoch())"
+				}
+			},
+			"indexes": {
+				"subscription_user_idx": {
+					"name": "subscription_user_idx",
+					"columns": ["userId"],
+					"isUnique": false
+				},
+				"subscription_plugin_idx": {
+					"name": "subscription_plugin_idx",
+					"columns": ["pluginId"],
+					"isUnique": false
+				},
+				"subscription_type_idx": {
+					"name": "subscription_type_idx",
+					"columns": ["subscriptionType"],
+					"isUnique": false
+				},
+				"subscription_unique_idx": {
+					"name": "subscription_unique_idx",
+					"columns": ["userId", "pluginId", "subscriptionType"],
+					"isUnique": false
+				}
+			},
+			"foreignKeys": {
+				"extera_plugins_user_plugin_subscription_userId_extera_plugins_user_id_fk": {
+					"name": "extera_plugins_user_plugin_subscription_userId_extera_plugins_user_id_fk",
+					"tableFrom": "extera_plugins_user_plugin_subscription",
+					"tableTo": "extera_plugins_user",
+					"columnsFrom": ["userId"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				},
+				"extera_plugins_user_plugin_subscription_pluginId_extera_plugins_plugin_id_fk": {
+					"name": "extera_plugins_user_plugin_subscription_pluginId_extera_plugins_plugin_id_fk",
+					"tableFrom": "extera_plugins_user_plugin_subscription",
+					"tableTo": "extera_plugins_plugin",
+					"columnsFrom": ["pluginId"],
+					"columnsTo": ["id"],
+					"onDelete": "cascade",
+					"onUpdate": "no action"
+				}
+			},
+			"compositePrimaryKeys": {},
+			"uniqueConstraints": {},
+			"checkConstraints": {}
+		}
+	},
+	"views": {},
+	"enums": {},
+	"_meta": {
+		"schemas": {},
+		"tables": {},
+		"columns": {}
+	},
+	"internal": {
+		"indexes": {}
+	}
+}
