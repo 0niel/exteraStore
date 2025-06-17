@@ -82,8 +82,8 @@ export default function BotAdminPage() {
 	};
 
 	return (
-		<div className="min-h-screen bg-background">
-			<div className="container mx-auto px-4 py-8">
+		<div className="py-8">
+			<div className="container mx-auto px-4">
 				<div className="mb-8">
 					<h1 className="mb-2 font-bold text-3xl">{t("title")}</h1>
 					<p className="text-muted-foreground">{t("description")}</p>

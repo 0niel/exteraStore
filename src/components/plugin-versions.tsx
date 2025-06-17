@@ -162,7 +162,7 @@ export function PluginVersions({ pluginSlug }: PluginVersionsProps) {
 										)}
 									</div>
 
-									<div className="mb-3 grid grid-cols-2 gap-4 text-muted-foreground text-sm md:grid-cols-4">
+									<div className="mb-3 grid grid-cols-1 gap-2 overflow-x-auto text-muted-foreground text-sm sm:grid-cols-2 md:grid-cols-4 md:gap-4">
 										<div className="flex items-center gap-1">
 											<Calendar className="h-4 w-4" />
 											<span>{formatDate(new Date(version.createdAt))}</span>

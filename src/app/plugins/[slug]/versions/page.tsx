@@ -1,4 +1,5 @@
 import { ArrowLeft, Download, GitBranch, Star, User } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PluginVersions } from "~/components/plugin-versions";
@@ -22,6 +23,7 @@ interface PluginVersionsPageProps {
 export default async function PluginVersionsPage({
 	params,
 }: PluginVersionsPageProps) {
+	const t = useTranslations("PluginVersionsPage");
 	const { slug } = await params;
 	const plugin = await api.plugins.getBySlug({ slug });
 
@@ -36,7 +38,7 @@ export default async function PluginVersionsPage({
 					<Link href={`/plugins/${slug}`}>
 						<Button variant="ghost" className="mb-4">
 							<ArrowLeft className="mr-2 h-4 w-4" />
-							Назад к плагину
+							{t("back_to_plugin")}
 						</Button>
 					</Link>
 
@@ -44,7 +46,7 @@ export default async function PluginVersionsPage({
 						<div>
 							<h1 className="mb-2 font-bold text-4xl">{plugin.name}</h1>
 							<p className="mb-4 text-muted-foreground text-xl">
-								История версий и изменений
+								{t("version_history_and_changes")}
 							</p>
 							<div className="flex items-center gap-4 text-muted-foreground text-sm">
 								<span className="flex items-center gap-1">
@@ -53,11 +55,12 @@ export default async function PluginVersionsPage({
 								</span>
 								<span className="flex items-center gap-1">
 									<Download className="h-4 w-4" />
-									{plugin.downloadCount} загрузок
+									{plugin.downloadCount} {t("downloads")}
 								</span>
 								<span className="flex items-center gap-1">
 									<Star className="h-4 w-4" />
-									{plugin.rating.toFixed(1)} ({plugin.ratingCount} отзывов)
+									{plugin.rating.toFixed(1)} ({plugin.ratingCount}{" "}
+									{t("reviews")})
 								</span>
 							</div>
 						</div>

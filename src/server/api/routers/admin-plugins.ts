@@ -1,10 +1,11 @@
-import { and, count, desc, eq, sql } from "drizzle-orm";
+import { and, count, desc, eq, not, sql } from "drizzle-orm";
+import { asc } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { env } from "~/env";
 import { TelegramNotifications } from "~/lib/telegram-notifications";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { plugins, users } from "~/server/db/schema";
+import { pluginCategories, plugins, users } from "~/server/db/schema";
 
 const ADMINS = (env.INITIAL_ADMINS ?? "i_am_oniel")
 	.split(",")
@@ -173,6 +174,128 @@ export const adminPluginsRouter = createTRPCRouter({
 				.limit(1);
 			await ctx.db.delete(plugins).where(eq(plugins.id, input.id));
 			if (pluginRow[0]) revalidatePath(`/plugins/${pluginRow[0].slug}`);
+			return { success: true };
+		}),
+	getCategories: protectedProcedure.query(async ({ ctx }) => {
+		if (ctx.session.user.role !== "admin") {
+			throw new Error("Unauthorized");
+		}
+
+		return await ctx.db
+			.select()
+			.from(pluginCategories)
+			.orderBy(asc(pluginCategories.name));
+	}),
+	createCategory: protectedProcedure
+		.input(
+			z.object({
+				name: z.string().min(1).max(50),
+				slug: z.string().min(1).max(50),
+				description: z.string().optional(),
+				icon: z.string().optional(),
+				color: z.string().optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			if (ctx.session.user.role !== "admin") {
+				throw new Error("Unauthorized");
+			}
+
+			const existingCategory = await ctx.db
+				.select({ id: pluginCategories.id })
+				.from(pluginCategories)
+				.where(eq(pluginCategories.slug, input.slug))
+				.limit(1);
+
+			if (existingCategory.length > 0) {
+				throw new Error("Категория с таким slug уже существует");
+			}
+
+			const [category] = await ctx.db
+				.insert(pluginCategories)
+				.values({
+					name: input.name,
+					slug: input.slug,
+					description: input.description,
+					icon: input.icon,
+					color: input.color,
+				})
+				.returning();
+
+			return category;
+		}),
+	updateCategory: protectedProcedure
+		.input(
+			z.object({
+				id: z.number(),
+				name: z.string().min(1).max(50),
+				slug: z.string().min(1).max(50),
+				description: z.string().optional(),
+				icon: z.string().optional(),
+				color: z.string().optional(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			if (ctx.session.user.role !== "admin") {
+				throw new Error("Unauthorized");
+			}
+
+			const existingCategory = await ctx.db
+				.select({ id: pluginCategories.id })
+				.from(pluginCategories)
+				.where(
+					and(
+						eq(pluginCategories.slug, input.slug),
+						not(eq(pluginCategories.id, input.id)),
+					),
+				)
+				.limit(1);
+
+			if (existingCategory.length > 0) {
+				throw new Error("Категория с таким slug уже существует");
+			}
+
+			const [category] = await ctx.db
+				.update(pluginCategories)
+				.set({
+					name: input.name,
+					slug: input.slug,
+					description: input.description,
+					icon: input.icon,
+					color: input.color,
+				})
+				.where(eq(pluginCategories.id, input.id))
+				.returning();
+
+			return category;
+		}),
+	deleteCategory: protectedProcedure
+		.input(z.object({ id: z.number() }))
+		.mutation(async ({ ctx, input }) => {
+			if (ctx.session.user.role !== "admin") {
+				throw new Error("Unauthorized");
+			}
+
+			const pluginsWithCategory = await ctx.db
+				.select({ id: plugins.id })
+				.from(plugins)
+				.innerJoin(
+					pluginCategories,
+					eq(plugins.category, pluginCategories.slug),
+				)
+				.where(eq(pluginCategories.id, input.id))
+				.limit(1);
+
+			if (pluginsWithCategory.length > 0) {
+				throw new Error(
+					"Нельзя удалить категорию, которая используется в плагинах",
+				);
+			}
+
+			await ctx.db
+				.delete(pluginCategories)
+				.where(eq(pluginCategories.id, input.id));
+
 			return { success: true };
 		}),
 });

@@ -82,7 +82,7 @@ export default function AdminPluginsPage() {
 	};
 
 	return (
-		<div className="min-h-screen bg-background py-8">
+		<div className="py-8">
 			<div className="container mx-auto max-w-6xl px-4">
 				<h1 className="mb-6 font-bold text-4xl">{t("title")}</h1>
 

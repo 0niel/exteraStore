@@ -319,5 +319,52 @@
 		"pending": "Pending",
 		"approved": "Approved",
 		"rejected": "Rejected"
+	},
+	"PluginVersionsPage": {
+		"back_to_plugin": "Back to plugin",
+		"version_history_and_changes": "Version history and changes",
+		"downloads": "downloads",
+		"reviews": "reviews"
+	},
+	"AdminCategories": {
+		"title": "Categories Management",
+		"add_category": "Add Category",
+		"edit_category": "Edit Category",
+		"delete_category": "Delete Category",
+		"no_categories": "No Categories",
+		"no_categories_description": "Create your first plugin category",
+		"add_first_category": "Add First Category",
+		"name": "Name",
+		"slug": "Slug",
+		"description": "Description",
+		"icon": "Icon",
+		"color": "Color",
+		"plugins": "plugins",
+		"no_description": "No description",
+		"name_placeholder": "Example: Tools",
+		"slug_placeholder": "Example: tools",
+		"description_placeholder": "Brief category description",
+		"icon_placeholder": "Example: 🛠️",
+		"color_placeholder": "#4CAF50",
+		"slug_help": "Used in URL, only latin letters, numbers and hyphens",
+		"icon_help": "You can use emoji or icon",
+		"fill_required_fields": "Please fill in all required fields",
+		"category_created": "Category successfully created",
+		"category_updated": "Category successfully updated",
+		"category_deleted": "Category successfully deleted",
+		"add_category_description": "Create a new category for plugins",
+		"edit_category_description": "Edit existing category",
+		"delete_category_description": "Are you sure you want to delete this category? This action cannot be undone.",
+		"cancel": "Cancel",
+		"save": "Save",
+		"create": "Create",
+		"delete": "Delete"
+	},
+	"AdminLayout": {
+		"admin_panel": "Admin Panel",
+		"plugins": "Plugins",
+		"categories": "Categories",
+		"bot": "Bot",
+		"back_to_site": "Back to Site"
 	}
 }

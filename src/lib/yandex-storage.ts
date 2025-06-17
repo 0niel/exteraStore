@@ -55,7 +55,7 @@ export class YandexStorage {
 			const result = await s3Client.send(command);
 			console.log("Upload successful:", result);
 
-			return `https://storage.yandexcloud.net/${BUCKET_NAME}/${key}`;
+			return `https://exteragram-plugins.storage.yandexcloud.net/images/${timestamp}-${safeName}`;
 		} catch (error) {
 			console.error("Error uploading file to Yandex Storage:", error);
 			console.error("Error details:", {
