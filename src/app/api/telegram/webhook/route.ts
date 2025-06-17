@@ -6,6 +6,7 @@ import {
 	pluginVersions,
 	plugins,
 	users,
+	pluginCategories,
 } from "~/server/db/schema";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -715,29 +716,25 @@ async function showCategories(
 	messageId?: number,
 ) {
 	try {
-		const categoriesResult = await db
-			.select({ tags: plugins.tags })
-			.from(plugins)
-			.where(sql`${plugins.tags} IS NOT NULL AND ${plugins.tags} != ''`);
-
-		const categoriesSet = new Set<string>();
-		categoriesResult.forEach((row: { tags: string | null }) => {
-			if (row.tags) {
-				row.tags.split(",").forEach((tag: string) => {
-					const cleanTag = tag.trim();
-					if (cleanTag) categoriesSet.add(cleanTag);
-				});
-			}
-		});
-
-		const categories = Array.from(categoriesSet).sort();
 		const limit = 8;
 		const offset = page * limit;
-		const pageCategories = categories.slice(offset, offset + limit);
-		const hasMore = categories.length > offset + limit;
+
+		const categories = await db
+			.select()
+			.from(pluginCategories)
+			.orderBy(pluginCategories.name)
+			.limit(limit + 1)
+			.offset(offset);
+
+		const hasMore = categories.length > limit;
+		const pageCategories = hasMore ? categories.slice(0, limit) : categories;
+
+		const totalCount = await db
+			.select({ count: sql<number>`count(*)` })
+			.from(pluginCategories);
 
 		let message = "📂 <b>Категории плагинов</b>\n\n";
-		message += `Всего категорий: ${categories.length}\n\n`;
+		message += `Всего категорий: ${totalCount[0]?.count || 0}\n\n`;
 
 		const keyboard = {
 			inline_keyboard: [] as Array<
@@ -747,14 +744,17 @@ async function showCategories(
 
 		for (let i = 0; i < pageCategories.length; i += 2) {
 			const row: Array<{ text: string; callback_data: string }> = [];
+			const category1 = pageCategories[i];
 			row.push({
-				text: `📁 ${pageCategories[i]}`,
-				callback_data: `category_${pageCategories[i]}_0`,
+				text: `${category1.icon || '📁'} ${category1.name}`,
+				callback_data: `category_${category1.slug}_0`,
 			});
+			
 			if (i + 1 < pageCategories.length) {
+				const category2 = pageCategories[i + 1];
 				row.push({
-					text: `📁 ${pageCategories[i + 1]}`,
-					callback_data: `category_${pageCategories[i + 1]}_0`,
+					text: `${category2.icon || '📁'} ${category2.name}`,
+					callback_data: `category_${category2.slug}_0`,
 				});
 			}
 			keyboard.inline_keyboard.push(row);
@@ -794,7 +794,7 @@ async function showCategories(
 
 async function showPluginsByCategory(
 	chatId: string,
-	category: string,
+	categorySlug: string,
 	page: number,
 	messageId?: number,
 ) {
@@ -802,17 +802,35 @@ async function showPluginsByCategory(
 		const limit = 5;
 		const offset = page * limit;
 
+		// Получаем информацию о категории
+		const categoryInfo = await db
+			.select()
+			.from(pluginCategories)
+			.where(eq(pluginCategories.slug, categorySlug))
+			.limit(1);
+
+		if (!categoryInfo[0]) {
+			await sendMessage(chatId, "❌ Категория не найдена.");
+			return;
+		}
+
+		const category = categoryInfo[0];
+
 		const categoryPlugins = await db
 			.select()
 			.from(plugins)
-			.where(like(plugins.tags, `%${category}%`))
+			.where(eq(plugins.category, categorySlug))
 			.limit(limit + 1)
 			.offset(offset);
 
 		const hasMore = categoryPlugins.length > limit;
 		const results = hasMore ? categoryPlugins.slice(0, limit) : categoryPlugins;
 
-		let message = `📁 <b>Категория: ${category}</b>\n\n`;
+		let message = `${category.icon || '📁'} <b>Категория: ${category.name}</b>\n\n`;
+		
+		if (category.description) {
+			message += `${category.description}\n\n`;
+		}
 
 		if (results.length === 0) {
 			message += "❌ В этой категории пока нет плагинов.";
@@ -844,13 +862,13 @@ async function showPluginsByCategory(
 			if (page > 0) {
 				paginationRow.push({
 					text: "⬅️ Назад",
-					callback_data: `category_${category}_${page - 1}`,
+					callback_data: `category_${categorySlug}_${page - 1}`,
 				});
 			}
 			if (hasMore) {
 				paginationRow.push({
 					text: "Далее ➡️",
-					callback_data: `category_${category}_${page + 1}`,
+					callback_data: `category_${categorySlug}_${page + 1}`,
 				});
 			}
 			if (paginationRow.length > 0) {
