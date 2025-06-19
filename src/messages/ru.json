@@ -88,14 +88,39 @@
 		"file_size": "Размер файла",
 		"stable": "Стабильная",
 		"beta": "Бета",
-		"no_versions": "Версии для этого плагина не найдены."
+		"no_versions": "Версии для этого плагина не найдены.",
+		"loading": "Загрузка версий...",
+		"download_file": "Скачать файл",
+		"view_changes": "Просмотреть изменения"
 	},
 	"PluginVersions": {
 		"versions": "Версии",
 		"description": "Просматривайте и загружайте различные версии плагина.",
 		"upload_version": "Загрузить новую версию",
 		"no_versions_found": "Версии не найдены",
-		"no_versions_description": "Для этого плагина пока нет доступных версий."
+		"no_versions_description": "Для этого плагина пока нет доступных версий.",
+		"version_history": "История версий",
+		"all_versions": "Все версии",
+		"version": "Версия",
+		"current": "Текущая",
+		"stable": "Стабильная",
+		"beta": "Бета",
+		"downloads": "скачиваний",
+		"changelog": "Список изменений",
+		"download": "Скачать",
+		"details": "Подробности",
+		"version_details": "Информация о версии",
+		"file_size": "Размер файла",
+		"creation_date": "Дата создания",
+		"type": "Тип",
+		"sha256_hash": "SHA256 хеш",
+		"git_info": "Информация Git",
+		"commit": "Коммит",
+		"branch": "Ветка",
+		"tag": "Тег",
+		"download_telegram": "Плагин доступен в Telegram",
+		"file_downloaded": "Файл успешно скачан",
+		"download_error": "Ошибка загрузки: {error}"
 	},
 	"ScreenshotUploader": {
 		"screenshots": "Скриншоты",
@@ -169,6 +194,9 @@
 		"simple": "Просто",
 		"bot_open_error": "Ошибка при открытии Telegram бота. Пожалуйста, попробуйте снова."
 	},
+	"Auth": {
+		"telegramAuthFailed": "Ошибка аутентификации через Telegram. Попробуйте еще раз."
+	},
 	"UploadVersionDialog": {
 		"upload_new_version": "Загрузить новую версию",
 		"upload_new_version_description": "Загрузите новую версию вашего плагина.",
@@ -179,13 +207,33 @@
 		"stable_version": "Стабильная версия",
 		"stable_version_description": "Отметьте эту версию как стабильную. Пользователи будут уведомлены об этом обновлении.",
 		"upload": "Загрузить",
-		"uploading": "Загрузка..."
+		"uploading": "Загрузка...",
+		"plugin_file": "Файл плагина",
+		"selected_file": "Выбранный файл",
+		"upload_plugin_file_description": "Загрузите файл плагина в формате .py или .txt",
+		"changelog_description": "Опишите изменения в этой версии",
+		"cancel": "Отмена",
+		"upload_version": "Загрузить версию",
+		"upload_success": "Версия успешно загружена",
+		"upload_error": "Ошибка загрузки: {error}",
+		"semantic_version": "Используйте семантическое версионирование (например, 1.0.1)"
 	},
 	"VersionDiffDialog": {
 		"view_changes": "Просмотреть изменения",
 		"changes_between_versions": "Изменения между версиями",
 		"no_changes": "Нет изменений между этими версиями.",
-		"close": "Закрыть"
+		"close": "Закрыть",
+		"version_comparison": "Сравнение версий",
+		"select_versions_to_compare": "Выберите две версии для сравнения",
+		"old_version": "Старая версия",
+		"new_version": "Новая версия",
+		"select_version": "Выберите версию",
+		"select_two_versions": "Выберите две версии для сравнения",
+		"select_different_versions": "Выберите разные версии",
+		"loading_diff": "Загрузка изменений...",
+		"diff_error": "Ошибка при загрузке изменений",
+		"comparison_of": "Сравнение версий {fromVersion} и {toVersion}",
+		"no_data_to_compare": "Нет данных для сравнения"
 	},
 	"BotAdmin": {
 		"title": "Администрирование Telegram бота",

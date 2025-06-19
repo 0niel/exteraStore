@@ -169,6 +169,9 @@
 		"simple": "Simple",
 		"bot_open_error": "Error opening Telegram bot. Please try again."
 	},
+	"Auth": {
+		"telegramAuthFailed": "Telegram authentication failed. Please try again."
+	},
 	"UploadVersionDialog": {
 		"upload_new_version": "Upload New Version",
 		"upload_new_version_description": "Upload a new version of your plugin.",
