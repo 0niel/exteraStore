@@ -15,23 +15,27 @@ const globalForDb = globalThis as unknown as {
 	postgresClient: postgres.Sql | undefined;
 };
 
-const isPostgres = env.DATABASE_URL.startsWith("postgresql");
+const isPostgres = env.DATABASE_URL?.startsWith("postgresql") ?? false;
 
 let db: any;
 let client: Client | null = null;
 let postgresClient: postgres.Sql | null = null;
 
-if (isPostgres) {
+if (isPostgres && env.DATABASE_URL) {
 	postgresClient = globalForDb.postgresClient ?? postgres(env.DATABASE_URL);
 	if (env.NODE_ENV !== "production")
 		globalForDb.postgresClient = postgresClient;
 
 	db = drizzlePostgres(postgresClient, { schema });
-} else {
+} else if (env.DATABASE_URL) {
 	client = globalForDb.client ?? createClient({ url: env.DATABASE_URL });
 	if (env.NODE_ENV !== "production") globalForDb.client = client;
 
 	db = drizzleLibsql(client, { schema });
+} else {
+	// Fallback for build time when DATABASE_URL is not available
+	// This will only be used during build and not at runtime
+	db = null;
 }
 
 export { db, client, postgresClient };

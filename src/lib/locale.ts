@@ -3,7 +3,7 @@ import { type Locale, locales } from "~/lib/i18n-config";
 export function getLocaleFromCookie(): Locale | null {
 	if (typeof document === "undefined") return null;
 
-	const cookies = document.cookie.split(";");
+	const cookies = document.cookie?.split(";") ?? [];
 	const localeCookie = cookies
 		.find((cookie) => cookie.trim().startsWith("locale="))
 		?.split("=")[1];

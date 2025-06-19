@@ -7,17 +7,12 @@ import {
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "~/env.js";
 
-if (!env.YANDEX_STORAGE_ACCESS_KEY || !env.YANDEX_STORAGE_SECRET_KEY) {
-	console.error("Missing Yandex Storage credentials");
-	throw new Error("Yandex Storage credentials not configured");
-}
-
 const s3Client = new S3Client({
 	region: "ru-central1",
 	endpoint: "https://storage.yandexcloud.net",
 	credentials: {
-		accessKeyId: env.YANDEX_STORAGE_ACCESS_KEY,
-		secretAccessKey: env.YANDEX_STORAGE_SECRET_KEY,
+		accessKeyId: env.YANDEX_STORAGE_ACCESS_KEY || "",
+		secretAccessKey: env.YANDEX_STORAGE_SECRET_KEY || "",
 	},
 	forcePathStyle: true,
 });
@@ -36,6 +31,10 @@ export class YandexStorage {
 		fileName: string,
 		contentType = "image/jpeg",
 	): Promise<string> {
+		if (!env.YANDEX_STORAGE_ACCESS_KEY || !env.YANDEX_STORAGE_SECRET_KEY) {
+			throw new Error("Yandex Storage credentials not configured");
+		}
+
 		try {
 			const timestamp = Date.now();
 			const safeName = fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
@@ -179,7 +178,7 @@ export class YandexStorage {
 
 export class ImageUtils {
 	static isImage(contentType: string): boolean {
-		return contentType.startsWith("image/");
+		return contentType?.startsWith("image/") ?? false;
 	}
 
 	static getExtensionFromMimeType(mimeType: string): string {
