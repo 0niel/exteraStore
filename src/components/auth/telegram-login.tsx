@@ -2,7 +2,9 @@
 
 import { LoginButton } from "@telegram-auth/react";
 import { signIn } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import { useCallback } from "react";
+import { toast } from "sonner";
 import { TelegramIcon } from "~/components/icons/telegram-icon";
 import { Button } from "~/components/ui/button";
 
@@ -17,18 +19,25 @@ type TelegramAuthData = {
 };
 
 export function TelegramLoginButton({ botUsername }: { botUsername?: string }) {
-	const handleAuth = useCallback((data: TelegramAuthData) => {
-		signIn("telegram", {
-			id: data.id,
-			first_name: data.first_name,
-			last_name: data.last_name,
-			username: data.username,
-			photo_url: data.photo_url,
-			auth_date: data.auth_date,
-			hash: data.hash,
-			callbackUrl: "/",
-		});
-	}, []);
+	const t = useTranslations("Auth");
+	const handleAuth = useCallback(
+		async (data: TelegramAuthData) => {
+			const result = await signIn("telegram", {
+				...data,
+				redirect: false,
+			});
+
+			if (result?.error) {
+				toast.error(t("telegramAuthFailed"));
+				return;
+			}
+
+			if (result?.ok) {
+				window.location.href = "/";
+			}
+		},
+		[t],
+	);
 
 	if (!botUsername) {
 		return (

@@ -3,10 +3,10 @@ import { type NextRequest, NextResponse } from "next/server";
 import { db } from "~/server/db";
 import {
 	type plugins as Plugin,
+	pluginCategories,
 	pluginVersions,
 	plugins,
 	users,
-	pluginCategories,
 } from "~/server/db/schema";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -746,14 +746,14 @@ async function showCategories(
 			const row: Array<{ text: string; callback_data: string }> = [];
 			const category1 = pageCategories[i];
 			row.push({
-				text: `${category1.icon || '📁'} ${category1.name}`,
+				text: `${category1.icon || "📁"} ${category1.name}`,
 				callback_data: `category_${category1.slug}_0`,
 			});
-			
+
 			if (i + 1 < pageCategories.length) {
 				const category2 = pageCategories[i + 1];
 				row.push({
-					text: `${category2.icon || '📁'} ${category2.name}`,
+					text: `${category2.icon || "📁"} ${category2.name}`,
 					callback_data: `category_${category2.slug}_0`,
 				});
 			}
@@ -826,8 +826,8 @@ async function showPluginsByCategory(
 		const hasMore = categoryPlugins.length > limit;
 		const results = hasMore ? categoryPlugins.slice(0, limit) : categoryPlugins;
 
-		let message = `${category.icon || '📁'} <b>Категория: ${category.name}</b>\n\n`;
-		
+		let message = `${category.icon || "📁"} <b>Категория: ${category.name}</b>\n\n`;
+
 		if (category.description) {
 			message += `${category.description}\n\n`;
 		}
