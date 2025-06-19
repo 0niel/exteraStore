@@ -12,48 +12,45 @@ concurrency:
 
 jobs:
   test:
-    name: Test & Build
+    name: 🧪 Test & Build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
+      - name: 📦 Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 10.11.0
 
-      - name: Setup Node.js
+      - name: ⚡ Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'pnpm'
 
-      - name: Install dependencies
+      - name: 🔧 Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Type check
+      - name: 🔍 Type check
         run: pnpm typecheck
 
-      - name: Generate database schema
-        run: pnpm db:generate
-
-      - name: Build
+      - name: 🏗️ Build
         run: pnpm build
         env:
           SKIP_ENV_VALIDATION: 1
 
   docker:
-    name: Docker Build Test
+    name: 🐳 Docker Build Test
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
+      - name: 🔧 Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image
+      - name: 🏗️ Build Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -64,25 +61,25 @@ jobs:
           cache-to: type=gha,mode=max
 
   security:
-    name: Security Audit
+    name: 🔐 Security Audit
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
+      - name: 📦 Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 10.11.0
 
-      - name: Setup Node.js
+      - name: ⚡ Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'pnpm'
 
-      - name: Install dependencies
+      - name: 🔧 Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Security audit
+      - name: 🛡️ Security audit
         run: pnpm audit --audit-level moderate
