@@ -41,6 +41,13 @@ jobs:
         run: pnpm build
         env:
           SKIP_ENV_VALIDATION: 1
+          NEXTAUTH_SECRET: dummy-secret-for-build
+          NEXTAUTH_URL: https://localhost:3000
+          DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
+          YANDEX_STORAGE_ACCESS_KEY: dummy-access-key
+          YANDEX_STORAGE_SECRET_KEY: dummy-secret-key
+          YANDEX_STORAGE_BUCKET: dummy-bucket
+          YANDEX_STORAGE_REGION: ru-central1
 
   build-and-push:
     name: 🐳 Build & Push Image
