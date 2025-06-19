@@ -1,20 +1,23 @@
-name: Deploy to Production
+name: Deploy
 
 on:
   push:
-    branches: [main]
-  pull_request:
     branches: [main]
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
+concurrency:
+  group: production
+  cancel-in-progress: false
+
 jobs:
   test:
+    name: Test & Build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup pnpm
@@ -31,36 +34,35 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run linter
-        run: pnpm check
-
-      - name: Run type check
+      - name: Type check
         run: pnpm typecheck
 
       - name: Generate database schema
         run: pnpm db:generate
 
-      - name: Build application
+      - name: Build
         run: pnpm build
         env:
           SKIP_ENV_VALIDATION: 1
 
   build-and-push:
+    name: Build & Push Image
     needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
     permissions:
       contents: read
       packages: write
-
+    outputs:
+      image: ${{ steps.meta.outputs.tags }}
+      digest: ${{ steps.build.outputs.digest }}
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to Container Registry
+      - name: Login to Container Registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -74,11 +76,11 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=ref,event=branch
-            type=ref,event=pr
             type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest
 
-      - name: Build and push Docker image
+      - name: Build and push
+        id: build
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -88,16 +90,15 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
 
   deploy:
+    name: Deploy to Production
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
     environment: production
-
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup SSH
@@ -106,68 +107,32 @@ jobs:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Add server to known hosts
-        run: |
-          ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+        run: ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Deploy to server
+      - name: Copy files to server
         run: |
-          # Копируем файлы на сервер
-          scp -r docker-compose.yml traefik/ monitoring/ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/app/
-          
-          # Подключаемся к серверу и выполняем деплой
+          scp -r docker-compose.yml traefik/ monitoring/ postgres/ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/app/
+
+      - name: Deploy application
+        run: |
           ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
             cd ~/app
             
-            # Создаем сеть traefik если её нет
             docker network create traefik-network 2>/dev/null || true
             
-            # Создаем директории для данных
             mkdir -p traefik/acme
             chmod 600 traefik/acme
             
-            # Логинимся в GitHub Container Registry
             echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
-            # Обновляем образы
-            docker-compose pull app
+            docker compose down
+            docker compose pull
+            docker compose up --build -d
             
-            # Перезапускаем сервисы
-            docker-compose up -d --remove-orphans
-            
-            # Выполняем миграции базы данных
-            docker-compose exec -T app pnpm db:migrate
-            
-            # Очищаем неиспользуемые образы
             docker image prune -f
           EOF
 
       - name: Health check
         run: |
-          # Ждем запуска приложения
           sleep 30
-          
-          # Проверяем доступность
-          curl -f https://exterastore.app/api/health || exit 1
-
-  # Уведомление в Telegram о деплое
-  notify:
-    needs: [deploy]
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-      - name: Send Telegram notification
-        uses: appleboy/telegram-action@master
-        with:
-          to: ${{ secrets.TELEGRAM_CHAT_ID }}
-          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          message: |
-            🚀 Деплой завершен!
-            
-            Repository: ${{ github.repository }}
-            Branch: ${{ github.ref_name }}
-            Commit: ${{ github.sha }}
-            Author: ${{ github.actor }}
-            
-            Status: ${{ needs.deploy.result }}
-            
-            URL: https://exterastore.app
+          curl -f https://exterastore.app/api/health

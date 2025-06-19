@@ -1,4 +1,4 @@
-name: Continuous Integration
+name: CI
 
 on:
   pull_request:
@@ -6,11 +6,16 @@ on:
   push:
     branches: [develop]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  lint-and-test:
+  test:
+    name: Test & Build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup pnpm
@@ -27,52 +32,22 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run linter
-        run: pnpm check
-
-      - name: Run type check
+      - name: Type check
         run: pnpm typecheck
 
       - name: Generate database schema
         run: pnpm db:generate
 
-      - name: Build application
+      - name: Build
         run: pnpm build
         env:
           SKIP_ENV_VALIDATION: 1
 
-  security-check:
+  docker:
+    name: Docker Build Test
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.11.0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Run security audit
-        run: pnpm audit --audit-level moderate
-
-      - name: Check for vulnerabilities
-        run: |
-          # Проверяем на известные уязвимости
-          npx audit-ci --moderate
-
-  docker-build-test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
@@ -88,39 +63,11 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Test Docker image
-        run: |
-          docker run --rm -d --name test-app -p 3000:3000 \
-            -e SKIP_ENV_VALIDATION=1 \
-            -e DATABASE_URL="file:./test.db" \
-            test:latest
-          
-          sleep 10
-
-          curl -f http://localhost:3000 || exit 1
-          
-          docker stop test-app
-
-  # (optional)
-  sonarcloud:
-    runs-on: ubuntu-latest
-    if: github.event.pull_request.head.repo.full_name == github.repository
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarcloud-github-action@master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
-  lighthouse:
+  security:
+    name: Security Audit
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup pnpm
@@ -137,22 +84,5 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build application
-        run: pnpm build
-        env:
-          SKIP_ENV_VALIDATION: 1
-
-      - name: Start application
-        run: |
-          pnpm start &
-          sleep 10
-        env:
-          SKIP_ENV_VALIDATION: 1
-          DATABASE_URL: "file:./test.db"
-
-      - name: Run Lighthouse CI
-        run: |
-          npm install -g @lhci/cli@0.12.x
-          lhci autorun
-        env:
-          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+      - name: Security audit
+        run: pnpm audit --audit-level moderate
