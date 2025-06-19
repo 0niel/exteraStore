@@ -158,7 +158,7 @@ export const pluginUploadRouter = createTRPCRouter({
 					.update(plugins)
 					.set({
 						version: input.version,
-						updatedAt: new Date(),
+						updatedAt: Math.floor(Date.now() / 1000),
 					})
 					.where(eq(plugins.id, input.pluginId));
 			}
@@ -283,7 +283,7 @@ export const pluginUploadRouter = createTRPCRouter({
 						.update(plugins)
 						.set({
 							version: newVersion,
-							updatedAt: new Date(),
+							updatedAt: Math.floor(Date.now() / 1000),
 						})
 						.where(eq(plugins.id, input.pluginId));
 				}
@@ -292,7 +292,7 @@ export const pluginUploadRouter = createTRPCRouter({
 					.update(pluginGitRepos)
 					.set({
 						lastCommitHash: commitHash,
-						lastSyncAt: new Date(),
+						lastSyncAt: Math.floor(Date.now() / 1000),
 					})
 					.where(eq(pluginGitRepos.id, plugin.gitRepo.id));
 

@@ -25,6 +25,7 @@ import { useParams } from "next/navigation";
 import React, { useState } from "react";
 
 import { toast } from "sonner";
+import { ImageGallery } from "~/components/image-gallery";
 import { PluginPipeline } from "~/components/plugin-pipeline";
 import { PluginSubscription } from "~/components/plugin-subscription";
 import { PluginVersions } from "~/components/plugin-versions";
@@ -64,7 +65,6 @@ export default function PluginDetailPage() {
 	const slug = params.slug as string;
 	const { data: session } = useSession();
 
-	const [selectedScreenshot, setSelectedScreenshot] = useState(0);
 	const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
 	const [reviewRating, setReviewRating] = useState(5);
 	const [reviewTitle, setReviewTitle] = useState("");
@@ -79,6 +79,10 @@ export default function PluginDetailPage() {
 	const { data: favoriteData } = api.favorites.check.useQuery(
 		{ pluginId: plugin?.id ?? 0 },
 		{ enabled: !!plugin?.id && !!session },
+	);
+	const { data: versions } = api.pluginVersions.getVersions.useQuery(
+		{ pluginSlug: slug },
+		{ enabled: !!slug },
 	);
 
 	const downloadMutation = api.plugins.download.useMutation({
@@ -238,6 +242,9 @@ export default function PluginDetailPage() {
 		? JSON.parse(plugin.requirements)
 		: {};
 
+	const latestVersion = versions?.[0];
+	const latestChangelog = latestVersion?.changelog || plugin.changelog;
+
 	return (
 		<div className="min-h-screen bg-background">
 			<div className="container mx-auto px-3 py-4 sm:px-4 sm:py-6 md:py-8">
@@ -341,66 +348,15 @@ export default function PluginDetailPage() {
 							<h2 className="font-semibold text-xl">Превью плагина</h2>
 
 							{screenshots.length > 0 ? (
-								<div className="space-y-4">
-									{/* Основной скриншот */}
-									<div className="relative overflow-hidden rounded-xl border">
-										<div className="relative aspect-video">
-											<Image
-												src={
-													screenshots[selectedScreenshot] ??
-													screenshots[0] ??
-													""
-												}
-												alt={`Скриншот ${selectedScreenshot + 1}`}
-												fill
-												className="object-cover"
-												sizes="(max-width: 768px) 100vw, 66vw"
-											/>
-
-											{/* Информационные бейджи */}
-											<div className="absolute bottom-4 left-4 flex gap-2">
-												<Badge className="border-0 bg-black/60 text-white backdrop-blur-sm">
-													{plugin.category}
-												</Badge>
-												{plugin.verified && (
-													<Badge className="border-0 bg-blue-500/80 text-white backdrop-blur-sm">
-														<Shield className="mr-1 h-3 w-3" />
-														Проверен
-													</Badge>
-												)}
-											</div>
-										</div>
-									</div>
-
-									{screenshots.length > 1 && (
-										<div className="flex gap-2 overflow-x-auto pb-2">
-											{screenshots.map((screenshot, index) => (
-												<button
-													key={index}
-													onClick={() => setSelectedScreenshot(index)}
-													className={`relative h-12 w-20 flex-shrink-0 overflow-hidden rounded-lg border-2 transition-colors ${
-														selectedScreenshot === index
-															? "border-primary"
-															: "border-muted hover:border-muted-foreground"
-													}`}
-												>
-													<Image
-														src={screenshot}
-														alt={`Миниатюра ${index + 1}`}
-														fill
-														className="object-cover"
-														sizes="80px"
-													/>
-												</button>
-											))}
-										</div>
-									)}
-								</div>
+								<ImageGallery
+									images={screenshots}
+									alt={`Скриншоты плагина ${plugin.name}`}
+									category={plugin.category}
+									verified={plugin.verified}
+								/>
 							) : (
-								/* Заглушка когда нет скриншотов */
 								<div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-muted/30 to-muted/60">
 									<div className="relative aspect-video">
-										{/* Красивый градиентный фон */}
 										<div
 											className={`absolute inset-0 bg-gradient-to-br ${
 												plugin.category.toLowerCase() === "ui"
@@ -418,12 +374,10 @@ export default function PluginDetailPage() {
 											}`}
 										/>
 
-										{/* Декоративные элементы */}
 										<div className="absolute inset-0 bg-black/20" />
 										<div className="-translate-y-32 absolute top-0 right-0 h-64 w-64 translate-x-32 rounded-full bg-white/10" />
 										<div className="-translate-x-24 absolute bottom-0 left-0 h-48 w-48 translate-y-24 rounded-full bg-white/5" />
 
-										{/* Центральный контент */}
 										<div className="absolute inset-0 flex items-center justify-center">
 											<div className="text-center text-white">
 												<div className="mb-4 inline-block rounded-3xl bg-white/20 p-8 backdrop-blur-sm">
@@ -438,7 +392,6 @@ export default function PluginDetailPage() {
 											</div>
 										</div>
 
-										{/* Информационные бейджи */}
 										<div className="absolute bottom-4 left-4 flex gap-2">
 											<Badge className="border-0 bg-white/20 text-white backdrop-blur-sm">
 												{plugin.category}
@@ -454,7 +407,6 @@ export default function PluginDetailPage() {
 								</div>
 							)}
 
-							{/* Дополнительная информация */}
 							<div className="grid grid-cols-2 gap-4 text-center md:grid-cols-4">
 								<div className="rounded-lg bg-muted/30 p-3">
 									<div className="font-bold text-2xl text-primary">
@@ -475,9 +427,11 @@ export default function PluginDetailPage() {
 								</div>
 								<div className="rounded-lg bg-muted/30 p-3">
 									<div className="font-bold text-2xl text-primary">
-										v{plugin.version}
+										v{latestVersion?.version || plugin.version}
 									</div>
-									<div className="text-muted-foreground text-sm">Версия</div>
+									<div className="text-muted-foreground text-sm">
+										{latestVersion ? "Последняя версия" : "Версия"}
+									</div>
 								</div>
 								<div className="rounded-lg bg-muted/30 p-3">
 									<div className="font-bold text-2xl text-primary">
@@ -488,7 +442,6 @@ export default function PluginDetailPage() {
 							</div>
 						</div>
 
-						{/* Tabs */}
 						<Tabs defaultValue="description" className="w-full">
 							<div className="scrollbar-hide overflow-x-auto">
 								<TabsList className="inline-flex h-auto w-max min-w-full justify-start p-1">
@@ -502,7 +455,8 @@ export default function PluginDetailPage() {
 										value="versions"
 										className="whitespace-nowrap px-3 py-2 text-xs sm:text-sm"
 									>
-										Версии
+										Версии{" "}
+										{versions && versions.length > 0 && `(${versions.length})`}
 									</TabsTrigger>
 									<TabsTrigger
 										value="pipeline"
@@ -702,10 +656,33 @@ export default function PluginDetailPage() {
 							</TabsContent>
 
 							<TabsContent value="changelog" className="mt-6">
-								<div className="prose prose-neutral dark:prose-invert max-w-none">
-									<div className="whitespace-pre-wrap">
-										{plugin.changelog || "История изменений пока не доступна."}
+								<div className="space-y-6">
+									<div className="flex items-center justify-between">
+										<h3 className="font-semibold text-lg">История изменений</h3>
+										{latestVersion && (
+											<Badge variant="outline">
+												Последняя: v{latestVersion.version}
+											</Badge>
+										)}
 									</div>
+
+									{latestChangelog ? (
+										<div className="prose prose-neutral dark:prose-invert max-w-none">
+											<div className="whitespace-pre-wrap">
+												{latestChangelog}
+											</div>
+										</div>
+									) : (
+										<div className="rounded-lg border border-dashed p-8 text-center">
+											<FileText className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+											<h4 className="mb-2 font-medium">
+												История изменений не найдена
+											</h4>
+											<p className="text-muted-foreground text-sm">
+												Автор плагина пока не добавил описание изменений.
+											</p>
+										</div>
+									)}
 								</div>
 							</TabsContent>
 

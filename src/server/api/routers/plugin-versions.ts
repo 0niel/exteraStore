@@ -389,7 +389,7 @@ export const pluginVersionsRouter = createTRPCRouter({
 						.set({
 							version: input.version,
 							changelog: input.changelog,
-							updatedAt: new Date(),
+							updatedAt: Math.floor(Date.now() / 1000),
 						})
 						.where(eq(plugins.id, plugin[0].id));
 				}

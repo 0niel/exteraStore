@@ -325,7 +325,7 @@ export const pluginPipelineRouter = createTRPCRouter({
 				.values({
 					pluginId: input.pluginId,
 					priority: 5,
-					scheduledAt: new Date(),
+					scheduledAt: Math.floor(Date.now() / 1000),
 				})
 				.returning();
 
@@ -357,7 +357,7 @@ export const pluginPipelineRouter = createTRPCRouter({
 						.update(pluginPipelineQueue)
 						.set({
 							status: "processing",
-							startedAt: new Date(),
+							startedAt: Math.floor(Date.now() / 1000),
 						})
 						.where(eq(pluginPipelineQueue.id, item.id));
 
@@ -413,7 +413,7 @@ export const pluginPipelineRouter = createTRPCRouter({
 									score: result.score,
 									details: JSON.stringify(result.details),
 									executionTime,
-									completedAt: new Date(),
+									completedAt: Math.floor(Date.now() / 1000),
 								})
 								.where(
 									and(
@@ -429,7 +429,7 @@ export const pluginPipelineRouter = createTRPCRouter({
 									status: "error",
 									errorMessage:
 										error instanceof Error ? error.message : "Unknown error",
-									completedAt: new Date(),
+									completedAt: Math.floor(Date.now() / 1000),
 								})
 								.where(
 									and(
@@ -445,7 +445,7 @@ export const pluginPipelineRouter = createTRPCRouter({
 						.update(pluginPipelineQueue)
 						.set({
 							status: "completed",
-							completedAt: new Date(),
+							completedAt: Math.floor(Date.now() / 1000),
 						})
 						.where(eq(pluginPipelineQueue.id, item.id));
 
@@ -458,7 +458,7 @@ export const pluginPipelineRouter = createTRPCRouter({
 							errorMessage:
 								error instanceof Error ? error.message : "Unknown error",
 							retryCount: item.retryCount + 1,
-							completedAt: new Date(),
+							completedAt: Math.floor(Date.now() / 1000),
 						})
 						.where(eq(pluginPipelineQueue.id, item.id));
 
@@ -556,7 +556,7 @@ export const pluginPipelineRouter = createTRPCRouter({
 				.update(userNotificationSettings)
 				.set({
 					...input,
-					updatedAt: new Date(),
+					updatedAt: Math.floor(Date.now() / 1000),
 				})
 				.where(eq(userNotificationSettings.userId, ctx.session.user.id))
 				.returning();
