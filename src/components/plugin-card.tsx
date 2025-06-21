@@ -1,25 +1,23 @@
 "use client";
 
 import {
+	Calendar,
 	Code,
 	Download,
 	ExternalLink,
 	Heart,
 	Shield,
 	Star,
+	User,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardFooter,
-	CardHeader,
-} from "~/components/ui/card";
-import { cn, formatNumber } from "~/lib/utils";
+import { Card, CardContent } from "~/components/ui/card";
+import { cn, formatDate, formatNumber } from "~/lib/utils";
+import { api } from "~/trpc/react";
 
 interface Plugin {
 	id: number;
@@ -29,6 +27,7 @@ interface Plugin {
 	shortDescription?: string | null;
 	version: string;
 	author: string;
+	authorId?: string | null;
 	category: string;
 	tags: string | null;
 	downloadCount: number;
@@ -38,7 +37,7 @@ interface Plugin {
 	featured: boolean;
 	verified: boolean;
 	screenshots: string | null;
-	createdAt: Date;
+	createdAt: Date | number;
 }
 
 interface PluginCardProps {
@@ -56,136 +55,243 @@ export function PluginCard({
 }: PluginCardProps) {
 	const t = useTranslations("PluginCard");
 	const tags = plugin.tags ? (JSON.parse(plugin.tags) as string[]) : [];
+	const screenshots = plugin.screenshots
+		? (JSON.parse(plugin.screenshots) as string[])
+		: [];
+
+	const { data: categories } = api.categories.getAll.useQuery();
+	const { data: authorData } = api.users.getPublicProfile.useQuery(
+		{ id: plugin.authorId || "" },
+		{ enabled: !!plugin.authorId },
+	);
+
+	const categoryName =
+		categories?.find((c) => c.slug === plugin.category)?.name ||
+		plugin.category;
+
+	if (compact) {
+		return (
+			<Card
+				className={cn(
+					"group border-border/50 transition-all duration-200 hover:shadow-md",
+					className,
+				)}
+			>
+				<div className="flex items-center gap-4 p-4">
+					<div className="relative flex-shrink-0">
+						<div
+							className={cn(
+								"flex h-12 w-12 items-center justify-center rounded-lg",
+								plugin.category === "ui" &&
+									"bg-purple-100 dark:bg-purple-900/20",
+								plugin.category === "utility" &&
+									"bg-blue-100 dark:bg-blue-900/20",
+								plugin.category === "security" &&
+									"bg-red-100 dark:bg-red-900/20",
+								plugin.category === "automation" &&
+									"bg-green-100 dark:bg-green-900/20",
+								plugin.category === "development" &&
+									"bg-indigo-100 dark:bg-indigo-900/20",
+								![
+									"ui",
+									"utility",
+									"security",
+									"automation",
+									"development",
+								].includes(plugin.category) &&
+									"bg-gray-100 dark:bg-gray-900/20",
+							)}
+						>
+							<Code
+								className={cn(
+									"h-6 w-6",
+									plugin.category === "ui" &&
+										"text-purple-600 dark:text-purple-400",
+									plugin.category === "utility" &&
+										"text-blue-600 dark:text-blue-400",
+									plugin.category === "security" &&
+										"text-red-600 dark:text-red-400",
+									plugin.category === "automation" &&
+										"text-green-600 dark:text-green-400",
+									plugin.category === "development" &&
+										"text-indigo-600 dark:text-indigo-400",
+									![
+										"ui",
+										"utility",
+										"security",
+										"automation",
+										"development",
+									].includes(plugin.category) &&
+										"text-gray-600 dark:text-gray-400",
+								)}
+							/>
+						</div>
+						{plugin.verified && (
+							<div className="-top-1 -right-1 absolute">
+								<div className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-white">
+									<Shield className="h-3 w-3" />
+								</div>
+							</div>
+						)}
+					</div>
+
+					<div className="min-w-0 flex-1">
+						<div className="flex items-start justify-between gap-2">
+							<div className="min-w-0">
+								<h3 className="truncate font-semibold transition-colors group-hover:text-primary">
+									<Link
+										href={`/plugins/${plugin.slug}`}
+										className="hover:underline"
+									>
+										{plugin.name}
+									</Link>
+								</h3>
+								<p className="line-clamp-1 text-muted-foreground text-sm">
+									{plugin.shortDescription || plugin.description}
+								</p>
+							</div>
+							<div className="flex flex-shrink-0 items-center gap-2">
+								<div className="flex items-center gap-1">
+									<Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+									<span className="font-medium text-sm">
+										{plugin.rating.toFixed(1)}
+									</span>
+								</div>
+								<Badge variant="outline" className="text-xs">
+									{categoryName}
+								</Badge>
+							</div>
+						</div>
+
+						<div className="mt-2 flex items-center gap-4 text-muted-foreground text-xs">
+							<div className="flex items-center gap-1">
+								<User className="h-3 w-3" />
+								<span>{plugin.author}</span>
+							</div>
+							<div className="flex items-center gap-1">
+								<Download className="h-3 w-3" />
+								<span>{formatNumber(plugin.downloadCount)}</span>
+							</div>
+							<div className="flex items-center gap-1">
+								<Calendar className="h-3 w-3" />
+								<span>{formatDate(new Date(plugin.createdAt))}</span>
+							</div>
+						</div>
+					</div>
+
+					<Button size="sm" variant="ghost" asChild>
+						<Link href={`/plugins/${plugin.slug}`}>
+							<ExternalLink className="h-4 w-4" />
+						</Link>
+					</Button>
+				</div>
+			</Card>
+		);
+	}
 
 	return (
-		<Card
-			className={cn(
-				"group hover:-translate-y-1 border border-border/50 bg-card/50 backdrop-blur-sm transition-all duration-300 hover:border-primary/20",
-				plugin.featured && "border-primary/30",
-				className,
-			)}
-		>
-			{plugin.featured && (
-				<div className="absolute top-3 right-3 z-10">
-					<Badge className="border-primary/20 bg-primary/10 text-primary">
-						⭐ {t("featured")}
-					</Badge>
-				</div>
-			)}
-
-			<CardHeader className={cn("p-6", compact && "p-4")}>
-				<div className="flex items-center justify-between">
-					<div className="flex items-center gap-3">
-						<div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-							<Code className="h-6 w-6 text-primary" />
-						</div>
-						<div>
-							<h3 className="font-semibold text-lg transition-colors group-hover:text-primary">
-								<Link href={`/plugins/${plugin.slug}`}>{plugin.name}</Link>
-							</h3>
-							<p className="text-muted-foreground text-sm">v{plugin.version}</p>
-						</div>
-					</div>
-
-					<div className="flex items-center gap-1 rounded-full bg-yellow-50 px-2 py-1 dark:bg-yellow-900/20">
-						<Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-						<span className="font-medium text-sm">
-							{plugin.rating.toFixed(1)}
-						</span>
-					</div>
-				</div>
-			</CardHeader>
-
-			<CardContent className={cn("px-6 pb-4", compact && "px-4 pb-3")}>
-				<div className="space-y-4">
-					{showAuthor && (
-						<div className="flex items-center gap-2 text-muted-foreground text-sm">
-							<Avatar className="h-5 w-5">
-								<AvatarImage
-									src={`https://t.me/i/userpic/320/${plugin.author.toLowerCase().replace(/[^a-z0-9]/g, "")}.jpg`}
-								/>
-								<AvatarFallback className="text-xs">
-									{plugin.author.slice(0, 2).toUpperCase()}
-								</AvatarFallback>
-							</Avatar>
-							<span>{plugin.author}</span>
+		<Link href={`/plugins/${plugin.slug}`} className="group block">
+			<Card
+				className={cn(
+					"hover:-translate-y-1 overflow-hidden border-border/50 transition-all duration-200 hover:shadow-xl",
+					plugin.featured && "ring-2 ring-yellow-500/20",
+					className,
+				)}
+			>
+				<div className="space-y-4 p-5">
+					<div className="space-y-2">
+						<div className="flex items-start justify-between gap-3">
+							<div className="min-w-0 flex-1">
+								<h3 className="truncate font-semibold text-lg transition-colors group-hover:text-primary">
+									{plugin.name}
+								</h3>
+								<p className="mt-1 line-clamp-2 text-muted-foreground text-sm">
+									{plugin.shortDescription || plugin.description}
+								</p>
+							</div>
 							{plugin.verified && (
-								<>
-									<span>•</span>
-									<div className="flex items-center gap-1 text-blue-600">
-										<Shield className="h-3 w-3" />
-										<span className="text-xs">{t("verified")}</span>
+								<div className="flex-shrink-0">
+									<div className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-500/10">
+										<Shield className="h-4 w-4 text-blue-500" />
 									</div>
-								</>
+								</div>
 							)}
 						</div>
-					)}
+					</div>
 
-					<p className="line-clamp-3 text-muted-foreground text-sm">
-						{plugin.shortDescription || plugin.description}
-					</p>
+					<div className="flex items-center gap-3">
+						<Avatar className="h-8 w-8">
+							<AvatarImage src={authorData?.image || undefined} />
+							<AvatarFallback className="bg-primary/10 text-xs">
+								{plugin.author.slice(0, 2).toUpperCase()}
+							</AvatarFallback>
+						</Avatar>
+						<div className="min-w-0 flex-1">
+							<p className="truncate font-medium text-sm">{plugin.author}</p>
+							<p className="text-muted-foreground text-xs">Разработчик</p>
+						</div>
+						<Badge
+							variant="outline"
+							className={cn(
+								"text-xs",
+								plugin.category === "ui" &&
+									"border-purple-500/50 text-purple-600 dark:text-purple-400",
+								plugin.category === "utility" &&
+									"border-blue-500/50 text-blue-600 dark:text-blue-400",
+								plugin.category === "security" &&
+									"border-red-500/50 text-red-600 dark:text-red-400",
+								plugin.category === "automation" &&
+									"border-green-500/50 text-green-600 dark:text-green-400",
+								plugin.category === "development" &&
+									"border-indigo-500/50 text-indigo-600 dark:text-indigo-400",
+							)}
+						>
+							{categoryName}
+						</Badge>
+					</div>
 
-					{tags.length > 0 && !compact && (
-						<div className="flex flex-wrap gap-1.5">
+					<div className="flex items-center justify-between border-t pt-3">
+						<div className="flex items-center gap-4 text-sm">
+							<div className="flex items-center gap-1">
+								<Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+								<span className="font-medium">{plugin.rating.toFixed(1)}</span>
+								<span className="text-muted-foreground">
+									({plugin.ratingCount})
+								</span>
+							</div>
+							<div className="flex items-center gap-1 text-muted-foreground">
+								<Download className="h-4 w-4" />
+								<span>{formatNumber(plugin.downloadCount)}</span>
+							</div>
+						</div>
+
+						{plugin.price > 0 && (
+							<Badge className="border-green-500/20 bg-green-500/10 text-green-600">
+								${plugin.price}
+							</Badge>
+						)}
+					</div>
+
+					{tags.length > 0 && (
+						<div className="flex flex-wrap gap-1 pt-2">
 							{tags.slice(0, 3).map((tag) => (
-								<Badge key={tag} variant="secondary" className="text-xs">
+								<Badge
+									key={tag}
+									variant="secondary"
+									className="px-2 py-0 text-xs"
+								>
 									{tag}
 								</Badge>
 							))}
 							{tags.length > 3 && (
-								<Badge variant="secondary" className="text-xs">
+								<Badge variant="secondary" className="px-2 py-0 text-xs">
 									+{tags.length - 3}
 								</Badge>
 							)}
 						</div>
 					)}
 				</div>
-			</CardContent>
-
-			<CardFooter className={cn("px-6 pt-0 pb-6", compact && "px-4 pb-4")}>
-				<div className="w-full space-y-3">
-					<div className="flex flex-wrap items-center justify-between gap-2">
-						<div className="flex items-center gap-3">
-							<div className="flex items-center gap-1 text-muted-foreground">
-								<Download className="h-4 w-4" />
-								<span className="font-medium text-sm">
-									{formatNumber(plugin.downloadCount)}
-								</span>
-							</div>
-							<Badge variant="secondary" className="text-xs">
-								{plugin.category}
-							</Badge>
-						</div>
-
-						<div className="flex items-center gap-2">
-							{plugin.price > 0 && (
-								<Badge className="border-green-500/20 bg-green-500/10 text-green-600 text-xs">
-									${plugin.price}
-								</Badge>
-							)}
-							{plugin.price === 0 && (
-								<Badge className="border-blue-500/20 bg-blue-500/10 text-blue-600 text-xs">
-									{t("free")}
-								</Badge>
-							)}
-							<Button
-								variant="ghost"
-								size="sm"
-								className="h-7 w-7 p-0 opacity-60 transition-colors hover:bg-red-50 hover:text-red-500 hover:opacity-100"
-							>
-								<Heart className="h-3.5 w-3.5" />
-							</Button>
-						</div>
-					</div>
-
-					<Button
-						asChild
-						className="w-full transition-colors group-hover:bg-primary group-hover:text-primary-foreground"
-					>
-						<Link href={`/plugins/${plugin.slug}`}>{t("details")}</Link>
-					</Button>
-				</div>
-			</CardFooter>
-		</Card>
+			</Card>
+		</Link>
 	);
 }

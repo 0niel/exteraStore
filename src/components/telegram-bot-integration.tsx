@@ -89,18 +89,11 @@ export function TelegramBotIntegration({
 					</div>
 				</CardHeader>
 				<CardContent className="space-y-4">
-					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-2">
-							{price > 0 ? (
-								<Badge className="bg-green-600">${price}</Badge>
-							) : (
-								<Badge className="bg-blue-600">{t("free")}</Badge>
-							)}
-							<Badge variant="outline" className="text-xs">
-								<Shield className="mr-1 h-3 w-3" />
-								{t("verified")}
-							</Badge>
-						</div>
+					<div className="flex items-center justify-center">
+						<Badge variant="outline" className="text-xs">
+							<Shield className="mr-1 h-3 w-3" />
+							{t("verified")}
+						</Badge>
 					</div>
 
 					<Button

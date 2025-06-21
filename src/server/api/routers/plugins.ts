@@ -340,4 +340,27 @@ export const pluginsRouter = createTRPCRouter({
 				.where(eq(plugins.authorId, input.authorId))
 				.orderBy(desc(plugins.createdAt));
 		}),
+
+	getStats: publicProcedure.query(async ({ ctx }) => {
+		const [pluginStats] = await ctx.db
+			.select({
+				totalPlugins: count(plugins.id),
+				totalDownloads: sql<number>`COALESCE(SUM(${plugins.downloadCount}), 0)`,
+			})
+			.from(plugins)
+			.where(eq(plugins.status, "approved"));
+
+		const [developerStats] = await ctx.db
+			.select({
+				totalDevelopers: sql<number>`COUNT(DISTINCT ${plugins.authorId})`,
+			})
+			.from(plugins)
+			.where(eq(plugins.status, "approved"));
+
+		return {
+			totalPlugins: pluginStats?.totalPlugins || 0,
+			totalDownloads: Number(pluginStats?.totalDownloads) || 0,
+			totalDevelopers: Number(developerStats?.totalDevelopers) || 0,
+		};
+	}),
 });

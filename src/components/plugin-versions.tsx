@@ -16,6 +16,7 @@ import {
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -216,10 +217,8 @@ export function PluginVersions({ pluginSlug }: PluginVersionsProps) {
 												<FileText className="h-4 w-4" />
 												{t("changelog")}
 											</h5>
-											<div className="rounded bg-muted p-3 text-muted-foreground text-sm">
-												<div className="whitespace-pre-wrap">
-													{version.changelog}
-												</div>
+											<div className="prose prose-sm prose-neutral dark:prose-invert max-w-none rounded bg-muted p-3">
+												<ReactMarkdown>{version.changelog}</ReactMarkdown>
 											</div>
 										</div>
 									)}
@@ -235,7 +234,7 @@ export function PluginVersions({ pluginSlug }: PluginVersionsProps) {
 										{t("download")}
 									</Button>
 
-									{index === 0 && versions.length > 1 && (
+									{index < versions.length - 1 && (
 										<Button
 											variant="link"
 											size="sm"
@@ -243,9 +242,9 @@ export function PluginVersions({ pluginSlug }: PluginVersionsProps) {
 											className="h-auto p-0 font-mono text-blue-600 text-xs hover:text-blue-800"
 										>
 											<Link
-												href={`/plugins/${pluginSlug}/diff/${versions[1]?.fileHash?.substring(0, 8)}/${versions[0]?.fileHash?.substring(0, 8)}`}
+												href={`/plugins/${pluginSlug}/diff/${versions[index + 1]?.fileHash?.substring(0, 8)}/${version.fileHash?.substring(0, 8)}`}
 											>
-												#{versions[0]?.fileHash?.substring(0, 8)}
+												Сравнить с предыдущей
 											</Link>
 										</Button>
 									)}
@@ -352,10 +351,8 @@ export function PluginVersions({ pluginSlug }: PluginVersionsProps) {
 														<label className="font-medium text-sm">
 															{t("changelog")}
 														</label>
-														<div className="mt-2 rounded bg-muted p-3 text-muted-foreground text-sm">
-															<div className="whitespace-pre-wrap">
-																{version.changelog}
-															</div>
+														<div className="prose prose-sm prose-neutral dark:prose-invert mt-2 max-w-none rounded bg-muted p-3">
+															<ReactMarkdown>{version.changelog}</ReactMarkdown>
 														</div>
 													</div>
 												)}
