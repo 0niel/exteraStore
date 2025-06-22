@@ -26,7 +26,7 @@ interface Plugin {
 	description: string;
 	shortDescription?: string | null;
 	version: string;
-	author: string;
+	author?: string | null;
 	authorId?: string | null;
 	category: string;
 	tags: string | null;
@@ -166,7 +166,7 @@ export function PluginCard({
 						<div className="mt-2 flex items-center gap-4 text-muted-foreground text-xs">
 							<div className="flex items-center gap-1">
 								<User className="h-3 w-3" />
-								<span>{plugin.author}</span>
+								<span>{plugin.author || "Unknown"}</span>
 							</div>
 							<div className="flex items-center gap-1">
 								<Download className="h-3 w-3" />
@@ -223,11 +223,13 @@ export function PluginCard({
 						<Avatar className="h-8 w-8">
 							<AvatarImage src={authorData?.image || undefined} />
 							<AvatarFallback className="bg-primary/10 text-xs">
-								{plugin.author.slice(0, 2).toUpperCase()}
+								{(plugin.author || "??").slice(0, 2).toUpperCase()}
 							</AvatarFallback>
 						</Avatar>
 						<div className="min-w-0 flex-1">
-							<p className="truncate font-medium text-sm">{plugin.author}</p>
+							<p className="truncate font-medium text-sm">
+								{plugin.author || "Unknown"}
+							</p>
 							<p className="text-muted-foreground text-xs">Разработчик</p>
 						</div>
 						<Badge

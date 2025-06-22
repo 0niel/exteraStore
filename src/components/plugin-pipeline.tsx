@@ -35,14 +35,14 @@ interface PluginPipelineProps {
 
 const checkTypeIcons = {
 	security: Shield,
-	quality: Code,
-	compatibility: Zap,
+	performance: Zap,
+	compatibility: Code,
 	malware: Bug,
 };
 
 const checkTypeNames = {
 	security: "Security",
-	quality: "Code Quality",
+	performance: "Performance",
 	compatibility: "Compatibility",
 	malware: "Malware Check",
 };
@@ -67,6 +67,8 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 	const t = useTranslations("PluginPipeline");
 	const [isRunning, setIsRunning] = useState(false);
 
+	const { data: plugin } = api.plugins.getBySlug.useQuery({ slug: pluginSlug });
+
 	const {
 		data: checks,
 		isLoading,
@@ -78,17 +80,21 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 
 	const runChecksMutation = api.pluginPipeline.runChecks.useMutation({
 		onSuccess: () => {
-			toast.success("Checks started successfully!");
+			toast.success("Проверки запущены успешно!");
 			setIsRunning(true);
 			refetch();
 		},
 		onError: (error) => {
-			toast.error(`Failed to start checks: ${error.message}`);
+			toast.error(`Ошибка при запуске проверок: ${error.message}`);
 		},
 	});
 
 	const handleRunChecks = () => {
-		toast.info("Feature in development");
+		if (!plugin?.id) {
+			toast.error("Плагин не найден");
+			return;
+		}
+		runChecksMutation.mutate({ pluginId: plugin.id });
 	};
 
 	if (isLoading) {
@@ -248,7 +254,14 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 							checkTypeIcons[type as keyof typeof checkTypeIcons] || Shield;
 						const StatusIcon =
 							statusIcons[check?.status as keyof typeof statusIcons] || Clock;
-						const typeName = t(type as any);
+						const typeName =
+							type === "performance"
+								? "Performance"
+								: type === "security"
+									? "Security"
+									: type === "compatibility"
+										? "Compatibility"
+										: t(type as any);
 
 						return (
 							<Card key={type}>
@@ -296,6 +309,37 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 													{check.errorMessage}
 												</div>
 											)}
+
+											{check?.shortDescription && (
+												<p className="mt-2 text-muted-foreground text-sm">
+													{check.shortDescription}
+												</p>
+											)}
+
+											{check?.classification &&
+												check.classification !== "safe" && (
+													<Badge
+														variant={
+															check.classification === "critical"
+																? "destructive"
+																: check.classification === "unsafe"
+																	? "destructive"
+																	: check.classification ===
+																			"potentially_unsafe"
+																		? "secondary"
+																		: "default"
+														}
+														className="mt-2"
+													>
+														{check.classification === "critical"
+															? "Критично"
+															: check.classification === "unsafe"
+																? "Небезопасно"
+																: check.classification === "potentially_unsafe"
+																	? "Потенциально небезопасно"
+																	: "Безопасно"}
+													</Badge>
+												)}
 
 											{check?.details && check.status !== "error" && (
 												<details className="mt-2">

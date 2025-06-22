@@ -12,269 +12,8 @@ import {
 	userNotificationSettings,
 	userPluginSubscriptions,
 } from "~/server/db/pipeline-schema";
-import { plugins } from "~/server/db/schema";
-
-class PluginLLMChecker {
-	private static readonly OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-	private static readonly ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
-
-	static async checkSecurity(
-		pluginCode: string,
-		pluginName: string,
-	): Promise<{
-		score: number;
-		details: any;
-		issues: string[];
-	}> {
-		const prompt = `
-Analyze this Python plugin for exteraGram for security issues.
-
-Plugin name: ${pluginName}
-
-Plugin code:
-\`\`\`python
-${pluginCode}
-\`\`\`
-
-Check for:
-1. Potentially dangerous imports (os, subprocess, eval, exec, etc.)
-2. Unverified network requests
-3. Filesystem operations
-4. Arbitrary code execution
-5. User data leaks
-6. SQL injections or similar vulnerabilities
-
-Respond in JSON format:
-{
-  "score": 0-100,
-  "issues": ["list of issues"],
-  "recommendations": ["fix recommendations"],
-  "severity": "low|medium|high|critical"
-}
-`;
-
-		try {
-			const response = await fetch(
-				"https://api.openai.com/v1/chat/completions",
-				{
-					method: "POST",
-					headers: {
-						Authorization: `Bearer ${PluginLLMChecker.OPENAI_API_KEY}`,
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						model: "gpt-4o-mini",
-						messages: [
-							{
-								role: "system",
-								content:
-									"You are a Python code security expert. Respond only in JSON format.",
-							},
-							{ role: "user", content: prompt },
-						],
-						temperature: 0.1,
-						max_tokens: 2000,
-					}),
-				},
-			);
-
-			if (!response.ok) {
-				throw new Error(`OpenAI API error: ${response.statusText}`);
-			}
-
-			const data = await response.json();
-			const result = JSON.parse(data.choices[0].message.content);
-
-			return {
-				score: result.score,
-				details: result,
-				issues: result.issues || [],
-			};
-		} catch (error) {
-			console.error("Security check failed:", error);
-			return {
-				score: 0,
-				details: {
-					error: error instanceof Error ? error.message : "Unknown error",
-				},
-				issues: ["Ошибка при проверке безопасности"],
-			};
-		}
-	}
-
-	static async checkQuality(
-		pluginCode: string,
-		pluginName: string,
-	): Promise<{
-		score: number;
-		details: any;
-		issues: string[];
-	}> {
-		const prompt = `
-Analyze the code quality of this Python plugin for exteraGram.
-
-Plugin name: ${pluginName}
-
-Plugin code:
-\`\`\`python
-${pluginCode}
-\`\`\`
-
-Check:
-1. Code structure and organization
-2. PEP 8 compliance
-3. Documentation and comments
-4. Error handling
-5. Performance
-6. Code readability
-7. Python best practices usage
-
-Respond in JSON format:
-{
-  "score": 0-100,
-  "issues": ["list of issues"],
-  "recommendations": ["improvement recommendations"],
-  "metrics": {
-    "complexity": 0-10,
-    "maintainability": 0-10,
-    "documentation": 0-10
-  }
-}
-`;
-
-		try {
-			const response = await fetch(
-				"https://api.openai.com/v1/chat/completions",
-				{
-					method: "POST",
-					headers: {
-						Authorization: `Bearer ${PluginLLMChecker.OPENAI_API_KEY}`,
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						model: "gpt-4o-mini",
-						messages: [
-							{
-								role: "system",
-								content:
-									"You are a Python code quality expert. Respond only in JSON format.",
-							},
-							{ role: "user", content: prompt },
-						],
-						temperature: 0.1,
-						max_tokens: 2000,
-					}),
-				},
-			);
-
-			if (!response.ok) {
-				throw new Error(`OpenAI API error: ${response.statusText}`);
-			}
-
-			const data = await response.json();
-			const result = JSON.parse(data.choices[0].message.content);
-
-			return {
-				score: result.score,
-				details: result,
-				issues: result.issues || [],
-			};
-		} catch (error) {
-			console.error("Quality check failed:", error);
-			return {
-				score: 0,
-				details: {
-					error: error instanceof Error ? error.message : "Unknown error",
-				},
-				issues: ["Ошибка при проверке качества"],
-			};
-		}
-	}
-
-	static async checkCompatibility(
-		pluginCode: string,
-		pluginName: string,
-	): Promise<{
-		score: number;
-		details: any;
-		issues: string[];
-	}> {
-		const prompt = `
-Analyze the compatibility of this Python plugin with exteraGram.
-
-Plugin name: ${pluginName}
-
-Plugin code:
-\`\`\`python
-${pluginCode}
-\`\`\`
-
-Check:
-1. Correct usage of exteraGram APIs
-2. Python version compatibility
-3. Dependencies and imports
-4. Proper plugin structure
-5. Compliance with exteraGram standards
-
-Respond in JSON format:
-{
-  "score": 0-100,
-  "issues": ["compatibility issues list"],
-  "recommendations": ["recommendations"],
-  "pythonVersion": "minimum Python version",
-  "dependencies": ["dependencies list"]
-}
-`;
-
-		try {
-			const response = await fetch(
-				"https://api.openai.com/v1/chat/completions",
-				{
-					method: "POST",
-					headers: {
-						Authorization: `Bearer ${PluginLLMChecker.OPENAI_API_KEY}`,
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						model: "gpt-4o-mini",
-						messages: [
-							{
-								role: "system",
-								content:
-									"You are an exteraGram plugin expert. Respond only in JSON format.",
-							},
-							{ role: "user", content: prompt },
-						],
-						temperature: 0.1,
-						max_tokens: 2000,
-					}),
-				},
-			);
-
-			if (!response.ok) {
-				throw new Error(`OpenAI API error: ${response.statusText}`);
-			}
-
-			const data = await response.json();
-			const result = JSON.parse(data.choices[0].message.content);
-
-			return {
-				score: result.score,
-				details: result,
-				issues: result.issues || [],
-			};
-		} catch (error) {
-			console.error("Compatibility check failed:", error);
-			return {
-				score: 0,
-				details: {
-					error: error instanceof Error ? error.message : "Unknown error",
-				},
-				issues: ["Ошибка при проверке совместимости"],
-			};
-		}
-	}
-}
+import { pluginVersions, plugins } from "~/server/db/schema";
+import { PluginAIChecker } from "./plugin-pipeline-ai";
 
 export const pluginPipelineRouter = createTRPCRouter({
 	getChecks: publicProcedure
@@ -318,6 +57,54 @@ export const pluginPipelineRouter = createTRPCRouter({
 					ctx.session.user.role !== "admin")
 			) {
 				throw new Error("Unauthorized");
+			}
+
+			// Получаем последнюю версию плагина
+			const latestVersion = await ctx.db
+				.select({
+					id: pluginVersions.id,
+					version: pluginVersions.version,
+					fileHash: pluginVersions.fileHash,
+				})
+				.from(pluginVersions)
+				.where(eq(pluginVersions.pluginId, input.pluginId))
+				.orderBy(desc(pluginVersions.createdAt))
+				.limit(1);
+
+			if (!latestVersion[0]) {
+				throw new Error("No version found for this plugin");
+			}
+
+			// Проверяем, была ли уже проведена проверка для этой версии
+			const existingChecks = await ctx.db
+				.select()
+				.from(pluginPipelineChecks)
+				.where(
+					and(
+						eq(pluginPipelineChecks.pluginId, input.pluginId),
+						sql`${pluginPipelineChecks.llmPrompt} LIKE '%Version: ${latestVersion[0].version}%'`,
+					),
+				)
+				.limit(1);
+
+			if (existingChecks.length > 0) {
+				throw new Error("Checks already performed for the latest version");
+			}
+
+			// Проверяем, нет ли уже активной проверки в очереди
+			const activeQueue = await ctx.db
+				.select()
+				.from(pluginPipelineQueue)
+				.where(
+					and(
+						eq(pluginPipelineQueue.pluginId, input.pluginId),
+						sql`${pluginPipelineQueue.status} IN ('queued', 'processing')`,
+					),
+				)
+				.limit(1);
+
+			if (activeQueue.length > 0) {
+				throw new Error("Checks are already in progress for this plugin");
 			}
 
 			const [queueItem] = await ctx.db
@@ -371,21 +158,36 @@ export const pluginPipelineRouter = createTRPCRouter({
 						throw new Error("Plugin not found");
 					}
 
-					const pluginFile = await ctx.db.query.pluginFiles.findFirst({
-						where: eq(plugins.id, item.pluginId),
-						orderBy: desc(sql`created_at`),
-					});
+					const latestVersion = await ctx.db
+						.select({
+							fileContent: pluginVersions.fileContent,
+							version: pluginVersions.version,
+						})
+						.from(pluginVersions)
+						.where(eq(pluginVersions.pluginId, item.pluginId))
+						.orderBy(desc(pluginVersions.createdAt))
+						.limit(1);
 
-					if (!pluginFile) {
-						throw new Error("Plugin file not found");
+					if (!latestVersion[0]) {
+						throw new Error("Plugin version not found");
 					}
 
+					const aiChecker = new PluginAIChecker();
 					const checks = [
-						{ type: "security", checker: PluginLLMChecker.checkSecurity },
-						{ type: "quality", checker: PluginLLMChecker.checkQuality },
+						{
+							type: "security",
+							checker: (code: string, name: string) =>
+								aiChecker.checkSecurity(code, name),
+						},
+						{
+							type: "performance",
+							checker: (code: string, name: string) =>
+								aiChecker.checkPerformance(code, name),
+						},
 						{
 							type: "compatibility",
-							checker: PluginLLMChecker.checkCompatibility,
+							checker: (code: string, name: string) =>
+								aiChecker.checkCompatibility(code, name),
 						},
 					];
 
@@ -397,11 +199,12 @@ export const pluginPipelineRouter = createTRPCRouter({
 								pluginId: item.pluginId,
 								checkType: check.type,
 								status: "running",
-								llmModel: "gpt-4o-mini",
+								llmModel: "google/gemini-2.5-pro-exp-03-25",
+								llmPrompt: `Version: ${latestVersion[0].version}`,
 							});
 
 							const result = await check.checker(
-								pluginFile.content,
+								latestVersion[0].fileContent,
 								plugin[0].name,
 							);
 							const executionTime = Date.now() - startTime;
@@ -412,6 +215,8 @@ export const pluginPipelineRouter = createTRPCRouter({
 									status: result.score >= 70 ? "passed" : "failed",
 									score: result.score,
 									details: JSON.stringify(result.details),
+									classification: result.details.classification,
+									shortDescription: result.details.shortDescription,
 									executionTime,
 									completedAt: Math.floor(Date.now() / 1000),
 								})
@@ -441,6 +246,8 @@ export const pluginPipelineRouter = createTRPCRouter({
 						}
 					}
 
+					aiChecker.cleanup();
+
 					await ctx.db
 						.update(pluginPipelineQueue)
 						.set({
@@ -448,6 +255,49 @@ export const pluginPipelineRouter = createTRPCRouter({
 							completedAt: Math.floor(Date.now() / 1000),
 						})
 						.where(eq(pluginPipelineQueue.id, item.id));
+
+					const checkResults = await ctx.db
+						.select()
+						.from(pluginPipelineChecks)
+						.where(
+							and(
+								eq(pluginPipelineChecks.pluginId, item.pluginId),
+								sql`${pluginPipelineChecks.createdAt} > ${item.createdAt}`,
+							),
+						);
+
+					const hasCriticalIssues = checkResults.some(
+						(check: typeof pluginPipelineChecks.$inferSelect) =>
+							check.status === "failed" &&
+							check.score !== null &&
+							check.score < 50,
+					);
+
+					if (hasCriticalIssues) {
+						const subscribers = await ctx.db
+							.select()
+							.from(userPluginSubscriptions)
+							.where(
+								and(
+									eq(userPluginSubscriptions.pluginId, item.pluginId),
+									eq(
+										userPluginSubscriptions.subscriptionType,
+										"security_alerts",
+									),
+									eq(userPluginSubscriptions.isActive, true),
+								),
+							);
+
+						for (const subscriber of subscribers) {
+							await ctx.db.insert(notifications).values({
+								userId: subscriber.userId,
+								pluginId: item.pluginId,
+								type: "security_alert",
+								title: "Критические проблемы найдены",
+								message: `В плагине ${plugin[0].name} обнаружены критические проблемы безопасности или производительности. Проверьте результаты проверки.`,
+							});
+						}
+					}
 
 					results.push({ pluginId: item.pluginId, status: "completed" });
 				} catch (error) {
@@ -563,4 +413,25 @@ export const pluginPipelineRouter = createTRPCRouter({
 
 			return settings;
 		}),
+
+	getQueueStatus: publicProcedure.query(async ({ ctx }) => {
+		const queuedItems = await ctx.db
+			.select({
+				count: count(),
+			})
+			.from(pluginPipelineQueue)
+			.where(eq(pluginPipelineQueue.status, "queued"));
+
+		const processingItems = await ctx.db
+			.select({
+				count: count(),
+			})
+			.from(pluginPipelineQueue)
+			.where(eq(pluginPipelineQueue.status, "processing"));
+
+		return {
+			queued: queuedItems[0]?.count ?? 0,
+			processing: processingItems[0]?.count ?? 0,
+		};
+	}),
 });

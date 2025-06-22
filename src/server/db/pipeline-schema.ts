@@ -23,6 +23,8 @@ export const pluginPipelineChecks = pgTable(
 		score: real("score"),
 		details: text("details"),
 		errorMessage: text("error_message"),
+		classification: text("classification").default("safe"),
+		shortDescription: text("short_description"),
 		llmModel: text("llm_model"),
 		llmPrompt: text("llm_prompt"),
 		llmResponse: text("llm_response"),

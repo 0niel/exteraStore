@@ -15,6 +15,13 @@
 			"when": 1750102515473,
 			"tag": "0001_elite_joseph",
 			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1750586709241,
+			"tag": "0002_high_patch",
+			"breakpoints": true
 		}
 	]
 }

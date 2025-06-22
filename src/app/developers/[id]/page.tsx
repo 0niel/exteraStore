@@ -1,21 +1,29 @@
 "use client";
 
 import {
-	Calendar,
+	ArrowLeft,
+	Award,
+	Check,
+	Copy,
+	Crown,
 	Download,
 	ExternalLink,
 	Github,
 	Globe,
-	Linkedin,
 	Mail,
 	Package,
+	Share2,
+	Sparkles,
 	Star,
-	Twitter,
-	User,
+	Target,
+	TrendingUp,
+	Trophy,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 import { PluginCard } from "~/components/plugin-card";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
@@ -27,55 +35,137 @@ import {
 	CardHeader,
 	CardTitle,
 } from "~/components/ui/card";
-import { EmptyState } from "~/components/ui/empty-state";
+import { Progress } from "~/components/ui/progress";
 import { Separator } from "~/components/ui/separator";
 import { Skeleton } from "~/components/ui/skeleton";
+import { cn, formatNumber } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
-interface DeveloperProfilePageProps {
-	params: Promise<{
-		id: string;
-	}>;
+function getDeveloperTier(downloads: number, rating: number, plugins: number) {
+	const score = downloads * 0.6 + rating * plugins * 20;
+
+	if (score >= 10000)
+		return {
+			name: "Legend",
+			color: "from-yellow-400 to-orange-500",
+			icon: Crown,
+			bgColor:
+				"from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20",
+		};
+	if (score >= 5000)
+		return {
+			name: "Master",
+			color: "from-purple-400 to-pink-500",
+			icon: Trophy,
+			bgColor:
+				"from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20",
+		};
+	if (score >= 2000)
+		return {
+			name: "Expert",
+			color: "from-blue-400 to-cyan-500",
+			icon: Award,
+			bgColor:
+				"from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20",
+		};
+	if (score >= 500)
+		return {
+			name: "Pro",
+			color: "from-green-400 to-emerald-500",
+			icon: Target,
+			bgColor:
+				"from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20",
+		};
+	return {
+		name: "Rising",
+		color: "from-gray-400 to-slate-500",
+		icon: Sparkles,
+		bgColor:
+			"from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20",
+	};
 }
 
-export default async function DeveloperProfilePage({
-	params,
-}: DeveloperProfilePageProps) {
+function getNextTierProgress(
+	downloads: number,
+	rating: number,
+	plugins: number,
+) {
+	const score = downloads * 0.6 + rating * plugins * 20;
+	const tiers = [0, 500, 2000, 5000, 10000];
+
+	let currentTier = 0;
+	for (let i = 0; i < tiers.length; i++) {
+		if (score >= tiers[i]!) currentTier = i;
+	}
+
+	if (currentTier === tiers.length - 1) return 100;
+
+	const currentTierScore = tiers[currentTier]!;
+	const nextTierScore = tiers[currentTier + 1]!;
+	const current = score - currentTierScore;
+	const next = nextTierScore - currentTierScore;
+
+	return Math.min((current / next) * 100, 100);
+}
+
+export default function DeveloperProfilePage() {
+	const params = useParams();
+	const router = useRouter();
+	const id = params?.id as string;
 	const t = useTranslations("DeveloperProfile");
-	const [pluginsPage, setPluginsPage] = useState(1);
-	const { id } = await params;
+	const [copied, setCopied] = useState(false);
 
 	const { data: developerData, isLoading } =
 		api.developers.getDeveloper.useQuery({
 			id: id,
 		});
 
+	const handleShare = async () => {
+		const url = window.location.href;
+		const title = `${developerData?.developer.name || "Developer"} - exteraGram Developer`;
+
+		if (typeof navigator !== "undefined" && navigator.share) {
+			try {
+				await navigator.share({ title, url });
+				toast.success("Профиль поделен!");
+			} catch (error) {
+				if ((error as Error).name !== "AbortError") {
+					handleCopyLink();
+				}
+			}
+		} else {
+			handleCopyLink();
+		}
+	};
+
+	const handleCopyLink = async () => {
+		try {
+			if (typeof navigator !== "undefined" && navigator.clipboard) {
+				await navigator.clipboard.writeText(window.location.href);
+				setCopied(true);
+				toast.success("Ссылка скопирована!");
+				setTimeout(() => setCopied(false), 2000);
+			} else {
+				toast.error("Копирование не поддерживается");
+			}
+		} catch (error) {
+			toast.error("Не удалось скопировать ссылку");
+		}
+	};
+
 	if (isLoading) {
 		return (
-			<div className="min-h-screen bg-background py-8">
-				<div className="container mx-auto max-w-6xl px-4">
-					<div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-						<div className="lg:col-span-1">
-							<Card>
-								<CardHeader className="text-center">
-									<Skeleton className="mx-auto mb-4 h-24 w-24 rounded-full" />
-									<Skeleton className="mx-auto mb-2 h-6 w-32" />
-									<Skeleton className="mx-auto h-4 w-24" />
-								</CardHeader>
-								<CardContent>
-									<div className="space-y-4">
-										<Skeleton className="h-4 w-full" />
-										<Skeleton className="h-4 w-3/4" />
-										<Skeleton className="h-4 w-1/2" />
-									</div>
-								</CardContent>
-							</Card>
-						</div>
-						<div className="lg:col-span-2">
-							<div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-								{Array.from({ length: 4 }).map((_, i) => (
-									<Skeleton key={i} className="h-64" />
-								))}
+			<div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
+				<div className="container mx-auto max-w-6xl px-4 py-8">
+					<div className="space-y-8">
+						<Skeleton className="h-64 w-full rounded-2xl" />
+						<div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+							<div className="lg:col-span-2">
+								<Skeleton className="h-96 w-full rounded-xl" />
+							</div>
+							<div className="space-y-4">
+								<Skeleton className="h-32 w-full rounded-xl" />
+								<Skeleton className="h-48 w-full rounded-xl" />
 							</div>
 						</div>
 					</div>
@@ -86,15 +176,22 @@ export default async function DeveloperProfilePage({
 
 	if (!developerData) {
 		return (
-			<div className="flex min-h-screen items-center justify-center">
-				<Card className="w-full max-w-md">
-					<CardHeader className="text-center">
-						<CardTitle>{t("not_found")}</CardTitle>
-						<CardDescription>{t("not_found_description")}</CardDescription>
-					</CardHeader>
-					<CardContent>
-						<Button asChild className="w-full">
-							<Link href="/developers">{t("back_to_developers")}</Link>
+			<div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-muted/20 to-background">
+				<Card className="w-full max-w-md text-center">
+					<CardContent className="p-8">
+						<div className="mb-4 text-6xl">😕</div>
+						<CardTitle className="mb-2 text-2xl">
+							Разработчик не найден
+						</CardTitle>
+						<CardDescription className="mb-6">
+							Возможно, профиль был удален или ссылка неверна
+						</CardDescription>
+						<Button
+							onClick={() => router.push("/developers")}
+							className="w-full"
+						>
+							<ArrowLeft className="mr-2 h-4 w-4" />
+							Вернуться к разработчикам
 						</Button>
 					</CardContent>
 				</Card>
@@ -103,169 +200,332 @@ export default async function DeveloperProfilePage({
 	}
 
 	const { developer, plugins, stats } = developerData;
+	const tier = getDeveloperTier(
+		stats?.totalDownloads || 0,
+		stats?.averageRating || 0,
+		stats?.totalPlugins || 0,
+	);
+	const progress = getNextTierProgress(
+		stats?.totalDownloads || 0,
+		stats?.averageRating || 0,
+		stats?.totalPlugins || 0,
+	);
+	const TierIcon = tier.icon;
 
 	return (
-		<div className="min-h-screen bg-background py-8">
-			<div className="container mx-auto max-w-6xl px-4">
-				<div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-					<div className="lg:col-span-1">
-						<Card className="sticky top-8">
-							<CardHeader className="text-center">
-								<Avatar className="mx-auto mb-4 h-24 w-24">
-									<AvatarImage
-										src={developer.image || undefined}
-										alt={developer.name || ""}
-									/>
-									<AvatarFallback className="text-2xl">
-										{developer.name?.slice(0, 2).toUpperCase() || "??"}
-									</AvatarFallback>
-								</Avatar>
-								<CardTitle className="text-xl">
-									{developer.name || t("anonymous")}
-								</CardTitle>
-								{developer.isVerified && (
-									<Badge variant="secondary" className="mx-auto w-fit">
-										{t("verified")}
-									</Badge>
-								)}
-								{developer.telegramUsername && (
-									<p className="text-blue-600 text-sm">
-										@{developer.telegramUsername}
-									</p>
-								)}
-							</CardHeader>
+		<div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
+			<div className="container mx-auto max-w-6xl px-4 py-8">
+				<div className="space-y-8">
+					{/* Hero Section */}
+					<div className="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-white/80 to-white/40 backdrop-blur-sm dark:from-gray-900/80 dark:to-gray-800/40">
+						<div
+							className={cn(
+								"absolute inset-0 bg-gradient-to-br opacity-10",
+								tier.bgColor,
+							)}
+						/>
+						<div className="relative p-8 md:p-12">
+							<div className="mb-6 flex items-center justify-between">
+								<Button
+									variant="ghost"
+									onClick={() => router.back()}
+									className="gap-2"
+								>
+									<ArrowLeft className="h-4 w-4" />
+									Назад
+								</Button>
+								<div className="flex items-center gap-2">
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleShare}
+										className="gap-2"
+									>
+										<Share2 className="h-4 w-4" />
+										Поделиться
+									</Button>
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleCopyLink}
+										className="gap-2"
+									>
+										{copied ? (
+											<Check className="h-4 w-4" />
+										) : (
+											<Copy className="h-4 w-4" />
+										)}
+										{copied ? "Скопировано" : "Ссылка"}
+									</Button>
+								</div>
+							</div>
 
-							<CardContent className="space-y-6">
-								{developer.bio && (
-									<div>
-										<h3 className="mb-2 font-semibold">{t("about")}</h3>
-										<p className="text-muted-foreground text-sm">
-											{developer.bio}
-										</p>
-									</div>
-								)}
-
-								<div>
-									<h3 className="mb-3 font-semibold">{t("stats")}</h3>
-									<div className="space-y-3">
-										<div className="flex items-center justify-between">
-											<div className="flex items-center gap-2">
-												<Package className="h-4 w-4 text-muted-foreground" />
-												<span className="text-sm">{t("total_plugins")}</span>
-											</div>
-											<span className="font-medium">{stats.totalPlugins}</span>
-										</div>
-										<div className="flex items-center justify-between">
-											<div className="flex items-center gap-2">
-												<Download className="h-4 w-4 text-muted-foreground" />
-												<span className="text-sm">{t("total_downloads")}</span>
-											</div>
-											<span className="font-medium">
-												{stats.totalDownloads || 0}
-											</span>
-										</div>
-										<div className="flex items-center justify-between">
-											<div className="flex items-center gap-2">
-												<Star className="h-4 w-4 text-muted-foreground" />
-												<span className="text-sm">{t("average_rating")}</span>
-											</div>
-											<span className="font-medium">
-												{stats.averageRating?.toFixed(1) || "0.0"}
-											</span>
-										</div>
-										<div className="flex items-center justify-between">
-											<div className="flex items-center gap-2">
-												<Calendar className="h-4 w-4 text-muted-foreground" />
-												<span className="text-sm">{t("member_since")}</span>
-											</div>
-											<span className="font-medium">
-												{new Date(developer.createdAt).getFullYear()}
-											</span>
-										</div>
+							<div className="flex flex-col items-center gap-8 md:flex-row md:items-start">
+								<div className="relative">
+									<Avatar className="h-32 w-32 border-4 border-white shadow-2xl md:h-40 md:w-40 dark:border-gray-800">
+										<AvatarImage
+											src={developer.image || undefined}
+											alt={developer.name || ""}
+											className="object-cover"
+										/>
+										<AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 font-bold text-4xl">
+											{(developer.name || "??").slice(0, 2).toUpperCase()}
+										</AvatarFallback>
+									</Avatar>
+									<div
+										className={cn(
+											"-bottom-2 -right-2 absolute flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r shadow-xl",
+											tier.color,
+										)}
+									>
+										<TierIcon className="h-8 w-8 text-white" />
 									</div>
 								</div>
 
-								{(developer.website ||
-									developer.githubUsername ||
-									(developer.links &&
-										JSON.parse(developer.links).length > 0)) && (
-									<div>
-										<h3 className="mb-3 font-semibold">{t("links")}</h3>
-										<div className="flex flex-wrap gap-2">
-											{developer.website && (
-												<Button variant="outline" size="sm" asChild>
-													<a
-														href={developer.website}
-														target="_blank"
-														rel="noopener noreferrer"
-													>
-														<Globe className="mr-2 h-4 w-4" />
-														{t("website")}
-													</a>
-												</Button>
+								<div className="flex-1 text-center md:text-left">
+									<div className="mb-4">
+										<h1 className="mb-2 font-bold text-4xl tracking-tight md:text-5xl">
+											{developer.name || "Anonymous Developer"}
+										</h1>
+										{developer.telegramUsername && (
+											<p className="font-medium text-lg text-primary">
+												@{developer.telegramUsername}
+											</p>
+										)}
+									</div>
+
+									<div className="mb-6 flex flex-wrap items-center justify-center gap-3 md:justify-start">
+										<Badge
+											className={cn(
+												"border-0 bg-gradient-to-r px-4 py-2 text-sm text-white",
+												tier.color,
 											)}
-											{developer.githubUsername && (
-												<Button variant="outline" size="sm" asChild>
-													<a
-														href={`https://github.com/${developer.githubUsername}`}
-														target="_blank"
-														rel="noopener noreferrer"
-													>
-														<Github className="mr-2 h-4 w-4" />
-														GitHub
-													</a>
-												</Button>
-											)}
-											{developer.links &&
-												JSON.parse(developer.links).map(
-													(link: any, index: number) => (
-														<Button
-															key={index}
-															variant="outline"
-															size="sm"
-															asChild
-														>
-															<a
-																href={link.url}
-																target="_blank"
-																rel="noopener noreferrer"
-															>
-																<ExternalLink className="mr-2 h-4 w-4" />
-																{link.title}
-															</a>
-														</Button>
-													),
-												)}
+										>
+											<TierIcon className="mr-2 h-4 w-4" />
+											{tier.name} Developer
+										</Badge>
+									</div>
+
+									{developer.bio && (
+										<p className="mb-6 max-w-2xl text-lg text-muted-foreground leading-relaxed">
+											{developer.bio}
+										</p>
+									)}
+
+									{/* Stats Grid */}
+									<div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+										<div className="text-center">
+											<div className="mb-1 font-bold text-3xl text-primary">
+												{stats?.totalPlugins || 0}
+											</div>
+											<div className="text-muted-foreground text-sm">
+												Плагинов
+											</div>
+										</div>
+										<div className="text-center">
+											<div className="mb-1 font-bold text-3xl text-primary">
+												{formatNumber(stats?.totalDownloads || 0)}
+											</div>
+											<div className="text-muted-foreground text-sm">
+												Скачиваний
+											</div>
+										</div>
+										<div className="text-center">
+											<div className="mb-1 flex items-center justify-center gap-1 font-bold text-3xl text-primary">
+												<Star className="h-6 w-6 fill-yellow-400 text-yellow-400" />
+												{stats?.averageRating?.toFixed(1) || "0.0"}
+											</div>
+											<div className="text-muted-foreground text-sm">
+												Рейтинг
+											</div>
+										</div>
+										<div className="text-center">
+											<div className="mb-1 font-bold text-3xl text-primary">
+												{Math.round(progress)}%
+											</div>
+											<div className="text-muted-foreground text-sm">
+												До {tier.name === "Legend" ? "Максимум" : "повышения"}
+											</div>
 										</div>
 									</div>
-								)}
-							</CardContent>
-						</Card>
+
+									{progress < 100 && tier.name !== "Legend" && (
+										<div className="mt-6">
+											<div className="mb-2 flex items-center justify-between text-sm">
+												<span className="text-muted-foreground">
+													Прогресс до следующего ранга
+												</span>
+												<span className="font-medium">
+													{Math.round(progress)}%
+												</span>
+											</div>
+											<Progress value={progress} className="h-3" />
+										</div>
+									)}
+								</div>
+							</div>
+						</div>
 					</div>
 
-					<div className="lg:col-span-2">
-						<div className="mb-6">
-							<h2 className="mb-2 font-bold text-2xl">
-								{t("plugins_by")} {developer.name}
-							</h2>
-							<p className="text-muted-foreground">
-								{t("plugins_count", { count: plugins.length })}
-							</p>
+					<div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+						{/* Main Content */}
+						<div className="lg:col-span-2">
+							<div className="space-y-8">
+								{/* Portfolio Header */}
+								<div className="flex items-center justify-between">
+									<div>
+										<h2 className="font-bold text-3xl">Портфолио</h2>
+										<p className="text-muted-foreground">
+											{plugins.length}{" "}
+											{plugins.length === 1
+												? "плагин"
+												: plugins.length < 5
+													? "плагина"
+													: "плагинов"}{" "}
+											создано
+										</p>
+									</div>
+									{stats?.totalDownloads && stats.totalDownloads > 0 && (
+										<div className="flex items-center gap-2 rounded-full bg-gradient-to-r from-primary/10 to-primary/5 px-4 py-2">
+											<TrendingUp className="h-4 w-4 text-primary" />
+											<span className="font-medium text-sm">
+												{formatNumber(stats.totalDownloads)} загрузок
+											</span>
+										</div>
+									)}
+								</div>
+
+								{/* Plugins Grid */}
+								{plugins.length === 0 ? (
+									<Card className="border-2 border-dashed">
+										<CardContent className="flex flex-col items-center justify-center py-16">
+											<div className="mb-4 text-6xl">📦</div>
+											<h3 className="mb-2 font-semibold text-xl">
+												Пока нет плагинов
+											</h3>
+											<p className="max-w-md text-center text-muted-foreground">
+												Этот разработчик еще не опубликовал ни одного плагина.
+												Заходите позже!
+											</p>
+										</CardContent>
+									</Card>
+								) : (
+									<div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+										{plugins.map((plugin: any) => (
+											<PluginCard
+												key={plugin.id}
+												plugin={plugin}
+												className="transition-all duration-300 hover:scale-[1.02]"
+											/>
+										))}
+									</div>
+								)}
+							</div>
 						</div>
 
-						{plugins.length === 0 ? (
-							<EmptyState
-								icon="📦"
-								title={t("no_plugins")}
-								description={t("no_plugins_description")}
-							/>
-						) : (
-							<div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-								{plugins.map((plugin: any) => (
-									<PluginCard key={plugin.id} plugin={plugin} />
-								))}
-							</div>
-						)}
+						{/* Sidebar */}
+						<div className="space-y-6">
+							{/* Quick Actions */}
+							<Card>
+								<CardHeader>
+									<CardTitle className="flex items-center gap-2">
+										<ExternalLink className="h-5 w-5" />
+										Быстрые действия
+									</CardTitle>
+								</CardHeader>
+								<CardContent className="space-y-3">
+									{developer.githubUsername && (
+										<Button
+											asChild
+											variant="outline"
+											className="w-full justify-start"
+										>
+											<a
+												href={`https://github.com/${developer.githubUsername}`}
+												target="_blank"
+												rel="noopener noreferrer"
+											>
+												<Github className="mr-2 h-4 w-4" />
+												GitHub профиль
+											</a>
+										</Button>
+									)}
+									{developer.website && (
+										<Button
+											asChild
+											variant="outline"
+											className="w-full justify-start"
+										>
+											<a
+												href={developer.website}
+												target="_blank"
+												rel="noopener noreferrer"
+											>
+												<Globe className="mr-2 h-4 w-4" />
+												Веб-сайт
+											</a>
+										</Button>
+									)}
+									{developer.telegramUsername && (
+										<Button
+											asChild
+											variant="outline"
+											className="w-full justify-start"
+										>
+											<a
+												href={`https://t.me/${developer.telegramUsername}`}
+												target="_blank"
+												rel="noopener noreferrer"
+											>
+												<Mail className="mr-2 h-4 w-4" />
+												Telegram
+											</a>
+										</Button>
+									)}
+								</CardContent>
+							</Card>
+
+							{/* Stats Card */}
+							<Card>
+								<CardHeader>
+									<CardTitle className="flex items-center gap-2">
+										<TrendingUp className="h-5 w-5" />
+										Статистика
+									</CardTitle>
+								</CardHeader>
+								<CardContent className="space-y-4">
+									<div className="space-y-3">
+										<div className="flex items-center justify-between">
+											<div className="flex items-center gap-2">
+												<Package className="h-4 w-4 text-blue-600" />
+												<span className="text-sm">Плагинов</span>
+											</div>
+											<span className="font-semibold">
+												{stats?.totalPlugins || 0}
+											</span>
+										</div>
+										<div className="flex items-center justify-between">
+											<div className="flex items-center gap-2">
+												<Download className="h-4 w-4 text-green-600" />
+												<span className="text-sm">Скачиваний</span>
+											</div>
+											<span className="font-semibold">
+												{formatNumber(stats?.totalDownloads || 0)}
+											</span>
+										</div>
+										<div className="flex items-center justify-between">
+											<div className="flex items-center gap-2">
+												<Star className="h-4 w-4 text-yellow-600" />
+												<span className="text-sm">Средний рейтинг</span>
+											</div>
+											<span className="font-semibold">
+												{stats?.averageRating?.toFixed(1) || "0.0"}
+											</span>
+										</div>
+									</div>
+								</CardContent>
+							</Card>
+						</div>
 					</div>
 				</div>
 			</div>

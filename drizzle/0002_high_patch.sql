@@ -1,0 +1,2 @@
+ALTER TABLE "extera_plugins_plugin_pipeline_check" ADD COLUMN "classification" text DEFAULT 'safe';--> statement-breakpoint
+ALTER TABLE "extera_plugins_plugin_pipeline_check" ADD COLUMN "short_description" text;
