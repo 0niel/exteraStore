@@ -1,4 +1,4 @@
-import { and, count, desc, eq, sql } from "drizzle-orm";
+import { and, count, desc, eq, like, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
 	createTRPCRouter,
@@ -14,6 +14,186 @@ import {
 } from "~/server/db/pipeline-schema";
 import { pluginVersions, plugins } from "~/server/db/schema";
 import { PluginAIChecker } from "./plugin-pipeline-ai";
+
+// Функция для обработки одного элемента очереди
+async function processQueueItem(ctx: any, queueItemId: number) {
+	const queueItem = await ctx.db
+		.select()
+		.from(pluginPipelineQueue)
+		.where(eq(pluginPipelineQueue.id, queueItemId))
+		.limit(1);
+
+	if (!queueItem[0] || queueItem[0].status !== "queued") {
+		return;
+	}
+
+	const item = queueItem[0];
+
+	try {
+		await ctx.db
+			.update(pluginPipelineQueue)
+			.set({
+				status: "processing",
+				startedAt: Math.floor(Date.now() / 1000),
+			})
+			.where(eq(pluginPipelineQueue.id, item.id));
+
+		const plugin = await ctx.db
+			.select()
+			.from(plugins)
+			.where(eq(plugins.id, item.pluginId))
+			.limit(1);
+
+		if (!plugin[0]) {
+			throw new Error("Plugin not found");
+		}
+
+		const latestVersion = await ctx.db
+			.select({
+				fileContent: pluginVersions.fileContent,
+				version: pluginVersions.version,
+			})
+			.from(pluginVersions)
+			.where(eq(pluginVersions.pluginId, item.pluginId))
+			.orderBy(desc(pluginVersions.createdAt))
+			.limit(1);
+
+		if (!latestVersion[0]) {
+			throw new Error("Plugin version not found");
+		}
+
+		const aiChecker = new PluginAIChecker();
+		const checks = [
+			{
+				type: "security",
+				checker: (code: string, name: string) =>
+					aiChecker.checkSecurity(code, name),
+			},
+			{
+				type: "performance",
+				checker: (code: string, name: string) =>
+					aiChecker.checkPerformance(code, name),
+			},
+		];
+
+		for (const check of checks) {
+			const startTime = Date.now();
+
+			try {
+				await ctx.db.insert(pluginPipelineChecks).values({
+					pluginId: item.pluginId,
+					checkType: check.type,
+					status: "running",
+					llmModel: "google/gemini-2.5-pro-exp-03-25",
+					llmPrompt: `Version: ${latestVersion[0].version}`,
+				});
+
+				const result = await check.checker(
+					latestVersion[0].fileContent,
+					plugin[0].name,
+				);
+				const executionTime = Date.now() - startTime;
+
+				await ctx.db
+					.update(pluginPipelineChecks)
+					.set({
+						status: result.score >= 70 ? "passed" : "failed",
+						score: result.score,
+						details: JSON.stringify(result.details),
+						classification: result.details.classification,
+						shortDescription: result.details.shortDescription,
+						executionTime,
+						completedAt: Math.floor(Date.now() / 1000),
+					})
+					.where(
+						and(
+							eq(pluginPipelineChecks.pluginId, item.pluginId),
+							eq(pluginPipelineChecks.checkType, check.type),
+							eq(pluginPipelineChecks.status, "running"),
+						),
+					);
+			} catch (error) {
+				await ctx.db
+					.update(pluginPipelineChecks)
+					.set({
+						status: "error",
+						errorMessage:
+							error instanceof Error ? error.message : "Unknown error",
+						completedAt: Math.floor(Date.now() / 1000),
+					})
+					.where(
+						and(
+							eq(pluginPipelineChecks.pluginId, item.pluginId),
+							eq(pluginPipelineChecks.checkType, check.type),
+							eq(pluginPipelineChecks.status, "running"),
+						),
+					);
+			}
+		}
+
+		aiChecker.cleanup();
+
+		await ctx.db
+			.update(pluginPipelineQueue)
+			.set({
+				status: "completed",
+				completedAt: Math.floor(Date.now() / 1000),
+			})
+			.where(eq(pluginPipelineQueue.id, item.id));
+
+		const checkResults = await ctx.db
+			.select()
+			.from(pluginPipelineChecks)
+			.where(
+				and(
+					eq(pluginPipelineChecks.pluginId, item.pluginId),
+					sql`${pluginPipelineChecks.createdAt} > ${item.createdAt}`,
+				),
+			);
+
+		const hasCriticalIssues = checkResults.some(
+			(check: typeof pluginPipelineChecks.$inferSelect) =>
+				check.status === "failed" && check.score !== null && check.score < 50,
+		);
+
+		if (hasCriticalIssues) {
+			const subscribers = await ctx.db
+				.select()
+				.from(userPluginSubscriptions)
+				.where(
+					and(
+						eq(userPluginSubscriptions.pluginId, item.pluginId),
+						eq(userPluginSubscriptions.subscriptionType, "security_alerts"),
+						eq(userPluginSubscriptions.isActive, true),
+					),
+				);
+
+			for (const subscriber of subscribers) {
+				await ctx.db.insert(notifications).values({
+					userId: subscriber.userId,
+					pluginId: item.pluginId,
+					type: "security_alert",
+					title: "Критические проблемы найдены",
+					message: `В плагине ${plugin[0].name} обнаружены критические проблемы безопасности или производительности. Проверьте результаты проверки.`,
+				});
+			}
+		}
+
+		return { pluginId: item.pluginId, status: "completed" };
+	} catch (error) {
+		await ctx.db
+			.update(pluginPipelineQueue)
+			.set({
+				status: "failed",
+				errorMessage: error instanceof Error ? error.message : "Unknown error",
+				retryCount: item.retryCount + 1,
+				completedAt: Math.floor(Date.now() / 1000),
+			})
+			.where(eq(pluginPipelineQueue.id, item.id));
+
+		throw error;
+	}
+}
 
 export const pluginPipelineRouter = createTRPCRouter({
 	getChecks: publicProcedure
@@ -76,13 +256,14 @@ export const pluginPipelineRouter = createTRPCRouter({
 			}
 
 			// Проверяем, была ли уже проведена проверка для этой версии
+			const versionTag = `%Version: ${latestVersion[0].version}%`;
 			const existingChecks = await ctx.db
 				.select()
 				.from(pluginPipelineChecks)
 				.where(
 					and(
 						eq(pluginPipelineChecks.pluginId, input.pluginId),
-						sql`${pluginPipelineChecks.llmPrompt} LIKE '%Version: ${latestVersion[0].version}%'`,
+						like(pluginPipelineChecks.llmPrompt, versionTag),
 					),
 				)
 				.limit(1);
@@ -115,6 +296,11 @@ export const pluginPipelineRouter = createTRPCRouter({
 					scheduledAt: Math.floor(Date.now() / 1000),
 				})
 				.returning();
+
+			// Автоматически обрабатываем очередь в фоне
+			processQueueItem(ctx, queueItem.id).catch((error) => {
+				console.error("Error processing queue item in background:", error);
+			});
 
 			return queueItem;
 		}),
@@ -184,11 +370,6 @@ export const pluginPipelineRouter = createTRPCRouter({
 							checker: (code: string, name: string) =>
 								aiChecker.checkPerformance(code, name),
 						},
-						{
-							type: "compatibility",
-							checker: (code: string, name: string) =>
-								aiChecker.checkCompatibility(code, name),
-						},
 					];
 
 					for (const check of checks) {
@@ -199,7 +380,7 @@ export const pluginPipelineRouter = createTRPCRouter({
 								pluginId: item.pluginId,
 								checkType: check.type,
 								status: "running",
-								llmModel: "google/gemini-2.5-pro-exp-03-25",
+								llmModel: "google/gemini-2.5-pro",
 								llmPrompt: `Version: ${latestVersion[0].version}`,
 							});
 
@@ -434,4 +615,32 @@ export const pluginPipelineRouter = createTRPCRouter({
 			processing: processingItems[0]?.count ?? 0,
 		};
 	}),
+
+	getPluginQueueStatus: publicProcedure
+		.input(z.object({ pluginSlug: z.string() }))
+		.query(async ({ ctx, input }) => {
+			const plugin = await ctx.db
+				.select({ id: plugins.id })
+				.from(plugins)
+				.where(eq(plugins.slug, input.pluginSlug))
+				.limit(1);
+
+			if (!plugin[0]) {
+				return null;
+			}
+
+			const queueItem = await ctx.db
+				.select()
+				.from(pluginPipelineQueue)
+				.where(
+					and(
+						eq(pluginPipelineQueue.pluginId, plugin[0].id),
+						sql`${pluginPipelineQueue.status} IN ('queued', 'processing')`,
+					),
+				)
+				.orderBy(desc(pluginPipelineQueue.createdAt))
+				.limit(1);
+
+			return queueItem[0] || null;
+		}),
 });

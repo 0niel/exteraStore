@@ -2,32 +2,23 @@
 
 import {
 	AlertTriangle,
-	Bug,
 	CheckCircle,
 	Clock,
-	Code,
 	Play,
 	RefreshCw,
 	Shield,
 	XCircle,
 	Zap,
 } from "lucide-react";
+
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "~/components/ui/card";
-import { Progress } from "~/components/ui/progress";
 import { Skeleton } from "~/components/ui/skeleton";
 import { formatDate } from "~/lib/utils";
 import { api } from "~/trpc/react";
+import { Card } from "./ui/card";
 
 interface PluginPipelineProps {
 	pluginSlug: string;
@@ -36,36 +27,16 @@ interface PluginPipelineProps {
 const checkTypeIcons = {
 	security: Shield,
 	performance: Zap,
-	compatibility: Code,
-	malware: Bug,
-};
-
-const checkTypeNames = {
-	security: "Security",
-	performance: "Performance",
-	compatibility: "Compatibility",
-	malware: "Malware Check",
-};
-
-const statusColors = {
-	pending: "bg-gray-500",
-	running: "bg-blue-500",
-	passed: "bg-green-500",
-	failed: "bg-red-500",
-	error: "bg-orange-500",
-};
-
-const statusIcons = {
-	pending: Clock,
-	running: RefreshCw,
-	passed: CheckCircle,
-	failed: XCircle,
-	error: AlertTriangle,
 };
 
 export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 	const t = useTranslations("PluginPipeline");
 	const [isRunning, setIsRunning] = useState(false);
+
+	const checkTypeNames = {
+		security: t("security_check"),
+		performance: t("performance_analysis"),
+	};
 
 	const { data: plugin } = api.plugins.getBySlug.useQuery({ slug: pluginSlug });
 
@@ -78,20 +49,31 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 		{ refetchInterval: isRunning ? 2000 : false },
 	);
 
+	const { data: queueStatus } = api.pluginPipeline.getQueueStatus.useQuery(
+		undefined,
+		{ refetchInterval: isRunning ? 2000 : false },
+	);
+
+	const { data: pluginQueueStatus } =
+		api.pluginPipeline.getPluginQueueStatus.useQuery(
+			{ pluginSlug },
+			{ refetchInterval: isRunning ? 2000 : false },
+		);
+
 	const runChecksMutation = api.pluginPipeline.runChecks.useMutation({
 		onSuccess: () => {
-			toast.success("Проверки запущены успешно!");
+			toast.success(t("run_checks"));
 			setIsRunning(true);
 			refetch();
 		},
 		onError: (error) => {
-			toast.error(`Ошибка при запуске проверок: ${error.message}`);
+			toast.error(`${t("check_error")}: ${error.message}`);
 		},
 	});
 
 	const handleRunChecks = () => {
 		if (!plugin?.id) {
-			toast.error("Плагин не найден");
+			toast.error(t("check_error"));
 			return;
 		}
 		runChecksMutation.mutate({ pluginId: plugin.id });
@@ -99,24 +81,38 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 
 	if (isLoading) {
 		return (
-			<div className="space-y-4">
-				<Skeleton className="h-8 w-48" />
-				<div className="grid gap-4">
-					{[1, 2, 3].map((i) => (
-						<Card key={i}>
-							<CardContent className="pt-6">
-								<div className="flex items-center gap-4">
-									<Skeleton className="h-8 w-8 rounded-full" />
-									<div className="flex-1">
-										<Skeleton className="mb-2 h-4 w-32" />
-										<Skeleton className="h-2 w-full" />
-									</div>
-									<Skeleton className="h-6 w-16" />
-								</div>
-							</CardContent>
-						</Card>
-					))}
+			<div className="space-y-6">
+				<div className="flex items-start justify-between">
+					<div>
+						<div className="mb-2 flex items-center gap-2">
+							<div className="h-6 w-1 animate-pulse rounded-full bg-gray-200"></div>
+							<Skeleton className="h-6 w-40" />
+						</div>
+						<Skeleton className="h-4 w-64" />
+					</div>
+					<Skeleton className="h-8 w-24" />
 				</div>
+				<Card>
+					{[1, 2].map((i) => (
+						<div
+							key={i}
+							className="flex items-center gap-4 border-gray-100 border-b px-4 py-4 last:border-b-0"
+						>
+							<Skeleton className="h-2.5 w-2.5 rounded-full" />
+							<div className="flex-1 space-y-2">
+								<div className="flex items-center gap-3">
+									<Skeleton className="h-4 w-32" />
+									<Skeleton className="h-4 w-16 rounded-full" />
+								</div>
+								<Skeleton className="h-3 w-48" />
+							</div>
+							<div className="flex items-center gap-4">
+								<Skeleton className="h-6 w-8 rounded-full" />
+								<Skeleton className="h-6 w-20 rounded-full" />
+							</div>
+						</div>
+					))}
+				</Card>
 			</div>
 		);
 	}
@@ -143,241 +139,327 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 		},
 	);
 
-	const overallScore =
-		latestChecks.length > 0
-			? Math.round(
-					latestChecks.reduce(
-						(sum, { check }) => sum + (check?.score || 0),
-						0,
-					) / latestChecks.length,
-				)
-			: 0;
-
 	const hasRunningChecks = latestChecks.some(
 		({ check }) => check?.status === "running",
 	);
 
-	if (hasRunningChecks && !isRunning) {
+	const isPluginInQueue =
+		pluginQueueStatus &&
+		(pluginQueueStatus.status === "queued" ||
+			pluginQueueStatus.status === "processing");
+
+	if ((hasRunningChecks || isPluginInQueue) && !isRunning) {
 		setIsRunning(true);
-	} else if (!hasRunningChecks && isRunning) {
+	} else if (!hasRunningChecks && !isPluginInQueue && isRunning) {
 		setIsRunning(false);
 	}
 
 	return (
 		<div className="space-y-6">
-			<div className="flex items-center justify-between">
+			<div className="flex items-start justify-between">
 				<div>
-					<h3 className="font-semibold text-lg">{t("automated_checks")}</h3>
-					<p className="text-muted-foreground text-sm">
-						{t("ai_powered_checks")}
+					<h3 className="flex items-center gap-2 font-semibold text-gray-900 text-lg">
+						{t("security_checks")}
+					</h3>
+					<p className="mt-1 text-gray-600 text-sm leading-relaxed">
+						{t("ai_powered_analysis")}
 					</p>
 				</div>
-				<Button
-					onClick={handleRunChecks}
-					disabled={runChecksMutation.isPending || isRunning}
-					size="sm"
-				>
-					{runChecksMutation.isPending || isRunning ? (
-						<RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-					) : (
+				{!isRunning && latestChecks.length > 0 && (
+					<Button
+						variant="outline"
+						onClick={handleRunChecks}
+						disabled={runChecksMutation.isPending}
+						size="sm"
+						className="border-gray-200 bg-white transition-all hover:border-gray-300 hover:bg-gray-50 hover:shadow-sm"
+					>
+						<RefreshCw className="mr-2 h-4 w-4" />
+						{t("rerun_jobs")}
+					</Button>
+				)}
+				{!isRunning && latestChecks.length === 0 && (
+					<Button
+						onClick={handleRunChecks}
+						disabled={runChecksMutation.isPending}
+						size="sm"
+						className="bg-blue-600 transition-all hover:bg-blue-700 hover:shadow-sm"
+					>
 						<Play className="mr-2 h-4 w-4" />
-					)}
-					{isRunning ? t("running") : t("run_checks")}
-				</Button>
-			</div>
-
-			{latestChecks.length > 0 && (
-				<Card>
-					<CardHeader>
-						<CardTitle className="flex items-center gap-2">
-							<Shield className="h-5 w-5" />
-							{t("overall_results")}
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<div className="flex items-center gap-4">
-							<div className="flex-1">
-								<div className="mb-2 flex items-center justify-between">
-									<span className="font-medium text-sm">
-										{t("overall_score")}
-									</span>
-									<span className="font-bold text-2xl">{overallScore}/100</span>
-								</div>
-								<Progress value={overallScore} className="h-2" />
-							</div>
-							<Badge
-								variant={
-									overallScore >= 80
-										? "default"
-										: overallScore >= 60
-											? "secondary"
-											: "destructive"
-								}
-								className="text-sm"
-							>
-								{overallScore >= 80
-									? t("excellent")
-									: overallScore >= 60
-										? t("good")
-										: t("needs_attention")}
-							</Badge>
-						</div>
-					</CardContent>
-				</Card>
-			)}
-
-			<div className="grid gap-4">
-				{latestChecks.length === 0 ? (
-					<Card>
-						<CardContent className="pt-6">
-							<div className="py-8 text-center">
-								<Shield className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-								<h3 className="mb-2 font-medium text-lg">
-									{t("no_checks_performed")}
-								</h3>
-								<p className="mb-4 text-muted-foreground">
-									{t("running_checks_description")}
-								</p>
-								<Button
-									onClick={handleRunChecks}
-									disabled={runChecksMutation.isPending}
-								>
-									<Play className="mr-2 h-4 w-4" />
-									{t("run_first_check")}
-								</Button>
-							</div>
-						</CardContent>
-					</Card>
-				) : (
-					latestChecks.map(({ type, check }) => {
-						const Icon =
-							checkTypeIcons[type as keyof typeof checkTypeIcons] || Shield;
-						const StatusIcon =
-							statusIcons[check?.status as keyof typeof statusIcons] || Clock;
-						const typeName =
-							type === "performance"
-								? "Performance"
-								: type === "security"
-									? "Security"
-									: type === "compatibility"
-										? "Compatibility"
-										: t(type as any);
-
-						return (
-							<Card key={type}>
-								<CardContent className="pt-6">
-									<div className="flex items-center gap-4">
-										<div className="relative">
-											<Icon className="h-8 w-8 text-muted-foreground" />
-											<div
-												className={`-bottom-1 -right-1 absolute h-4 w-4 rounded-full ${statusColors[check?.status as keyof typeof statusColors] || statusColors.pending} flex items-center justify-center`}
-											>
-												<StatusIcon className="h-2.5 w-2.5 text-white" />
-											</div>
-										</div>
-
-										<div className="min-w-0 flex-1">
-											<div className="mb-2 flex items-center justify-between">
-												<h4 className="font-medium">{typeName}</h4>
-												{check?.score !== null &&
-													check?.score !== undefined && (
-														<span className="font-medium text-sm">
-															{check.score}/100
-														</span>
-													)}
-											</div>
-
-											{check?.score !== null && check?.score !== undefined && (
-												<Progress value={check.score} className="mb-2 h-1.5" />
-											)}
-
-											<div className="flex items-center justify-between text-muted-foreground text-sm">
-												<span>
-													{check?.status === "running" && t("running")}
-													{check?.status === "pending" && t("pending")}
-													{check?.status === "passed" && t("check_passed")}
-													{check?.status === "failed" && t("issues_found")}
-													{check?.status === "error" && t("check_error")}
-												</span>
-												{check?.completedAt && (
-													<span>{formatDate(new Date(check.completedAt))}</span>
-												)}
-											</div>
-
-											{check?.errorMessage && (
-												<div className="mt-2 rounded bg-destructive/10 p-2 text-destructive text-sm">
-													{check.errorMessage}
-												</div>
-											)}
-
-											{check?.shortDescription && (
-												<p className="mt-2 text-muted-foreground text-sm">
-													{check.shortDescription}
-												</p>
-											)}
-
-											{check?.classification &&
-												check.classification !== "safe" && (
-													<Badge
-														variant={
-															check.classification === "critical"
-																? "destructive"
-																: check.classification === "unsafe"
-																	? "destructive"
-																	: check.classification ===
-																			"potentially_unsafe"
-																		? "secondary"
-																		: "default"
-														}
-														className="mt-2"
-													>
-														{check.classification === "critical"
-															? "Критично"
-															: check.classification === "unsafe"
-																? "Небезопасно"
-																: check.classification === "potentially_unsafe"
-																	? "Потенциально небезопасно"
-																	: "Безопасно"}
-													</Badge>
-												)}
-
-											{check?.details && check.status !== "error" && (
-												<details className="mt-2">
-													<summary className="cursor-pointer text-muted-foreground text-sm hover:text-foreground">
-														{t("details")}
-													</summary>
-													<div className="mt-2 rounded bg-muted p-3 text-sm">
-														<pre className="whitespace-pre-wrap text-xs">
-															{JSON.stringify(
-																JSON.parse(check.details),
-																null,
-																2,
-															)}
-														</pre>
-													</div>
-												</details>
-											)}
-										</div>
-									</div>
-								</CardContent>
-							</Card>
-						);
-					})
+						{t("run_workflow")}
+					</Button>
 				)}
 			</div>
 
 			{latestChecks.length > 0 && (
-				<div className="text-center">
+				<Card>
+					{latestChecks.map(({ type, check }, index) => {
+						const typeName =
+							checkTypeNames[type as keyof typeof checkTypeNames] || type;
+
+						let statusColor = "bg-gray-400 shadow-sm";
+						let statusText = t("queued");
+
+						if (check?.status === "running") {
+							statusColor = "bg-yellow-500 shadow-yellow-200";
+							statusText = t("in_progress");
+						} else if (check?.status === "passed") {
+							statusColor = "bg-green-500 shadow-green-200";
+							statusText = t("success");
+						} else if (check?.status === "failed") {
+							statusColor = "bg-red-500 shadow-red-200";
+							statusText = t("failed");
+						} else if (check?.status === "error") {
+							statusColor = "bg-red-500 shadow-red-200";
+							statusText = t("failed");
+						}
+
+						const duration = check?.executionTime
+							? Math.round(check.executionTime / 1000)
+							: null;
+
+						return (
+							<div
+								key={type}
+								className={`group flex items-center gap-4 px-4 py-4 transition-all duration-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-50/50 ${
+									index !== latestChecks.length - 1
+										? "border-gray-100 border-b"
+										: ""
+								}`}
+							>
+								<div className="flex min-w-0 flex-1 items-center gap-4">
+									<div
+										className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${statusColor} ${
+											check?.status === "running" ? "animate-pulse" : ""
+										}`}
+									></div>
+
+									<div className="min-w-0 flex-1">
+										<div className="mb-1 flex items-center gap-3">
+											<span className="font-semibold text-gray-900 text-md transition-colors group-hover:text-gray-700">
+												{typeName}
+											</span>
+											<span
+												className={`rounded-full px-2 py-0.5 font-medium text-xs ${
+													check?.status === "running"
+														? "bg-yellow-100 text-yellow-700"
+														: check?.status === "passed"
+															? "bg-green-100 text-green-700"
+															: check?.status === "failed" ||
+																	check?.status === "error"
+																? "bg-red-100 text-red-700"
+																: "bg-gray-100 text-gray-600"
+												}`}
+											>
+												{statusText}
+											</span>
+										</div>
+
+										{check?.shortDescription && (
+											<p className="pr-4 text-gray-600 text-sm leading-relaxed transition-colors group-hover:text-gray-500">
+												{check.shortDescription}
+											</p>
+										)}
+
+										{check?.classification &&
+											check.classification !== "safe" && (
+												<div className="mt-2">
+													<span
+														className={`inline-flex items-center gap-1 rounded-md px-2 py-1 font-medium text-xs ${
+															check.classification === "critical"
+																? "border border-red-200 bg-red-100 text-red-800"
+																: check.classification === "unsafe"
+																	? "border border-red-200 bg-red-100 text-red-800"
+																	: check.classification ===
+																			"potentially_unsafe"
+																		? "border border-yellow-200 bg-yellow-100 text-yellow-800"
+																		: "border border-green-200 bg-green-100 text-green-800"
+														}`}
+													>
+														<div
+															className={`h-1.5 w-1.5 rounded-full ${
+																check.classification === "critical"
+																	? "bg-red-500"
+																	: check.classification === "unsafe"
+																		? "bg-red-500"
+																		: check.classification ===
+																				"potentially_unsafe"
+																			? "bg-yellow-500"
+																			: "bg-green-500"
+															}`}
+														></div>
+														{check.classification === "critical"
+															? t("critical")
+															: check.classification === "unsafe"
+																? t("unsafe")
+																: check.classification === "potentially_unsafe"
+																	? t("warning")
+																	: t("safe")}
+													</span>
+												</div>
+											)}
+									</div>
+								</div>
+
+								<div className="flex flex-shrink-0 items-center gap-4 text-gray-500 text-xs">
+									{duration && (
+										<span className="rounded-full bg-gray-100 px-2 py-1 font-medium">
+											{duration}s
+										</span>
+									)}
+									{check?.completedAt && (
+										<span className="hidden rounded-full bg-gray-50 px-2 py-1 sm:inline">
+											{formatDate(new Date(check.completedAt * 1000))}
+										</span>
+									)}
+
+									{check?.details && check.status !== "error" && (
+										<details className="relative">
+											<summary className="cursor-pointer list-none text-gray-400 opacity-0 transition-colors duration-200 hover:text-blue-600 group-hover:opacity-100">
+												<div className="rounded-md p-1 transition-colors hover:bg-blue-50">
+													<svg
+														className="h-4 w-4"
+														fill="none"
+														stroke="currentColor"
+														viewBox="0 0 24 24"
+													>
+														<path
+															strokeLinecap="round"
+															strokeLinejoin="round"
+															strokeWidth={2}
+															d="M9 5l7 7-7 7"
+														/>
+													</svg>
+												</div>
+											</summary>
+											<div className="slide-in-from-top-2 absolute top-8 right-0 z-20 w-80 animate-in overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl duration-200">
+												<div className="border-gray-100 border-b bg-gradient-to-r from-green-50 to-emerald-50 p-4">
+													<h4 className="flex items-center gap-2 font-semibold text-green-900">
+														<div className="h-2 w-2 rounded-full bg-green-500"></div>
+														{t("check_details")}
+													</h4>
+												</div>
+												<div className="max-h-60 overflow-y-auto p-4">
+													<pre className="whitespace-pre-wrap rounded-md border bg-gray-50 p-3 text-gray-700 text-xs leading-relaxed">
+														{JSON.stringify(JSON.parse(check.details), null, 2)}
+													</pre>
+												</div>
+											</div>
+										</details>
+									)}
+
+									{check?.errorMessage && (
+										<details className="relative">
+											<summary className="cursor-pointer list-none text-red-400 opacity-0 transition-colors duration-200 hover:text-red-600 group-hover:opacity-100">
+												<div className="rounded-md p-1 transition-colors hover:bg-red-50">
+													<svg
+														className="h-4 w-4"
+														fill="none"
+														stroke="currentColor"
+														viewBox="0 0 24 24"
+													>
+														<path
+															strokeLinecap="round"
+															strokeLinejoin="round"
+															strokeWidth={2}
+															d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+														/>
+													</svg>
+												</div>
+											</summary>
+											<div className="slide-in-from-top-2 absolute top-8 right-0 z-20 w-80 animate-in overflow-hidden rounded-lg border border-red-200 bg-white shadow-xl duration-200">
+												<div className="border-red-100 border-b bg-gradient-to-r from-red-50 to-pink-50 p-4">
+													<h4 className="flex items-center gap-2 font-semibold text-red-900">
+														<div className="h-2 w-2 rounded-full bg-red-500"></div>
+														{t("error_details")}
+													</h4>
+												</div>
+												<div className="p-4">
+													<p className="rounded-md border border-red-200 bg-red-50 p-3 text-red-700 text-xs leading-relaxed">
+														{check.errorMessage}
+													</p>
+												</div>
+											</div>
+										</details>
+									)}
+								</div>
+							</div>
+						);
+					})}
+				</Card>
+			)}
+
+			{latestChecks.length === 0 && !isRunning && (
+				<div className="rounded-lg border-2 border-gray-200 border-dashed bg-gray-50/30 p-8 text-center transition-all duration-200 hover:bg-gray-50/50">
+					<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-gray-100 to-gray-200 shadow-sm">
+						<Shield className="h-7 w-7 text-gray-500" />
+					</div>
+					<h3 className="mb-2 font-semibold text-gray-900 text-lg">
+						{t("no_checks_run")}
+					</h3>
+					<p className="mx-auto mb-6 max-w-md text-gray-600 leading-relaxed">
+						{t("no_checks_description")}
+					</p>
 					<Button
-						variant="outline"
-						onClick={() => refetch()}
-						disabled={isRunning}
+						onClick={handleRunChecks}
+						disabled={runChecksMutation.isPending}
+						className="font-medium shadow-sm"
 					>
-						<RefreshCw
-							className={`mr-2 h-4 w-4 ${isRunning ? "animate-spin" : ""}`}
-						/>
-						{t("refresh_status")}
+						{runChecksMutation.isPending ? (
+							<>
+								<div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+								{t("starting")}
+							</>
+						) : (
+							<>
+								<Play className="mr-2 h-4 w-4" />
+								{t("run_workflow")}
+							</>
+						)}
 					</Button>
+				</div>
+			)}
+
+			{(isRunning || runChecksMutation.isPending) && (
+				<div className="rounded-lg border border-blue-200/60 bg-gradient-to-r from-blue-50 to-indigo-50 p-6 shadow-sm">
+					<div className="flex items-center gap-4">
+						<div className="flex-shrink-0">
+							<div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-blue-200 shadow-sm">
+								<RefreshCw className="h-5 w-5 animate-spin text-blue-600" />
+							</div>
+						</div>
+						<div className="flex-1">
+							<h3 className="mb-1 font-semibold text-blue-900 text-lg">
+								{t("running_workflow")}
+							</h3>
+							<p className="text-blue-700 text-sm leading-relaxed">
+								{t("ai_analyzing")}
+							</p>
+						</div>
+					</div>
+
+					<div className="mt-6 space-y-3">
+						<div className="flex items-center gap-4 rounded-md bg-white/50 p-3 text-sm">
+							<div className="h-2 w-2 animate-pulse rounded-full bg-yellow-500"></div>
+							<span className="font-medium text-blue-800">
+								{t("security_check")}
+							</span>
+							<span className="ml-auto text-blue-600 text-xs">
+								{t("in_progress")}
+							</span>
+						</div>
+						<div className="flex items-center gap-4 rounded-md bg-white/50 p-3 text-sm">
+							<div
+								className="h-2 w-2 animate-pulse rounded-full bg-yellow-500"
+								style={{ animationDelay: "0.3s" }}
+							></div>
+							<span className="font-medium text-blue-800">
+								{t("performance_analysis")}
+							</span>
+							<span className="ml-auto text-blue-600 text-xs">
+								{t("in_progress")}
+							</span>
+						</div>
+					</div>
 				</div>
 			)}
 		</div>
