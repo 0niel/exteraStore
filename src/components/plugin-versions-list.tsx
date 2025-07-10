@@ -77,7 +77,7 @@ export function PluginVersionsList({ pluginId }: PluginVersionsListProps) {
 							</TableCell>
 							<TableCell className="flex items-center gap-2">
 								<Calendar className="h-4 w-4" />
-								{formatDate(new Date(version.createdAt))}
+								{formatDate(version.createdAt)}
 							</TableCell>
 							<TableCell className="text-right">
 								<DropdownMenu>

@@ -660,7 +660,7 @@ export default function PluginDetailPage() {
 																	))}
 																</div>
 																<span className="text-muted-foreground text-xs">
-																	{formatDate(new Date(review.createdAt))}
+																	{formatDate(review.createdAt)}
 																</span>
 															</div>
 															{review.comment && (

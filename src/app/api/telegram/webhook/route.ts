@@ -1,5 +1,6 @@
 import { and, desc, eq, like, or, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
+import { createValidDate } from "~/lib/utils";
 import { db } from "~/server/db";
 import {
 	type plugins as Plugin,
@@ -988,7 +989,7 @@ async function showRecentPlugins(
 		message += `📦 Последние ${results.length} плагин${results.length === 1 ? "" : results.length < 5 ? "а" : "ов"}:\n\n`;
 
 		results.forEach((plugin: typeof Plugin.$inferSelect, index: number) => {
-			const createdDate = new Date(plugin.createdAt).toLocaleDateString(
+			const createdDate = createValidDate(plugin.createdAt).toLocaleDateString(
 				"ru-RU",
 			);
 			message += `${index + 1 + offset}. <b>${plugin.name}</b>\n`;
@@ -1059,7 +1060,7 @@ async function showUserProfile(
 
 		if (user[0]) {
 			message += `📧 Email: ${user[0].email || "Не указан"}\n`;
-			message += `📅 Регистрация: ${new Date(user[0].createdAt).toLocaleDateString("ru-RU")}\n`;
+			message += `📅 Регистрация: ${createValidDate(user[0].createdAt).toLocaleDateString("ru-RU")}\n`;
 		} else {
 			message += `🆔 Telegram ID: ${userId}\n`;
 			message += "📅 Первое использование: сегодня\n";
@@ -1111,7 +1112,7 @@ async function showPluginDetails(
 		message += `👤 <b>Автор:</b> ${p.author}\n`;
 		message += `📊 <b>Рейтинг:</b> ⭐ ${p.rating.toFixed(1)}/5 (${p.ratingCount} отзывов)\n`;
 		message += `⬇️ <b>Скачиваний:</b> ${p.downloadCount}\n`;
-		message += `📅 <b>Обновлен:</b> ${new Date(p.updatedAt || p.createdAt).toLocaleDateString("ru-RU")}\n`;
+		message += `📅 <b>Обновлен:</b> ${createValidDate(p.updatedAt || p.createdAt).toLocaleDateString("ru-RU")}\n`;
 
 		if (p.tags) {
 			message += `🏷️ <b>Теги:</b> ${p.tags}\n`;

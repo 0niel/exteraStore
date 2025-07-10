@@ -253,7 +253,7 @@ export default function PluginDiffPage() {
 								<div className="flex items-center gap-2 text-muted-foreground text-sm">
 									<Calendar className="h-4 w-4" />
 									<span>
-										{formatDate(new Date(diffData.fromVersion.createdAt))}
+										{formatDate(diffData.fromVersion.createdAt)}
 									</span>
 								</div>
 								<div className="flex items-center gap-2 text-muted-foreground text-sm">
@@ -294,7 +294,7 @@ export default function PluginDiffPage() {
 								<div className="flex items-center gap-2 text-muted-foreground text-sm">
 									<Calendar className="h-4 w-4" />
 									<span>
-										{formatDate(new Date(diffData.toVersion.createdAt))}
+										{formatDate(diffData.toVersion.createdAt)}
 									</span>
 								</div>
 								<div className="flex items-center gap-2 text-muted-foreground text-sm">

@@ -16,7 +16,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
-import { formatDate } from "~/lib/utils";
+import { createValidDate, formatDate } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import { Card } from "./ui/card";
 
@@ -131,10 +131,10 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 
 	const latestChecks = Object.entries(groupedChecks).map(
 		([type, typeChecks]) => {
-			const latest = (typeChecks as any[]).sort(
-				(a: any, b: any) =>
-					new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-			)[0];
+			const latest = 		(typeChecks as any[]).sort(
+			(a: any, b: any) =>
+				createValidDate(b.createdAt).getTime() - createValidDate(a.createdAt).getTime(),
+		)[0];
 			return { type, check: latest };
 		},
 	);
@@ -308,7 +308,7 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 									)}
 									{check?.completedAt && (
 										<span className="hidden rounded-full bg-gray-50 px-2 py-1 sm:inline">
-											{formatDate(new Date(check.completedAt * 1000))}
+											{formatDate(check.completedAt)}
 										</span>
 									)}
 

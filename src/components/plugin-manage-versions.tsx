@@ -93,7 +93,7 @@ export function PluginManageVersions({
 								<div className="mb-3 grid grid-cols-2 gap-4 text-muted-foreground text-sm md:grid-cols-4">
 									<div className="flex items-center gap-1">
 										<Calendar className="h-4 w-4" />
-										<span>{formatDate(new Date(version.createdAt))}</span>
+										<span>{formatDate(version.createdAt)}</span>
 									</div>
 									<div className="flex items-center gap-1">
 										<Download className="h-4 w-4" />

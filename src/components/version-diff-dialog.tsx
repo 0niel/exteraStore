@@ -20,6 +20,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "~/components/ui/select";
+import { createValidDate } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
 interface VersionDiffDialogProps {
@@ -59,7 +60,7 @@ export function VersionDiffDialog({
 	);
 
 	const sortedVersions = [...versions].sort(
-		(a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+		(a, b) => createValidDate(b.createdAt).getTime() - createValidDate(a.createdAt).getTime(),
 	);
 
 	const renderDiff = () => {
@@ -140,7 +141,7 @@ export function VersionDiffDialog({
 								{sortedVersions.map((version) => (
 									<SelectItem key={version.id} value={version.version}>
 										{version.version} (
-										{new Date(version.createdAt).toLocaleDateString()})
+										{createValidDate(version.createdAt).toLocaleDateString()})
 									</SelectItem>
 								))}
 							</SelectContent>
@@ -159,7 +160,7 @@ export function VersionDiffDialog({
 								{sortedVersions.map((version) => (
 									<SelectItem key={version.id} value={version.version}>
 										{version.version} (
-										{new Date(version.createdAt).toLocaleDateString()})
+										{createValidDate(version.createdAt).toLocaleDateString()})
 									</SelectItem>
 								))}
 							</SelectContent>

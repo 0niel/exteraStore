@@ -166,7 +166,7 @@ export function PluginVersions({ pluginSlug }: PluginVersionsProps) {
 									<div className="mb-3 grid grid-cols-1 gap-2 overflow-x-auto text-muted-foreground text-sm sm:grid-cols-2 md:grid-cols-4 md:gap-4">
 										<div className="flex items-center gap-1">
 											<Calendar className="h-4 w-4" />
-											<span>{formatDate(new Date(version.createdAt))}</span>
+											<span>{formatDate(version.createdAt)}</span>
 										</div>
 										<div className="flex items-center gap-1">
 											<HardDrive className="h-4 w-4" />
@@ -288,7 +288,7 @@ export function PluginVersions({ pluginSlug }: PluginVersionsProps) {
 															{t("creation_date")}
 														</label>
 														<p className="text-muted-foreground text-sm">
-															{formatDate(new Date(version.createdAt))}
+															{formatDate(version.createdAt)}
 														</p>
 													</div>
 													<div>

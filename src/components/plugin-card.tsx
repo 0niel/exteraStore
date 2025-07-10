@@ -174,7 +174,7 @@ export function PluginCard({
 							</div>
 							<div className="flex items-center gap-1">
 								<Calendar className="h-3 w-3" />
-								<span>{formatDate(new Date(plugin.createdAt))}</span>
+								<span>{formatDate(plugin.createdAt)}</span>
 							</div>
 						</div>
 					</div>
