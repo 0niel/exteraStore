@@ -32,6 +32,7 @@ import {
 	CardTitle,
 } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
+import { Progress } from "~/components/ui/progress";
 import { Skeleton } from "~/components/ui/skeleton";
 import { cn, formatNumber } from "~/lib/utils";
 import { api } from "~/trpc/react";
@@ -44,25 +45,59 @@ function getDeveloperTier(downloads: number, rating: number, plugins: number) {
 			name: "Legend",
 			color: "from-yellow-400 to-orange-500",
 			icon: Crown,
+			bgColor: "from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20",
 		};
 	if (score >= 5000)
 		return {
 			name: "Master",
 			color: "from-purple-400 to-pink-500",
 			icon: Trophy,
+			bgColor: "from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20",
 		};
 	if (score >= 2000)
-		return { name: "Expert", color: "from-blue-400 to-cyan-500", icon: Award };
+		return { 
+			name: "Expert", 
+			color: "from-blue-400 to-cyan-500", 
+			icon: Award,
+			bgColor: "from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20",
+		};
 	if (score >= 500)
 		return {
 			name: "Pro",
 			color: "from-green-400 to-emerald-500",
 			icon: Target,
+			bgColor: "from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20",
 		};
 	return {
 		name: "Rising",
 		color: "from-gray-400 to-slate-500",
 		icon: Sparkles,
+		bgColor: "from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20",
+	};
+}
+
+function getTierProgress(downloads: number, rating: number, plugins: number) {
+	const score = downloads * 0.6 + rating * plugins * 20;
+	const tiers = [0, 500, 2000, 5000, 10000];
+	const tierNames = ["Rising", "Pro", "Expert", "Master", "Legend"];
+
+	let currentTier = 0;
+	for (let i = 0; i < tiers.length; i++) {
+		if (score >= tiers[i]!) currentTier = i;
+	}
+
+	if (currentTier === tiers.length - 1) return { progress: 100, nextTier: null };
+
+	const currentTierScore = tiers[currentTier]!;
+	const nextTierScore = tiers[currentTier + 1]!;
+	const current = score - currentTierScore;
+	const next = nextTierScore - currentTierScore;
+	const progress = Math.min((current / next) * 100, 100);
+
+	return { 
+		progress, 
+		nextTier: tierNames[currentTier + 1] || null,
+		scoreNeeded: nextTierScore - score
 	};
 }
 
@@ -162,8 +197,13 @@ export default function DevelopersPage() {
 				) : (
 					<>
 						<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-							{filteredDevelopers.map((developer: any) => {
+														{filteredDevelopers.map((developer: any) => {
 								const tier = getDeveloperTier(
+									developer.totalDownloads || 0,
+									developer.averageRating || 0,
+									developer.pluginCount || 0,
+								);
+								const progress = getTierProgress(
 									developer.totalDownloads || 0,
 									developer.averageRating || 0,
 									developer.pluginCount || 0,
@@ -173,23 +213,31 @@ export default function DevelopersPage() {
 								return (
 									<Card
 										key={developer.id}
-										className="group hover:-translate-y-1 h-full cursor-pointer overflow-hidden transition-all duration-200 hover:shadow-lg"
+										className="group relative h-full cursor-pointer overflow-hidden bg-gradient-to-br from-card to-card/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl"
+										onClick={() =>
+											(window.location.href = `/developers/${developer.id}`)
+										}
 									>
-										<CardContent
-											className="p-6"
-											onClick={() =>
-												(window.location.href = `/developers/${developer.id}`)
-											}
-										>
-											<div className="flex items-start gap-4">
+										{/* Tier accent border */}
+										<div className={cn(
+											"absolute inset-x-0 top-0 h-1 bg-gradient-to-r",
+											tier.color
+										)} />
+										
+										<CardContent className="relative p-6 h-full flex flex-col">
+											{/* Header with avatar and tier */}
+											<div className="flex items-start gap-4 mb-4">
 												<div className="relative">
-													<Avatar className="h-12 w-12">
+													<Avatar className="h-14 w-14 border-2 border-background shadow-lg">
 														<AvatarImage
 															src={developer.image || undefined}
 															alt={developer.name || ""}
 															className="object-cover"
 														/>
-														<AvatarFallback className="bg-primary/10 font-medium text-sm">
+														<AvatarFallback className={cn(
+															"bg-gradient-to-br font-medium text-sm text-white",
+															tier.color
+														)}>
 															{(developer.name || "??")
 																.slice(0, 2)
 																.toUpperCase()}
@@ -197,52 +245,60 @@ export default function DevelopersPage() {
 													</Avatar>
 													<div
 														className={cn(
-															"-bottom-1 -right-1 absolute flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-r shadow-sm",
+															"-bottom-1 -right-1 absolute flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-r shadow-lg border-2 border-background",
 															tier.color,
 														)}
 													>
-														<TierIcon className="h-3 w-3 text-white" />
+														<TierIcon className="h-3.5 w-3.5 text-white" />
 													</div>
 												</div>
 
 												<div className="min-w-0 flex-1">
-													<h3 className="truncate font-semibold transition-colors group-hover:text-primary">
+													<h3 className="truncate font-bold text-lg transition-colors group-hover:text-primary">
 														{developer.name || "Anonymous"}
 													</h3>
-													<div className="mt-1 flex items-center gap-2">
+													<div className="mt-2">
 														<Badge
-															variant="secondary"
 															className={cn(
-																"border-0 bg-gradient-to-r text-white text-xs",
+																"border-0 bg-gradient-to-r text-white text-xs shadow-md px-3 py-1",
 																tier.color,
 															)}
 														>
-															<TierIcon className="mr-1 h-2.5 w-2.5" />
-															{tier.name}
+															<TierIcon className="mr-1.5 h-3 w-3" />
+															{tier.name} Developer
 														</Badge>
-														{developer.isVerified && (
-															<Badge
-																variant="outline"
-																className="border-blue-500 text-blue-600 text-xs"
-															>
-																<Zap className="mr-1 h-2.5 w-2.5" />
-																Verified
-															</Badge>
-														)}
 													</div>
 												</div>
 											</div>
 
 											{developer.bio && (
-												<p className="mt-4 line-clamp-2 text-muted-foreground text-sm">
+												<p className="mb-4 line-clamp-2 text-muted-foreground text-sm">
 													{developer.bio}
 												</p>
 											)}
 
-											<div className="mt-4 grid grid-cols-3 gap-2 text-center">
-												<div className="rounded-lg bg-muted/50 p-2">
+											{/* Progress to next tier */}
+											{progress.nextTier && progress.progress < 100 && (
+												<div className="mb-4">
+													<div className="mb-2 flex items-center justify-between text-xs">
+														<span className="text-muted-foreground">
+															Прогресс до {progress.nextTier}
+														</span>
+														<span className="font-medium text-primary">
+															{Math.round(progress.progress)}%
+														</span>
+													</div>
+													<Progress 
+														value={progress.progress} 
+														className="h-1.5"
+													/>
+												</div>
+											)}
+
+											<div className="mb-4 grid grid-cols-3 gap-2 text-center">
+												<div className="rounded-lg bg-muted/30 p-2 transition-colors group-hover:bg-muted/50">
 													<div className="flex items-center justify-center gap-1">
-														<Package className="h-3 w-3 text-muted-foreground" />
+														<Package className="h-3 w-3 text-blue-600" />
 														<span className="font-medium text-sm">
 															{developer.pluginCount || 0}
 														</span>
@@ -252,9 +308,9 @@ export default function DevelopersPage() {
 													</div>
 												</div>
 
-												<div className="rounded-lg bg-muted/50 p-2">
+												<div className="rounded-lg bg-muted/30 p-2 transition-colors group-hover:bg-muted/50">
 													<div className="flex items-center justify-center gap-1">
-														<Download className="h-3 w-3 text-muted-foreground" />
+														<Download className="h-3 w-3 text-green-600" />
 														<span className="font-medium text-sm">
 															{formatNumber(developer.totalDownloads || 0)}
 														</span>
@@ -264,9 +320,9 @@ export default function DevelopersPage() {
 													</div>
 												</div>
 
-												<div className="rounded-lg bg-muted/50 p-2">
+												<div className="rounded-lg bg-muted/30 p-2 transition-colors group-hover:bg-muted/50">
 													<div className="flex items-center justify-center gap-1">
-														<Star className="h-3 w-3 text-muted-foreground" />
+														<Star className="h-3 w-3 text-yellow-600" />
 														<span className="font-medium text-sm">
 															{developer.averageRating?.toFixed(1) || "0.0"}
 														</span>
@@ -277,13 +333,13 @@ export default function DevelopersPage() {
 												</div>
 											</div>
 
-											<div className="mt-4 flex items-center justify-between">
+											<div className="mt-auto flex items-center justify-between">
 												<div className="flex items-center gap-1">
 													{developer.githubUsername && (
 														<Button
 															variant="ghost"
 															size="sm"
-															className="h-8 w-8 p-0"
+															className="h-8 w-8 p-0 hover:bg-primary/10 transition-colors"
 															onClick={(e) => {
 																e.stopPropagation();
 																window.open(
@@ -299,7 +355,7 @@ export default function DevelopersPage() {
 														<Button
 															variant="ghost"
 															size="sm"
-															className="h-8 w-8 p-0"
+															className="h-8 w-8 p-0 hover:bg-primary/10 transition-colors"
 															onClick={(e) => {
 																e.stopPropagation();
 																window.open(developer.website, "_blank");
@@ -313,7 +369,7 @@ export default function DevelopersPage() {
 												<Button
 													size="sm"
 													variant="ghost"
-													className="h-8 w-8 p-0"
+													className="h-8 w-8 p-0 hover:bg-primary/10 transition-colors opacity-60 group-hover:opacity-100"
 												>
 													<ExternalLink className="h-4 w-4" />
 												</Button>

@@ -91,21 +91,42 @@ function getNextTierProgress(
 	plugins: number,
 ) {
 	const score = downloads * 0.6 + rating * plugins * 20;
-	const tiers = [0, 500, 2000, 5000, 10000];
+	const tiers = [
+		{ score: 0, name: "Rising" },
+		{ score: 500, name: "Pro" },
+		{ score: 2000, name: "Expert" },
+		{ score: 5000, name: "Master" },
+		{ score: 10000, name: "Legend" }
+	];
 
-	let currentTier = 0;
+	let currentTierIndex = 0;
 	for (let i = 0; i < tiers.length; i++) {
-		if (score >= tiers[i]!) currentTier = i;
+		if (score >= tiers[i]!.score) currentTierIndex = i;
 	}
 
-	if (currentTier === tiers.length - 1) return 100;
+	if (currentTierIndex === tiers.length - 1) {
+		return {
+			progress: 100,
+			currentTier: tiers[currentTierIndex]!,
+			nextTier: null,
+			currentScore: score,
+			scoreNeeded: 0,
+		};
+	}
 
-	const currentTierScore = tiers[currentTier]!;
-	const nextTierScore = tiers[currentTier + 1]!;
-	const current = score - currentTierScore;
-	const next = nextTierScore - currentTierScore;
+	const currentTier = tiers[currentTierIndex]!;
+	const nextTier = tiers[currentTierIndex + 1]!;
+	const current = score - currentTier.score;
+	const next = nextTier.score - currentTier.score;
+	const progress = Math.min((current / next) * 100, 100);
 
-	return Math.min((current / next) * 100, 100);
+	return {
+		progress,
+		currentTier,
+		nextTier,
+		currentScore: score,
+		scoreNeeded: nextTier.score - score,
+	};
 }
 
 export default function DeveloperProfilePage() {
@@ -205,7 +226,7 @@ export default function DeveloperProfilePage() {
 		stats?.averageRating || 0,
 		stats?.totalPlugins || 0,
 	);
-	const progress = getNextTierProgress(
+	const tierProgress = getNextTierProgress(
 		stats?.totalDownloads || 0,
 		stats?.averageRating || 0,
 		stats?.totalPlugins || 0,
@@ -297,7 +318,7 @@ export default function DeveloperProfilePage() {
 									<div className="mb-6 flex flex-wrap items-center justify-center gap-3 md:justify-start">
 										<Badge
 											className={cn(
-												"border-0 bg-gradient-to-r px-4 py-2 text-sm text-white",
+												"border-0 bg-gradient-to-r px-4 py-2 text-sm text-white shadow-lg",
 												tier.color,
 											)}
 										>
@@ -341,7 +362,7 @@ export default function DeveloperProfilePage() {
 										</div>
 										<div className="text-center">
 											<div className="mb-1 font-bold text-3xl text-primary">
-												{Math.round(progress)}%
+												{Math.round(tierProgress.progress)}%
 											</div>
 											<div className="text-muted-foreground text-sm">
 												До {tier.name === "Legend" ? "Максимум" : "повышения"}
@@ -349,17 +370,27 @@ export default function DeveloperProfilePage() {
 										</div>
 									</div>
 
-									{progress < 100 && tier.name !== "Legend" && (
+									{tierProgress.progress < 100 && tier.name !== "Legend" && (
 										<div className="mt-6">
 											<div className="mb-2 flex items-center justify-between text-sm">
 												<span className="text-muted-foreground">
-													Прогресс до следующего ранга
+													{tierProgress.nextTier ? `Прогресс до ${tierProgress.nextTier.name}` : "Прогресс"}
 												</span>
 												<span className="font-medium">
-													{Math.round(progress)}%
+													{Math.round(tierProgress.progress)}%
 												</span>
 											</div>
-											<Progress value={progress} className="h-3" />
+											<Progress value={tierProgress.progress} className="h-3 bg-muted/30" />
+											{tierProgress.nextTier && (
+												<div className="mt-2 text-center">
+													<div className="text-xs text-muted-foreground">
+														Нужно еще <span className="font-medium text-primary">{Math.ceil(tierProgress.scoreNeeded)}</span> очков для ранга <span className="font-medium">{tierProgress.nextTier.name}</span>
+													</div>
+													<div className="mt-1 text-xs text-muted-foreground">
+														Текущий счет: <span className="font-medium">{Math.floor(tierProgress.currentScore)}</span>
+													</div>
+												</div>
+											)}
 										</div>
 									)}
 								</div>

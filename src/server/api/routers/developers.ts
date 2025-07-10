@@ -33,6 +33,7 @@ export const developersRouter = createTRPCRouter({
 					isVerified: users.isVerified,
 					pluginCount: count(plugins.id),
 					averageRating: sql<number>`AVG(${plugins.rating})`,
+					totalDownloads: sql<number>`SUM(${plugins.downloadCount})`,
 				})
 				.from(users)
 				.innerJoin(plugins, eq(plugins.authorId, users.id))
