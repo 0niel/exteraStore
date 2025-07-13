@@ -165,6 +165,13 @@
 		"versions": "Версии",
 		"reviews": "Отзывы"
 	},
+	"TextImprovement": {
+		"improve_text": "Улучшить с ИИ",
+		"improving": "Улучшаем...",
+		"improvement_success": "Текст успешно улучшен!",
+		"improvement_error": "Ошибка улучшения: {error}",
+		"text_empty": "Нечего улучшать - поле пустое"
+	},
 	"ScreenshotUploader": {
 		"screenshots": "Скриншоты",
 		"screenshots_description": "Добавьте до 5 скриншотов, чтобы продемонстрировать свой плагин.",

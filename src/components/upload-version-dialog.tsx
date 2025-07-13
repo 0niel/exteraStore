@@ -29,7 +29,7 @@ import {
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { Switch } from "~/components/ui/switch";
-import { Textarea } from "~/components/ui/textarea";
+import { MarkdownEditor } from "~/components/markdown-editor";
 
 const uploadVersionSchema = z.object({
 	version: z
@@ -41,16 +41,18 @@ const uploadVersionSchema = z.object({
 	isStable: z.boolean(),
 });
 
-type UploadVersionForm = z.infer<typeof uploadVersionSchema>;
-
 interface UploadVersionDialogProps {
 	pluginId: number;
 	onUploadSuccess: () => void;
+	pluginName?: string;
 }
+
+type UploadVersionForm = z.infer<typeof uploadVersionSchema>;
 
 export function UploadVersionDialog({
 	pluginId,
 	onUploadSuccess,
+	pluginName,
 }: UploadVersionDialogProps) {
 	const t = useTranslations("UploadVersionDialog");
 	const [open, setOpen] = useState(false);
@@ -196,10 +198,14 @@ export function UploadVersionDialog({
 								<FormItem>
 									<FormLabel>{t("changelog")}</FormLabel>
 									<FormControl>
-										<Textarea
+										<MarkdownEditor
+											value={field.value || ""}
+											onChange={field.onChange}
+											height={150}
 											placeholder={t("changelog_placeholder")}
-											className="min-h-[100px]"
-											{...field}
+											showImproveButton={true}
+											textType="changelog"
+											pluginName={pluginName}
 										/>
 									</FormControl>
 									<FormDescription>

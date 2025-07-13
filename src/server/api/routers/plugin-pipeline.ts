@@ -546,6 +546,32 @@ export const pluginPipelineRouter = createTRPCRouter({
 			return results;
 		}),
 
+	improveText: protectedProcedure
+		.input(
+			z.object({
+				text: z.string().min(1, "Текст не может быть пустым"),
+				textType: z.enum(["description", "changelog"]),
+				pluginName: z.string().optional(),
+			}),
+		)
+		.mutation(async ({ input }) => {
+			if (!input.text.trim()) {
+				throw new Error("Текст не может быть пустым");
+			}
+
+			const aiChecker = new PluginAIChecker();
+			try {
+				const result = await aiChecker.improveText(
+					input.text,
+					input.textType,
+					input.pluginName,
+				);
+				return result;
+			} finally {
+				aiChecker.cleanup();
+			}
+		}),
+
 	subscribe: protectedProcedure
 		.input(
 			z.object({

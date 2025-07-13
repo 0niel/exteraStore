@@ -162,6 +162,13 @@
 		"versions": "Versions",
 		"reviews": "Reviews"
 	},
+	"TextImprovement": {
+		"improve_text": "Improve with AI",
+		"improving": "Improving...",
+		"improvement_success": "Text successfully improved!",
+		"improvement_error": "Improvement error: {error}",
+		"text_empty": "Nothing to improve - field is empty"
+	},
 	"ScreenshotUploader": {
 		"screenshots": "Screenshots",
 		"screenshots_description": "Add up to 5 screenshots to showcase your plugin.",

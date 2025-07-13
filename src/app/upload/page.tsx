@@ -280,6 +280,9 @@ export default function UploadPluginPage() {
 															value={field.value || ""}
 															onChange={field.onChange}
 															height={400}
+															showImproveButton={true}
+															textType="description"
+															pluginName={form.watch("name")}
 														/>
 													</FormControl>
 													<FormMessage />
@@ -332,6 +335,9 @@ export default function UploadPluginPage() {
 															onChange={field.onChange}
 															height={200}
 															placeholder="- Добавлена функция X&#10;- Исправлена ошибка Y"
+															showImproveButton={true}
+															textType="changelog"
+															pluginName={form.watch("name")}
 														/>
 													</FormControl>
 													<FormMessage />

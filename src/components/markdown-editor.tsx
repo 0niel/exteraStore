@@ -17,12 +17,16 @@ import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Textarea } from "~/components/ui/textarea";
+import { TextImprovementButton } from "~/components/text-improvement-button";
 
 interface MarkdownEditorProps {
 	value: string;
 	onChange: (value: string) => void;
 	height?: number;
 	placeholder?: string;
+	showImproveButton?: boolean;
+	textType?: "description" | "changelog";
+	pluginName?: string;
 }
 
 export function MarkdownEditor({
@@ -30,94 +34,129 @@ export function MarkdownEditor({
 	onChange,
 	height = 300,
 	placeholder = "Use Markdown for formatting...",
+	showImproveButton = false,
+	textType = "description",
+	pluginName,
 }: MarkdownEditorProps) {
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-	const handleToolbarClick = (syntax: string) => {
-		const newText = `${value}\n${syntax}`;
-		onChange(newText);
-	};
+	const insertMarkdown = (before: string, after = "") => {
+		const textarea = textareaRef.current;
+		if (!textarea) return;
 
-	const handleBold = () => {
-		const start = textareaRef.current?.selectionStart ?? 0;
-		const end = textareaRef.current?.selectionEnd ?? 0;
-		const newValue = `${value.substring(0, start)}**${value.substring(start, end)}**${value.substring(end)}`;
-		onChange(newValue);
-	};
+		const start = textarea.selectionStart;
+		const end = textarea.selectionEnd;
+		const selectedText = value.substring(start, end);
+		const newValue =
+			value.substring(0, start) +
+			before +
+			selectedText +
+			after +
+			value.substring(end);
 
-	const handleItalic = () => {
-		const start = textareaRef.current?.selectionStart ?? 0;
-		const end = textareaRef.current?.selectionEnd ?? 0;
-		const newValue = `${value.substring(0, start)}*${value.substring(start, end)}*${value.substring(end)}`;
 		onChange(newValue);
+
+		setTimeout(() => {
+			textarea.focus();
+			textarea.setSelectionRange(
+				start + before.length,
+				start + before.length + selectedText.length,
+			);
+		}, 10);
 	};
 
 	return (
-		<div className="space-y-2">
-			<Label htmlFor="description">Full Description</Label>
-			<Tabs defaultValue="write" className="w-full rounded-md border">
-				<TabsList className="w-full justify-start rounded-b-none border-b bg-muted/60">
-					<TabsTrigger value="write">Write</TabsTrigger>
-					<TabsTrigger value="preview">Preview</TabsTrigger>
-					<div className="ml-auto flex items-center gap-1 pr-2">
+		<div className="w-full rounded-md border">
+			<Tabs defaultValue="write" className="w-full">
+				<div className="flex items-center justify-between border-b px-3 py-2">
+					<TabsList className="h-8">
+						<TabsTrigger value="write" className="text-xs">
+							Write
+						</TabsTrigger>
+						<TabsTrigger value="preview" className="text-xs">
+							Preview
+						</TabsTrigger>
+					</TabsList>
+					<div className="flex items-center gap-1">
 						<Button
-							size="icon"
-							variant="ghost"
 							type="button"
-							onClick={() => handleToolbarClick("**Bold Text**")}
+							variant="ghost"
+							size="sm"
+							onClick={() => insertMarkdown("**", "**")}
+							className="h-8 w-8 p-0"
 						>
-							<Bold className="h-4 w-4" />
+							<Bold className="h-3 w-3" />
 						</Button>
 						<Button
-							size="icon"
-							variant="ghost"
 							type="button"
-							onClick={() => handleToolbarClick("_Italic Text_")}
+							variant="ghost"
+							size="sm"
+							onClick={() => insertMarkdown("*", "*")}
+							className="h-8 w-8 p-0"
 						>
-							<Italic className="h-4 w-4" />
+							<Italic className="h-3 w-3" />
 						</Button>
 						<Button
-							size="icon"
-							variant="ghost"
 							type="button"
-							onClick={() => handleToolbarClick("> Blockquote")}
+							variant="ghost"
+							size="sm"
+							onClick={() => insertMarkdown("`", "`")}
+							className="h-8 w-8 p-0"
 						>
-							<Quote className="h-4 w-4" />
+							<Code className="h-3 w-3" />
 						</Button>
 						<Button
-							size="icon"
-							variant="ghost"
 							type="button"
-							onClick={() => handleToolbarClick("```\ncode\n```")}
+							variant="ghost"
+							size="sm"
+							onClick={() => insertMarkdown("[", "](url)")}
+							className="h-8 w-8 p-0"
 						>
-							<Code className="h-4 w-4" />
+							<Link className="h-3 w-3" />
 						</Button>
 						<Button
-							size="icon"
-							variant="ghost"
 							type="button"
-							onClick={() => handleToolbarClick("* List Item")}
+							variant="ghost"
+							size="sm"
+							onClick={() => insertMarkdown("\n- ", "")}
+							className="h-8 w-8 p-0"
 						>
-							<List className="h-4 w-4" />
+							<List className="h-3 w-3" />
 						</Button>
 						<Button
-							size="icon"
-							variant="ghost"
 							type="button"
-							onClick={() => handleToolbarClick("[Link Text](url)")}
+							variant="ghost"
+							size="sm"
+							onClick={() => insertMarkdown("\n> ", "")}
+							className="h-8 w-8 p-0"
 						>
-							<Link className="h-4 w-4" />
+							<Quote className="h-3 w-3" />
 						</Button>
 						<Button
-							size="icon"
-							variant="ghost"
 							type="button"
-							onClick={() => handleToolbarClick("![Alt Text](url)")}
+							variant="ghost"
+							size="sm"
+							onClick={() => insertMarkdown("\n![alt](", ")")}
+							className="h-8 w-8 p-0"
 						>
-							<ImageIcon className="h-4 w-4" />
+							<ImageIcon className="h-3 w-3" />
 						</Button>
+						{showImproveButton && (
+							<>
+								<div className="mx-1 h-4 w-px bg-border" />
+								<TextImprovementButton
+									text={value}
+									textType={textType}
+									pluginName={pluginName}
+									onImprovedText={onChange}
+									size="sm"
+									variant="ghost"
+								/>
+							</>
+						)}
 					</div>
-				</TabsList>
+				</div>
+
 				<TabsContent value="write" className="p-0">
 					<Textarea
 						id="description"

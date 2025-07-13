@@ -122,6 +122,85 @@ export class PluginAIChecker {
 }`;
 	}
 
+	private getTextImprovementPrompt(textType: "description" | "changelog"): string {
+		if (textType === "description") {
+			return `Ты эксперт по написанию описаний плагинов для exteraGram. Улучши описание плагина:
+
+ЦЕЛИ:
+• Сделай текст более привлекательным и информативным
+• Подчеркни ключевые возможности и преимущества
+• Сохрани техническую точность
+• Используй активный залог и живой язык
+• Добавь эмодзи для лучшего восприятия
+• Структурируй информацию с помощью заголовков и списков
+
+ФОРМАТ ОТВЕТА:
+Верни только улучшенный текст в формате Markdown. Не добавляй пояснений или комментариев.`;
+		} else {
+			return `Ты эксперт по написанию changelog для плагинов exteraGram. Улучши список изменений:
+
+ЦЕЛИ:
+• Сделай изменения более понятными для пользователей
+• Группируй изменения по типам: ✨ Новое, 🔧 Исправления, 💥 Критические изменения
+• Используй активный залог
+• Добавь эмодзи для категоризации изменений
+• Сделай описания конкретными и полезными
+
+ФОРМАТ ОТВЕТА:
+Верни только улучшенный changelog в формате Markdown. Не добавляй пояснений или комментариев.`;
+		}
+	}
+
+	async improveText(
+		text: string,
+		textType: "description" | "changelog",
+		pluginName?: string,
+	): Promise<{ improvedText: string }> {
+		console.log(
+			`[PluginAIChecker] Starting text improvement for ${textType}: ${text.length} characters`,
+		);
+
+		try {
+			const messages = [
+				new SystemMessage(this.getTextImprovementPrompt(textType)),
+				new HumanMessage(`${pluginName ? `Плагин: ${pluginName}\n\n` : ""}Исходный текст:
+${text}
+
+Улучши этот текст, сделай его более привлекательным и информативным. Отвечай только на русском языке.`),
+			];
+
+			console.log(
+				`[PluginAIChecker] Sending text improvement request to Gemini`,
+			);
+
+			const startTime = Date.now();
+			const response = await this.gemini.invoke(messages);
+			const duration = Date.now() - startTime;
+
+			console.log(
+				`[PluginAIChecker] Received text improvement response in ${duration}ms`,
+			);
+
+			const improvedText = response.content.toString().trim();
+
+			console.log(
+				`[PluginAIChecker] Text improvement completed: ${improvedText.length} characters`,
+			);
+
+			return {
+				improvedText,
+			};
+		} catch (error) {
+			console.error(
+				`[PluginAIChecker] Failed to improve ${textType}:`,
+				error,
+			);
+			throw new Error(
+				`Не удалось улучшить текст: ${error instanceof Error ? error.message : "Неизвестная ошибка"}`,
+			);
+		}
+	}
+
 	private async mergeChunkResults(
 		results: CheckResult[],
 	): Promise<CheckResult> {

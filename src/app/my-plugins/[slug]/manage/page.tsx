@@ -277,6 +277,9 @@ export default function PluginManagePage() {
 												onChange={(val) =>
 													setFormData((f) => ({ ...f, description: val }))
 												}
+												showImproveButton={true}
+												textType="description"
+												pluginName={formData.name}
 											/>
 										</div>
 									</CardContent>
@@ -362,6 +365,7 @@ export default function PluginManagePage() {
 								<UploadVersionDialog
 									pluginId={plugin.id}
 									onUploadSuccess={() => refetch()}
+									pluginName={plugin.name}
 								/>
 							</CardHeader>
 							<CardContent>
