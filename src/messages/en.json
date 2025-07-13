@@ -11,7 +11,14 @@
 		"profile": "Profile",
 		"my_plugins": "My Plugins",
 		"sign_out": "Sign Out",
-		"language": "Language"
+		"language": "Language",
+		"theme": "Theme"
+	},
+	"ThemeToggle": {
+		"toggle_theme": "Toggle theme",
+		"light": "Light",
+		"dark": "Dark",
+		"system": "System"
 	},
 	"PluginCard": {
 		"featured": "Featured",
@@ -72,7 +79,11 @@
 		"safe": "Safe",
 		"check_details": "Check Details",
 		"error_details": "Error Details",
-		"no_checks_run": "No checks have been run",
+		"no_checks_run": "No Security Checks Run",
+		"no_checks_description": "Run automated security and performance checks to ensure your plugin is safe and optimized.",
+		"starting": "Starting...",
+		"running_workflow": "Running Security Analysis",
+		"ai_analyzing": "AI is analyzing your plugin for security vulnerabilities and performance issues.",
 		"no_checks_description": "Run automated security and performance analysis to ensure your plugin is safe and optimized",
 		"ai_analyzing": "AI is analyzing your code for security vulnerabilities and performance issues...",
 		"starting": "Starting...",
@@ -116,7 +127,40 @@
 		"description": "Browse and download different versions of the plugin.",
 		"upload_version": "Upload New Version",
 		"no_versions_found": "No versions found",
-		"no_versions_description": "There are no available versions for this plugin yet."
+		"no_versions_description": "There are no available versions for this plugin yet.",
+		"version_history": "Version History",
+		"all_versions": "All Versions",
+		"version": "Version",
+		"current": "Current",
+		"stable": "Stable",
+		"beta": "Beta",
+		"downloads": "downloads",
+		"changelog": "Changelog",
+		"download": "Download",
+		"details": "Details",
+		"version_details": "Version Details",
+		"file_size": "File Size",
+		"creation_date": "Creation Date",
+		"type": "Type",
+		"sha256_hash": "SHA256 Hash",
+		"git_info": "Git Information",
+		"commit": "Commit",
+		"branch": "Branch",
+		"tag": "Tag",
+		"compare_with_previous": "Compare with Previous",
+		"download_telegram": "Plugin sent to Telegram!",
+		"file_downloaded": "File downloaded successfully!",
+		"download_error": "Download error: {error}"
+	},
+	"MyPluginsPage": {
+		"view": "View",
+		"versions": "Versions",
+		"manage": "Manage"
+	},
+	"PluginDetailPage": {
+		"description": "Description",
+		"versions": "Versions",
+		"reviews": "Reviews"
 	},
 	"ScreenshotUploader": {
 		"screenshots": "Screenshots",

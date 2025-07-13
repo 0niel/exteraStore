@@ -85,7 +85,7 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 				<div className="flex items-start justify-between">
 					<div>
 						<div className="mb-2 flex items-center gap-2">
-							<div className="h-6 w-1 animate-pulse rounded-full bg-gray-200"></div>
+							<div className="h-6 w-1 animate-pulse rounded-full bg-muted"></div>
 							<Skeleton className="h-6 w-40" />
 						</div>
 						<Skeleton className="h-4 w-64" />
@@ -96,7 +96,7 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 					{[1, 2].map((i) => (
 						<div
 							key={i}
-							className="flex items-center gap-4 border-gray-100 border-b px-4 py-4 last:border-b-0"
+							className="flex items-center gap-4 border-b border-border px-4 py-4 last:border-b-0"
 						>
 							<Skeleton className="h-2.5 w-2.5 rounded-full" />
 							<div className="flex-1 space-y-2">
@@ -158,10 +158,11 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 		<div className="space-y-6">
 			<div className="flex items-start justify-between">
 				<div>
-					<h3 className="flex items-center gap-2 font-semibold text-gray-900 text-lg">
+					<h3 className="flex items-center gap-2 font-semibold text-foreground text-lg">
+						<Shield className="h-5 w-5 text-primary" />
 						{t("security_checks")}
 					</h3>
-					<p className="mt-1 text-gray-600 text-sm leading-relaxed">
+					<p className="mt-1 text-muted-foreground text-sm leading-relaxed">
 						{t("ai_powered_analysis")}
 					</p>
 				</div>
@@ -171,7 +172,7 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 						onClick={handleRunChecks}
 						disabled={runChecksMutation.isPending}
 						size="sm"
-						className="border-gray-200 bg-white transition-all hover:border-gray-300 hover:bg-gray-50 hover:shadow-sm"
+						className="transition-all hover:shadow-sm"
 					>
 						<RefreshCw className="mr-2 h-4 w-4" />
 						{t("rerun_jobs")}
@@ -182,7 +183,7 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 						onClick={handleRunChecks}
 						disabled={runChecksMutation.isPending}
 						size="sm"
-						className="bg-blue-600 transition-all hover:bg-blue-700 hover:shadow-sm"
+						className="transition-all hover:shadow-sm"
 					>
 						<Play className="mr-2 h-4 w-4" />
 						{t("run_workflow")}
@@ -191,28 +192,35 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 			</div>
 
 			{latestChecks.length > 0 && (
-				<Card>
+				<Card className="overflow-hidden">
 					{latestChecks.map(({ type, check }, index) => {
+						const IconComponent = checkTypeIcons[type as keyof typeof checkTypeIcons] || Shield;
 						const typeName =
 							checkTypeNames[type as keyof typeof checkTypeNames] || type;
 
-						let statusColor = "bg-gray-400 shadow-sm";
+						let statusColor = "bg-muted";
 						let statusText = t("queued");
+						let statusIcon = Clock;
 
 						if (check?.status === "running") {
-							statusColor = "bg-yellow-500 shadow-yellow-200";
+							statusColor = "bg-yellow-500";
 							statusText = t("in_progress");
+							statusIcon = RefreshCw;
 						} else if (check?.status === "passed") {
-							statusColor = "bg-green-500 shadow-green-200";
+							statusColor = "bg-green-500";
 							statusText = t("success");
+							statusIcon = CheckCircle;
 						} else if (check?.status === "failed") {
-							statusColor = "bg-red-500 shadow-red-200";
+							statusColor = "bg-red-500";
 							statusText = t("failed");
+							statusIcon = XCircle;
 						} else if (check?.status === "error") {
-							statusColor = "bg-red-500 shadow-red-200";
+							statusColor = "bg-red-500";
 							statusText = t("failed");
+							statusIcon = AlertTriangle;
 						}
 
+						const StatusIcon = statusIcon;
 						const duration = check?.executionTime
 							? Math.round(check.executionTime / 1000)
 							: null;
@@ -220,42 +228,54 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 						return (
 							<div
 								key={type}
-								className={`group flex items-center gap-4 px-4 py-4 transition-all duration-200 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-50/50 ${
+								className={`group flex items-center gap-4 px-4 py-4 transition-all duration-200 hover:bg-accent/50 ${
 									index !== latestChecks.length - 1
-										? "border-gray-100 border-b"
+										? "border-b border-border"
 										: ""
 								}`}
 							>
 								<div className="flex min-w-0 flex-1 items-center gap-4">
-									<div
-										className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${statusColor} ${
-											check?.status === "running" ? "animate-pulse" : ""
-										}`}
-									></div>
+									<div className="flex items-center gap-3">
+										<IconComponent className="h-5 w-5 text-primary" />
+										<div
+											className={`h-2.5 w-2.5 flex-shrink-0 rounded-full ${statusColor} ${
+												check?.status === "running" ? "animate-pulse" : ""
+											}`}
+										></div>
+									</div>
 
 									<div className="min-w-0 flex-1">
 										<div className="mb-1 flex items-center gap-3">
-											<span className="font-semibold text-gray-900 text-md transition-colors group-hover:text-gray-700">
+											<span className="font-semibold text-foreground text-md transition-colors">
 												{typeName}
 											</span>
-											<span
-												className={`rounded-full px-2 py-0.5 font-medium text-xs ${
-													check?.status === "running"
-														? "bg-yellow-100 text-yellow-700"
-														: check?.status === "passed"
-															? "bg-green-100 text-green-700"
-															: check?.status === "failed" ||
-																	check?.status === "error"
-																? "bg-red-100 text-red-700"
-																: "bg-gray-100 text-gray-600"
-												}`}
-											>
-												{statusText}
-											</span>
+											<div className="flex items-center gap-1">
+												<StatusIcon className={`h-3 w-3 ${
+													check?.status === "running" ? "animate-spin" : ""
+												} ${
+													check?.status === "passed" ? "text-green-600" :
+													check?.status === "failed" || check?.status === "error" ? "text-red-600" :
+													check?.status === "running" ? "text-yellow-600" : "text-muted-foreground"
+												}`} />
+												<span
+													className={`rounded-full px-2 py-0.5 font-medium text-xs ${
+														check?.status === "running"
+															? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+															: check?.status === "passed"
+																? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+																: check?.status === "failed" ||
+																		check?.status === "error"
+																	? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+																	: "bg-muted text-muted-foreground"
+													}`}
+												>
+													{statusText}
+												</span>
+											</div>
 										</div>
 
 										{check?.shortDescription && (
-											<p className="pr-4 text-gray-600 text-sm leading-relaxed transition-colors group-hover:text-gray-500">
+											<p className="pr-4 text-muted-foreground text-sm leading-relaxed">
 												{check.shortDescription}
 											</p>
 										)}
@@ -266,13 +286,13 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 													<span
 														className={`inline-flex items-center gap-1 rounded-md px-2 py-1 font-medium text-xs ${
 															check.classification === "critical"
-																? "border border-red-200 bg-red-100 text-red-800"
+																? "border border-red-200 bg-red-100 text-red-800 dark:border-red-800 dark:bg-red-900/30 dark:text-red-400"
 																: check.classification === "unsafe"
-																	? "border border-red-200 bg-red-100 text-red-800"
+																	? "border border-red-200 bg-red-100 text-red-800 dark:border-red-800 dark:bg-red-900/30 dark:text-red-400"
 																	: check.classification ===
 																			"potentially_unsafe"
-																		? "border border-yellow-200 bg-yellow-100 text-yellow-800"
-																		: "border border-green-200 bg-green-100 text-green-800"
+																		? "border border-yellow-200 bg-yellow-100 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+																		: "border border-green-200 bg-green-100 text-green-800 dark:border-green-800 dark:bg-green-900/30 dark:text-green-400"
 														}`}
 													>
 														<div
@@ -300,22 +320,22 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 									</div>
 								</div>
 
-								<div className="flex flex-shrink-0 items-center gap-4 text-gray-500 text-xs">
+								<div className="flex flex-shrink-0 items-center gap-4 text-muted-foreground text-xs">
 									{duration && (
-										<span className="rounded-full bg-gray-100 px-2 py-1 font-medium">
+										<span className="rounded-full bg-muted px-2 py-1 font-medium">
 											{duration}s
 										</span>
 									)}
 									{check?.completedAt && (
-										<span className="hidden rounded-full bg-gray-50 px-2 py-1 sm:inline">
+										<span className="hidden rounded-full bg-muted/50 px-2 py-1 sm:inline">
 											{formatDate(check.completedAt)}
 										</span>
 									)}
 
 									{check?.details && check.status !== "error" && (
 										<details className="relative">
-											<summary className="cursor-pointer list-none text-gray-400 opacity-0 transition-colors duration-200 hover:text-blue-600 group-hover:opacity-100">
-												<div className="rounded-md p-1 transition-colors hover:bg-blue-50">
+											<summary className="cursor-pointer list-none text-muted-foreground opacity-0 transition-colors duration-200 hover:text-primary group-hover:opacity-100">
+												<div className="rounded-md p-1 transition-colors hover:bg-accent">
 													<svg
 														className="h-4 w-4"
 														fill="none"
@@ -331,15 +351,15 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 													</svg>
 												</div>
 											</summary>
-											<div className="slide-in-from-top-2 absolute top-8 right-0 z-20 w-80 animate-in overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl duration-200">
-												<div className="border-gray-100 border-b bg-gradient-to-r from-green-50 to-emerald-50 p-4">
-													<h4 className="flex items-center gap-2 font-semibold text-green-900">
+											<div className="slide-in-from-top-2 absolute top-8 right-0 z-20 w-80 animate-in overflow-hidden rounded-lg border border-border bg-popover shadow-xl duration-200">
+												<div className="border-b border-border bg-accent/50 p-4">
+													<h4 className="flex items-center gap-2 font-semibold text-foreground">
 														<div className="h-2 w-2 rounded-full bg-green-500"></div>
 														{t("check_details")}
 													</h4>
 												</div>
 												<div className="max-h-60 overflow-y-auto p-4">
-													<pre className="whitespace-pre-wrap rounded-md border bg-gray-50 p-3 text-gray-700 text-xs leading-relaxed">
+													<pre className="whitespace-pre-wrap rounded-md border border-border bg-muted p-3 text-muted-foreground text-xs leading-relaxed">
 														{JSON.stringify(JSON.parse(check.details), null, 2)}
 													</pre>
 												</div>
@@ -349,32 +369,20 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 
 									{check?.errorMessage && (
 										<details className="relative">
-											<summary className="cursor-pointer list-none text-red-400 opacity-0 transition-colors duration-200 hover:text-red-600 group-hover:opacity-100">
-												<div className="rounded-md p-1 transition-colors hover:bg-red-50">
-													<svg
-														className="h-4 w-4"
-														fill="none"
-														stroke="currentColor"
-														viewBox="0 0 24 24"
-													>
-														<path
-															strokeLinecap="round"
-															strokeLinejoin="round"
-															strokeWidth={2}
-															d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.082 16.5c-.77.833.192 2.5 1.732 2.5z"
-														/>
-													</svg>
+											<summary className="cursor-pointer list-none text-red-500 opacity-0 transition-colors duration-200 hover:text-red-600 group-hover:opacity-100">
+												<div className="rounded-md p-1 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20">
+													<AlertTriangle className="h-4 w-4" />
 												</div>
 											</summary>
-											<div className="slide-in-from-top-2 absolute top-8 right-0 z-20 w-80 animate-in overflow-hidden rounded-lg border border-red-200 bg-white shadow-xl duration-200">
-												<div className="border-red-100 border-b bg-gradient-to-r from-red-50 to-pink-50 p-4">
-													<h4 className="flex items-center gap-2 font-semibold text-red-900">
+											<div className="slide-in-from-top-2 absolute top-8 right-0 z-20 w-80 animate-in overflow-hidden rounded-lg border border-red-200 bg-popover shadow-xl duration-200 dark:border-red-800">
+												<div className="border-b border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/30">
+													<h4 className="flex items-center gap-2 font-semibold text-red-900 dark:text-red-400">
 														<div className="h-2 w-2 rounded-full bg-red-500"></div>
 														{t("error_details")}
 													</h4>
 												</div>
 												<div className="p-4">
-													<p className="rounded-md border border-red-200 bg-red-50 p-3 text-red-700 text-xs leading-relaxed">
+													<p className="rounded-md border border-red-200 bg-red-50 p-3 text-red-700 text-xs leading-relaxed dark:border-red-800 dark:bg-red-900/30 dark:text-red-400">
 														{check.errorMessage}
 													</p>
 												</div>
@@ -389,14 +397,14 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 			)}
 
 			{latestChecks.length === 0 && !isRunning && (
-				<div className="rounded-lg border-2 border-gray-200 border-dashed bg-gray-50/30 p-8 text-center transition-all duration-200 hover:bg-gray-50/50">
-					<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-gray-100 to-gray-200 shadow-sm">
-						<Shield className="h-7 w-7 text-gray-500" />
+				<div className="rounded-lg border-2 border-dashed border-border bg-muted/30 p-8 text-center transition-all duration-200 hover:bg-muted/50">
+					<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary/10 to-primary/20 shadow-sm">
+						<Shield className="h-7 w-7 text-primary" />
 					</div>
-					<h3 className="mb-2 font-semibold text-gray-900 text-lg">
+					<h3 className="mb-2 font-semibold text-foreground text-lg">
 						{t("no_checks_run")}
 					</h3>
-					<p className="mx-auto mb-6 max-w-md text-gray-600 leading-relaxed">
+					<p className="mx-auto mb-6 max-w-md text-muted-foreground leading-relaxed">
 						{t("no_checks_description")}
 					</p>
 					<Button
@@ -406,7 +414,7 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 					>
 						{runChecksMutation.isPending ? (
 							<>
-								<div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+								<div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
 								{t("starting")}
 							</>
 						) : (
@@ -420,42 +428,44 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 			)}
 
 			{(isRunning || runChecksMutation.isPending) && (
-				<div className="rounded-lg border border-blue-200/60 bg-gradient-to-r from-blue-50 to-indigo-50 p-6 shadow-sm">
+				<div className="rounded-lg border border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10 p-6 shadow-sm">
 					<div className="flex items-center gap-4">
 						<div className="flex-shrink-0">
-							<div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-blue-200 shadow-sm">
-								<RefreshCw className="h-5 w-5 animate-spin text-blue-600" />
+							<div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-primary/10 to-primary/20 shadow-sm">
+								<RefreshCw className="h-5 w-5 animate-spin text-primary" />
 							</div>
 						</div>
 						<div className="flex-1">
-							<h3 className="mb-1 font-semibold text-blue-900 text-lg">
+							<h3 className="mb-1 font-semibold text-foreground text-lg">
 								{t("running_workflow")}
 							</h3>
-							<p className="text-blue-700 text-sm leading-relaxed">
+							<p className="text-muted-foreground text-sm leading-relaxed">
 								{t("ai_analyzing")}
 							</p>
 						</div>
 					</div>
 
 					<div className="mt-6 space-y-3">
-						<div className="flex items-center gap-4 rounded-md bg-white/50 p-3 text-sm">
+						<div className="flex items-center gap-4 rounded-md bg-background/50 p-3 text-sm">
 							<div className="h-2 w-2 animate-pulse rounded-full bg-yellow-500"></div>
-							<span className="font-medium text-blue-800">
+							<Shield className="h-4 w-4 text-primary" />
+							<span className="font-medium text-foreground">
 								{t("security_check")}
 							</span>
-							<span className="ml-auto text-blue-600 text-xs">
+							<span className="ml-auto text-muted-foreground text-xs">
 								{t("in_progress")}
 							</span>
 						</div>
-						<div className="flex items-center gap-4 rounded-md bg-white/50 p-3 text-sm">
+						<div className="flex items-center gap-4 rounded-md bg-background/50 p-3 text-sm">
 							<div
 								className="h-2 w-2 animate-pulse rounded-full bg-yellow-500"
 								style={{ animationDelay: "0.3s" }}
 							></div>
-							<span className="font-medium text-blue-800">
+							<Zap className="h-4 w-4 text-primary" />
+							<span className="font-medium text-foreground">
 								{t("performance_analysis")}
 							</span>
-							<span className="ml-auto text-blue-600 text-xs">
+							<span className="ml-auto text-muted-foreground text-xs">
 								{t("in_progress")}
 							</span>
 						</div>

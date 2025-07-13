@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { SessionProvider } from "next-auth/react";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
+import { ThemeProvider } from "next-themes";
 import { Inter } from "next/font/google";
 import { cookies, headers } from "next/headers";
 import { type Locale, locales } from "~/lib/i18n-config";
@@ -93,11 +94,18 @@ export default async function RootLayout({
 				<NextIntlClientProvider messages={messages}>
 					<SessionProvider session={session}>
 						<TRPCReactProvider>
-							<Navigation />
-							<main className="w-full max-w-full overflow-x-hidden">
-								{children}
-							</main>
-							<Toaster />
+							<ThemeProvider
+								attribute="class"
+								defaultTheme="system"
+								enableSystem
+								disableTransitionOnChange
+							>
+								<Navigation />
+								<main className="w-full max-w-full overflow-x-hidden">
+									{children}
+								</main>
+								<Toaster />
+							</ThemeProvider>
 						</TRPCReactProvider>
 					</SessionProvider>
 				</NextIntlClientProvider>

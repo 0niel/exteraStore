@@ -22,6 +22,7 @@ import { TelegramIcon } from "~/components/icons/telegram-icon";
 
 import { LanguageSwitcher } from "~/components/language-switcher";
 import { SearchDialog } from "~/components/search-dialog";
+import { ThemeToggle } from "~/components/theme-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -109,6 +110,7 @@ export function Navigation() {
 							}
 						/>
 
+						<ThemeToggle />
 						<LanguageSwitcher />
 
 						{session?.user ? (
@@ -289,6 +291,12 @@ export function Navigation() {
 												{t("language")}
 											</span>
 											<LanguageSwitcher />
+										</div>
+										<div className="mb-3 flex items-center justify-between">
+											<span className="font-medium text-muted-foreground text-sm">
+												{t("theme")}
+											</span>
+											<ThemeToggle />
 										</div>
 
 										{/* Информация о пользователе */}

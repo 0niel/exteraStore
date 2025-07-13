@@ -393,6 +393,28 @@ export const pluginVersionsRouter = createTRPCRouter({
 						})
 						.where(eq(plugins.id, plugin[0].id));
 				}
+
+				try {
+					if (input.isStable) {
+						const { telegramNotificationsRouter } = await import("~/server/api/routers/telegram-notifications");
+						const notifySubscribers = telegramNotificationsRouter.createCaller(ctx);
+						await notifySubscribers.notifySubscribers({
+							pluginId: plugin[0].id,
+							newVersion: input.version,
+						});
+					}
+				} catch (error) {
+					console.error("Failed to send notifications:", error);
+				}
+
+				// Автоматически запускаем проверки безопасности для новой версии
+				try {
+					const { pluginPipelineRouter } = await import("~/server/api/routers/plugin-pipeline");
+					const pipelineRouter = pluginPipelineRouter.createCaller(ctx);
+					await pipelineRouter.runChecks({ pluginId: plugin[0].id });
+				} catch (error) {
+					console.error("Failed to auto-run security checks:", error);
+				}
 			}
 
 			return version;

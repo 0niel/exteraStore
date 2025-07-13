@@ -161,18 +161,6 @@ export const telegramNotificationsRouter = createTRPCRouter({
 			const fileName = `${input.pluginSlug}-v${version[0].version}.plugin`;
 			const fileContent = Buffer.from(version[0].fileContent, "utf-8");
 
-			const caption =
-				`🔌 <b>${plugin[0].name}</b> v${version[0].version}\n\n` +
-				`📝 ${plugin[0].shortDescription || plugin[0].description.substring(0, 100)}...\n\n` +
-				`👤 Author: ${plugin[0].author}\n📊 Rating: ${plugin[0].rating.toFixed(1)}/5 (${plugin[0].ratingCount} reviews)\n⬇️ Downloads: ${plugin[0].downloadCount}\n\nInstall this plugin in exteraGram!`;
-
-			await TelegramBot.sendDocument(
-				input.chatId,
-				fileContent,
-				fileName,
-				caption,
-			);
-
 			await ctx.db
 				.update(plugins)
 				.set({
@@ -186,6 +174,24 @@ export const telegramNotificationsRouter = createTRPCRouter({
 					downloadCount: version[0].downloadCount + 1,
 				})
 				.where(eq(pluginVersions.id, version[0].id));
+
+			const updatedPlugin = await ctx.db
+				.select()
+				.from(plugins)
+				.where(eq(plugins.id, plugin[0].id))
+				.limit(1);
+
+			const caption =
+				`🔌 <b>${updatedPlugin[0]?.name}</b> v${version[0].version}\n\n` +
+				`📝 ${updatedPlugin[0]?.shortDescription || updatedPlugin[0]?.description.substring(0, 100)}...\n\n` +
+				`👤 Author: ${updatedPlugin[0]?.author}\n📊 Rating: ${updatedPlugin[0]?.rating.toFixed(1)}/5 (${updatedPlugin[0]?.ratingCount} reviews)\n⬇️ Downloads: ${updatedPlugin[0]?.downloadCount}\n\nInstall this plugin in exteraGram!`;
+
+			await TelegramBot.sendDocument(
+				input.chatId,
+				fileContent,
+				fileName,
+				caption,
+			);
 
 			return { success: true };
 		}),
@@ -292,6 +298,22 @@ export const telegramNotificationsRouter = createTRPCRouter({
 
 					await TelegramBot.sendMessage(chatId, message, {
 						parse_mode: "HTML",
+						reply_markup: {
+							inline_keyboard: [
+								[
+									{
+										text: "⬇️ Download Update",
+										url: `https://t.me/${process.env.TELEGRAM_BOT_USERNAME}?start=plugin_${plugin[0].slug}_v${input.newVersion}`,
+									},
+								],
+								[
+									{
+										text: "🔕 Unsubscribe",
+										callback_data: `unsubscribe_${input.pluginId}_${subscriber.userId}`,
+									},
+								],
+							],
+						},
 					});
 
 					await ctx.db.insert(notifications).values({
@@ -477,18 +499,6 @@ export const telegramNotificationsRouter = createTRPCRouter({
 					const fileName = `${pluginSlug}-v${version_data[0].version}.plugin`;
 					const fileContent = Buffer.from(version_data[0].fileContent, "utf-8");
 
-					const caption =
-						`🔌 <b>${plugin[0].name}</b> v${version_data[0].version}\n\n` +
-						`📝 ${plugin[0].shortDescription || plugin[0].description.substring(0, 100)}...\n\n` +
-						`👤 Author: ${plugin[0].author}\n📊 Rating: ${plugin[0].rating.toFixed(1)}/5 (${plugin[0].ratingCount} reviews)\n⬇️ Downloads: ${plugin[0].downloadCount}\n\nInstall this plugin in exteraGram!`;
-
-					await TelegramBot.sendDocument(
-						input.chatId,
-						fileContent,
-						fileName,
-						caption,
-					);
-
 					await ctx.db
 						.update(plugins)
 						.set({
@@ -502,6 +512,24 @@ export const telegramNotificationsRouter = createTRPCRouter({
 							downloadCount: version_data[0].downloadCount + 1,
 						})
 						.where(eq(pluginVersions.id, version_data[0].id));
+
+					const updatedPlugin = await ctx.db
+						.select()
+						.from(plugins)
+						.where(eq(plugins.id, plugin[0].id))
+						.limit(1);
+
+					const caption =
+						`🔌 <b>${updatedPlugin[0]?.name}</b> v${version_data[0].version}\n\n` +
+						`📝 ${updatedPlugin[0]?.shortDescription || updatedPlugin[0]?.description.substring(0, 100)}...\n\n` +
+						`👤 Author: ${updatedPlugin[0]?.author}\n📊 Rating: ${updatedPlugin[0]?.rating.toFixed(1)}/5 (${updatedPlugin[0]?.ratingCount} reviews)\n⬇️ Downloads: ${updatedPlugin[0]?.downloadCount}\n\nInstall this plugin in exteraGram!`;
+
+					await TelegramBot.sendDocument(
+						input.chatId,
+						fileContent,
+						fileName,
+						caption,
+					);
 
 					return { success: true, action: "plugin_sent" };
 				}

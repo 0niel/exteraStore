@@ -22,6 +22,7 @@ import {
 	Zap,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -69,6 +70,7 @@ export default function PluginDetailPage() {
 	const router = useRouter();
 	const slug = params.slug as string;
 	const { data: session } = useSession();
+	const t = useTranslations("PluginDetailPage");
 
 	const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
 	const [reviewRating, setReviewRating] = useState(5);
@@ -468,14 +470,14 @@ export default function PluginDetailPage() {
 						<div className="overflow-x-auto">
 							<TabsList className="inline-flex h-auto w-max min-w-full justify-start">
 								<TabsTrigger value="description" className="whitespace-nowrap">
-									Описание
+									{t("description")}
 								</TabsTrigger>
 								<TabsTrigger value="versions" className="whitespace-nowrap">
-									Версии{" "}
+									{t("versions")}{" "}
 									{versions && versions.length > 0 && `(${versions.length})`}
 								</TabsTrigger>
 								<TabsTrigger value="reviews" className="whitespace-nowrap">
-									Отзывы ({plugin.ratingCount})
+									{t("reviews")} ({plugin.ratingCount})
 								</TabsTrigger>
 								<TabsTrigger value="changelog" className="whitespace-nowrap">
 									Изменения

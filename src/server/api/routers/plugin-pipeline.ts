@@ -305,6 +305,48 @@ export const pluginPipelineRouter = createTRPCRouter({
 			return queueItem;
 		}),
 
+	getQueueStatus: publicProcedure
+		.query(async ({ ctx }) => {
+			const queueItems = await ctx.db
+				.select()
+				.from(pluginPipelineQueue)
+				.where(sql`${pluginPipelineQueue.status} IN ('queued', 'processing')`)
+				.orderBy(desc(pluginPipelineQueue.createdAt));
+
+			return {
+				totalInQueue: queueItems.length,
+				processing: queueItems.filter((item: any) => item.status === "processing").length,
+				queued: queueItems.filter((item: any) => item.status === "queued").length,
+			};
+		}),
+
+	getPluginQueueStatus: publicProcedure
+		.input(z.object({ pluginSlug: z.string() }))
+		.query(async ({ ctx, input }) => {
+			const plugin = await ctx.db
+				.select({ id: plugins.id })
+				.from(plugins)
+				.where(eq(plugins.slug, input.pluginSlug))
+				.limit(1);
+
+			if (!plugin[0]) {
+				return null;
+			}
+
+			const queueItem = await ctx.db
+				.select()
+				.from(pluginPipelineQueue)
+				.where(
+					and(
+						eq(pluginPipelineQueue.pluginId, plugin[0].id),
+						sql`${pluginPipelineQueue.status} IN ('queued', 'processing')`
+					)
+				)
+				.limit(1);
+
+			return queueItem[0] || null;
+		}),
+
 	processQueue: protectedProcedure
 		.input(z.object({ limit: z.number().default(5) }))
 		.mutation(async ({ ctx, input }) => {
@@ -595,52 +637,5 @@ export const pluginPipelineRouter = createTRPCRouter({
 			return settings;
 		}),
 
-	getQueueStatus: publicProcedure.query(async ({ ctx }) => {
-		const queuedItems = await ctx.db
-			.select({
-				count: count(),
-			})
-			.from(pluginPipelineQueue)
-			.where(eq(pluginPipelineQueue.status, "queued"));
 
-		const processingItems = await ctx.db
-			.select({
-				count: count(),
-			})
-			.from(pluginPipelineQueue)
-			.where(eq(pluginPipelineQueue.status, "processing"));
-
-		return {
-			queued: queuedItems[0]?.count ?? 0,
-			processing: processingItems[0]?.count ?? 0,
-		};
-	}),
-
-	getPluginQueueStatus: publicProcedure
-		.input(z.object({ pluginSlug: z.string() }))
-		.query(async ({ ctx, input }) => {
-			const plugin = await ctx.db
-				.select({ id: plugins.id })
-				.from(plugins)
-				.where(eq(plugins.slug, input.pluginSlug))
-				.limit(1);
-
-			if (!plugin[0]) {
-				return null;
-			}
-
-			const queueItem = await ctx.db
-				.select()
-				.from(pluginPipelineQueue)
-				.where(
-					and(
-						eq(pluginPipelineQueue.pluginId, plugin[0].id),
-						sql`${pluginPipelineQueue.status} IN ('queued', 'processing')`,
-					),
-				)
-				.orderBy(desc(pluginPipelineQueue.createdAt))
-				.limit(1);
-
-			return queueItem[0] || null;
-		}),
 });

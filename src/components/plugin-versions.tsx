@@ -244,7 +244,7 @@ export function PluginVersions({ pluginSlug }: PluginVersionsProps) {
 											<Link
 												href={`/plugins/${pluginSlug}/diff/${versions[index + 1]?.fileHash?.substring(0, 8)}/${version.fileHash?.substring(0, 8)}`}
 											>
-												Сравнить с предыдущей
+												{t("compare_with_previous")}
 											</Link>
 										</Button>
 									)}

@@ -8,6 +8,7 @@ import {
 	pluginVersions,
 	plugins,
 	users,
+	userPluginSubscriptions,
 } from "~/server/db/schema";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -117,40 +118,25 @@ async function editMessage(
 	}
 }
 
-async function answerCallbackQuery(callbackQueryId: string, text?: string) {
-	if (!BOT_TOKEN) {
-		console.error("[answerCallbackQuery] BOT_TOKEN is not set");
-		return;
-	}
+async function answerCallbackQuery(
+	queryId: string,
+	text: string,
+	showAlert: boolean = false,
+) {
+	if (!BOT_TOKEN) return;
 
 	try {
-		console.log(
-			`[answerCallbackQuery] Answering callback query: ${callbackQueryId}`,
-		);
-		const response = await fetch(`${API_URL}/answerCallbackQuery`, {
+		await fetch(`${API_URL}/answerCallbackQuery`, {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
 			body: JSON.stringify({
-				callback_query_id: callbackQueryId,
-				text: text || "",
+				callback_query_id: queryId,
+				text,
+				show_alert: showAlert,
 			}),
 		});
-
-		const responseText = await response.text();
-		console.log(
-			`[answerCallbackQuery] Response status: ${response.status}, body: ${responseText}`,
-		);
-
-		if (!response.ok) {
-			console.error(
-				`[answerCallbackQuery] Failed to answer callback query: ${response.status} ${responseText}`,
-			);
-		}
 	} catch (error) {
-		console.error(
-			"[answerCallbackQuery] Failed to answer callback query:",
-			error,
-		);
+		console.error("Failed to answer callback query:", error);
 	}
 }
 
@@ -224,11 +210,9 @@ export async function POST(request: NextRequest) {
 			);
 
 			await handleCallbackQuery(
-				chatId,
+				callbackQuery,
 				userId,
-				data,
-				messageId,
-				callbackQuery.id,
+				chatId,
 			);
 			return NextResponse.json({ ok: true });
 		}
@@ -405,12 +389,6 @@ async function handlePluginDownload(
 			`[Webhook] Preparing to send file: ${fileName}, size: ${fileContent.length} bytes`,
 		);
 
-		const caption = `🔌 <b>${plugin[0].name}</b> v${pluginVersion[0].version}\n\n📝 ${plugin[0].shortDescription || plugin[0].description.substring(0, 100)}...\n\n👤 Автор: ${plugin[0].author}\n📊 Рейтинг: ${plugin[0].rating.toFixed(1)}/5 (${plugin[0].ratingCount} отзывов)\n⬇️ Скачиваний: ${plugin[0].downloadCount}\n\nУстановите плагин в exteraGram!`;
-
-		console.log(`[Webhook] Sending document to chat ${chatId}`);
-		await sendDocument(chatId, fileContent, fileName, caption);
-		console.log("[Webhook] Document sent successfully");
-
 		await db
 			.update(plugins)
 			.set({
@@ -425,6 +403,18 @@ async function handlePluginDownload(
 			})
 			.where(eq(pluginVersions.id, pluginVersion[0].id));
 
+		const updatedPlugin = await db
+			.select()
+			.from(plugins)
+			.where(eq(plugins.id, plugin[0].id))
+			.limit(1);
+
+		const caption = `🔌 <b>${updatedPlugin[0]?.name}</b> v${pluginVersion[0].version}\n\n📝 ${updatedPlugin[0]?.shortDescription || updatedPlugin[0]?.description.substring(0, 100)}...\n\n👤 Автор: ${updatedPlugin[0]?.author}\n📊 Рейтинг: ${updatedPlugin[0]?.rating.toFixed(1)}/5 (${updatedPlugin[0]?.ratingCount} отзывов)\n⬇️ Скачиваний: ${updatedPlugin[0]?.downloadCount}\n\nУстановите плагин в exteraGram!`;
+
+		console.log(`[Webhook] Sending document to chat ${chatId}`);
+		await sendDocument(chatId, fileContent, fileName, caption);
+		console.log("[Webhook] Document sent successfully");
+
 		try {
 			const existingUser = await db
 				.select()
@@ -432,11 +422,32 @@ async function handlePluginDownload(
 				.where(eq(users.telegramId, userId))
 				.limit(1);
 
-			if (!existingUser[0]) {
-				console.log(`New Telegram user downloaded plugin: ${userId}`);
+			if (existingUser[0]) {
+				const existingSubscription = await db
+					.select()
+					.from(userPluginSubscriptions)
+					.where(
+						and(
+							eq(userPluginSubscriptions.userId, existingUser[0].id),
+							eq(userPluginSubscriptions.pluginId, plugin[0].id),
+							eq(userPluginSubscriptions.subscriptionType, "updates"),
+						),
+					)
+					.limit(1);
+
+				if (!existingSubscription[0]) {
+					await db.insert(userPluginSubscriptions).values({
+						userId: existingUser[0].id,
+						pluginId: plugin[0].id,
+						subscriptionType: "updates",
+						telegramChatId: chatId,
+						isActive: true,
+					});
+					console.log(`[Webhook] User ${existingUser[0].id} subscribed to plugin ${plugin[0].id} updates`);
+				}
 			}
 		} catch (error) {
-			console.error("Error handling user info:", error);
+			console.error("Error handling user subscription:", error);
 		}
 	} catch (error) {
 		console.error("Plugin download error:", error);
@@ -489,18 +500,23 @@ async function showMainMenu(
 }
 
 async function handleCallbackQuery(
-	chatId: string,
+	callbackQuery: any,
 	userId: string,
-	data: string,
-	messageId: number,
-	callbackQueryId: string,
+	chatId: string,
 ) {
+	const { data, id: queryId } = callbackQuery;
+
+	if (data.startsWith("unsubscribe_")) {
+		await handleUnsubscribe(data, userId, chatId, queryId);
+		return;
+	}
+
 	console.log(
-		`[handleCallbackQuery] Processing callback: action="${data}", chatId=${chatId}, messageId=${messageId}`,
+		`[handleCallbackQuery] Processing callback: action="${data}", chatId=${chatId}, messageId=${callbackQuery.message.message_id}`,
 	);
 
 	try {
-		await answerCallbackQuery(callbackQueryId);
+		await answerCallbackQuery(queryId, "✅ Processing...");
 		console.log("[handleCallbackQuery] Callback query answered successfully");
 	} catch (error) {
 		console.error(
@@ -520,7 +536,7 @@ async function handleCallbackQuery(
 			if (params[0] === "menu") {
 				await editMessage(
 					chatId,
-					messageId,
+					callbackQuery.message.message_id,
 					`
 🔍 <b>Поиск плагинов</b>
 
@@ -544,40 +560,40 @@ async function handleCallbackQuery(
 
 		case "categories": {
 			const page = Number.parseInt(params[0] || "0") || 0;
-			await showCategories(chatId, page, messageId);
+			await showCategories(chatId, page, callbackQuery.message.message_id);
 			break;
 		}
 
 		case "popular": {
 			const popularPage = Number.parseInt(params[0] || "0") || 0;
-			await showPopularPlugins(chatId, popularPage, messageId);
+			await showPopularPlugins(chatId, popularPage, callbackQuery.message.message_id);
 			break;
 		}
 
 		case "recent": {
 			const recentPage = Number.parseInt(params[0] || "0") || 0;
-			await showRecentPlugins(chatId, recentPage, messageId);
+			await showRecentPlugins(chatId, recentPage, callbackQuery.message.message_id);
 			break;
 		}
 
 		case "profile":
-			await showUserProfile(chatId, userId, messageId);
+			await showUserProfile(chatId, userId, callbackQuery.message.message_id);
 			break;
 
 		case "help":
-			await showHelp(chatId, messageId);
+			await showHelp(chatId, callbackQuery.message.message_id);
 			break;
 
 		case "main":
 			if (params[0] === "menu") {
-				await showMainMenu(chatId, userId, messageId);
+				await showMainMenu(chatId, userId, callbackQuery.message.message_id);
 			}
 			break;
 
 		case "plugin": {
 			const pluginId = Number.parseInt(params[0] || "0");
 			if (pluginId) {
-				await showPluginDetails(chatId, pluginId, messageId);
+				await showPluginDetails(chatId, pluginId, callbackQuery.message.message_id);
 			}
 			break;
 		}
@@ -602,7 +618,7 @@ async function handleCallbackQuery(
 					chatId,
 					categoryName,
 					categoryPage,
-					messageId,
+					callbackQuery.message.message_id,
 				);
 			}
 			break;
@@ -610,8 +626,62 @@ async function handleCallbackQuery(
 
 		default:
 			console.log(`[handleCallbackQuery] Unknown action: "${action}"`);
-			await showMainMenu(chatId, userId, messageId);
+			await showMainMenu(chatId, userId, callbackQuery.message.message_id);
 			break;
+	}
+}
+
+async function handleUnsubscribe(
+	data: string,
+	userId: string,
+	chatId: string,
+	queryId: string,
+) {
+	try {
+		const parts = data.split("_");
+		const pluginId = Number(parts[1]);
+		const subscriberUserId = parts[2];
+
+		if (!subscriberUserId) {
+			await answerCallbackQuery(queryId, "❌ Invalid request");
+			return;
+		}
+
+		const user = await db
+			.select()
+			.from(users)
+			.where(eq(users.telegramId, userId))
+			.limit(1);
+
+		if (!user[0] || user[0].id !== subscriberUserId) {
+			await answerCallbackQuery(queryId, "❌ Unauthorized");
+			return;
+		}
+
+		await db
+			.update(userPluginSubscriptions)
+			.set({ isActive: false })
+			.where(
+				and(
+					eq(userPluginSubscriptions.userId, subscriberUserId),
+					eq(userPluginSubscriptions.pluginId, pluginId),
+					eq(userPluginSubscriptions.subscriptionType, "updates"),
+				),
+			);
+
+		const plugin = await db
+			.select({ name: plugins.name })
+			.from(plugins)
+			.where(eq(plugins.id, pluginId))
+			.limit(1);
+
+		await answerCallbackQuery(
+			queryId,
+			`✅ Unsubscribed from ${plugin[0]?.name || "plugin"} updates`,
+		);
+	} catch (error) {
+		console.error("Unsubscribe error:", error);
+		await answerCallbackQuery(queryId, "❌ Error during unsubscribe");
 	}
 }
 
@@ -803,7 +873,6 @@ async function showPluginsByCategory(
 		const limit = 5;
 		const offset = page * limit;
 
-		// Получаем информацию о категории
 		const categoryInfo = await db
 			.select()
 			.from(pluginCategories)

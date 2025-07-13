@@ -13,6 +13,7 @@ import {
 	Upload,
 } from "lucide-react";
 import { useSession } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -34,6 +35,7 @@ import { api } from "~/trpc/react";
 export default function MyPluginsPage() {
 	const { data: session } = useSession();
 	const router = useRouter();
+	const t = useTranslations("MyPluginsPage");
 	const [searchQuery, setSearchQuery] = useState("");
 
 	const { data: myPlugins, isLoading } = api.plugins.getByAuthor.useQuery(
@@ -194,6 +196,7 @@ export default function MyPluginsPage() {
 }
 
 function PluginCard({ plugin }: { plugin: typeof Plugin.$inferSelect }) {
+	const t = useTranslations("MyPluginsPage");
 	const getStatusColor = (status: string) => {
 		switch (status) {
 			case "approved":
@@ -254,19 +257,19 @@ function PluginCard({ plugin }: { plugin: typeof Plugin.$inferSelect }) {
 					<Button variant="outline" size="sm" asChild className="flex-1">
 						<Link href={`/plugins/${plugin.slug}`}>
 							<Eye className="mr-1 h-4 w-4" />
-							Просмотр
+							{t("view")}
 						</Link>
 					</Button>
 					<Button variant="outline" size="sm" asChild>
 						<Link href={`/plugins/${plugin.slug}/versions`}>
 							<GitBranch className="mr-1 h-4 w-4" />
-							Версии
+							{t("versions")}
 						</Link>
 					</Button>
 					<Button variant="outline" size="sm" asChild>
 						<Link href={`/my-plugins/${plugin.slug}/manage`}>
 							<Settings className="mr-1 h-4 w-4" />
-							Управлять
+							{t("manage")}
 						</Link>
 					</Button>
 				</div>

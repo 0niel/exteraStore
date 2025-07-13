@@ -107,6 +107,15 @@ export const pluginUploadRouter = createTRPCRouter({
 				hash: fileHash,
 			});
 
+			// Автоматически запускаем проверки безопасности для нового плагина
+			try {
+				const { pluginPipelineRouter } = await import("~/server/api/routers/plugin-pipeline");
+				const pipelineRouter = pluginPipelineRouter.createCaller(ctx);
+				await pipelineRouter.runChecks({ pluginId: plugin.id });
+			} catch (error) {
+				console.error("Failed to auto-run security checks:", error);
+			}
+
 			return { ...plugin, slug: finalSlug };
 		}),
 
@@ -154,13 +163,37 @@ export const pluginUploadRouter = createTRPCRouter({
 					hash: fileHash,
 				});
 
-				await ctx.db
-					.update(plugins)
-					.set({
-						version: input.version,
-						updatedAt: Math.floor(Date.now() / 1000),
-					})
-					.where(eq(plugins.id, input.pluginId));
+				if (input.isStable) {
+					await ctx.db
+						.update(plugins)
+						.set({
+							version: input.version,
+							updatedAt: Math.floor(Date.now() / 1000),
+						})
+						.where(eq(plugins.id, input.pluginId));
+				}
+
+				try {
+					if (input.isStable) {
+						const { telegramNotificationsRouter } = await import("~/server/api/routers/telegram-notifications");
+						const notifySubscribers = telegramNotificationsRouter.createCaller(ctx);
+						await notifySubscribers.notifySubscribers({
+							pluginId: input.pluginId,
+							newVersion: input.version,
+						});
+					}
+				} catch (error) {
+					console.error("Failed to send notifications:", error);
+				}
+
+				// Автоматически запускаем проверки безопасности для новой версии
+				try {
+					const { pluginPipelineRouter } = await import("~/server/api/routers/plugin-pipeline");
+					const pipelineRouter = pluginPipelineRouter.createCaller(ctx);
+					await pipelineRouter.runChecks({ pluginId: input.pluginId });
+				} catch (error) {
+					console.error("Failed to auto-run security checks:", error);
+				}
 			}
 
 			return version;
@@ -295,6 +328,15 @@ export const pluginUploadRouter = createTRPCRouter({
 						lastSyncAt: Math.floor(Date.now() / 1000),
 					})
 					.where(eq(pluginGitRepos.id, plugin.gitRepo.id));
+
+				// Автоматически запускаем проверки безопасности для обновленной версии
+				try {
+					const { pluginPipelineRouter } = await import("~/server/api/routers/plugin-pipeline");
+					const pipelineRouter = pluginPipelineRouter.createCaller(ctx);
+					await pipelineRouter.runChecks({ pluginId: input.pluginId });
+				} catch (error) {
+					console.error("Failed to auto-run security checks:", error);
+				}
 
 				return { version, message: "Successfully synced from Git" };
 			} catch (error) {
