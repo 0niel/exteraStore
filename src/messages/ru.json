@@ -198,16 +198,27 @@
 	},
 	"SearchDialog": {
 		"search_plugins": "Поиск плагинов...",
-		"no_results": "Ничего не найдено.",
-		"search": "Поиск",
 		"search_results": "Результаты поиска",
+		"no_results": "Ничего не найдено",
+		"no_results_for": "По запросу \"{query}\" ничего не найдено",
 		"show_all": "Показать все",
-		"no_results_for": "Ничего не найдено по запросу \"{query}\"",
 		"recent_searches": "Недавние поиски",
-		"clear": "Очистить",
 		"popular_plugins": "Популярные плагины",
 		"categories": "Категории",
-		"downloads": "{count} скачиваний"
+		"clear": "Очистить",
+		"downloads": "{count} скачиваний",
+		"suggestions": "Подсказки",
+		"similar_categories": "Похожие категории",
+		"maybe_looking_for": "Возможно, вы ищете",
+		"filters": "Фильтры",
+		"sort_by": "Сортировка",
+		"rating": "Рейтинг",
+		"relevance": "Релевантность",
+		"newest": "Новые",
+		"popular": "Популярные",
+		"downloads_sort": "Скачивания",
+		"clear_filters": "Сбросить фильтры",
+		"min_rating": "Минимальный рейтинг"
 	},
 	"TagInput": {
 		"add_tag": "Добавить тег"

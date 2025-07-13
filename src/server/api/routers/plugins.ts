@@ -341,6 +341,273 @@ export const pluginsRouter = createTRPCRouter({
 				.orderBy(desc(plugins.createdAt));
 		}),
 
+	advancedSearch: publicProcedure
+		.input(
+			z.object({
+				query: z.string().min(1),
+				limit: z.number().min(1).max(50).default(20),
+				categories: z.array(z.string()).optional(),
+				minRating: z.number().min(0).max(5).optional(),
+				sortBy: z
+					.enum(["relevance", "newest", "popular", "rating", "downloads"])
+					.default("relevance"),
+				includeContent: z.boolean().default(false),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const searchTerms = input.query
+				.toLowerCase()
+				.trim()
+				.split(/\s+/)
+				.filter(term => term.length > 0);
+
+			if (searchTerms.length === 0) {
+				return { plugins: [], suggestions: [] };
+			}
+
+			// Создаем более гибкие паттерны поиска
+			const queryLower = input.query.toLowerCase().trim();
+			const likePattern = `%${queryLower}%`;
+			
+			// Создаем паттерны для каждого слова
+			const wordPatterns = searchTerms.map(term => `%${term}%`);
+
+			let whereConditions = [eq(plugins.status, "approved")];
+
+			if (input.categories && input.categories.length > 0) {
+				whereConditions.push(
+					sql`${plugins.category} = ANY(${JSON.stringify(input.categories)})`
+				);
+			}
+
+			if (input.minRating) {
+				whereConditions.push(sql`${plugins.rating} >= ${input.minRating}`);
+			}
+
+			const relevanceScore = sql<number>`
+				CASE 
+					-- Точное совпадение названия (высший приоритет)
+					WHEN LOWER(${plugins.name}) = ${queryLower} THEN 1000
+					-- Название начинается с запроса
+					WHEN LOWER(${plugins.name}) LIKE ${`${queryLower}%`} THEN 900
+					-- Название содержит запрос
+					WHEN LOWER(${plugins.name}) LIKE ${likePattern} THEN 800
+					ELSE 0
+				END +
+				CASE 
+					-- Автор точно совпадает
+					WHEN LOWER(${plugins.author}) = ${queryLower} THEN 700
+					-- Автор содержит запрос
+					WHEN LOWER(${plugins.author}) LIKE ${likePattern} THEN 600
+					ELSE 0
+				END +
+				CASE 
+					-- Краткое описание содержит запрос
+					WHEN LOWER(${plugins.shortDescription}) LIKE ${likePattern} THEN 500
+					ELSE 0
+				END +
+				CASE 
+					-- Полное описание содержит запрос
+					WHEN LOWER(${plugins.description}) LIKE ${likePattern} THEN 400
+					ELSE 0
+				END +
+				CASE 
+					-- Теги содержат запрос
+					WHEN LOWER(${plugins.tags}) LIKE ${likePattern} THEN 300
+					ELSE 0
+				END +
+				CASE 
+					-- Категория содержит запрос
+					WHEN LOWER(${plugins.category}) LIKE ${likePattern} THEN 200
+					ELSE 0
+				END +
+				-- Бонусы за качество плагина
+				CASE 
+					WHEN ${plugins.featured} = true THEN 100
+					ELSE 0
+				END +
+				CASE
+					WHEN ${plugins.rating} >= 4.5 THEN 50
+					WHEN ${plugins.rating} >= 4.0 THEN 30
+					WHEN ${plugins.rating} >= 3.5 THEN 15
+					ELSE 0
+				END +
+				-- Бонус за популярность (ограниченный)
+				LEAST(${plugins.downloadCount} / 1000, 25)
+			`;
+
+			// Более гибкое условие поиска - ищем в любом из полей
+			const searchCondition = sql`(
+				LOWER(${plugins.name}) LIKE ${likePattern} OR
+				LOWER(${plugins.author}) LIKE ${likePattern} OR
+				LOWER(${plugins.shortDescription}) LIKE ${likePattern} OR
+				LOWER(${plugins.description}) LIKE ${likePattern} OR
+				LOWER(${plugins.tags}) LIKE ${likePattern} OR
+				LOWER(${plugins.category}) LIKE ${likePattern}
+			)`;
+
+			// Дополнительное условие для поиска по отдельным словам
+			const wordsCondition = searchTerms.length > 1 ? sql`OR (${
+				sql.join(
+					searchTerms.map(term => sql`(
+						LOWER(${plugins.name}) LIKE ${`%${term}%`} OR
+						LOWER(${plugins.shortDescription}) LIKE ${`%${term}%`} OR
+						LOWER(${plugins.description}) LIKE ${`%${term}%`}
+					)`),
+					sql` AND `
+				)
+			})` : sql``;
+
+			const finalSearchCondition = sql`(${searchCondition} ${wordsCondition})`;
+			whereConditions.push(finalSearchCondition);
+
+			let orderBy;
+			switch (input.sortBy) {
+				case "relevance":
+					orderBy = [desc(relevanceScore), desc(plugins.downloadCount)];
+					break;
+				case "newest":
+					orderBy = [desc(plugins.createdAt)];
+					break;
+				case "popular":
+					orderBy = [desc(plugins.downloadCount)];
+					break;
+				case "rating":
+					orderBy = [desc(plugins.rating), desc(plugins.ratingCount)];
+					break;
+				case "downloads":
+					orderBy = [desc(plugins.downloadCount)];
+					break;
+				default:
+					orderBy = [desc(relevanceScore)];
+			}
+
+			const resultsQuery = ctx.db
+				.select({
+					id: plugins.id,
+					name: plugins.name,
+					slug: plugins.slug,
+					shortDescription: plugins.shortDescription,
+					description: input.includeContent ? plugins.description : sql`NULL`,
+					author: plugins.author,
+					category: plugins.category,
+					tags: plugins.tags,
+					rating: plugins.rating,
+					ratingCount: plugins.ratingCount,
+					downloadCount: plugins.downloadCount,
+					featured: plugins.featured,
+					screenshots: plugins.screenshots,
+					createdAt: plugins.createdAt,
+					relevanceScore: input.sortBy === "relevance" ? relevanceScore : sql`NULL`,
+				})
+				.from(plugins)
+				.where(and(...whereConditions))
+				.orderBy(...orderBy)
+				.limit(input.limit);
+
+			// Улучшенная статистика по категориям
+			const suggestionQuery = ctx.db
+				.select({
+					category: plugins.category,
+					count: sql<number>`COUNT(*)`,
+				})
+				.from(plugins)
+				.where(
+					and(
+						eq(plugins.status, "approved"),
+						finalSearchCondition
+					)
+				)
+				.groupBy(plugins.category)
+				.orderBy(desc(sql`COUNT(*)`))
+				.limit(5);
+
+			const [results, categoryStats] = await Promise.all([
+				resultsQuery,
+				suggestionQuery,
+			]);
+
+			const suggestions = categoryStats.map((stat: { category: string; count: number }) => ({
+				type: "category" as const,
+				value: stat.category,
+				count: stat.count,
+			}));
+
+			return {
+				plugins: results,
+				suggestions,
+				searchTerms,
+				totalFound: results.length,
+			};
+		}),
+
+	searchSuggestions: publicProcedure
+		.input(z.object({ query: z.string().min(1).max(100) }))
+		.query(async ({ ctx, input }) => {
+			const likePattern = `%${input.query.toLowerCase()}%`;
+
+			const [pluginSuggestions, categorySuggestions, authorSuggestions] = await Promise.all([
+				ctx.db
+					.select({
+						type: sql`'plugin'`,
+						value: plugins.name,
+						slug: plugins.slug,
+						extra: plugins.category,
+					})
+					.from(plugins)
+					.where(
+						and(
+							eq(plugins.status, "approved"),
+							sql`LOWER(${plugins.name}) LIKE ${likePattern}`
+						)
+					)
+					.orderBy(desc(plugins.downloadCount))
+					.limit(5),
+
+				ctx.db
+					.select({
+						type: sql`'category'`,
+						value: plugins.category,
+						slug: plugins.category,
+						extra: sql<number>`COUNT(*)`,
+					})
+					.from(plugins)
+					.where(
+						and(
+							eq(plugins.status, "approved"),
+							sql`LOWER(${plugins.category}) LIKE ${likePattern}`
+						)
+					)
+					.groupBy(plugins.category)
+					.orderBy(desc(sql`COUNT(*)`))
+					.limit(3),
+
+				ctx.db
+					.select({
+						type: sql`'author'`,
+						value: plugins.author,
+						slug: plugins.author,
+						extra: sql<number>`COUNT(*)`,
+					})
+					.from(plugins)
+					.where(
+						and(
+							eq(plugins.status, "approved"),
+							sql`LOWER(${plugins.author}) LIKE ${likePattern}`
+						)
+					)
+					.groupBy(plugins.author)
+					.orderBy(desc(sql`COUNT(*)`))
+					.limit(3),
+			]);
+
+			return [
+				...pluginSuggestions,
+				...categorySuggestions,
+				...authorSuggestions,
+			];
+		}),
+
 	getStats: publicProcedure.query(async ({ ctx }) => {
 		const [pluginStats] = await ctx.db
 			.select({
