@@ -15,6 +15,7 @@ interface TextImprovementButtonProps {
 	disabled?: boolean;
 	size?: "default" | "sm" | "lg" | "icon";
 	variant?: "default" | "outline" | "secondary" | "ghost" | "link" | "destructive";
+	className?: string;
 }
 
 export function TextImprovementButton({
@@ -25,6 +26,7 @@ export function TextImprovementButton({
 	disabled = false,
 	size = "sm",
 	variant = "outline",
+	className,
 }: TextImprovementButtonProps) {
 	const t = useTranslations("TextImprovement");
 	const [isImproving, setIsImproving] = useState(false);
@@ -64,7 +66,7 @@ export function TextImprovementButton({
 			size={size}
 			onClick={handleImproveText}
 			disabled={isDisabled}
-			className="flex items-center gap-1.5"
+			className={`flex items-center gap-1.5 ${className || ""}`}
 		>
 			{isImproving ? (
 				<Loader2 className="h-4 w-4 animate-spin" />

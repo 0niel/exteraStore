@@ -68,82 +68,82 @@ export function MarkdownEditor({
 	return (
 		<div className="w-full rounded-md border">
 			<Tabs defaultValue="write" className="w-full">
-				<div className="flex items-center justify-between border-b px-3 py-2">
-					<TabsList className="h-8">
-						<TabsTrigger value="write" className="text-xs">
+				<div className="flex items-center justify-between border-b px-2 py-1.5 sm:px-3 sm:py-2">
+					<TabsList className="h-7 sm:h-8">
+						<TabsTrigger value="write" className="text-xs sm:text-sm px-2 sm:px-3">
 							Write
 						</TabsTrigger>
-						<TabsTrigger value="preview" className="text-xs">
+						<TabsTrigger value="preview" className="text-xs sm:text-sm px-2 sm:px-3">
 							Preview
 						</TabsTrigger>
 					</TabsList>
-					<div className="flex items-center gap-1">
+					<div className="flex items-center gap-0.5 sm:gap-1">
 						<Button
 							type="button"
 							variant="ghost"
 							size="sm"
 							onClick={() => insertMarkdown("**", "**")}
-							className="h-8 w-8 p-0"
+							className="h-6 w-6 p-0 sm:h-8 sm:w-8"
 						>
-							<Bold className="h-3 w-3" />
+							<Bold className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
 						</Button>
 						<Button
 							type="button"
 							variant="ghost"
 							size="sm"
 							onClick={() => insertMarkdown("*", "*")}
-							className="h-8 w-8 p-0"
+							className="h-6 w-6 p-0 sm:h-8 sm:w-8"
 						>
-							<Italic className="h-3 w-3" />
+							<Italic className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
 						</Button>
 						<Button
 							type="button"
 							variant="ghost"
 							size="sm"
 							onClick={() => insertMarkdown("`", "`")}
-							className="h-8 w-8 p-0"
+							className="h-6 w-6 p-0 sm:h-8 sm:w-8"
 						>
-							<Code className="h-3 w-3" />
+							<Code className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
 						</Button>
 						<Button
 							type="button"
 							variant="ghost"
 							size="sm"
 							onClick={() => insertMarkdown("[", "](url)")}
-							className="h-8 w-8 p-0"
+							className="h-6 w-6 p-0 sm:h-8 sm:w-8"
 						>
-							<Link className="h-3 w-3" />
+							<Link className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
 						</Button>
 						<Button
 							type="button"
 							variant="ghost"
 							size="sm"
 							onClick={() => insertMarkdown("\n- ", "")}
-							className="h-8 w-8 p-0"
+							className="h-6 w-6 p-0 sm:h-8 sm:w-8"
 						>
-							<List className="h-3 w-3" />
+							<List className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
 						</Button>
 						<Button
 							type="button"
 							variant="ghost"
 							size="sm"
 							onClick={() => insertMarkdown("\n> ", "")}
-							className="h-8 w-8 p-0"
+							className="h-6 w-6 p-0 sm:h-8 sm:w-8"
 						>
-							<Quote className="h-3 w-3" />
+							<Quote className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
 						</Button>
 						<Button
 							type="button"
 							variant="ghost"
 							size="sm"
 							onClick={() => insertMarkdown("\n![alt](", ")")}
-							className="h-8 w-8 p-0"
+							className="h-6 w-6 p-0 sm:h-8 sm:w-8"
 						>
-							<ImageIcon className="h-3 w-3" />
+							<ImageIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
 						</Button>
 						{showImproveButton && (
 							<>
-								<div className="mx-1 h-4 w-px bg-border" />
+								<div className="mx-0.5 h-4 w-px bg-border sm:mx-1" />
 								<TextImprovementButton
 									text={value}
 									textType={textType}
@@ -168,9 +168,9 @@ export function MarkdownEditor({
 						className="w-full resize-y rounded-t-none border-0 focus:ring-0"
 					/>
 				</TabsContent>
-				<TabsContent value="preview" className="p-4">
+				<TabsContent value="preview" className="p-3 sm:p-4">
 					<div
-						className="prose prose-neutral dark:prose-invert max-w-none"
+						className="prose max-w-none"
 						style={{ minHeight: `${height}px` }}
 					>
 						<ReactMarkdown remarkPlugins={[remarkGfm]}>

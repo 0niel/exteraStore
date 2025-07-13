@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { env } from "~/env";
 import {
@@ -548,5 +548,138 @@ export const telegramNotificationsRouter = createTRPCRouter({
 					error: error instanceof Error ? error.message : "Unknown error",
 				};
 			}
+		}),
+
+	broadcast: protectedProcedure
+		.input(
+			z.object({
+				message: z.string().min(1),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const isAdmin = ctx.session.user.role === "admin" || 
+				ADMINS.includes(ctx.session.user.name?.toLowerCase() ?? "");
+
+			if (!isAdmin) {
+				throw new Error("Unauthorized");
+			}
+
+			const usersWithTelegram = await ctx.db
+				.select({
+					telegramId: users.telegramId,
+					name: users.name,
+				})
+				.from(users)
+				.where(sql`${users.telegramId} IS NOT NULL`);
+
+			const results = { sent: 0, failed: 0 };
+
+			for (const user of usersWithTelegram) {
+				try {
+					if (user.telegramId) {
+						await TelegramBot.sendMessage(user.telegramId, input.message);
+						results.sent++;
+					}
+				} catch (error) {
+					console.error(`Failed to send message to ${user.name}:`, error);
+					results.failed++;
+				}
+
+				await new Promise(resolve => setTimeout(resolve, 100));
+			}
+
+			return results;
+		}),
+
+	sendPersonalMessage: protectedProcedure
+		.input(
+			z.object({
+				username: z.string().min(1),
+				message: z.string().min(1),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const isAdmin = ctx.session.user.role === "admin" || 
+				ADMINS.includes(ctx.session.user.name?.toLowerCase() ?? "");
+
+			if (!isAdmin) {
+				throw new Error("Unauthorized");
+			}
+
+			const user = await ctx.db
+				.select({
+					telegramId: users.telegramId,
+					name: users.name,
+				})
+				.from(users)
+				.where(eq(users.telegramUsername, input.username.replace("@", "")))
+				.limit(1);
+
+			if (!user[0] || !user[0].telegramId) {
+				throw new Error("User not found or has no Telegram ID");
+			}
+
+			await TelegramBot.sendMessage(user[0].telegramId, input.message);
+
+			return { success: true, userFound: true };
+		}),
+
+	testMessage: protectedProcedure
+		.input(
+			z.object({
+				chatId: z.string(),
+				message: z.string().min(1),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const isAdmin = ctx.session.user.role === "admin" || 
+				ADMINS.includes(ctx.session.user.name?.toLowerCase() ?? "");
+
+			if (!isAdmin) {
+				throw new Error("Unauthorized");
+			}
+
+			await TelegramBot.sendMessage(input.chatId, input.message);
+
+			return { success: true };
+		}),
+
+	setWebhook: protectedProcedure
+		.input(
+			z.object({
+				url: z.string().url(),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const isAdmin = ctx.session.user.role === "admin" || 
+				ADMINS.includes(ctx.session.user.name?.toLowerCase() ?? "");
+
+			if (!isAdmin) {
+				throw new Error("Unauthorized");
+			}
+
+			if (!process.env.TELEGRAM_BOT_TOKEN) {
+				throw new Error("Telegram bot token not configured");
+			}
+
+			const response = await fetch(
+				`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/setWebhook`,
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						url: input.url,
+					}),
+				},
+			);
+
+			if (!response.ok) {
+				throw new Error(`Failed to set webhook: ${response.statusText}`);
+			}
+
+			const data = await response.json();
+			return { success: true, data };
 		}),
 });

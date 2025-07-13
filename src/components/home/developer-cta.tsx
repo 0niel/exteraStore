@@ -59,13 +59,13 @@ export function DeveloperCTA() {
 							</div>
 
 							<div className="flex flex-wrap items-center justify-center gap-4">
-								<Link href="/upload">
+								<Link href="http://plugins.exteragram.app">
 									<Button size="lg" className="group h-12 px-8">
 										Начать разработку
 										<ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
 									</Button>
 								</Link>
-								<Link href="https://github.com/exteraSquad/exteraGram">
+								<Link href="https://github.com/0niel/exteraStore">
 									<Button size="lg" variant="outline" className="h-12 px-8">
 										<Github className="mr-2 h-4 w-4" />
 										GitHub
