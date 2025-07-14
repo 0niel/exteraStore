@@ -10,6 +10,7 @@ import { cookies, headers } from "next/headers";
 import { type Locale, locales } from "~/lib/i18n-config";
 
 import { Navigation } from "~/components/navigation";
+import { Footer } from "~/components/footer";
 import { Toaster } from "~/components/ui/sonner";
 import { auth } from "~/server/auth";
 import { TRPCReactProvider } from "~/trpc/react";
@@ -100,10 +101,13 @@ export default async function RootLayout({
 								enableSystem
 								disableTransitionOnChange
 							>
-								<Navigation />
-								<main className="w-full max-w-full overflow-x-hidden">
-									{children}
-								</main>
+								<div className="min-h-screen flex flex-col">
+									<Navigation />
+									<main className="w-full max-w-full overflow-x-hidden flex-1">
+										{children}
+									</main>
+									<Footer />
+								</div>
 								<Toaster />
 							</ThemeProvider>
 						</TRPCReactProvider>

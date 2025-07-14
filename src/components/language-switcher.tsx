@@ -19,6 +19,11 @@ const languageNames: Record<Locale, string> = {
 	ru: "Русский",
 };
 
+const languageFlags: Record<Locale, string> = {
+	en: "🇺🇸",
+	ru: "🇷🇺",
+};
+
 export function LanguageSwitcher() {
 	const router = useRouter();
 	const currentLocale = useLocale() as Locale;
@@ -60,5 +65,62 @@ export function LanguageSwitcher() {
 				))}
 			</DropdownMenuContent>
 		</DropdownMenu>
+	);
+}
+
+// Footer версия с красивым дизайном
+export function FooterLanguageSwitcher() {
+	const router = useRouter();
+	const currentLocale = useLocale() as Locale;
+	const [isPending, startTransition] = useTransition();
+	const [clientLocale, setClientLocale] = useState<Locale>(currentLocale);
+
+	useEffect(() => {
+		setClientLocale(getCurrentLocale());
+	}, []);
+
+	function handleLocaleChange(locale: Locale) {
+		startTransition(() => {
+			setLocaleCookie(locale);
+			setClientLocale(locale);
+
+			router.refresh();
+		});
+	}
+
+	if (isPending) {
+		return (
+			<div className="flex items-center justify-between w-full">
+				<span className="text-sm text-gray-600 dark:text-gray-400">Switching...</span>
+				<div className="w-12 h-6 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+			</div>
+		);
+	}
+
+	return (
+		<div className="space-y-3">
+			{locales.map((locale) => (
+				<button
+					key={locale}
+					onClick={() => handleLocaleChange(locale)}
+					disabled={isPending}
+					className={`
+						w-full flex items-center justify-between p-3 rounded-lg transition-all duration-200 disabled:opacity-50
+						${clientLocale === locale 
+							? 'bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/50' 
+							: 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+						}
+					`}
+				>
+					<div className="flex items-center space-x-3">
+						<span className="text-lg">{languageFlags[locale]}</span>
+						<span className="text-sm font-medium">{languageNames[locale]}</span>
+					</div>
+					{clientLocale === locale && (
+						<div className="w-2 h-2 bg-red-500 rounded-full" />
+					)}
+				</button>
+			))}
+		</div>
 	);
 }

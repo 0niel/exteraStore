@@ -18,7 +18,8 @@
 		"toggle_theme": "Toggle theme",
 		"light": "Light",
 		"dark": "Dark",
-		"system": "System"
+		"system": "System",
+		"loading": "Loading..."
 	},
 	"PluginCard": {
 		"featured": "Featured",
@@ -465,5 +466,157 @@
 		"categories": "Categories",
 		"bot": "Bot",
 		"back_to_site": "Back to Site"
+	},
+	"Footer": {
+		"description": "The revolutionary plugin store for exteraGram. Discover, create, and share plugins to enhance your Telegram experience.",
+		"contact_developer": "Contact Developer",
+		"view_source": "View Source Code",
+		"quick_links": "Quick Links",
+		"browse_plugins": "Browse Plugins",
+		"categories": "Categories",
+		"developers": "Developers",
+		"upload_plugin": "Upload Plugin",
+		"resources": "Resources",
+		"documentation": "Documentation",
+		"report_issue": "Report Issue",
+		"community": "Community",
+		"legal": "Legal",
+		"privacy_policy": "Privacy Policy",
+		"terms_of_service": "Terms of Service",
+		"cookie_policy": "Cookie Policy",
+		"rights_reserved": "All rights reserved.",
+		"made_with": "Made with",
+		"for_telegram_community": "for the Telegram community",
+		"settings": "Settings",
+		"appearance": "Appearance",
+		"language_setting": "Language"
+	},
+	"Privacy": {
+		"badge": "Legal",
+		"title": "Privacy Policy",
+		"description": "How we collect, use, and protect your personal information.",
+		"information_collection": {
+			"title": "Information We Collect",
+			"content": "We collect information you provide directly to us, such as when you create an account, upload plugins, or contact us. This may include your name, email address, username, and any content you submit."
+		},
+		"information_use": {
+			"title": "How We Use Your Information",
+			"content": "We use the information we collect to provide, maintain, and improve our services, process transactions, send communications, and comply with legal obligations."
+		},
+		"data_protection": {
+			"title": "Data Protection",
+			"content": "We implement appropriate security measures to protect your personal information against unauthorized access, alteration, disclosure, or destruction."
+		},
+		"cookies": {
+			"title": "Cookies and Tracking",
+			"content": "We use cookies and similar technologies to enhance your experience, analyze usage patterns, and provide personalized content."
+		},
+		"third_party": {
+			"title": "Third-Party Services",
+			"content": "We may use third-party services for analytics, authentication, and other functionalities. These services have their own privacy policies."
+		},
+		"contact": {
+			"title": "Contact Us",
+			"content": "If you have any questions about this Privacy Policy, please contact us through our support channels."
+		},
+		"last_updated": "Last updated"
+	},
+	"Terms": {
+		"badge": "Legal",
+		"title": "Terms of Service",
+		"description": "Terms and conditions for using exteraStore platform.",
+		"acceptance": {
+			"title": "Acceptance of Terms",
+			"content": "By accessing and using exteraStore, you accept and agree to be bound by the terms and provision of this agreement."
+		},
+		"services": {
+			"title": "Description of Services",
+			"content": "exteraStore is a platform for discovering, sharing, and managing plugins for exteraGram. We provide tools for developers to publish their plugins and for users to discover and install them."
+		},
+		"user_accounts": {
+			"title": "User Accounts",
+			"content": "You are responsible for maintaining the confidentiality of your account information and for all activities that occur under your account."
+		},
+		"plugin_uploads": {
+			"title": "Plugin Uploads",
+			"content": "Users may upload plugins subject to our content guidelines. You retain ownership of your plugins but grant us a license to distribute them through our platform."
+		},
+		"prohibited_uses": {
+			"title": "Prohibited Uses",
+			"content": "You may not use our service for any unlawful purpose or to solicit others to perform unlawful acts. You may not upload malicious content or violate intellectual property rights."
+		},
+		"intellectual_property": {
+			"title": "Intellectual Property",
+			"content": "The service and its original content, features, and functionality are and will remain the exclusive property of exteraStore and its licensors."
+		},
+		"termination": {
+			"title": "Termination",
+			"content": "We may terminate or suspend your account and bar access to the service immediately, without prior notice, for conduct that we believe violates these Terms."
+		},
+		"limitation_liability": {
+			"title": "Limitation of Liability",
+			"content": "In no event shall exteraStore be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the service."
+		},
+		"changes": {
+			"title": "Changes to Terms",
+			"content": "We reserve the right to modify or replace these Terms at any time. If a revision is material, we will provide at least 30 days notice prior to any new terms taking effect."
+		},
+		"contact": {
+			"title": "Contact Information",
+			"content": "Questions about the Terms of Service should be sent to us through our support channels."
+		},
+		"last_updated": "Last updated"
+	},
+	"Cookies": {
+		"badge": "Legal",
+		"title": "Cookie Policy",
+		"description": "How we use cookies and similar technologies on exteraStore.",
+		"what_are_cookies": {
+			"title": "What Are Cookies",
+			"content": "Cookies are small text files that are stored on your device when you visit our website. They help us provide you with a better experience by remembering your preferences and understanding how you use our service."
+		},
+		"how_we_use": {
+			"title": "How We Use Cookies",
+			"content": "We use cookies to maintain your session, remember your language preferences, analyze site usage, and provide personalized content. This helps us improve our service and provide you with a better user experience."
+		},
+		"types_of_cookies": {
+			"title": "Types of Cookies We Use",
+			"content": "We use essential cookies for basic functionality, analytics cookies to understand usage patterns, and preference cookies to remember your settings like language and theme preferences."
+		},
+		"manage_cookies": {
+			"title": "Managing Cookies",
+			"content": "You can control and manage cookies through your browser settings. Please note that disabling certain cookies may affect the functionality of our website."
+		},
+		"contact": {
+			"title": "Contact Us",
+			"content": "If you have any questions about our Cookie Policy, please contact us through our support channels."
+		},
+		"last_updated": "Last updated"
+	},
+	"License": {
+		"badge": "Legal",
+		"title": "License",
+		"description": "Licensing information for exteraStore platform and user content.",
+		"platform_license": {
+			"title": "Platform License",
+			"content": "The exteraStore platform is proprietary software. All rights to the platform code, design, and functionality are reserved by exteraStore. Users are granted a limited license to use the platform in accordance with our Terms of Service."
+		},
+		"user_content": {
+			"title": "User Content License",
+			"content": "When you upload plugins to exteraStore, you retain ownership of your intellectual property. However, you grant us a non-exclusive license to distribute, display, and promote your plugins through our platform."
+		},
+		"third_party": {
+			"title": "Third-Party Licenses",
+			"content": "Our platform uses various open-source libraries and frameworks. Each third-party component is licensed under its respective license terms, which are available in our source code repository."
+		},
+		"open_source": {
+			"title": "Open Source Components",
+			"content": "We are grateful to the open-source community and comply with all licensing requirements for the open-source software we use. Attribution and license information for these components can be found in our repository."
+		},
+		"contact": {
+			"title": "License Questions",
+			"content": "If you have questions about licensing or need special licensing arrangements, please contact us through our support channels."
+		},
+		"last_updated": "Last updated"
 	}
 }
