@@ -91,7 +91,7 @@ export default async function RootLayout({
 					content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
 				/>
 			</head>
-			<body className="min-h-screen overflow-x-hidden bg-background font-sans antialiased">
+			<body className="overflow-x-hidden bg-background font-sans antialiased">
 				<NextIntlClientProvider messages={messages}>
 					<SessionProvider session={session}>
 						<TRPCReactProvider>

@@ -68,7 +68,55 @@ export function LanguageSwitcher() {
 	);
 }
 
-// Footer версия с красивым дизайном
+export function CompactLanguageSwitcher() {
+	const router = useRouter();
+	const currentLocale = useLocale() as Locale;
+	const [isPending, startTransition] = useTransition();
+	const [clientLocale, setClientLocale] = useState<Locale>(currentLocale);
+
+	useEffect(() => {
+		setClientLocale(getCurrentLocale());
+	}, []);
+
+	function handleLocaleChange(locale: Locale) {
+		startTransition(() => {
+			setLocaleCookie(locale);
+			setClientLocale(locale);
+
+			router.refresh();
+		});
+	}
+
+	if (isPending) {
+		return (
+			<div className="flex items-center gap-1">
+				<div className="h-6 w-6 bg-muted rounded animate-pulse" />
+				<div className="h-6 w-6 bg-muted rounded animate-pulse" />
+			</div>
+		);
+	}
+
+	return (
+		<div className="flex items-center gap-1">
+			{locales.map((locale) => (
+				<button
+					key={locale}
+					onClick={() => handleLocaleChange(locale)}
+					disabled={isPending}
+					className={`h-6 w-6 rounded flex items-center justify-center transition-colors disabled:opacity-50 ${
+						clientLocale === locale 
+							? 'bg-primary text-primary-foreground' 
+							: 'hover:bg-muted text-muted-foreground hover:text-foreground'
+					}`}
+					title={languageNames[locale]}
+				>
+					<span className="text-xs">{languageFlags[locale]}</span>
+				</button>
+			))}
+		</div>
+	);
+}
+
 export function FooterLanguageSwitcher() {
 	const router = useRouter();
 	const currentLocale = useLocale() as Locale;

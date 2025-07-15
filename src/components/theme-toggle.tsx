@@ -56,7 +56,51 @@ export function ThemeToggle() {
 	);
 }
 
-// Footer версия с красивым дизайном
+export function CompactThemeToggle() {
+	const { theme, setTheme, resolvedTheme } = useTheme();
+	const [mounted, setMounted] = useState(false);
+	const t = useTranslations("ThemeToggle");
+
+	useEffect(() => {
+		setMounted(true);
+	}, []);
+
+	if (!mounted) {
+		return (
+			<div className="flex items-center gap-1">
+				<div className="h-6 w-6 bg-muted rounded animate-pulse" />
+				<div className="h-6 w-6 bg-muted rounded animate-pulse" />
+				<div className="h-6 w-6 bg-muted rounded animate-pulse" />
+			</div>
+		);
+	}
+
+	const themes = [
+		{ key: "light", icon: Sun, label: t("light") },
+		{ key: "dark", icon: Moon, label: t("dark") },
+		{ key: "system", icon: Monitor, label: t("system") },
+	];
+
+	return (
+		<div className="flex items-center gap-1">
+			{themes.map(({ key, icon: Icon, label }) => (
+				<button
+					key={key}
+					onClick={() => setTheme(key)}
+					className={`h-6 w-6 rounded flex items-center justify-center transition-colors ${
+						theme === key 
+							? 'bg-primary text-primary-foreground' 
+							: 'hover:bg-muted text-muted-foreground hover:text-foreground'
+					}`}
+					title={label}
+				>
+					<Icon className="h-3 w-3" />
+				</button>
+			))}
+		</div>
+	);
+}
+
 export function FooterThemeToggle() {
 	const { theme, setTheme, resolvedTheme } = useTheme();
 	const [mounted, setMounted] = useState(false);

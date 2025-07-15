@@ -234,7 +234,7 @@ export default function DeveloperProfilePage() {
 	const TierIcon = tier.icon;
 
 	return (
-		<div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
+		<div className="bg-gradient-to-br from-background via-muted/20 to-background">
 			<div className="container mx-auto max-w-6xl px-4 py-8">
 				<div className="space-y-8">
 					{/* Hero Section */}

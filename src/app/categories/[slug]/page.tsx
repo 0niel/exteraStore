@@ -156,7 +156,7 @@ export default function CategoryPage() {
 		colorMap[category.color as keyof typeof colorMap] || colorMap.blue;
 
 	return (
-		<div className="min-h-screen bg-background">
+		<div className="bg-background">
 			{/* Category Header */}
 			<section className="bg-muted/20 py-16">
 				<div className="container mx-auto px-4">

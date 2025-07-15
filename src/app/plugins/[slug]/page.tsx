@@ -208,7 +208,7 @@ export default function PluginDetailPage() {
 
 	if (isLoading) {
 		return (
-			<div className="min-h-screen bg-background">
+			<div className="bg-background">
 				<div className="container mx-auto max-w-4xl px-4 py-4">
 					<div className="space-y-6">
 						<Skeleton className="h-10 w-full" />
@@ -226,7 +226,7 @@ export default function PluginDetailPage() {
 
 	if (!plugin) {
 		return (
-			<div className="flex min-h-screen items-center justify-center bg-background">
+			<div className="flex items-center justify-center bg-background py-16">
 				<div className="px-4 text-center">
 					<div className="mb-4 text-6xl">😕</div>
 					<h1 className="mb-2 font-bold text-2xl">Плагин не найден</h1>
@@ -256,7 +256,7 @@ export default function PluginDetailPage() {
 		plugin.category;
 
 	return (
-		<div className="min-h-screen bg-background">
+		<div className="bg-background">
 			{/* Mobile Header */}
 			<div className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 lg:hidden">
 				<div className="flex items-center justify-between px-4 py-3">

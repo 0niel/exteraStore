@@ -116,7 +116,7 @@ export default function DevelopersPage() {
 	const filteredDevelopers = developersData?.developers || [];
 
 	return (
-		<div className="min-h-screen bg-background">
+		<div className="bg-background">
 			<div className="container mx-auto px-4 py-8">
 				<div className="mb-8 text-center">
 					<div className="mb-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 font-medium text-primary text-sm">

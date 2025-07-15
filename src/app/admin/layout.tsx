@@ -59,7 +59,7 @@ export default function AdminLayout({
 	];
 
 	return (
-		<div className="min-h-screen bg-background">
+		<div className="bg-background">
 			<div className="border-b">
 				<div className="container mx-auto flex h-16 items-center px-4">
 					<div className="mr-8 flex items-center">

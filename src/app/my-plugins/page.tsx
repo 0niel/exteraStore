@@ -84,7 +84,7 @@ export default function MyPluginsPage() {
 	);
 
 	return (
-		<div className="min-h-screen bg-background py-8">
+		<div className="bg-background py-8">
 			<div className="container mx-auto max-w-6xl px-4">
 				<div className="mb-8 flex items-center justify-between">
 					<div>

@@ -207,7 +207,7 @@ export default function UploadPluginPage() {
 	}
 
 	return (
-		<section className="min-h-screen bg-muted/40 py-4 sm:py-8 md:py-12">
+		<section className="bg-muted/40 py-4 sm:py-8 md:py-12">
 			<div className="container mx-auto max-w-6xl px-3 sm:px-4">
 				<div className="mb-6 text-center sm:mb-8">
 					<h1 className="mb-2 font-bold text-2xl sm:text-3xl md:text-4xl">

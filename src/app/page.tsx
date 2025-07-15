@@ -7,7 +7,7 @@ import { PopularPlugins } from "~/components/home/popular-plugins";
 
 export default function Home() {
 	return (
-		<main className="min-h-screen w-full max-w-full overflow-x-hidden bg-background">
+		<main className="w-full max-w-full overflow-x-hidden bg-background">
 			<HeroSection />
 			<FeaturedPlugins />
 			<PopularPlugins />
