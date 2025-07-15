@@ -7,6 +7,7 @@ import {
 	publicProcedure,
 } from "~/server/api/trpc";
 import { pluginFiles, pluginVersions, plugins } from "~/server/db/schema";
+import { pluginPipelineChecks } from "~/server/db/schema";
 
 export const pluginVersionsRouter = createTRPCRouter({
 	getVersions: publicProcedure
@@ -119,6 +120,18 @@ export const pluginVersionsRouter = createTRPCRouter({
 				throw new Error("Version not found");
 			}
 
+			const latestSecurityCheck = await ctx.db
+				.select()
+				.from(pluginPipelineChecks)
+				.where(
+					and(
+						eq(pluginPipelineChecks.pluginId, plugin[0].id),
+						eq(pluginPipelineChecks.checkType, "security")
+					)
+				)
+				.orderBy(desc(pluginPipelineChecks.createdAt))
+				.limit(1);
+
 			await ctx.db
 				.update(pluginVersions)
 				.set({
@@ -136,6 +149,7 @@ export const pluginVersionsRouter = createTRPCRouter({
 					telegramBotDeeplink: deeplink,
 					fileName,
 					fileSize: version[0].fileSize,
+					securityCheck: latestSecurityCheck[0] || null,
 				};
 			}
 
@@ -145,6 +159,7 @@ export const pluginVersionsRouter = createTRPCRouter({
 				fileContent,
 				fileSize: version[0].fileSize,
 				mimeType: "application/x-python",
+				securityCheck: latestSecurityCheck[0] || null,
 			};
 		}),
 

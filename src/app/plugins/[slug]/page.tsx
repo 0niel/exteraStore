@@ -48,6 +48,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "~/components/ui/card";
+import { SecurityWarning } from "~/components/ui/security-warning";
 import {
 	Dialog,
 	DialogContent,
@@ -99,14 +100,39 @@ export default function PluginDetailPage() {
 
 	const downloadMutation = api.plugins.download.useMutation({
 		onSuccess: (data) => {
+			if (data.securityCheck && data.securityCheck.status !== "passed" && data.securityCheck.details) {
+				const details = JSON.parse(data.securityCheck.details);
+				if (details.classification === "critical" || details.classification === "unsafe") {
+					toast.error("🛡️ Плагин не прошел проверку безопасности", {
+						description: "Обнаружены критические проблемы. Используйте на свой страх и риск.",
+						duration: 6000,
+					});
+				} else if (details.classification === "potentially_unsafe") {
+					toast.warning("⚠️ Потенциальные проблемы безопасности", {
+						description: "В плагине обнаружены потенциальные проблемы. Будьте осторожны.",
+						duration: 4000,
+					});
+				}
+			}
+			
 			if (data.telegramBotDeeplink) {
 				window.open(data.telegramBotDeeplink, "_blank");
+				toast.success("🚀 Плагин отправлен в Telegram", {
+					description: "Следуйте инструкциям в боте для установки",
+					duration: 3000,
+				});
 			} else {
-				toast.success("Плагин скачан!");
+				toast.success("✅ Плагин успешно скачан", {
+					description: "Установите плагин через настройки exteraGram",
+					duration: 3000,
+				});
 			}
 		},
 		onError: (error) => {
-			toast.error(`Ошибка при скачивании: ${error.message}`);
+			toast.error("❌ Ошибка при скачивании", {
+				description: error.message,
+				duration: 4000,
+			});
 		},
 	});
 
@@ -451,6 +477,22 @@ export default function PluginDetailPage() {
 							)}
 						</div>
 					</div>
+
+					{/* Security Warning */}
+					{plugin.latestSecurityCheck && plugin.latestSecurityCheck.status !== "passed" && plugin.latestSecurityCheck.details && (
+						<div className="mb-6">
+							<SecurityWarning
+								securityResult={{
+									status: plugin.latestSecurityCheck.classification as "safe" | "warning" | "danger",
+									classification: plugin.latestSecurityCheck.classification as "safe" | "potentially_unsafe" | "unsafe" | "critical",
+									shortDescription: plugin.latestSecurityCheck.shortDescription,
+									issues: JSON.parse(plugin.latestSecurityCheck.details).issues || [],
+								}}
+								variant="banner"
+								showDetails={true}
+							/>
+						</div>
+					)}
 
 					{/* Screenshots */}
 					{screenshots.length > 0 && (

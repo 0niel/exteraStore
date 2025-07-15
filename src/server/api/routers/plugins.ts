@@ -13,6 +13,7 @@ import {
 	pluginReviews,
 	plugins,
 	users,
+	pluginPipelineChecks,
 } from "~/server/db/schema";
 
 export const pluginsRouter = createTRPCRouter({
@@ -69,8 +70,29 @@ export const pluginsRouter = createTRPCRouter({
 					.then((result: any) => result[0]?.count ?? 0),
 			]);
 
+			const pluginsWithSecurity = await Promise.all(
+				pluginsList.map(async (plugin: typeof plugins.$inferSelect) => {
+					const latestSecurityCheck = await ctx.db
+						.select()
+						.from(pluginPipelineChecks)
+						.where(
+							and(
+								eq(pluginPipelineChecks.pluginId, plugin.id),
+								eq(pluginPipelineChecks.checkType, "security")
+							)
+						)
+						.orderBy(desc(pluginPipelineChecks.createdAt))
+						.limit(1);
+
+					return {
+						...plugin,
+						latestSecurityCheck: latestSecurityCheck[0] || null,
+					};
+				})
+			);
+
 			return {
-				plugins: pluginsList,
+				plugins: pluginsWithSecurity,
 				totalCount,
 				totalPages: Math.ceil(totalCount / input.limit),
 				currentPage: input.page,
@@ -90,7 +112,22 @@ export const pluginsRouter = createTRPCRouter({
 				throw new Error("Plugin not found");
 			}
 
-			return plugin[0];
+			const latestSecurityCheck = await ctx.db
+				.select()
+				.from(pluginPipelineChecks)
+				.where(
+					and(
+						eq(pluginPipelineChecks.pluginId, plugin[0].id),
+						eq(pluginPipelineChecks.checkType, "security")
+					)
+				)
+				.orderBy(desc(pluginPipelineChecks.createdAt))
+				.limit(1);
+
+			return {
+				...plugin[0],
+				latestSecurityCheck: latestSecurityCheck[0] || null,
+			};
 		}),
 
 	getReviews: publicProcedure
@@ -205,6 +242,18 @@ export const pluginsRouter = createTRPCRouter({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
+			const latestSecurityCheck = await ctx.db
+				.select()
+				.from(pluginPipelineChecks)
+				.where(
+					and(
+						eq(pluginPipelineChecks.pluginId, input.pluginId),
+						eq(pluginPipelineChecks.checkType, "security")
+					)
+				)
+				.orderBy(desc(pluginPipelineChecks.createdAt))
+				.limit(1);
+
 			await ctx.db.insert(pluginDownloads).values({
 				pluginId: input.pluginId,
 				userId: ctx.session?.user?.id,
@@ -228,6 +277,7 @@ export const pluginsRouter = createTRPCRouter({
 			return {
 				success: true,
 				telegramBotDeeplink: plugin[0]?.telegramBotDeeplink,
+				securityCheck: latestSecurityCheck[0] || null,
 			};
 		}),
 

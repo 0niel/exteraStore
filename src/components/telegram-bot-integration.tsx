@@ -56,13 +56,11 @@ export function TelegramBotIntegration({
 			setTimeout(() => {
 				if (telegramBotDeeplink) {
 					window.open(telegramBotDeeplink, "_blank");
-					toast.success(t("bot_opened"));
 				} else {
 					const botUsername =
 						env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "exterastore_bot";
 					const fallbackLink = `https://t.me/${botUsername}?start=plugin_${pluginId}`;
 					window.open(fallbackLink, "_blank");
-					toast.success(t("bot_opened"));
 				}
 			}, 500);
 		} catch (error) {

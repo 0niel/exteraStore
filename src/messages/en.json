@@ -25,7 +25,16 @@
 		"featured": "Featured",
 		"verified": "Verified",
 		"free": "Free",
-		"details": "Details"
+		"details": "Details",
+		"security_warning": "Security Warning",
+		"security_issues_found": "Security issues found",
+		"security_critical": "Critical issues",
+		"security_unsafe": "Unsafe code",
+		"security_warning_level": "Potential issues",
+		"download_at_risk": "Download at your own risk",
+		"security_details": "Security details",
+		"security_check_failed": "Failed security check",
+		"security_issues_short": "Issues found"
 	},
 	"PluginManageVersions": {
 		"loading": "Loading versions...",

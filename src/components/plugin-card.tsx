@@ -16,6 +16,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
+import { SecurityWarning } from "~/components/ui/security-warning";
 import { cn, formatDate, formatNumber } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
@@ -38,6 +39,12 @@ interface Plugin {
 	verified: boolean;
 	screenshots: string | null;
 	createdAt: Date | number;
+	latestSecurityCheck?: {
+		status: string;
+		classification: string;
+		shortDescription: string;
+		details: string;
+	} | null;
 }
 
 interface PluginCardProps {
@@ -177,6 +184,20 @@ export function PluginCard({
 								<span>{formatDate(plugin.createdAt)}</span>
 							</div>
 						</div>
+
+						{plugin.latestSecurityCheck && plugin.latestSecurityCheck.status !== "passed" && plugin.latestSecurityCheck.details && (
+							<div className="mt-2">
+								<SecurityWarning
+									securityResult={{
+										status: plugin.latestSecurityCheck.classification as "safe" | "warning" | "danger",
+										classification: plugin.latestSecurityCheck.classification as "safe" | "potentially_unsafe" | "unsafe" | "critical",
+										shortDescription: plugin.latestSecurityCheck.shortDescription,
+										issues: JSON.parse(plugin.latestSecurityCheck.details).issues || [],
+									}}
+									variant="compact"
+								/>
+							</div>
+						)}
 					</div>
 
 					<Button size="sm" variant="ghost" asChild>
@@ -291,6 +312,18 @@ export function PluginCard({
 								</Badge>
 							)}
 						</div>
+					)}
+
+					{plugin.latestSecurityCheck && plugin.latestSecurityCheck.status !== "passed" && plugin.latestSecurityCheck.details && (
+						<SecurityWarning
+							securityResult={{
+								status: plugin.latestSecurityCheck.classification as "safe" | "warning" | "danger",
+								classification: plugin.latestSecurityCheck.classification as "safe" | "potentially_unsafe" | "unsafe" | "critical",
+								shortDescription: plugin.latestSecurityCheck.shortDescription,
+								issues: JSON.parse(plugin.latestSecurityCheck.details).issues || [],
+							}}
+							variant="compact"
+						/>
 					)}
 				</div>
 			</Card>

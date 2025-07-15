@@ -25,7 +25,16 @@
 		"featured": "Рекомендуемый",
 		"verified": "Проверен",
 		"free": "Бесплатно",
-		"details": "Подробнее"
+		"details": "Подробнее",
+		"security_warning": "Предупреждение о безопасности",
+		"security_issues_found": "Обнаружены проблемы безопасности",
+		"security_critical": "Критические проблемы",
+		"security_unsafe": "Небезопасный код",
+		"security_warning_level": "Потенциальные проблемы",
+		"download_at_risk": "Скачивание на ваш риск",
+		"security_details": "Подробности безопасности",
+		"security_check_failed": "Не прошел проверку безопасности",
+		"security_issues_short": "Есть проблемы"
 	},
 	"PluginManageVersions": {
 		"loading": "Загрузка версий...",
@@ -47,7 +56,7 @@
 		"ai_powered_checks": "Проверка плагина с помощью ИИ на безопасность, качество и совместимость",
 		"ai_powered_analysis": "Анализ безопасности и производительности с помощью ИИ",
 		"run_checks": "Запустить проверки",
-		"rerun_jobs": "Перезапустить задания",
+		"rerun_jobs": "Перезапустить",
 		"run_workflow": "Запустить workflow",
 		"running": "Выполняется...",
 		"overall_results": "Общий результат",

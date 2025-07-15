@@ -55,24 +55,39 @@ export function PluginVersions({ pluginSlug }: PluginVersionsProps) {
 	const downloadVersionMutation =
 		api.pluginVersions.downloadVersion.useMutation({
 			onSuccess: (data) => {
+				if (data.securityCheck && data.securityCheck.status !== "passed" && data.securityCheck.details) {
+					const details = JSON.parse(data.securityCheck.details);
+					if (details.classification === "critical" || details.classification === "unsafe") {
+						toast.error("🛡️ Версия не прошла проверку безопасности", {
+							description: "Обнаружены критические проблемы. Используйте на свой страх и риск.",
+							duration: 6000,
+						});
+					} else if (details.classification === "potentially_unsafe") {
+						toast.warning("⚠️ Потенциальные проблемы безопасности", {
+							description: "В версии обнаружены потенциальные проблемы. Будьте осторожны.",
+							duration: 4000,
+						});
+					}
+				}
+
 				if (data.telegramBotDeeplink) {
 					window.open(data.telegramBotDeeplink, "_blank");
-					toast.success(t("download_telegram"));
-				} else if (data.fileContent) {
-					const blob = new Blob([data.fileContent], { type: data.mimeType });
-					const url = URL.createObjectURL(blob);
-					const a = document.createElement("a");
-					a.href = url;
-					a.download = data.fileName;
-					document.body.appendChild(a);
-					a.click();
-					document.body.removeChild(a);
-					URL.revokeObjectURL(url);
-					toast.success(t("file_downloaded"));
+					toast.success("🚀 Версия отправлена в Telegram", {
+						description: "Следуйте инструкциям в боте для установки",
+						duration: 3000,
+					});
+				} else {
+					toast.success("✅ Версия успешно скачана", {
+						description: "Установите плагин через настройки exteraGram",
+						duration: 3000,
+					});
 				}
 			},
 			onError: (error) => {
-				toast.error(t("download_error", { error: error.message }));
+				toast.error("❌ Ошибка при скачивании версии", {
+					description: error.message,
+					duration: 4000,
+				});
 			},
 		});
 
