@@ -125,7 +125,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 				.limit(1);
 
 			if (!plugin[0]) {
-				throw new Error("Plugin not found");
+				throw new Error("Плагин не найден");
 			}
 
 			let version;
@@ -155,7 +155,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 			}
 
 			if (!version || !version[0]) {
-				throw new Error("Version not found");
+				throw new Error("Версия не найдена");
 			}
 
 			const fileName = `${input.pluginSlug}-v${version[0].version}.plugin`;
@@ -211,7 +211,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 				.limit(1);
 
 			if (!plugin[0]) {
-				throw new Error("Plugin not found");
+				throw new Error("Плагин не найден");
 			}
 
 			const deepLink = TelegramBot.createDeepLink(
@@ -252,7 +252,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 				(plugin[0].authorId !== ctx.session.user.id &&
 					ctx.session.user.role !== "admin")
 			) {
-				throw new Error("Unauthorized");
+				throw new Error("Недостаточно прав");
 			}
 
 			const subscribers = await ctx.db
@@ -294,7 +294,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 						continue;
 					}
 
-					const message = `🔄 <b>Plugin update!</b>\n\n🔌 <b>${plugin[0].name}</b> updated to version <b>${input.newVersion}</b>\n\nDownload update using:\n/download_${plugin[0].slug}_v${input.newVersion}`;
+					const message = `🔄 <b>Обновление плагина!</b>\n\n🔌 <b>${plugin[0].name}</b> обновлен до версии <b>${input.newVersion}</b>\n\nНажмите кнопку ниже, чтобы скачать обновление.`;
 
 					await TelegramBot.sendMessage(chatId, message, {
 						parse_mode: "HTML",
@@ -302,13 +302,13 @@ export const telegramNotificationsRouter = createTRPCRouter({
 							inline_keyboard: [
 								[
 									{
-										text: "⬇️ Download Update",
+										text: "⬇️ Скачать обновление",
 										url: `https://t.me/${process.env.TELEGRAM_BOT_USERNAME}?start=plugin_${plugin[0].slug}_v${input.newVersion}`,
 									},
 								],
 								[
 									{
-										text: "🔕 Unsubscribe",
+										text: "🔕 Отписаться",
 										callback_data: `unsubscribe_${input.pluginId}_${subscriber.userId}`,
 									},
 								],
@@ -320,8 +320,8 @@ export const telegramNotificationsRouter = createTRPCRouter({
 						userId: subscriber.userId,
 						pluginId: input.pluginId,
 						type: "plugin_update",
-						title: `Update ${plugin[0].name}`,
-						message: `Plugin ${plugin[0].name} updated to version ${input.newVersion}`,
+						title: `Обновление ${plugin[0].name}`,
+						message: `Плагин ${plugin[0].name} обновлен до версии ${input.newVersion}`,
 						data: JSON.stringify({ version: input.newVersion }),
 						sentToTelegram: true,
 					});
@@ -413,7 +413,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 					const parts = input.command.split(" ");
 					const targetUsername = parts[1]?.replace("@", "").toLowerCase();
 					if (!targetUsername) {
-						await TelegramBot.sendMessage(input.chatId, "❌ Username required");
+						await TelegramBot.sendMessage(input.chatId, "❌ Требуется имя пользователя");
 						return { success: false };
 					}
 
@@ -432,7 +432,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 							ADMINS.includes(requester[0].username.toLowerCase()));
 
 					if (!requesterIsAdmin) {
-						await TelegramBot.sendMessage(input.chatId, "❌ Unauthorized");
+						await TelegramBot.sendMessage(input.chatId, "❌ Недостаточно прав");
 						return { success: false };
 					}
 
@@ -443,18 +443,18 @@ export const telegramNotificationsRouter = createTRPCRouter({
 
 					await TelegramBot.sendMessage(
 						input.chatId,
-						`✅ ${targetUsername} is now admin`,
+						`✅ ${targetUsername} теперь администратор`,
 					);
 					return { success: true, action: "admin_set" };
 				}
 
 				if (input.command.startsWith("plugin_")) {
-					const parts = input.command.split("_");
-					const pluginSlug = parts.slice(1, -1).join("_");
-					const versionPart = parts[parts.length - 1];
-					const version = versionPart?.startsWith("v")
-						? versionPart.substring(1)
-						: undefined;
+					const commandWithoutPrefix = input.command.substring(7);
+					const versionMatch = commandWithoutPrefix.match(/_v(.+)$/);
+					const pluginSlug = versionMatch 
+						? commandWithoutPrefix.substring(0, commandWithoutPrefix.lastIndexOf('_v'))
+						: commandWithoutPrefix;
+					const version = versionMatch ? versionMatch[1] : undefined;
 
 					const plugin = await ctx.db
 						.select()
@@ -463,7 +463,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 						.limit(1);
 
 					if (!plugin[0]) {
-						throw new Error("Plugin not found");
+						throw new Error("Плагин не найден");
 					}
 
 					let version_data;
@@ -493,7 +493,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 					}
 
 					if (!version_data || !version_data[0]) {
-						throw new Error("Version not found");
+						throw new Error("Версия не найдена");
 					}
 
 					const fileName = `${pluginSlug}-v${version_data[0].version}.plugin`;
@@ -522,7 +522,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 					const caption =
 						`🔌 <b>${updatedPlugin[0]?.name}</b> v${version_data[0].version}\n\n` +
 						`📝 ${updatedPlugin[0]?.shortDescription || updatedPlugin[0]?.description.substring(0, 100)}...\n\n` +
-						`👤 Author: ${updatedPlugin[0]?.author}\n📊 Rating: ${updatedPlugin[0]?.rating.toFixed(1)}/5 (${updatedPlugin[0]?.ratingCount} reviews)\n⬇️ Downloads: ${updatedPlugin[0]?.downloadCount}\n\nInstall this plugin in exteraGram!`;
+						`👤 Автор: ${updatedPlugin[0]?.author}\n📊 Рейтинг: ${updatedPlugin[0]?.rating.toFixed(1)}/5 (${updatedPlugin[0]?.ratingCount} отзывов)\n⬇️ Скачиваний: ${updatedPlugin[0]?.downloadCount}\n\nУстановите этот плагин в exteraGram!`;
 
 					await TelegramBot.sendDocument(
 						input.chatId,
@@ -540,7 +540,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 
 				await TelegramBot.sendMessage(
 					input.chatId,
-					"❌ Error processing command. Please try again later.",
+					"❌ Ошибка при обработке команды. Попробуйте позже.",
 				);
 
 				return {
