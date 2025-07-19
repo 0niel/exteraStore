@@ -278,61 +278,43 @@ export const telegramNotificationsRouter = createTRPCRouter({
 
 			for (const subscriber of subscribers) {
 				try {
-					const settings = await ctx.db
-						.select()
-						.from(userNotificationSettings)
-						.where(eq(userNotificationSettings.userId, subscriber.userId))
-						.limit(1);
+					const chatId = subscriber.telegramChatId ?? subscriber.user.telegramId;
+					if (chatId) {
+						const message = `🎉 Обновление плагина!\n\n🔌 *${plugin[0].name}* v${input.newVersion} теперь доступен.\n\nНажмите, чтобы посмотреть детали.`;
 
-					if (settings[0] && !settings[0].enablePluginUpdates) {
-						continue;
-					}
-
-					const chatId =
-						subscriber.telegramChatId || subscriber.user?.telegramId;
-					if (!chatId) {
-						continue;
-					}
-
-					const message = `🔄 <b>Обновление плагина!</b>\n\n🔌 <b>${plugin[0].name}</b> обновлен до версии <b>${input.newVersion}</b>\n\nНажмите кнопку ниже, чтобы скачать обновление.`;
-
-					await TelegramBot.sendMessage(chatId, message, {
-						parse_mode: "HTML",
-						reply_markup: {
-							inline_keyboard: [
-								[
-									{
-										text: "⬇️ Скачать обновление",
-										url: `https://t.me/${process.env.TELEGRAM_BOT_USERNAME}?start=plugin_${plugin[0].slug}_v${input.newVersion}`,
-									},
+						await TelegramBot.sendMessage(chatId, message, {
+							parse_mode: "Markdown",
+							reply_markup: {
+								inline_keyboard: [
+									[
+										{
+											text: "👀 Посмотреть",
+											callback_data: `plugin_${plugin[0].slug}`,
+										},
+									],
 								],
-								[
-									{
-										text: "🔕 Отписаться",
-										callback_data: `unsubscribe_${input.pluginId}_${subscriber.userId}`,
-									},
-								],
-							],
-						},
-					});
-
-					await ctx.db.insert(notifications).values({
-						userId: subscriber.userId,
-						pluginId: input.pluginId,
-						type: "plugin_update",
-						title: `Обновление ${plugin[0].name}`,
-						message: `Плагин ${plugin[0].name} обновлен до версии ${input.newVersion}`,
-						data: JSON.stringify({ version: input.newVersion }),
-						sentToTelegram: true,
-					});
-
-					results.push({ userId: subscriber.userId, status: "sent" });
+							},
+						});
+						results.push({
+							subscriber: subscriber.user.name ?? "Unknown",
+							status: "sent",
+						});
+					} else {
+						results.push({
+							subscriber: subscriber.user.name ?? "Unknown",
+							status: "failed",
+							reason: "No chat ID",
+						});
+					}
 				} catch (error) {
-					console.error(`Failed to notify user ${subscriber.userId}:`, error);
+					console.error(
+						`Failed to send notification to ${subscriber.user.name}:`,
+						error,
+					);
 					results.push({
-						userId: subscriber.userId,
+						subscriber: subscriber.user.name ?? "Unknown",
 						status: "failed",
-						error: error instanceof Error ? error.message : "Unknown error",
+						reason: error instanceof Error ? error.message : "Unknown error",
 					});
 				}
 			}

@@ -1238,8 +1238,8 @@ async function showHelp(chatId: string, messageId?: number) {
 • Установите его в exteraGram
 
 <b>🔗 Полезные ссылки:</b>
-• Сайт: https:
-• Документация: https:
+• Разработчик: https://github.com/0niel
+• Документация: http://plugins.exteragram.app
 	`;
 
 	const keyboard = {
