@@ -101,7 +101,7 @@ export default async function RootLayout({
 								enableSystem
 								disableTransitionOnChange
 							>
-								<div className="min-h-screen flex flex-col">
+								<div className="min-h-screen flex flex-col overflow-hidden">
 									<Navigation />
 									<main className="w-full max-w-full overflow-x-hidden flex-1">
 										{children}
