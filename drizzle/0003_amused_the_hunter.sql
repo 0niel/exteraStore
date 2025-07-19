@@ -1,0 +1,2 @@
+ALTER TABLE "extera_plugins_plugin_download" RENAME COLUMN "ip_address" TO "ip_hash";--> statement-breakpoint
+CREATE INDEX "download_ip_hash_idx" ON "extera_plugins_plugin_download" USING btree ("ip_hash");

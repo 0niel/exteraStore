@@ -127,7 +127,7 @@ export const pluginDownloads = pgTable(
 			.notNull()
 			.references(() => plugins.id, { onDelete: "cascade" }),
 		userId: text("user_id").references(() => users.id),
-		ipAddress: text("ip_address"),
+		ipHash: text("ip_hash"),
 		userAgent: text("user_agent"),
 		downloadedAt: integer("downloaded_at")
 			.default(sql`extract(epoch from now())`)
@@ -137,6 +137,7 @@ export const pluginDownloads = pgTable(
 		index("download_plugin_idx").on(t.pluginId),
 		index("download_user_idx").on(t.userId),
 		index("download_date_idx").on(t.downloadedAt),
+		index("download_ip_hash_idx").on(t.ipHash),
 	],
 );
 

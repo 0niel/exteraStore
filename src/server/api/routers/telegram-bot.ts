@@ -6,6 +6,10 @@ import {
 	publicProcedure,
 } from "~/server/api/trpc";
 import { pluginDownloads, plugins } from "~/server/db/schema";
+import {
+	checkDownloadRateLimit,
+	hashIp,
+} from "~/server/lib/rate-limiter";
 
 const botUserSchema = z.object({
 	id: z.number(),
@@ -71,7 +75,7 @@ export const telegramBotRouter = createTRPCRouter({
 				await ctx.db.insert(pluginDownloads).values({
 					pluginId: pluginId,
 					userId: null,
-					ipAddress: null,
+					ipHash: null,
 					userAgent: `Telegram Bot User ${input.userId}`,
 				});
 
@@ -160,6 +164,54 @@ export const telegramBotRouter = createTRPCRouter({
 		.mutation(async ({ ctx, input }) => {
 			const { data } = input;
 
+			if (data.startsWith("plugin_")) {
+				const pluginSlug = data.replace("plugin_", "");
+				const result = await ctx.db
+					.select()
+					.from(plugins)
+					.where(eq(plugins.slug, pluginSlug))
+					.limit(1);
+				const plugin = result[0];
+
+				if (plugin) {
+					return {
+						success: true,
+						plugin: {
+							id: plugin.id,
+							name: plugin.name,
+							version: plugin.version,
+							description: plugin.description,
+							author: plugin.author,
+							price: plugin.price,
+							downloadCount: plugin.downloadCount,
+						},
+						message: {
+							text: `🔌 *${plugin.name}* v${plugin.version}\n\n${plugin.description}\n\n👨‍💻 Автор: ${plugin.author}\n💰 Цена: ${plugin.price > 0 ? `$${plugin.price}` : "Бесплатно"}\n📥 Скачиваний: ${plugin.downloadCount}`,
+							reply_markup: {
+								inline_keyboard: [
+									[
+										{
+											text: "📥 Скачать плагин",
+											callback_data: `download_${plugin.id}`,
+										},
+									],
+									[
+										{
+											text: "📖 Подробнее",
+											url: `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/plugins/${plugin.slug}`,
+										},
+										{
+											text: "🌐 Каталог",
+											url: `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/plugins`,
+										},
+									],
+								],
+							},
+						},
+					};
+				}
+			}
+
 			if (data.startsWith("download_")) {
 				const pluginId = Number(data.replace("download_", ""));
 
@@ -172,6 +224,29 @@ export const telegramBotRouter = createTRPCRouter({
 				const plugin = result[0];
 
 				if (plugin) {
+					const rateLimit = await checkDownloadRateLimit(
+						ctx.db,
+						pluginId,
+						String(input.userId),
+						null,
+					);
+
+					if (!rateLimit.limited) {
+						await ctx.db.insert(pluginDownloads).values({
+							pluginId: pluginId,
+							userId: String(input.userId),
+							ipHash: null,
+							userAgent: `Telegram Bot User ${input.userId}`,
+						});
+
+						await ctx.db
+							.update(plugins)
+							.set({
+								downloadCount: sql`${plugins.downloadCount} + 1`,
+							})
+							.where(eq(plugins.id, pluginId));
+					}
+
 					return {
 						success: true,
 						answerCallbackQuery: {
@@ -200,7 +275,7 @@ export const telegramBotRouter = createTRPCRouter({
 									[
 										{
 											text: "🔙 Назад к плагину",
-											callback_data: `plugin_${plugin.id}`,
+											callback_data: `plugin_${plugin.slug}`,
 										},
 									],
 								],

@@ -8,12 +8,17 @@ import {
 } from "~/server/api/trpc";
 import {
 	notifications,
+	pluginDownloads,
 	pluginVersions,
 	plugins,
 	userNotificationSettings,
 	userPluginSubscriptions,
 	users,
 } from "~/server/db/schema";
+import {
+	checkDownloadRateLimit,
+	hashIp,
+} from "~/server/lib/rate-limiter";
 
 const ADMINS = (env.INITIAL_ADMINS ?? "i_am_oniel")
 	.split(",")
@@ -118,6 +123,9 @@ export const telegramNotificationsRouter = createTRPCRouter({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
+			const ip = ctx.headers.get("x-forwarded-for");
+			const userId = ctx.session?.user.id;
+
 			const plugin = await ctx.db
 				.select()
 				.from(plugins)
@@ -158,33 +166,39 @@ export const telegramNotificationsRouter = createTRPCRouter({
 				throw new Error("Версия не найдена");
 			}
 
+			const rateLimit = await checkDownloadRateLimit(
+				ctx.db,
+				plugin[0].id,
+				userId,
+				ip,
+			);
+
+			if (!rateLimit.limited) {
+				await ctx.db.insert(pluginDownloads).values({
+					pluginId: plugin[0].id,
+					userId,
+					ipHash: hashIp(ip),
+					userAgent: ctx.headers.get("user-agent"),
+				});
+
+				await ctx.db
+					.update(plugins)
+					.set({
+						downloadCount: sql`${plugins.downloadCount} + 1`,
+					})
+					.where(eq(plugins.id, plugin[0].id));
+
+				await ctx.db
+					.update(pluginVersions)
+					.set({
+						downloadCount: sql`${pluginVersions.downloadCount} + 1`,
+					})
+					.where(eq(pluginVersions.id, version[0].id));
+			}
+
 			const fileName = `${input.pluginSlug}-v${version[0].version}.plugin`;
 			const fileContent = Buffer.from(version[0].fileContent, "utf-8");
-
-			await ctx.db
-				.update(plugins)
-				.set({
-					downloadCount: plugin[0].downloadCount + 1,
-				})
-				.where(eq(plugins.id, plugin[0].id));
-
-			await ctx.db
-				.update(pluginVersions)
-				.set({
-					downloadCount: version[0].downloadCount + 1,
-				})
-				.where(eq(pluginVersions.id, version[0].id));
-
-			const updatedPlugin = await ctx.db
-				.select()
-				.from(plugins)
-				.where(eq(plugins.id, plugin[0].id))
-				.limit(1);
-
-			const caption =
-				`🔌 <b>${updatedPlugin[0]?.name}</b> v${version[0].version}\n\n` +
-				`📝 ${updatedPlugin[0]?.shortDescription || updatedPlugin[0]?.description.substring(0, 100)}...\n\n` +
-				`👤 Author: ${updatedPlugin[0]?.author}\n📊 Rating: ${updatedPlugin[0]?.rating.toFixed(1)}/5 (${updatedPlugin[0]?.ratingCount} reviews)\n⬇️ Downloads: ${updatedPlugin[0]?.downloadCount}\n\nInstall this plugin in exteraGram!`;
+			const caption = `Плагин ${plugin[0].name} версии ${version[0].version}`;
 
 			await TelegramBot.sendDocument(
 				input.chatId,
@@ -433,10 +447,13 @@ export const telegramNotificationsRouter = createTRPCRouter({
 				if (input.command.startsWith("plugin_")) {
 					const commandWithoutPrefix = input.command.substring(7);
 					const versionMatch = commandWithoutPrefix.match(/_v(.+)$/);
-					const pluginSlug = versionMatch 
-						? commandWithoutPrefix.substring(0, commandWithoutPrefix.lastIndexOf('_v'))
+					const pluginSlug = versionMatch
+						? commandWithoutPrefix.substring(
+								0,
+								commandWithoutPrefix.lastIndexOf("_v"),
+							)
 						: commandWithoutPrefix;
-					const version = versionMatch ? versionMatch[1] : undefined;
+					const versionStr = versionMatch ? versionMatch[1] : undefined;
 
 					const plugin = await ctx.db
 						.select()
@@ -448,15 +465,27 @@ export const telegramNotificationsRouter = createTRPCRouter({
 						throw new Error("Плагин не найден");
 					}
 
+					const rateLimit = await checkDownloadRateLimit(
+						ctx.db,
+						plugin[0].id,
+						input.userId,
+						null,
+					);
+
+					if (rateLimit.limited) {
+						await TelegramBot.sendMessage(input.chatId, `❌ ${rateLimit.reason}`);
+						return { success: false };
+					}
+
 					let version_data;
-					if (version) {
+					if (versionStr) {
 						version_data = await ctx.db
 							.select()
 							.from(pluginVersions)
 							.where(
 								and(
 									eq(pluginVersions.pluginId, plugin[0].id),
-									eq(pluginVersions.version, version),
+									eq(pluginVersions.version, versionStr),
 								),
 							)
 							.limit(1);
@@ -479,7 +508,17 @@ export const telegramNotificationsRouter = createTRPCRouter({
 					}
 
 					const fileName = `${pluginSlug}-v${version_data[0].version}.plugin`;
-					const fileContent = Buffer.from(version_data[0].fileContent, "utf-8");
+					const fileContent = Buffer.from(
+						version_data[0].fileContent,
+						"utf-8",
+					);
+
+					await ctx.db.insert(pluginDownloads).values({
+						pluginId: plugin[0].id,
+						userId: input.userId,
+						ipHash: null,
+						userAgent: `Telegram Bot User ${input.userId}`,
+					});
 
 					await ctx.db
 						.update(plugins)
