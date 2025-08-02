@@ -5,6 +5,7 @@ import {
 	Edit,
 	Eye,
 	GitBranch,
+	MoreHorizontal,
 	Plus,
 	Search,
 	Settings,
@@ -26,6 +27,12 @@ import {
 	CardHeader,
 	CardTitle,
 } from "~/components/ui/card";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
 import { EmptyState } from "~/components/ui/empty-state";
 import { Input } from "~/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
@@ -253,7 +260,63 @@ function PluginCard({ plugin }: { plugin: typeof Plugin.$inferSelect }) {
 					</span>
 				</div>
 
-				<div className="flex items-center gap-1">
+				{/* Мобильная версия - кнопки в две строки */}
+				<div className="space-y-2 sm:hidden">
+					<Button variant="outline" size="sm" asChild className="w-full">
+						<Link href={`/plugins/${plugin.slug}`}>
+							<Eye className="mr-2 h-4 w-4" />
+							{t("view")}
+						</Link>
+					</Button>
+					<div className="flex gap-2">
+						<Button variant="outline" size="sm" asChild className="flex-1">
+							<Link href={`/plugins/${plugin.slug}/versions`}>
+								<GitBranch className="mr-1 h-4 w-4" />
+								{t("versions")}
+							</Link>
+						</Button>
+						<Button variant="outline" size="sm" asChild className="flex-1">
+							<Link href={`/my-plugins/${plugin.slug}/manage`}>
+								<Settings className="mr-1 h-4 w-4" />
+								{t("manage")}
+							</Link>
+						</Button>
+					</div>
+				</div>
+
+				{/* Планшетная версия - dropdown menu */}
+				<div className="hidden sm:flex lg:hidden items-center gap-2">
+					<Button variant="outline" size="sm" asChild className="flex-1">
+						<Link href={`/plugins/${plugin.slug}`}>
+							<Eye className="mr-2 h-4 w-4" />
+							{t("view")}
+						</Link>
+					</Button>
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button variant="outline" size="sm">
+								<MoreHorizontal className="h-4 w-4" />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end">
+							<DropdownMenuItem asChild>
+								<Link href={`/plugins/${plugin.slug}/versions`} className="flex items-center">
+									<GitBranch className="mr-2 h-4 w-4" />
+									{t("versions")}
+								</Link>
+							</DropdownMenuItem>
+							<DropdownMenuItem asChild>
+								<Link href={`/my-plugins/${plugin.slug}/manage`} className="flex items-center">
+									<Settings className="mr-2 h-4 w-4" />
+									{t("manage")}
+								</Link>
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
+				</div>
+
+				{/* Десктопная версия - все кнопки в одну строку */}
+				<div className="hidden lg:flex items-center gap-1">
 					<Button variant="outline" size="sm" asChild className="flex-1">
 						<Link href={`/plugins/${plugin.slug}`}>
 							<Eye className="mr-1 h-4 w-4" />

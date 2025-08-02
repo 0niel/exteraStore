@@ -4,6 +4,7 @@ import {
 	AlertTriangle,
 	CheckCircle,
 	Clock,
+	Info,
 	Play,
 	RefreshCw,
 	Shield,
@@ -15,6 +16,11 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "~/components/ui/popover";
 import { Skeleton } from "~/components/ui/skeleton";
 import { createValidDate, formatDate } from "~/lib/utils";
 import { api } from "~/trpc/react";
@@ -333,25 +339,21 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 									)}
 
 									{check?.details && check.status !== "error" && (
-										<details className="relative">
-											<summary className="cursor-pointer list-none text-muted-foreground opacity-0 transition-colors duration-200 hover:text-primary group-hover:opacity-100">
-												<div className="rounded-md p-1 transition-colors hover:bg-accent">
-													<svg
-														className="h-4 w-4"
-														fill="none"
-														stroke="currentColor"
-														viewBox="0 0 24 24"
-													>
-														<path
-															strokeLinecap="round"
-															strokeLinejoin="round"
-															strokeWidth={2}
-															d="M9 5l7 7-7 7"
-														/>
-													</svg>
-												</div>
-											</summary>
-											<div className="slide-in-from-top-2 absolute top-8 right-0 z-20 w-80 animate-in overflow-hidden rounded-lg border border-border bg-popover shadow-xl duration-200">
+										<Popover>
+											<PopoverTrigger asChild>
+												<Button
+													variant="ghost"
+													size="sm"
+													className="h-6 w-6 p-0 text-muted-foreground opacity-0 transition-all duration-200 hover:text-primary group-hover:opacity-100"
+												>
+													<Info className="h-4 w-4" />
+												</Button>
+											</PopoverTrigger>
+											<PopoverContent
+												className="w-96 p-0"
+												align="end"
+												side="bottom"
+											>
 												<div className="border-b border-border bg-accent/50 p-4">
 													<h4 className="flex items-center gap-2 font-semibold text-foreground">
 														<div className="h-2 w-2 rounded-full bg-green-500"></div>
@@ -363,18 +365,26 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 														{JSON.stringify(JSON.parse(check.details), null, 2)}
 													</pre>
 												</div>
-											</div>
-										</details>
+											</PopoverContent>
+										</Popover>
 									)}
 
 									{check?.errorMessage && (
-										<details className="relative">
-											<summary className="cursor-pointer list-none text-red-500 opacity-0 transition-colors duration-200 hover:text-red-600 group-hover:opacity-100">
-												<div className="rounded-md p-1 transition-colors hover:bg-red-50 dark:hover:bg-red-900/20">
+										<Popover>
+											<PopoverTrigger asChild>
+												<Button
+													variant="ghost"
+													size="sm"
+													className="h-6 w-6 p-0 text-red-500 opacity-0 transition-all duration-200 hover:text-red-600 group-hover:opacity-100"
+												>
 													<AlertTriangle className="h-4 w-4" />
-												</div>
-											</summary>
-											<div className="slide-in-from-top-2 absolute top-8 right-0 z-20 w-80 animate-in overflow-hidden rounded-lg border border-red-200 bg-popover shadow-xl duration-200 dark:border-red-800">
+												</Button>
+											</PopoverTrigger>
+											<PopoverContent
+												className="w-80 p-0"
+												align="end"
+												side="bottom"
+											>
 												<div className="border-b border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/30">
 													<h4 className="flex items-center gap-2 font-semibold text-red-900 dark:text-red-400">
 														<div className="h-2 w-2 rounded-full bg-red-500"></div>
@@ -386,8 +396,8 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 														{check.errorMessage}
 													</p>
 												</div>
-											</div>
-										</details>
+											</PopoverContent>
+										</Popover>
 									)}
 								</div>
 							</div>
