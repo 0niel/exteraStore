@@ -207,7 +207,7 @@ export default function UploadPluginPage() {
 	}
 
 	return (
-		<section className="bg-muted/40 py-4 sm:py-8 md:py-12">
+		<section className="bg-muted/40 py-4 sm:py-8 md:py-12 min-h-screen">
 			<div className="container mx-auto max-w-6xl px-3 sm:px-4">
 				<div className="mb-6 text-center sm:mb-8">
 					<h1 className="mb-2 font-bold text-2xl sm:text-3xl md:text-4xl">
@@ -223,8 +223,8 @@ export default function UploadPluginPage() {
 						onSubmit={form.handleSubmit(onSubmit)}
 						className="space-y-4 sm:space-y-6"
 					>
-						<div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-3">
-							<div className="space-y-4 sm:space-y-6 lg:col-span-2">
+						<div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-3">
+							<div className="space-y-4 sm:space-y-6 xl:col-span-2">
 								{/* Основная информация */}
 								<Card>
 									<CardHeader>
@@ -279,7 +279,7 @@ export default function UploadPluginPage() {
 														<MarkdownEditor
 															value={field.value || ""}
 															onChange={field.onChange}
-															height={400}
+															height={300}
 															showImproveButton={true}
 															textType="description"
 															pluginName={form.watch("name")}
@@ -333,7 +333,7 @@ export default function UploadPluginPage() {
 														<MarkdownEditor
 															value={field.value || ""}
 															onChange={field.onChange}
-															height={200}
+															height={150}
 															placeholder="- Добавлена функция X&#10;- Исправлена ошибка Y"
 															showImproveButton={true}
 															textType="changelog"
@@ -348,7 +348,7 @@ export default function UploadPluginPage() {
 								</Card>
 							</div>
 
-							<div className="space-y-4 sm:space-y-6 lg:col-span-1">
+							<div className="space-y-4 sm:space-y-6 xl:col-span-1">
 								{/* Организация */}
 								<Card>
 									<CardHeader>
@@ -372,7 +372,7 @@ export default function UploadPluginPage() {
 																<SelectValue placeholder="Выберите категорию" />
 															</SelectTrigger>
 														</FormControl>
-														<SelectContent>
+														<SelectContent className="max-h-[200px] overflow-y-auto">
 															{areCategoriesLoading ? (
 																<SelectItem value="loading" disabled>
 																	Загрузка...

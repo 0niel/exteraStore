@@ -253,20 +253,20 @@ function PluginCard({ plugin }: { plugin: typeof Plugin.$inferSelect }) {
 					</span>
 				</div>
 
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-1">
 					<Button variant="outline" size="sm" asChild className="flex-1">
 						<Link href={`/plugins/${plugin.slug}`}>
 							<Eye className="mr-1 h-4 w-4" />
 							{t("view")}
 						</Link>
 					</Button>
-					<Button variant="outline" size="sm" asChild>
+					<Button variant="outline" size="sm" asChild className="flex-1">
 						<Link href={`/plugins/${plugin.slug}/versions`}>
 							<GitBranch className="mr-1 h-4 w-4" />
 							{t("versions")}
 						</Link>
 					</Button>
-					<Button variant="outline" size="sm" asChild>
+					<Button variant="outline" size="sm" asChild className="flex-1">
 						<Link href={`/my-plugins/${plugin.slug}/manage`}>
 							<Settings className="mr-1 h-4 w-4" />
 							{t("manage")}

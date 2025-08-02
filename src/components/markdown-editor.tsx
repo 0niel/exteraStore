@@ -68,91 +68,109 @@ export function MarkdownEditor({
 	return (
 		<div className="w-full rounded-md border">
 			<Tabs defaultValue="write" className="w-full">
-				<div className="flex items-center justify-between border-b px-2 py-1.5 sm:px-3 sm:py-2">
-					<TabsList className="h-7 sm:h-8">
-						<TabsTrigger value="write" className="text-xs sm:text-sm px-2 sm:px-3">
-							Write
-						</TabsTrigger>
-						<TabsTrigger value="preview" className="text-xs sm:text-sm px-2 sm:px-3">
-							Preview
-						</TabsTrigger>
-					</TabsList>
-					<div className="flex items-center gap-0.5 sm:gap-1">
+				<div className="border-b">
+					<div className="flex items-center justify-between px-2 py-1.5 sm:px-3 sm:py-2">
+						<TabsList className="h-7 sm:h-8">
+							<TabsTrigger value="write" className="text-xs sm:text-sm px-2 sm:px-3">
+								Write
+							</TabsTrigger>
+							<TabsTrigger value="preview" className="text-xs sm:text-sm px-2 sm:px-3">
+								Preview
+							</TabsTrigger>
+						</TabsList>
+						{showImproveButton && (
+							<TextImprovementButton
+								text={value}
+								textType={textType}
+								pluginName={pluginName}
+								onImprovedText={onChange}
+								size="sm"
+								variant="ghost"
+								className="hidden sm:flex"
+							/>
+						)}
+					</div>
+					<div className="flex flex-wrap items-center gap-0.5 px-2 pb-1.5 sm:gap-1 sm:px-3 sm:pb-2">
 						<Button
 							type="button"
 							variant="ghost"
 							size="sm"
 							onClick={() => insertMarkdown("**", "**")}
-							className="h-6 w-6 p-0 sm:h-8 sm:w-8"
+							className="h-6 w-6 p-0 sm:h-7 sm:w-7"
+							title="Bold"
 						>
-							<Bold className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+							<Bold className="h-3 w-3" />
 						</Button>
 						<Button
 							type="button"
 							variant="ghost"
 							size="sm"
 							onClick={() => insertMarkdown("*", "*")}
-							className="h-6 w-6 p-0 sm:h-8 sm:w-8"
+							className="h-6 w-6 p-0 sm:h-7 sm:w-7"
+							title="Italic"
 						>
-							<Italic className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+							<Italic className="h-3 w-3" />
 						</Button>
 						<Button
 							type="button"
 							variant="ghost"
 							size="sm"
 							onClick={() => insertMarkdown("`", "`")}
-							className="h-6 w-6 p-0 sm:h-8 sm:w-8"
+							className="h-6 w-6 p-0 sm:h-7 sm:w-7"
+							title="Code"
 						>
-							<Code className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+							<Code className="h-3 w-3" />
 						</Button>
 						<Button
 							type="button"
 							variant="ghost"
 							size="sm"
 							onClick={() => insertMarkdown("[", "](url)")}
-							className="h-6 w-6 p-0 sm:h-8 sm:w-8"
+							className="h-6 w-6 p-0 sm:h-7 sm:w-7"
+							title="Link"
 						>
-							<Link className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+							<Link className="h-3 w-3" />
 						</Button>
 						<Button
 							type="button"
 							variant="ghost"
 							size="sm"
 							onClick={() => insertMarkdown("\n- ", "")}
-							className="h-6 w-6 p-0 sm:h-8 sm:w-8"
+							className="h-6 w-6 p-0 sm:h-7 sm:w-7"
+							title="List"
 						>
-							<List className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+							<List className="h-3 w-3" />
 						</Button>
 						<Button
 							type="button"
 							variant="ghost"
 							size="sm"
 							onClick={() => insertMarkdown("\n> ", "")}
-							className="h-6 w-6 p-0 sm:h-8 sm:w-8"
+							className="h-6 w-6 p-0 sm:h-7 sm:w-7"
+							title="Quote"
 						>
-							<Quote className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+							<Quote className="h-3 w-3" />
 						</Button>
 						<Button
 							type="button"
 							variant="ghost"
 							size="sm"
 							onClick={() => insertMarkdown("\n![alt](", ")")}
-							className="h-6 w-6 p-0 sm:h-8 sm:w-8"
+							className="h-6 w-6 p-0 sm:h-7 sm:w-7"
+							title="Image"
 						>
-							<ImageIcon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+							<ImageIcon className="h-3 w-3" />
 						</Button>
 						{showImproveButton && (
-							<>
-								<div className="mx-0.5 h-4 w-px bg-border sm:mx-1" />
-								<TextImprovementButton
-									text={value}
-									textType={textType}
-									pluginName={pluginName}
-									onImprovedText={onChange}
-									size="sm"
-									variant="ghost"
-								/>
-							</>
+							<TextImprovementButton
+								text={value}
+								textType={textType}
+								pluginName={pluginName}
+								onImprovedText={onChange}
+								size="sm"
+								variant="ghost"
+								className="sm:hidden"
+							/>
 						)}
 					</div>
 				</div>
