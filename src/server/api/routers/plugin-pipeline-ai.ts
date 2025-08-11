@@ -18,7 +18,14 @@ const CheckResultSchema = z.object({
 	),
 });
 
+const AICollectionResultSchema = z.object({
+	collectionName: z.string(),
+	collectionDescription: z.string(),
+	pluginIds: z.array(z.number()),
+});
+
 type CheckResult = z.infer<typeof CheckResultSchema>;
+type AICollectionResult = z.infer<typeof AICollectionResultSchema>;
 
 export class PluginAIChecker {
 	private gemini: ChatOpenAI;
@@ -148,6 +155,102 @@ export class PluginAIChecker {
 
 ФОРМАТ ОТВЕТА:
 Верни только улучшенный changelog в формате Markdown. Не добавляй пояснений или комментариев.`;
+		}
+	}
+
+	private getAICollectionPrompt(): string {
+		return `Ты — эксперт по плагинам для Telegram и exteraGram. Твоя задача — создавать интересные и полезные подборки плагинов.
+Тебе будет предоставлен список всех доступных плагинов в формате JSON и тема для подборки.
+
+Твои действия:
+1.  **Внимательно изучи тему подборки.** Пойми, какие плагины будут наиболее релевантны.
+2.  **Проанализируй список плагинов.** Обрати внимание на название, описание, категорию и теги каждого плагина.
+3.  **Выбери 8-12 наиболее подходящих плагинов.** Не добавляй больше, чтобы подборка была сфокусированной.
+4.  **Придумай креативное и привлекательное название для подборки**, соответствующее теме.
+5.  **Напиши краткое, но ёмкое описание для подборки (2-3 предложения).** Оно должно объяснять, почему эти плагины вместе и какую пользу они принесут.
+6.  **Верни результат в строго заданном формате JSON.**
+
+Критерии отбора плагинов:
+*   **Релевантность теме:** Плагин должен максимально соответствовать теме подборки.
+*   **Качество и популярность:** Отдавай предпочтение плагинам с хорошим рейтингом и количеством загрузок, но не бойся включать новые и перспективные.
+*   **Разнообразие:** Постарайся сделать подборку разнообразной, чтобы она не состояла из однотипных плагинов.
+
+ЗАПРЕЩЕНО:
+*   Возвращать плагины, которых нет в предоставленном списке.
+*   Возвращать более 15 или менее 5 плагинов.
+*   Отвечать что-либо, кроме JSON объекта.
+
+Формат ответа (строго JSON):
+{
+	 "collectionName": "Название твоей подборки",
+	 "collectionDescription": "Описание твоей подборки.",
+	 "pluginIds": [1, 2, 3, 4, 5, 6, 7, 8]
+}`;
+	}
+
+	async generateAICollection(
+		allPlugins: {
+			id: number;
+			name: string;
+			shortDescription: string | null;
+			category: string;
+			tags: string | null;
+			rating: number;
+			downloadCount: number;
+		}[],
+		theme: string,
+	): Promise<AICollectionResult> {
+		console.log(
+			`[PluginAIChecker] Starting AI collection generation for theme: "${theme}"`,
+		);
+
+		try {
+			const messages = [
+				new SystemMessage(this.getAICollectionPrompt()),
+				new HumanMessage(`Сгенерируй подборку плагинов на тему "${theme}".
+
+Вот список всех доступных плагинов:
+\`\`\`json
+${JSON.stringify(allPlugins, null, 2)}
+\`\`\`
+
+Верни результат в формате JSON. Отвечай только на русском языке.`),
+			];
+
+			console.log(
+				`[PluginAIChecker] Sending collection generation request to Gemini`,
+			);
+
+			const startTime = Date.now();
+			const response = await this.gemini.invoke(messages);
+			const duration = Date.now() - startTime;
+
+			console.log(
+				`[PluginAIChecker] Received collection response in ${duration}ms`,
+			);
+
+			const content = response.content.toString();
+			const jsonMatch = content.match(/\{[\s\S]*\}/);
+			if (!jsonMatch) {
+				throw new Error("No JSON found in AI response for collection");
+			}
+
+			const parsedJson = JSON.parse(jsonMatch[0]);
+			const result = AICollectionResultSchema.parse(parsedJson);
+
+			console.log(
+				`[PluginAIChecker] Collection generation completed for theme "${theme}". Found ${result.pluginIds.length} plugins.`,
+			);
+
+			return result;
+		} catch (error) {
+			console.error(
+				`[PluginAIChecker] Failed to generate AI collection for theme "${theme}":`,
+				error,
+			);
+			throw new Error(
+				`Не удалось сгенерировать подборку: ${error instanceof Error ? error.message : "Неизвестная ошибка"}`,
+			);
 		}
 	}
 

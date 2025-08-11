@@ -154,6 +154,26 @@ export const userNotificationSettings = pgTable(
 	(t) => [index("notification_settings_user_idx").on(t.userId)],
 );
 
+export const aiPluginCollections = pgTable(
+	"extera_plugins_ai_plugin_collection",
+	{
+		id: serial("id").primaryKey(),
+		name: text("name").notNull(),
+		description: text("description"),
+		pluginIds: integer("plugin_ids").array().notNull(),
+		generatedAt: integer("generated_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+	},
+	(t) => [
+		index("ai_collection_name_idx").on(t.name),
+		index("ai_collection_generated_at_idx").on(t.generatedAt),
+	],
+);
+
 export const pluginPipelineChecksRelations = relations(
 	pluginPipelineChecks,
 	({ one }) => ({

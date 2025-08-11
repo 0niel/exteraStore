@@ -1,4 +1,4 @@
-import { and, count, desc, eq, like, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, like, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
 	createTRPCRouter,
@@ -11,9 +11,12 @@ import {
 	pluginPipelineQueue,
 	userNotificationSettings,
 	userPluginSubscriptions,
+	aiPluginCollections,
 } from "~/server/db/pipeline-schema";
 import { pluginVersions, plugins } from "~/server/db/schema";
 import { PluginAIChecker } from "./plugin-pipeline-ai";
+
+let isGeneratingCollections = false;
 
 // Функция для обработки одного элемента очереди
 async function processQueueItem(ctx: any, queueItemId: number) {
@@ -364,7 +367,11 @@ export const pluginPipelineRouter = createTRPCRouter({
 				)
 				.limit(input.limit);
 
-			const results = [];
+			const results: {
+				pluginId: number;
+				status: string;
+				error?: string;
+			}[] = [];
 
 			for (const item of queueItems) {
 				try {
@@ -662,6 +669,163 @@ export const pluginPipelineRouter = createTRPCRouter({
 
 			return settings;
 		}),
+});
 
+async function _generateAndSaveAICollections(ctx: any, themes: string[]) {
+	const allPlugins = await ctx.db
+		.select({
+			id: plugins.id,
+			name: plugins.name,
+			shortDescription: plugins.shortDescription,
+			category: plugins.category,
+			tags: plugins.tags,
+			rating: plugins.rating,
+			downloadCount: plugins.downloadCount,
+		})
+		.from(plugins)
+		.where(eq(plugins.status, "approved"));
 
+	if (allPlugins.length === 0) {
+		console.log("No approved plugins found to generate collections.");
+		return [];
+	}
+
+	const aiChecker = new PluginAIChecker();
+	const results: {
+		theme: string;
+		status: string;
+		collection?: typeof aiPluginCollections.$inferSelect;
+		error?: string;
+	}[] = [];
+
+	for (const theme of themes) {
+		try {
+			const collection = await aiChecker.generateAICollection(
+				allPlugins,
+				theme,
+			);
+
+			const [savedCollection] = await ctx.db
+				.insert(aiPluginCollections)
+				.values({
+					name: collection.collectionName,
+					description: collection.collectionDescription,
+					pluginIds: collection.pluginIds,
+				})
+				.returning();
+
+			results.push({
+				theme,
+				status: "success",
+				collection: savedCollection,
+			});
+		} catch (error) {
+			results.push({
+				theme,
+				status: "failed",
+				error: error instanceof Error ? error.message : "Unknown error",
+			});
+		}
+	}
+
+	aiChecker.cleanup();
+	return results;
+}
+
+export const aiCollectionsRouter = createTRPCRouter({
+	generateAndSaveAICollections: protectedProcedure
+		.input(
+			z.object({
+				themes: z
+					.array(z.string())
+					.default([
+						"Полезные инструменты",
+						"Удивить друзей",
+						"Для работы и учебы",
+						"Кастомизация интерфейса",
+						"Развлечения и мемы",
+						"Продуктивность",
+						"Безопасность и приватность",
+					]),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			if (ctx.session.user.role !== "admin") {
+				throw new Error("Unauthorized");
+			}
+			return _generateAndSaveAICollections(ctx, input.themes);
+		}),
+
+	getAICollections: publicProcedure
+		.input(
+			z.object({
+				limit: z.number().min(1).max(20).default(5),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const sevenDaysAgo = Math.floor(
+				(Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000,
+			);
+
+			const latestCollection = await ctx.db
+				.select()
+				.from(aiPluginCollections)
+				.orderBy(desc(aiPluginCollections.generatedAt))
+				.limit(1);
+
+			const needsUpdate =
+				!latestCollection[0] ||
+				latestCollection[0].generatedAt < sevenDaysAgo;
+
+			if (needsUpdate && !isGeneratingCollections) {
+				isGeneratingCollections = true;
+				// Запускаем генерацию в фоне, не дожидаясь ее завершения
+				_generateAndSaveAICollections(ctx, [
+					"Полезные инструменты",
+					"Удивить друзей",
+					"Для работы и учебы",
+					"Кастомизация интерфейса",
+					"Развлечения и мемы",
+					"Продуктивность",
+					"Безопасность и приватность",
+				])
+					.catch((err: any) => {
+						console.error(
+							"Failed to regenerate AI collections in background:",
+							err,
+						);
+					})
+					.finally(() => {
+						isGeneratingCollections = false;
+					});
+			}
+
+			const collections = await ctx.db
+				.select()
+				.from(aiPluginCollections)
+				.orderBy(desc(aiPluginCollections.generatedAt))
+				.limit(input.limit);
+
+			if (collections.length === 0) {
+				return [];
+			}
+
+			const result = await Promise.all(
+				collections.map(
+					async (collection: typeof aiPluginCollections.$inferSelect) => {
+						const pluginsInCollection = await ctx.db
+							.select()
+							.from(plugins)
+							.where(inArray(plugins.id, collection.pluginIds));
+
+						return {
+							...collection,
+							plugins: pluginsInCollection,
+						};
+					},
+				),
+			);
+
+			return result;
+		}),
 });

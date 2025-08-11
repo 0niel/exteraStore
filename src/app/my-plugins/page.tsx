@@ -154,7 +154,7 @@ export default function MyPluginsPage() {
 									onAction={() => (window.location.href = "/upload")}
 								/>
 							) : (
-								<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+								<div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
 									{publishedPlugins.map(
 										(plugin: typeof Plugin.$inferSelect) => (
 											<PluginCard key={plugin.id} plugin={plugin} />
@@ -172,7 +172,7 @@ export default function MyPluginsPage() {
 									description="Здесь будут отображаться плагины, ожидающие проверки"
 								/>
 							) : (
-								<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+								<div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
 									{pendingPlugins.map((plugin: typeof Plugin.$inferSelect) => (
 										<PluginCard key={plugin.id} plugin={plugin} />
 									))}
@@ -188,7 +188,7 @@ export default function MyPluginsPage() {
 									description="Отлично! У вас нет отклоненных плагинов"
 								/>
 							) : (
-								<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+								<div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
 									{rejectedPlugins.map((plugin: typeof Plugin.$inferSelect) => (
 										<PluginCard key={plugin.id} plugin={plugin} />
 									))}
@@ -315,24 +315,20 @@ function PluginCard({ plugin }: { plugin: typeof Plugin.$inferSelect }) {
 					</DropdownMenu>
 				</div>
 
-				{/* Десктопная версия - все кнопки в одну строку */}
 				<div className="hidden lg:flex items-center gap-1">
-					<Button variant="outline" size="sm" asChild className="flex-1">
+					<Button variant="outline" size="sm" asChild className="flex-1" title={t("view")}>
 						<Link href={`/plugins/${plugin.slug}`}>
-							<Eye className="mr-1 h-4 w-4" />
-							{t("view")}
+							<Eye className="h-4 w-4" />
 						</Link>
 					</Button>
-					<Button variant="outline" size="sm" asChild className="flex-1">
+					<Button variant="outline" size="sm" asChild className="flex-1" title={t("versions")}>
 						<Link href={`/plugins/${plugin.slug}/versions`}>
-							<GitBranch className="mr-1 h-4 w-4" />
-							{t("versions")}
+							<GitBranch className="h-4 w-4" />
 						</Link>
 					</Button>
-					<Button variant="outline" size="sm" asChild className="flex-1">
+					<Button variant="outline" size="sm" asChild className="flex-1" title={t("manage")}>
 						<Link href={`/my-plugins/${plugin.slug}/manage`}>
-							<Settings className="mr-1 h-4 w-4" />
-							{t("manage")}
+							<Settings className="h-4 w-4" />
 						</Link>
 					</Button>
 				</div>

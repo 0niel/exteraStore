@@ -627,5 +627,17 @@
 			"content": "If you have questions about licensing or need special licensing arrangements, please contact us through our support channels."
 		},
 		"last_updated": "Last updated"
+	},
+	"Home": {
+		"featuredPlugins": "Featured Plugins",
+		"trendingPlugins": "Trending This Month",
+		"aiCollections": "AI-Powered Collections",
+		"popularPlugins": "Popular Plugins",
+		"developerCTA": {
+			"title": "Are you a developer?",
+			"description": "Create your own plugins and share them with the world. Our platform provides all the tools you need to get started.",
+			"getStarted": "Get Started"
+		},
+		"viewAll": "View All"
 	}
 }

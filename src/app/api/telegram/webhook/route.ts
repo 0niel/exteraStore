@@ -591,9 +591,26 @@ async function handleCallbackQuery(
 			break;
 
 		case "plugin": {
-			const pluginId = Number.parseInt(params[0] || "0");
-			if (pluginId) {
+			const pluginToken = params[0];
+			let pluginId = Number.parseInt(pluginToken || "0");
+			if ((!pluginId || Number.isNaN(pluginId)) && pluginToken) {
+				// Fallback: treat token as slug
+				try {
+					const found = await db
+						.select({ id: plugins.id })
+						.from(plugins)
+						.where(eq(plugins.slug, pluginToken))
+						.limit(1);
+					pluginId = found[0]?.id ?? 0;
+				} catch (e) {
+					pluginId = 0;
+				}
+			}
+
+			if (pluginId && !Number.isNaN(pluginId)) {
 				await showPluginDetails(chatId, pluginId, callbackQuery.message.message_id);
+			} else {
+				await answerCallbackQuery(queryId, "❌ Плагин не найден", true);
 			}
 			break;
 		}

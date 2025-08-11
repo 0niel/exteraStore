@@ -2,7 +2,10 @@ import { adminPluginsRouter } from "~/server/api/routers/admin-plugins";
 import { categoriesRouter } from "~/server/api/routers/categories";
 import { developersRouter } from "~/server/api/routers/developers";
 import { favoritesRouter } from "~/server/api/routers/favorites";
-import { pluginPipelineRouter } from "~/server/api/routers/plugin-pipeline";
+import {
+	pluginPipelineRouter,
+	aiCollectionsRouter,
+} from "~/server/api/routers/plugin-pipeline";
 import { pluginUploadRouter } from "~/server/api/routers/plugin-upload";
 import { pluginVersionsRouter } from "~/server/api/routers/plugin-versions";
 import { pluginsRouter } from "~/server/api/routers/plugins";
@@ -25,6 +28,7 @@ export const appRouter = createTRPCRouter({
 	developers: developersRouter,
 	users: usersRouter,
 	adminPlugins: adminPluginsRouter,
+	aiCollections: aiCollectionsRouter,
 });
 
 export type AppRouter = typeof appRouter;

@@ -105,7 +105,7 @@ export function FeaturedPlugins() {
 		{ limit: 6 },
 	);
 
-	const { data: popularPlugins } = api.plugins.getPopular.useQuery(
+	const { data: popularPlugins } = api.plugins.getTrending.useQuery(
 		{ limit: 6 },
 		{
 			enabled: !isLoading && (!featuredPlugins || featuredPlugins.length === 0),

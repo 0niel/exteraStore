@@ -63,6 +63,7 @@ import { Separator } from "~/components/ui/separator";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Textarea } from "~/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import { cn, formatDate, formatNumber } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
@@ -113,19 +114,6 @@ export default function PluginDetailPage() {
 						duration: 4000,
 					});
 				}
-			}
-			
-			if (data.telegramBotDeeplink) {
-				window.open(data.telegramBotDeeplink, "_blank");
-				toast.success("🚀 Плагин отправлен в Telegram", {
-					description: "Следуйте инструкциям в боте для установки",
-					duration: 3000,
-				});
-			} else {
-				toast.success("✅ Плагин успешно скачан", {
-					description: "Установите плагин через настройки exteraGram",
-					duration: 3000,
-				});
 			}
 		},
 		onError: (error) => {
@@ -280,6 +268,7 @@ export default function PluginDetailPage() {
 	const categoryName =
 		categories?.find((c) => c.slug === plugin.category)?.name ||
 		plugin.category;
+  const hasLinks = Boolean(plugin.githubUrl || plugin.documentationUrl);
 
 	return (
 		<div className="bg-background">
@@ -388,16 +377,16 @@ export default function PluginDetailPage() {
 								</div>
 
 								{/* Meta Info */}
-								<div className="mt-3 flex flex-wrap items-center gap-3 text-muted-foreground text-sm">
-									<div className="flex items-center gap-1">
-										<Avatar className="h-5 w-5">
-											<AvatarImage src={authorData?.image || undefined} />
-											<AvatarFallback className="text-xs">
-												{plugin.author.slice(0, 1).toUpperCase()}
-											</AvatarFallback>
-										</Avatar>
-										<span>{plugin.author}</span>
-									</div>
+                                <div className="mt-3 flex flex-wrap items-center gap-3 text-muted-foreground text-sm">
+                                    <Link href={`/developers/${plugin.authorId}`} className="group inline-flex items-center gap-1 hover:text-foreground">
+                                        <Avatar className="h-5 w-5">
+                                            <AvatarImage src={authorData?.image || undefined} />
+                                            <AvatarFallback className="text-xs">
+                                                {plugin.author.slice(0, 1).toUpperCase()}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <span className="font-medium group-hover:underline">{authorData?.name || plugin.author}</span>
+                                    </Link>
 									<Badge variant="outline" className="text-xs">
 										{categoryName}
 									</Badge>
@@ -536,55 +525,120 @@ export default function PluginDetailPage() {
 							</div>
 
 							{/* Additional Info Cards */}
-							<div className="mt-8 grid gap-4 sm:grid-cols-2">
-								{/* Author Card */}
-								<Card>
-									<CardContent className="flex items-center gap-3 p-4">
-										<Avatar className="h-10 w-10">
-											<AvatarImage src={authorData?.image || undefined} />
-											<AvatarFallback>
-												{plugin.author.slice(0, 2).toUpperCase()}
-											</AvatarFallback>
-										</Avatar>
-										<div>
-											<div className="font-medium">{plugin.author}</div>
-											<div className="text-muted-foreground text-sm">
-												Разработчик
-											</div>
-										</div>
-									</CardContent>
-								</Card>
+                            <div className={cn("mt-8 grid gap-4", hasLinks ? "sm:grid-cols-2" : "sm:grid-cols-1") }>
+                                {/* Author Card */}
+                                <Link href={`/developers/${plugin.authorId}`} className="group">
+                                    <Card className="transition-colors group-hover:border-primary/30">
+                                        <CardContent className="p-4">
+                                            <div className="flex items-start gap-3">
+                                                <Avatar className="h-12 w-12">
+                                                    <AvatarImage src={authorData?.image || undefined} />
+                                                    <AvatarFallback className="text-sm">
+                                                        {(authorData?.name || plugin.author).slice(0, 2).toUpperCase()}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <h3 className="truncate font-semibold">
+                                                            {authorData?.name || plugin.author}
+                                                        </h3>
+                                                        {authorData?.isVerified && (
+                                                            <Badge className="bg-blue-600 text-xs">
+                                                                <Shield className="mr-1 h-3 w-3" />
+                                                                Проверен
+                                                            </Badge>
+                                                        )}
+                                                    </div>
+                                                    {authorData?.telegramUsername && (
+                                                        <p className="text-primary text-sm">@{authorData.telegramUsername}</p>
+                                                    )}
+                                                    {authorData?.bio && (
+                                                        <p className="mt-1 line-clamp-2 text-muted-foreground text-sm">
+                                                            {authorData.bio}
+                                                        </p>
+                                                    )}
+                                                    {authorData?.stats && (
+                                                        <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                                                            <div>
+                                                                <div className="font-semibold text-sm">{authorData.stats.totalPlugins || 0}</div>
+                                                                <div className="text-muted-foreground text-xs">Плагинов</div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="font-semibold text-sm">{formatNumber(Number(authorData.stats.totalDownloads) || 0)}</div>
+                                                                <div className="text-muted-foreground text-xs">Скачиваний</div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="flex items-center justify-center gap-1 font-semibold text-sm">
+                                                                    <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                                                                    {(Number(authorData.stats.averageRating) || 0).toFixed(1)}
+                                                                </div>
+                                                                <div className="text-muted-foreground text-xs">Рейтинг</div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="mt-3 flex gap-2">
+                                                {authorData?.githubUsername && (
+                                                    <Button asChild variant="outline" size="sm">
+                                                        <a href={`https://github.com/${authorData.githubUsername}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2">
+                                                            <Github className="h-4 w-4" /> GitHub
+                                                        </a>
+                                                    </Button>
+                                                )}
+                                                {authorData?.website && (
+                                                    <Button asChild variant="outline" size="sm">
+                                                        <a href={authorData.website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2">
+                                                            <Globe className="h-4 w-4" /> Веб-сайт
+                                                        </a>
+                                                    </Button>
+                                                )}
+                                                {authorData?.telegramUsername && (
+                                                    <Button asChild variant="outline" size="sm">
+                                                        <a href={`https://t.me/${authorData.telegramUsername}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2">
+                                                            <MessageSquare className="h-4 w-4" /> Telegram
+                                                        </a>
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                </Link>
 
-								{/* Links Card */}
-								{(plugin.githubUrl || plugin.documentationUrl) && (
-									<Card>
-										<CardContent className="space-y-2 p-4">
-											{plugin.githubUrl && (
-												<Link
-													href={plugin.githubUrl}
-													target="_blank"
-													className="flex items-center gap-2 text-sm hover:text-primary"
-												>
-													<Github className="h-4 w-4" />
-													<span>Исходный код</span>
-													<ExternalLink className="h-3 w-3" />
-												</Link>
-											)}
-											{plugin.documentationUrl && (
-												<Link
-													href={plugin.documentationUrl}
-													target="_blank"
-													className="flex items-center gap-2 text-sm hover:text-primary"
-												>
-													<FileText className="h-4 w-4" />
-													<span>Документация</span>
-													<ExternalLink className="h-3 w-3" />
-												</Link>
-											)}
-										</CardContent>
-									</Card>
-								)}
-							</div>
+                                {/* Links Card */}
+                                {(plugin.githubUrl || plugin.documentationUrl) && (
+                                    <Card>
+                                        <CardContent className="p-4">
+                                            <div className="flex flex-wrap gap-2">
+                                                {plugin.githubUrl && (
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button asChild variant="outline" size="sm">
+                                                                <a href={plugin.githubUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2">
+                                                                    <Github className="h-4 w-4" /> Исходный код <ExternalLink className="h-3 w-3" />
+                                                                </a>
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>Открыть репозиторий GitHub</TooltipContent>
+                                                    </Tooltip>
+                                                )}
+                                                {plugin.documentationUrl && (
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button asChild variant="outline" size="sm">
+                                                                <a href={plugin.documentationUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2">
+                                                                    <FileText className="h-4 w-4" /> Документация <ExternalLink className="h-3 w-3" />
+                                                                </a>
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>Открыть документацию</TooltipContent>
+                                                    </Tooltip>
+                                                )}
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                )}
+                            </div>
 						</TabsContent>
 
 						<TabsContent value="versions" className="mt-6">

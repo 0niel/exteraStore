@@ -296,14 +296,14 @@ export const telegramNotificationsRouter = createTRPCRouter({
 					if (chatId) {
 						const message = `🎉 Обновление плагина!\n\n🔌 *${plugin[0].name}* v${input.newVersion} теперь доступен.\n\nНажмите, чтобы посмотреть детали.`;
 
-						await TelegramBot.sendMessage(chatId, message, {
+                        await TelegramBot.sendMessage(chatId, message, {
 							parse_mode: "Markdown",
 							reply_markup: {
 								inline_keyboard: [
 									[
 										{
-											text: "👀 Посмотреть",
-											callback_data: `plugin_${plugin[0].slug}`,
+                                            text: "👀 Посмотреть",
+                                            callback_data: `plugin_${plugin[0].id}`,
 										},
 									],
 								],

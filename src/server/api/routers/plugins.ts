@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, like, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, like, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { generateSlug, generateUniqueSlug } from "~/lib/utils";
@@ -300,14 +300,156 @@ export const pluginsRouter = createTRPCRouter({
 		}),
 
 	getPopular: publicProcedure
-		.input(z.object({ limit: z.number().min(1).max(20).default(6) }))
+		.input(
+			z.object({
+				limit: z.number().min(1).max(20).default(6),
+				months: z.number().min(1).max(12).default(6),
+			}),
+		)
 		.query(async ({ ctx, input }) => {
-			return await ctx.db
+			const monthsAgo = Math.floor(
+				(Date.now() - input.months * 30 * 24 * 60 * 60 * 1000) / 1000,
+			);
+
+			// Сначала получаем статистику скачиваний за период
+			const recentDownloads = await ctx.db
+				.select({
+					pluginId: pluginDownloads.pluginId,
+					downloadCount: count(pluginDownloads.id),
+				})
+				.from(pluginDownloads)
+				.where(sql`${pluginDownloads.downloadedAt} >= ${monthsAgo}`)
+				.groupBy(pluginDownloads.pluginId);
+
+			if (recentDownloads.length === 0) {
+				return [];
+			}
+
+			// Создаем мапу для быстрого доступа к статистике
+			const downloadsMap = new Map(
+				recentDownloads.map((item: any) => [item.pluginId, Number(item.downloadCount)])
+			);
+
+			// Получаем плагины и вычисляем popularity score
+			const allPlugins = await ctx.db
 				.select()
 				.from(plugins)
-				.where(eq(plugins.status, "approved"))
-				.orderBy(desc(plugins.downloadCount))
-				.limit(input.limit);
+				.where(
+					and(
+						eq(plugins.status, "approved"),
+						inArray(plugins.id, recentDownloads.map((d: any) => d.pluginId))
+					)
+				);
+
+			// Вычисляем popularity score и сортируем
+			const pluginsWithScore = allPlugins.map((plugin: any) => {
+				const recentDownloadCount = downloadsMap.get(plugin.id) || 0;
+				const daysSinceCreation = Math.floor(
+					(Date.now() - plugin.createdAt * 1000) / (1000 * 60 * 60 * 24)
+				);
+
+				const popularityScore =
+					// Скачивания за период (70% веса)
+					Number(recentDownloadCount) * 0.7 +
+					// Рейтинг с учетом количества отзывов (20% веса)
+					(plugin.rating * Math.min(plugin.ratingCount / 10.0, 1.0)) * 20 * 0.2 +
+					// Свежесть плагина - бонус для новых плагинов (10% веса)
+					Math.max(0, 30 - daysSinceCreation) * 0.1;
+
+				return {
+					...plugin,
+					popularityScore,
+				};
+			});
+
+			// Сортируем по popularity score и возвращаем топ
+			return pluginsWithScore
+				.sort((a: any, b: any) => b.popularityScore - a.popularityScore)
+				.slice(0, input.limit);
+		}),
+
+	getTrending: publicProcedure
+		.input(
+			z.object({
+				limit: z.number().min(1).max(20).default(6),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const thirtyDaysAgo = Math.floor(
+				(Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000,
+			);
+
+			// Формула трендовости: скачивания за месяц (80%) + рост рейтинга (15%) + новизна (5%)
+			const trendingScore = sql<number>`
+				(
+					-- Скачивания за последний месяц (80% веса)
+					COALESCE(recent_downloads.download_count, 0) * 0.8 +
+					-- Рейтинг с бонусом за количество отзывов (15% веса)
+					(${plugins.rating} * LEAST(${plugins.ratingCount} / 5.0, 1.0)) * 15 * 0.15 +
+					-- Бонус для совсем новых плагинов (5% веса)
+					CASE
+						WHEN EXTRACT(days FROM NOW() - TO_TIMESTAMP(${plugins.createdAt})) <= 7 THEN 10
+						WHEN EXTRACT(days FROM NOW() - TO_TIMESTAMP(${plugins.createdAt})) <= 30 THEN 5
+						ELSE 0
+					END * 0.05
+				)
+			`;
+
+			// Сначала получаем статистику скачиваний за месяц
+			const recentDownloads = await ctx.db
+				.select({
+					pluginId: pluginDownloads.pluginId,
+					downloadCount: count(pluginDownloads.id),
+				})
+				.from(pluginDownloads)
+				.where(sql`${pluginDownloads.downloadedAt} >= ${thirtyDaysAgo}`)
+				.groupBy(pluginDownloads.pluginId);
+
+			if (recentDownloads.length === 0) {
+				return [];
+			}
+
+			// Создаем мапу для быстрого доступа к статистике
+			const downloadsMap = new Map(
+				recentDownloads.map((item: any) => [item.pluginId, Number(item.downloadCount)])
+			);
+
+			// Получаем плагины и вычисляем trending score
+			const allPlugins = await ctx.db
+				.select()
+				.from(plugins)
+				.where(
+					and(
+						eq(plugins.status, "approved"),
+						inArray(plugins.id, recentDownloads.map((d: any) => d.pluginId))
+					)
+				);
+
+			// Вычисляем trending score и сортируем
+			const pluginsWithScore = allPlugins.map((plugin: any) => {
+				const recentDownloadCount = downloadsMap.get(plugin.id) || 0;
+				const daysSinceCreation = Math.floor(
+					(Date.now() - plugin.createdAt * 1000) / (1000 * 60 * 60 * 24)
+				);
+
+				const trendingScore =
+					// Скачивания за последний месяц (80% веса)
+					Number(recentDownloadCount) * 0.8 +
+					// Рейтинг с бонусом за количество отзывов (15% веса)
+					(plugin.rating * Math.min(plugin.ratingCount / 5.0, 1.0)) * 15 * 0.15 +
+					// Бонус для совсем новых плагинов (5% веса)
+					(daysSinceCreation <= 7 ? 10 : daysSinceCreation <= 30 ? 5 : 0) * 0.05;
+
+				return {
+					...plugin,
+					trendingScore,
+				};
+			});
+
+			// Сортируем по trending score и возвращаем топ
+			return pluginsWithScore
+				.sort((a: any, b: any) => b.trendingScore - a.trendingScore)
+				.slice(0, input.limit);
 		}),
 
 	update: protectedProcedure

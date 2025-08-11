@@ -137,7 +137,7 @@ export function SearchDialog({
 		},
 	);
 
-	const { data: popularPlugins } = api.plugins.getPopular.useQuery(
+	const { data: popularPlugins } = api.plugins.getTrending.useQuery(
 		{ limit: 6 },
 		{ enabled: query.length === 0 },
 	);

@@ -103,35 +103,38 @@ export const developersRouter = createTRPCRouter({
 				throw new Error("Developer not found");
 			}
 
-			const developerPlugins = await ctx.db
-				.select({
-					id: plugins.id,
-					name: plugins.name,
-					slug: plugins.slug,
-					description: plugins.description,
-					shortDescription: plugins.shortDescription,
-					version: plugins.version,
-					category: plugins.category,
-					downloadCount: plugins.downloadCount,
-					rating: plugins.rating,
-					ratingCount: plugins.ratingCount,
-					featured: plugins.featured,
-					verified: plugins.verified,
-					screenshots: plugins.screenshots,
-					createdAt: plugins.createdAt,
-				})
+            const developerPlugins = await ctx.db
+                .select({
+                    id: plugins.id,
+                    name: plugins.name,
+                    slug: plugins.slug,
+                    description: plugins.description,
+                    shortDescription: plugins.shortDescription,
+                    version: plugins.version,
+                    category: plugins.category,
+                    author: plugins.author,
+                    authorId: plugins.authorId,
+                    price: plugins.price,
+                    downloadCount: plugins.downloadCount,
+                    rating: plugins.rating,
+                    ratingCount: plugins.ratingCount,
+                    featured: plugins.featured,
+                    verified: plugins.verified,
+                    screenshots: plugins.screenshots,
+                    createdAt: plugins.createdAt,
+                })
 				.from(plugins)
 				.where(
 					and(eq(plugins.authorId, input.id), eq(plugins.status, "approved")),
 				)
 				.orderBy(desc(plugins.createdAt));
 
-			const stats = await ctx.db
-				.select({
-					totalPlugins: count(plugins.id),
-					totalDownloads: sql<number>`SUM(${plugins.downloadCount})`,
-					averageRating: sql<number>`AVG(${plugins.rating})`,
-				})
+            const stats = await ctx.db
+                .select({
+                    totalPlugins: count(plugins.id),
+                    totalDownloads: sql<number>`COALESCE(SUM(${plugins.downloadCount}), 0)`,
+                    averageRating: sql<number>`COALESCE(AVG(${plugins.rating}), 0)`,
+                })
 				.from(plugins)
 				.where(
 					and(eq(plugins.authorId, input.id), eq(plugins.status, "approved")),

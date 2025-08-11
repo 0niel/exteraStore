@@ -10,6 +10,7 @@ import {
 	Plus,
 	Search,
 	Settings,
+	Sparkles,
 	User,
 	Users,
 } from "lucide-react";
@@ -46,6 +47,7 @@ export function Navigation() {
 	const navigation = [
 		{ name: t("home"), href: "/", icon: Home },
 		{ name: t("plugins"), href: "/plugins", icon: Package },
+		{ name: "Подборки", href: "/collections", icon: Sparkles },
 		{ name: t("categories"), href: "/categories", icon: Grid3X3 },
 		{ name: t("developers"), href: "/developers", icon: Users },
 	];

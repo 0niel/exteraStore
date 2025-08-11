@@ -104,35 +104,37 @@ export function UploadVersionDialog({
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>
-				<Button>
+				<Button className="w-full sm:w-auto">
 					<Upload className="mr-2 h-4 w-4" />
-					{t("upload_new_version")}
+					<span className="hidden sm:inline">{t("upload_new_version")}</span>
+					<span className="sm:hidden">Загрузить версию</span>
 				</Button>
 			</DialogTrigger>
-			<DialogContent className="max-w-2xl">
+			<DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto sm:max-h-[85vh]">
 				<DialogHeader>
-					<DialogTitle>{t("upload_new_version")}</DialogTitle>
-					<DialogDescription>
+					<DialogTitle className="text-lg sm:text-xl">{t("upload_new_version")}</DialogTitle>
+					<DialogDescription className="text-sm">
 						{t("upload_new_version_description")}
 					</DialogDescription>
 				</DialogHeader>
 
 				<Form {...form}>
-					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-						<div className="grid grid-cols-2 gap-4">
+					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
+						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4">
 							<FormField
 								control={form.control}
 								name="version"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel>{t("version")} *</FormLabel>
+										<FormLabel className="text-sm font-medium">{t("version")} *</FormLabel>
 										<FormControl>
 											<Input
 												placeholder={t("version_placeholder")}
 												{...field}
+												className="text-sm"
 											/>
 										</FormControl>
-										<FormDescription>{t("semantic_version")}</FormDescription>
+										<FormDescription className="text-xs">{t("semantic_version")}</FormDescription>
 										<FormMessage />
 									</FormItem>
 								)}
@@ -142,12 +144,12 @@ export function UploadVersionDialog({
 								control={form.control}
 								name="isStable"
 								render={({ field }) => (
-									<FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+									<FormItem className="flex flex-col space-y-3 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0 sm:p-4">
 										<div className="space-y-0.5">
-											<FormLabel className="text-base">
+											<FormLabel className="text-sm font-medium sm:text-base">
 												{t("stable_version")}
 											</FormLabel>
-											<FormDescription>
+											<FormDescription className="text-xs sm:text-sm">
 												{t("stable_version_description")}
 											</FormDescription>
 										</div>
@@ -167,23 +169,23 @@ export function UploadVersionDialog({
 							name="fileContent"
 							render={({ field }) => (
 								<FormItem>
-									<FormLabel>{t("plugin_file")} *</FormLabel>
+									<FormLabel className="text-sm font-medium">{t("plugin_file")} *</FormLabel>
 									<FormControl>
 										<div className="space-y-2">
 											<Input
 												type="file"
 												accept=".py,.txt"
 												onChange={handleFileChange}
-												className="cursor-pointer"
+												className="cursor-pointer text-sm"
 											/>
 											{file && (
-												<p className="text-muted-foreground text-sm">
+												<p className="text-muted-foreground text-xs sm:text-sm break-all">
 													{t("selected_file")}: {file.name}
 												</p>
 											)}
 										</div>
 									</FormControl>
-									<FormDescription>
+									<FormDescription className="text-xs sm:text-sm">
 										{t("upload_plugin_file_description")}
 									</FormDescription>
 									<FormMessage />
@@ -196,19 +198,19 @@ export function UploadVersionDialog({
 							name="changelog"
 							render={({ field }) => (
 								<FormItem>
-									<FormLabel>{t("changelog")}</FormLabel>
+									<FormLabel className="text-sm font-medium">{t("changelog")}</FormLabel>
 									<FormControl>
 										<MarkdownEditor
 											value={field.value || ""}
 											onChange={field.onChange}
-											height={150}
+											height={120}
 											placeholder={t("changelog_placeholder")}
 											showImproveButton={true}
 											textType="changelog"
 											pluginName={pluginName}
 										/>
 									</FormControl>
-									<FormDescription>
+									<FormDescription className="text-xs sm:text-sm">
 										{t("changelog_description")}
 									</FormDescription>
 									<FormMessage />
@@ -216,15 +218,20 @@ export function UploadVersionDialog({
 							)}
 						/>
 
-						<div className="flex justify-end gap-2">
+						<div className="flex flex-col gap-2 pt-2 sm:flex-row sm:justify-end sm:gap-2">
 							<Button
 								type="button"
 								variant="outline"
 								onClick={() => setOpen(false)}
+								className="w-full sm:w-auto"
 							>
 								{t("cancel")}
 							</Button>
-							<Button type="submit" disabled={createVersionMutation.isPending}>
+							<Button
+								type="submit"
+								disabled={createVersionMutation.isPending}
+								className="w-full sm:w-auto"
+							>
 								{createVersionMutation.isPending && (
 									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 								)}
