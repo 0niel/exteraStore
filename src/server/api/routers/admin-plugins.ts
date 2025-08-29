@@ -5,7 +5,7 @@ import { z } from "zod";
 import { env } from "~/env";
 import { TelegramNotifications } from "~/lib/telegram-notifications";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { pluginCategories, plugins, users } from "~/server/db/schema";
+import { pluginActivities, pluginCategories, plugins, users } from "~/server/db/schema";
 
 const ADMINS = (env.INITIAL_ADMINS ?? "i_am_oniel")
 	.split(",")
@@ -90,6 +90,17 @@ export const adminPluginsRouter = createTRPCRouter({
 				.set({ status: "approved", updatedAt: sql`extract(epoch from now())` })
 				.where(eq(plugins.id, input.id))
 				.returning();
+
+			// Лента активности: плагин одобрен
+			try {
+				await ctx.db.insert(pluginActivities).values({
+					type: "plugin.approved",
+					actorId: ctx.session.user.id,
+					pluginId: updatedPlugin.id,
+					message: updatedPlugin.name,
+					data: JSON.stringify({ slug: updatedPlugin.slug }),
+				});
+			} catch {}
 
 			if (pluginWithAuthor[0].author?.telegramId) {
 				try {

@@ -14,6 +14,7 @@ import {
 	plugins,
 	users,
 	pluginPipelineChecks,
+	pluginActivities,
 } from "~/server/db/schema";
 
 export const pluginsRouter = createTRPCRouter({
@@ -150,6 +151,7 @@ export const pluginsRouter = createTRPCRouter({
 						comment: pluginReviews.comment,
 						helpful: pluginReviews.helpful,
 						createdAt: pluginReviews.createdAt,
+						userId: pluginReviews.userId,
 						user: {
 							name: users.name,
 							image: users.image,
@@ -175,6 +177,125 @@ export const pluginsRouter = createTRPCRouter({
 				currentPage: input.page,
 			};
 		}),
+
+		updateReview: protectedProcedure
+			.input(
+				z.object({
+					reviewId: z.number(),
+					rating: z.number().min(1).max(5).optional(),
+					title: z.string().min(1).max(256).optional(),
+					comment: z.string().max(2000).optional(),
+				}),
+			)
+			.mutation(async ({ ctx, input }) => {
+				const existing = await ctx.db
+					.select({
+						id: pluginReviews.id,
+						pluginId: pluginReviews.pluginId,
+						userId: pluginReviews.userId,
+					})
+					.from(pluginReviews)
+					.where(eq(pluginReviews.id, input.reviewId))
+					.limit(1);
+
+				if (!existing[0]) {
+					throw new Error("Review not found");
+				}
+
+				const isOwner = existing[0].userId === ctx.session.user.id;
+				const isAdmin = ctx.session.user.role === "admin";
+				if (!isOwner && !isAdmin) {
+					throw new Error("Unauthorized");
+				}
+
+				const [updated] = await ctx.db
+					.update(pluginReviews)
+					.set({
+						rating: input.rating ?? undefined,
+						title: input.title ?? undefined,
+						comment: input.comment ?? undefined,
+						updatedAt: sql`extract(epoch from now())`,
+					})
+					.where(eq(pluginReviews.id, input.reviewId))
+					.returning();
+
+				// recalc plugin rating
+				const avgRating = await ctx.db
+					.select({
+						avg: sql<number>`AVG(${pluginReviews.rating})`,
+						count: count(),
+					})
+					.from(pluginReviews)
+					.where(eq(pluginReviews.pluginId, existing[0].pluginId));
+
+				await ctx.db
+					.update(plugins)
+					.set({
+						rating: Number(avgRating[0]?.avg ?? 0),
+						ratingCount: Number(avgRating[0]?.count ?? 0),
+					})
+					.where(eq(plugins.id, existing[0].pluginId));
+
+				// Log activity (non-blocking)
+				try {
+					await ctx.db.insert(pluginActivities).values({
+						type: "review.updated",
+						actorId: ctx.session.user.id,
+						pluginId: existing[0].pluginId,
+						reviewId: updated.id,
+						message: updated.title ?? null,
+					});
+				} catch {}
+
+				return updated;
+			}),
+
+		deleteReview: protectedProcedure
+			.input(z.object({ reviewId: z.number() }))
+			.mutation(async ({ ctx, input }) => {
+				const existing = await ctx.db
+					.select({
+						id: pluginReviews.id,
+						pluginId: pluginReviews.pluginId,
+						userId: pluginReviews.userId,
+					})
+					.from(pluginReviews)
+					.where(eq(pluginReviews.id, input.reviewId))
+					.limit(1);
+
+				if (!existing[0]) {
+					throw new Error("Review not found");
+				}
+
+				const isOwner = existing[0].userId === ctx.session.user.id;
+				const isAdmin = ctx.session.user.role === "admin";
+				if (!isOwner && !isAdmin) {
+					throw new Error("Unauthorized");
+				}
+
+				await ctx.db
+					.delete(pluginReviews)
+					.where(eq(pluginReviews.id, input.reviewId));
+
+				// recalc plugin rating
+				const avgRating = await ctx.db
+					.select({
+						avg: sql<number>`COALESCE(AVG(${pluginReviews.rating}), 0)` ,
+						count: count(),
+					})
+					.from(pluginReviews)
+					.where(eq(pluginReviews.pluginId, existing[0].pluginId));
+
+				await ctx.db
+					.update(plugins)
+					.set({
+						rating: Number(avgRating[0]?.avg ?? 0),
+						ratingCount: Number(avgRating[0]?.count ?? 0),
+					})
+					.where(eq(plugins.id, existing[0].pluginId));
+
+				return { success: true };
+			}),
 
 	addReview: protectedProcedure
 		.input(
@@ -229,6 +350,18 @@ export const pluginsRouter = createTRPCRouter({
 					})
 					.where(eq(plugins.id, input.pluginId));
 			}
+
+			// Записываем активность: добавлен отзыв (неблокирующе)
+			try {
+				await ctx.db.insert(pluginActivities).values({
+					type: "review.added",
+					actorId: ctx.session.user.id,
+					pluginId: input.pluginId,
+					reviewId: review.id,
+					rating: input.rating,
+					message: input.title ?? null,
+				});
+			} catch {}
 
 			return review;
 		}),
@@ -822,4 +955,31 @@ export const pluginsRouter = createTRPCRouter({
 			totalDevelopers: Number(developerStats?.totalDevelopers) || 0,
 		};
 	}),
+
+	similarByName: publicProcedure
+		.input(
+			z.object({
+				name: z.string().min(2),
+				limit: z.number().min(1).max(10).default(5),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const likePattern = `%${input.name.trim().toLowerCase()}%`;
+			const list = await ctx.db
+				.select({
+					id: plugins.id,
+					name: plugins.name,
+					slug: plugins.slug,
+					shortDescription: plugins.shortDescription,
+					category: plugins.category,
+					rating: plugins.rating,
+					ratingCount: plugins.ratingCount,
+				})
+				.from(plugins)
+				.where(sql`LOWER(${plugins.name}) LIKE ${likePattern}`)
+				.orderBy(desc(plugins.rating), desc(plugins.ratingCount), desc(plugins.createdAt))
+				.limit(input.limit);
+
+			return list;
+		}),
 });

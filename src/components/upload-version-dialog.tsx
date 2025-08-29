@@ -83,7 +83,7 @@ export function UploadVersionDialog({
 
 	const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		const selectedFile = event.target.files?.[0];
-		if (selectedFile) {
+		if (selectedFile && (selectedFile.name.endsWith('.py') || selectedFile.name.endsWith('.plugin') || selectedFile.name.endsWith('.txt'))) {
 			setFile(selectedFile);
 			const reader = new FileReader();
 			reader.onload = (e) => {
@@ -91,6 +91,8 @@ export function UploadVersionDialog({
 				form.setValue("fileContent", content);
 			};
 			reader.readAsText(selectedFile);
+		} else {
+			toast.error(t("invalid_file_type"));
 		}
 	};
 
@@ -174,7 +176,7 @@ export function UploadVersionDialog({
 										<div className="space-y-2">
 											<Input
 												type="file"
-												accept=".py,.txt"
+												accept=".py,.plugin,.txt"
 												onChange={handleFileChange}
 												className="cursor-pointer text-sm"
 											/>

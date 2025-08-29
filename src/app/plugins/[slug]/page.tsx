@@ -17,6 +17,7 @@ import {
 	Shield,
 	Star,
 	Tag,
+	Trash2,
 	ThumbsUp,
 	User,
 	Zap,
@@ -78,6 +79,9 @@ export default function PluginDetailPage() {
 	const [reviewRating, setReviewRating] = useState(5);
 	const [reviewComment, setReviewComment] = useState("");
 	const [isFavorited, setIsFavorited] = useState(false);
+    const [editingReviewId, setEditingReviewId] = useState<number | null>(null);
+    const [editingRating, setEditingRating] = useState<number>(5);
+    const [editingComment, setEditingComment] = useState("");
 
 	const { data: plugin, isLoading } = api.plugins.getBySlug.useQuery({ slug });
 	const { data: reviewsData, refetch: refetchReviews } =
@@ -136,6 +140,27 @@ export default function PluginDetailPage() {
 			toast.error(`Ошибка при добавлении отзыва: ${error.message}`);
 		},
 	});
+
+    const updateReviewMutation = api.plugins.updateReview.useMutation({
+        onSuccess: () => {
+            toast.success("Отзыв обновлен");
+            setEditingReviewId(null);
+            refetchReviews();
+        },
+        onError: (error) => {
+            toast.error(`Ошибка при обновлении: ${error.message}`);
+        },
+    });
+
+    const deleteReviewMutation = api.plugins.deleteReview.useMutation({
+        onSuccess: () => {
+            toast.success("Отзыв удален");
+            refetchReviews();
+        },
+        onError: (error) => {
+            toast.error(`Ошибка при удалении: ${error.message}`);
+        },
+    });
 
 	const toggleFavoriteMutation = api.favorites.toggle.useMutation({
 		onSuccess: (data) => {
@@ -722,6 +747,7 @@ export default function PluginDetailPage() {
 											comment: string | null;
 											helpful: number;
 											createdAt: string | Date;
+                                            userId: string;
 											user: {
 												name: string | null;
 												image: string | null;
@@ -740,38 +766,111 @@ export default function PluginDetailPage() {
 															</AvatarFallback>
 														</Avatar>
 														<div className="flex-1 space-y-2">
-															<div className="flex items-center gap-2">
-																<span className="font-medium text-sm">
-																	{review.user?.name}
-																</span>
-																<div className="flex">
-																	{[1, 2, 3, 4, 5].map((star) => (
-																		<Star
-																			key={star}
-																			className={cn(
-																				"h-3 w-3",
-																				star <= review.rating
-																					? "fill-yellow-400 text-yellow-400"
-																					: "text-muted-foreground",
-																			)}
-																		/>
-																	))}
-																</div>
-																<span className="text-muted-foreground text-xs">
-																	{formatDate(review.createdAt)}
-																</span>
-															</div>
-															{review.comment && (
-																<p className="text-muted-foreground text-sm">
-																	{review.comment}
-																</p>
-															)}
-														</div>
+                                            <div className="flex items-center justify-between gap-2">
+                                                <div className="flex items-center gap-2">
+													<span className="font-medium text-sm">
+														{review.user?.name}
+													</span>
+													<div className="flex">
+														{[1, 2, 3, 4, 5].map((star) => (
+															<Star
+																key={star}
+																className={cn(
+																	"h-3 w-3",
+																	star <= review.rating
+																		? "fill-yellow-400 text-yellow-400"
+																		: "text-muted-foreground",
+																)}
+															/>
+														))}
 													</div>
-												</CardContent>
-											</Card>
-										),
-									)}
+													<span className="text-muted-foreground text-xs">
+														{formatDate(review.createdAt)}
+													</span>
+                                                </div>
+                                                {(session?.user?.id === review.userId || session?.user?.role === "admin") && (
+                                                    <div className="flex items-center gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                setEditingReviewId(review.id);
+                                                                setEditingRating(review.rating);
+                                                                setEditingComment(review.comment ?? "");
+                                                            }}
+                                                        >
+                                                            <Edit className="mr-2 h-3.5 w-3.5" /> Редактировать
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                if (confirm("Удалить отзыв?")) {
+                                                                    deleteReviewMutation.mutate({ reviewId: review.id });
+                                                                }
+                                                            }}
+                                                        >
+                                                            <Trash2 className="mr-2 h-3.5 w-3.5" /> Удалить
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {editingReviewId === review.id ? (
+                                                <div className="space-y-2">
+                                                    <div className="flex gap-1">
+                                                        {[1, 2, 3, 4, 5].map((star) => (
+                                                            <button key={star} onClick={() => setEditingRating(star)}>
+                                                                <Star
+                                                                    className={cn(
+                                                                        "h-4 w-4",
+                                                                        star <= editingRating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground",
+                                                                    )}
+                                                                />
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                    <Textarea
+                                                        value={editingComment}
+                                                        onChange={(e) => setEditingComment(e.target.value)}
+                                                        rows={3}
+                                                        className="resize-none"
+                                                    />
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                updateReviewMutation.mutate({
+                                                                    reviewId: review.id,
+                                                                    rating: editingRating,
+                                                                    comment: editingComment,
+                                                                });
+                                                            }}
+                                                            disabled={updateReviewMutation.isPending}
+                                                        >
+                                                            Сохранить
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => setEditingReviewId(null)}
+                                                        >
+                                                            Отмена
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                review.comment && (
+                                                    <p className="text-muted-foreground text-sm">
+                                                        {review.comment}
+                                                    </p>
+                                                )
+                                            )}
+                                        </div>
+ 										</div>
+ 									</CardContent>
+ 								</Card>
+ 							),
+ 						)}
 								</div>
 							</div>
 						</TabsContent>

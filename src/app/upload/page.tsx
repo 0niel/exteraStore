@@ -47,6 +47,8 @@ import {
 	SelectValue,
 } from "~/components/ui/select";
 import { api } from "~/trpc/react";
+import type { RouterOutputs } from "~/trpc/react";
+import { useDebounce } from "use-debounce";
 
 const formSchema = z.object({
 	name: z
@@ -91,6 +93,7 @@ export default function UploadPluginPage() {
 	const { data: session } = useSession();
 	const router = useRouter();
 	const [fileContent, setFileContent] = useState("");
+	const [fileName, setFileName] = useState<string | null>(null);
 	const [screenshots, setScreenshots] = useState<string[]>([]);
 
 	const { data: categories, isLoading: areCategoriesLoading } =
@@ -110,6 +113,16 @@ export default function UploadPluginPage() {
 			documentationUrl: "",
 		},
 	});
+
+	// Поиск похожих плагинов по названию (для предотвращения дубликатов)
+	const watchedName = form.watch("name");
+	const [debouncedName] = useDebounce(watchedName, 300);
+	const { data: similar, isFetching: isSimilarFetching } = api.plugins.similarByName.useQuery(
+		{ name: debouncedName || "", limit: 5 },
+		{ enabled: (debouncedName || "").trim().length >= 2 },
+	);
+
+	type SimilarPlugin = RouterOutputs["plugins"]["similarByName"][number];
 
 	const createPlugin = api.pluginUpload.create.useMutation({
 		onSuccess: (plugin) => {
@@ -168,6 +181,7 @@ export default function UploadPluginPage() {
 			documentationUrl: data.documentationUrl?.trim() || undefined,
 			screenshots: JSON.stringify(screenshots),
 			fileContent,
+			filename: fileName || undefined,
 		};
 
 		createPlugin.mutate(cleanedData);
@@ -175,14 +189,15 @@ export default function UploadPluginPage() {
 
 	const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
-		if (file?.name.endsWith(".py")) {
+		if (file && (file.name.endsWith(".py") || file.name.endsWith(".plugin"))) {
+			setFileName(file.name);
 			const reader = new FileReader();
 			reader.onload = (event) => {
 				setFileContent(event.target?.result as string);
 			};
 			reader.readAsText(file);
 		} else {
-			toast.error("Пожалуйста, выберите корректный .py файл.");
+			toast.error("Пожалуйста, выберите корректный .py или .plugin файл.");
 		}
 	};
 
@@ -247,6 +262,26 @@ export default function UploadPluginPage() {
 														/>
 													</FormControl>
 													<FormMessage />
+													{(similar?.length ?? 0) > 0 && (
+														<div className="mt-2 rounded-lg border bg-muted/40 p-3 text-xs">
+															<div className="mb-2 font-medium text-muted-foreground">
+																Найдены похожие плагины. Пожалуйста, убедитесь, что вы не публикуете дубликат:
+															</div>
+															<ul className="space-y-1">
+																{similar!.map((p: SimilarPlugin) => (
+																	<li key={p.id} className="flex items-center justify-between gap-2">
+																		<div className="truncate">
+																			<span className="font-medium">{p.name}</span>
+																			{p.shortDescription && (
+																				<span className="ml-2 text-muted-foreground">{p.shortDescription}</span>
+																			)}
+																		</div>
+																		<Link className="shrink-0 underline" href={`/plugins/${p.slug}`}>Открыть</Link>
+																	</li>
+																))}
+															</ul>
+														</div>
+													)}
 												</FormItem>
 											)}
 										/>
@@ -465,21 +500,21 @@ export default function UploadPluginPage() {
 											<Code className="h-4 w-4 sm:h-5 sm:w-5" /> Файл плагина *
 										</CardTitle>
 										<CardDescription className="text-sm">
-											Загрузите `.py` файл вашего плагина.
+											Загрузите `.py` или `.plugin` файл вашего плагина.
 										</CardDescription>
 									</CardHeader>
 									<CardContent>
 										<Input
 											id="file"
 											type="file"
-											accept=".py"
+											accept=".py,.plugin"
 											onChange={handleFileUpload}
 											required
 											className="cursor-pointer"
 										/>
 										{fileContent && (
 											<p className="mt-2 text-muted-foreground text-sm">
-												{fileContent.length.toLocaleString()} байт выбрано.
+												{fileContent.length.toLocaleString()} байт выбрано{fileName ? ` — ${fileName}` : ""}.
 											</p>
 										)}
 									</CardContent>

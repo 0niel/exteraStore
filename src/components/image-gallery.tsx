@@ -125,6 +125,7 @@ export function ImageGallery({
 
 			<Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
 				<DialogContent
+					showCloseButton={false}
 					className="max-h-[95vh] max-w-[95vw] border-none bg-black/95 p-0"
 					onKeyDown={handleKeyDown}
 				>

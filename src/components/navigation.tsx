@@ -13,6 +13,7 @@ import {
 	Sparkles,
 	User,
 	Users,
+	Activity,
 } from "lucide-react";
 import { signOut, useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
@@ -46,6 +47,7 @@ export function Navigation() {
 
 	const navigation = [
 		{ name: t("home"), href: "/", icon: Home },
+		{ name: "Пульс", href: "/pulse", icon: Activity },
 		{ name: t("plugins"), href: "/plugins", icon: Package },
 		{ name: "Подборки", href: "/collections", icon: Sparkles },
 		{ name: t("categories"), href: "/categories", icon: Grid3X3 },

@@ -8,10 +8,12 @@ import {
 	Loader2,
 	MoreVertical,
 	User,
+	Trash2,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useState } from "react";
+import { toast } from "sonner";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
@@ -27,6 +29,16 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "~/components/ui/alert-dialog";
 import {
 	Table,
 	TableBody,
@@ -48,8 +60,23 @@ export function PluginManageVersions({
 	pluginSlug,
 }: PluginManageVersionsProps) {
 	const t = useTranslations("PluginManageVersions");
-	const { data: versions, isLoading } = api.pluginUpload.getVersions.useQuery({
+	const { data: versions, isLoading, refetch } = api.pluginUpload.getVersions.useQuery({
 		pluginId,
+	});
+
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+	const [versionToDelete, setVersionToDelete] = useState<string | null>(null);
+
+	const deleteVersion = api.pluginVersions.deleteVersion.useMutation({
+		onSuccess: () => {
+			toast.success("Версия удалена");
+			setDeleteDialogOpen(false);
+			setVersionToDelete(null);
+			refetch();
+		},
+		onError: (error) => {
+			toast.error("Не удалось удалить версию", { description: error.message });
+		},
 	});
 
 	if (isLoading) {
@@ -174,6 +201,16 @@ export function PluginManageVersions({
 												</Link>
 											</DropdownMenuItem>
 										)}
+										<DropdownMenuItem
+											variant="destructive"
+											onClick={() => {
+												setVersionToDelete(version.version);
+												setDeleteDialogOpen(true);
+											}}
+										>
+											<Trash2 className="mr-2 h-4 w-4" />
+											Удалить версию
+										</DropdownMenuItem>
 									</DropdownMenuContent>
 								</DropdownMenu>
 							</div>
@@ -181,6 +218,31 @@ export function PluginManageVersions({
 					</CardContent>
 				</Card>
 			))}
+			<AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Удалить версию?</AlertDialogTitle>
+						<AlertDialogDescription>
+							Это действие нельзя отменить. Версия v{versionToDelete} будет удалена.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Отмена</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={() => {
+								if (!versionToDelete) return;
+								deleteVersion.mutate({ pluginSlug, version: versionToDelete });
+							}}
+							disabled={deleteVersion.isPending}
+						>
+							{deleteVersion.isPending && (
+								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+							)}
+							Удалить
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }

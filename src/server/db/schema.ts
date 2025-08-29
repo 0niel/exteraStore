@@ -221,6 +221,29 @@ export const pluginFiles = pgTable(
 	],
 );
 
+export const pluginActivities = pgTable(
+	"extera_plugins_activity",
+	{
+		id: serial("id").primaryKey(),
+		type: text("type").notNull(),
+		actorId: text("actor_id").references(() => users.id, { onDelete: "set null" }),
+		pluginId: integer("plugin_id").references(() => plugins.id, { onDelete: "cascade" }),
+		versionId: integer("version_id").references(() => pluginVersions.id, { onDelete: "cascade" }),
+		reviewId: integer("review_id").references(() => pluginReviews.id, { onDelete: "cascade" }),
+		rating: integer("rating"),
+		message: text("message"),
+		data: text("data"),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+	},
+	(t) => [
+		index("activity_type_idx").on(t.type),
+		index("activity_created_at_idx").on(t.createdAt),
+		index("activity_plugin_idx").on(t.pluginId),
+	],
+);
+
 export const pluginGitRepos = pgTable(
 	"extera_plugins_plugin_git_repo",
 	{
@@ -283,6 +306,7 @@ export const usersRelations = relations(users, ({ many }) => ({
 	downloads: many(pluginDownloads),
 	createdVersions: many(pluginVersions),
 	favorites: many(pluginFavorites),
+	activities: many(pluginActivities),
 }));
 
 export const pluginsRelations = relations(plugins, ({ one, many }) => ({
@@ -293,6 +317,7 @@ export const pluginsRelations = relations(plugins, ({ one, many }) => ({
 	files: many(pluginFiles),
 	gitRepo: one(pluginGitRepos),
 	favorites: many(pluginFavorites),
+	activities: many(pluginActivities),
 }));
 
 export const pluginVersionsRelations = relations(
@@ -318,6 +343,25 @@ export const pluginFilesRelations = relations(pluginFiles, ({ one }) => ({
 	version: one(pluginVersions, {
 		fields: [pluginFiles.versionId],
 		references: [pluginVersions.id],
+	}),
+}));
+
+export const pluginActivitiesRelations = relations(pluginActivities, ({ one }) => ({
+	actor: one(users, {
+		fields: [pluginActivities.actorId],
+		references: [users.id],
+	}),
+	plugin: one(plugins, {
+		fields: [pluginActivities.pluginId],
+		references: [plugins.id],
+	}),
+	version: one(pluginVersions, {
+		fields: [pluginActivities.versionId],
+		references: [pluginVersions.id],
+	}),
+	review: one(pluginReviews, {
+		fields: [pluginActivities.reviewId],
+		references: [pluginReviews.id],
 	}),
 }));
 

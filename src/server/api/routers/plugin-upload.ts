@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { generateSlug, generateUniqueSlug } from "~/lib/utils";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
@@ -8,6 +8,7 @@ import {
 	pluginGitRepos,
 	pluginVersions,
 	plugins,
+	pluginActivities,
 } from "~/server/db/schema";
 
 const createPluginSchema = z.object({
@@ -19,6 +20,7 @@ const createPluginSchema = z.object({
 	screenshots: z.string().optional(),
 	version: z.string().min(1).max(50),
 	fileContent: z.string().min(1),
+	filename: z.string().optional(),
 	changelog: z.string().optional(),
 	githubUrl: z.string().url().optional(),
 	documentationUrl: z.string().url().optional(),
@@ -37,6 +39,7 @@ const createVersionSchema = z.object({
 	pluginId: z.number(),
 	version: z.string().min(1).max(50),
 	fileContent: z.string().min(1),
+	filename: z.string().optional(),
 	changelog: z.string().optional(),
 	gitCommitHash: z.string().optional(),
 	gitBranch: z.string().optional(),
@@ -48,6 +51,16 @@ export const pluginUploadRouter = createTRPCRouter({
 	create: protectedProcedure
 		.input(createPluginSchema)
 		.mutation(async ({ ctx, input }) => {
+			// Не позволяем создавать плагины с уже существующим названием (игнор регистра, пробелы)
+			const normalized = input.name.trim().toLowerCase();
+			const existing = await ctx.db
+				.select({ id: plugins.id })
+				.from(plugins)
+				.where(sql`LOWER(${plugins.name}) = ${normalized}`)
+				.limit(1);
+			if (existing[0]) {
+				throw new Error("Плагин с таким названием уже существует. Пожалуйста, проверьте похожие плагины и выберите уникальное имя.");
+			}
 			const baseSlug = generateSlug(input.name);
 			const fileHash = crypto
 				.createHash("sha256")
@@ -98,14 +111,30 @@ export const pluginUploadRouter = createTRPCRouter({
 				})
 				.returning();
 
+			const savedFilename = input.filename
+				? `${finalSlug}${input.filename.endsWith('.plugin') ? '.plugin' : '.py'}`
+				: `${finalSlug}.py`;
+
 			await ctx.db.insert(pluginFiles).values({
 				pluginId: plugin.id,
 				versionId: version?.id,
-				filename: `${finalSlug}.py`,
+				filename: savedFilename,
 				content: input.fileContent,
 				size: fileSize,
 				hash: fileHash,
 			});
+
+			// Логируем активность: создан плагин
+			try {
+				await ctx.db.insert(pluginActivities).values({
+					type: "plugin.created",
+					actorId: ctx.session.user.id,
+					pluginId: plugin.id,
+					versionId: version?.id,
+					message: plugin.name,
+					data: JSON.stringify({ slug: finalSlug, version: input.version }),
+				});
+			} catch {}
 
 			// Автоматически запускаем проверки безопасности для нового плагина
 			try {
@@ -154,10 +183,11 @@ export const pluginUploadRouter = createTRPCRouter({
 				.returning();
 
 			if (version) {
+				const versionSavedFilename = input.filename ? `${plugin.slug}${input.filename.endsWith('.plugin') ? '.plugin' : '.py'}` : `${plugin.slug}.py`;
 				await ctx.db.insert(pluginFiles).values({
 					pluginId: input.pluginId,
 					versionId: version.id,
-					filename: `${plugin.slug}.py`,
+					filename: versionSavedFilename,
 					content: input.fileContent,
 					size: fileSize,
 					hash: fileHash,
@@ -172,6 +202,18 @@ export const pluginUploadRouter = createTRPCRouter({
 						})
 						.where(eq(plugins.id, input.pluginId));
 				}
+
+				// Логируем активность: создана версия
+				try {
+					await ctx.db.insert(pluginActivities).values({
+						type: "version.released",
+						actorId: ctx.session.user.id,
+						pluginId: input.pluginId,
+						versionId: version.id,
+						message: `v${input.version}`,
+						data: JSON.stringify({ isStable: input.isStable }),
+					});
+				} catch {}
 
 				try {
 					if (input.isStable) {

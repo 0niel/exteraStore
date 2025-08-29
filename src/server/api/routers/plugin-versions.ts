@@ -6,7 +6,7 @@ import {
 	protectedProcedure,
 	publicProcedure,
 } from "~/server/api/trpc";
-import { pluginFiles, pluginVersions, plugins } from "~/server/db/schema";
+import { pluginFiles, pluginVersions, plugins, pluginActivities } from "~/server/db/schema";
 import { pluginPipelineChecks } from "~/server/db/schema";
 
 export const pluginVersionsRouter = createTRPCRouter({
@@ -392,7 +392,7 @@ export const pluginVersionsRouter = createTRPCRouter({
 				await ctx.db.insert(pluginFiles).values({
 					pluginId: plugin[0].id,
 					versionId: version.id,
-					filename: `${plugin[0].slug}-v${input.version}.py`,
+					filename: `${plugin[0].slug}-v${input.version}.plugin`,
 					content: input.fileContent,
 					size: fileSize,
 					hash: fileHash,
@@ -408,6 +408,18 @@ export const pluginVersionsRouter = createTRPCRouter({
 						})
 						.where(eq(plugins.id, plugin[0].id));
 				}
+
+				// Логируем активность: релиз версии
+				try {
+					await ctx.db.insert(pluginActivities).values({
+						type: "version.released",
+						actorId: ctx.session.user.id,
+						pluginId: plugin[0].id,
+						versionId: version.id,
+						message: `v${input.version}`,
+						data: JSON.stringify({ isStable: input.isStable }),
+					});
+				} catch {}
 
 				try {
 					if (input.isStable) {

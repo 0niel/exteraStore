@@ -9,6 +9,7 @@ import {
 import { pluginUploadRouter } from "~/server/api/routers/plugin-upload";
 import { pluginVersionsRouter } from "~/server/api/routers/plugin-versions";
 import { pluginsRouter } from "~/server/api/routers/plugins";
+import { pulseRouter } from "~/server/api/routers/pulse";
 import { postRouter } from "~/server/api/routers/post";
 import { telegramBotRouter } from "~/server/api/routers/telegram-bot";
 import { telegramNotificationsRouter } from "~/server/api/routers/telegram-notifications";
@@ -29,6 +30,7 @@ export const appRouter = createTRPCRouter({
 	users: usersRouter,
 	adminPlugins: adminPluginsRouter,
 	aiCollections: aiCollectionsRouter,
+	pulse: pulseRouter,
 });
 
 export type AppRouter = typeof appRouter;
