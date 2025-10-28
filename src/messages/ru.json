@@ -184,7 +184,7 @@
 		"uploading": "Загрузка...",
 		"upload_error": "Ошибка загрузки",
 		"file_too_large": "Файл слишком большой.",
-		"invalid_file_type": "Неверный тип файла.",
+		"invalid_file_type": "Неверный тип файла. Поддерживаются форматы: .py, .plugin, .txt",
 		"upload_failed": "Загрузка не удалась.",
 		"delete": "Удалить",
 		"add_screenshot": "Добавить скриншот",

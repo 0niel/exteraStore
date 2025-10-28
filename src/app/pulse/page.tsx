@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Package, Star, Tag } from "lucide-react";
+import { Activity, MessageSquare, Package, Star, Tag } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { PageHeader } from "~/components/page-header";
@@ -80,19 +80,39 @@ export default function PulsePage() {
           icon={Activity}
         />
 
-        <Card className="mb-6">
+        <Card className="mb-6 overflow-hidden">
           <CardContent className="p-3 sm:p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <Tabs value={tab} onValueChange={(v) => { setTab(v as any); setPage(1); }}>
-                <TabsList className="grid grid-cols-4">
-                  <TabsTrigger value="all">Все</TabsTrigger>
-                  <TabsTrigger value="plugin.created">Плагины</TabsTrigger>
-                  <TabsTrigger value="version.released">Релизы</TabsTrigger>
-                  <TabsTrigger value="review.added">Отзывы</TabsTrigger>
+              <Tabs value={tab} onValueChange={(v) => { setTab(v as any); setPage(1); }} className="w-full sm:w-auto">
+                <TabsList className="grid w-full grid-cols-4">
+                  <TabsTrigger value="all" className="text-xs sm:text-sm">
+                    Все
+                  </TabsTrigger>
+                  <TabsTrigger value="plugin.created" className="text-xs sm:text-sm">
+                    <Package className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">Плагины</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="version.released" className="text-xs sm:text-sm">
+                    <Tag className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">Релизы</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="review.added" className="text-xs sm:text-sm">
+                    <Star className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
+                    <span className="hidden sm:inline">Отзывы</span>
+                  </TabsTrigger>
                 </TabsList>
               </Tabs>
-              <div className="text-muted-foreground text-xs sm:text-sm">
-                {isLoading ? "Загрузка..." : `Показано ${items.length} событий`}
+              <div className="flex items-center gap-2">
+                {!isLoading && (
+                  <Badge variant="secondary" className="text-xs">
+                    {data?.pagination.total ?? 0} {tab === "all" ? "событий" : 
+                      tab === "plugin.created" ? "плагинов" : 
+                      tab === "version.released" ? "релизов" : "отзывов"}
+                  </Badge>
+                )}
+                {isLoading && (
+                  <span className="text-muted-foreground text-xs">Загрузка...</span>
+                )}
               </div>
             </div>
           </CardContent>
@@ -100,98 +120,209 @@ export default function PulsePage() {
 
         {/* Timeline */}
         {isLoading ? (
-          <div className="relative">
+          <div className="space-y-3">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="relative pl-14">
-                <div className="absolute left-6 top-0 bottom-0 w-px bg-border" />
-                <div className="absolute left-2 top-2 grid h-8 w-8 place-items-center rounded-full bg-accent shadow-sm" />
-                <Card className="mb-4">
-                  <CardContent className="p-4">
-                    <div className="mb-2 flex items-center justify-between">
-                      <Skeleton className="h-4 w-40" />
-                      <Skeleton className="h-3 w-16" />
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Skeleton className="h-8 w-8 rounded-full" />
-                      <div className="flex-1 space-y-2">
-                        <Skeleton className="h-3 w-2/3" />
-                        <Skeleton className="h-3 w-1/2" />
+              <Card key={i}>
+                <CardContent className="p-0">
+                  <div className="flex items-start gap-3 p-3 sm:p-4">
+                    <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <Skeleton className="h-6 w-6 rounded-full" />
+                          <Skeleton className="h-4 w-24" />
+                        </div>
+                        <Skeleton className="h-3 w-16" />
+                      </div>
+                      <Skeleton className="h-4 w-3/4" />
+                      <div className="flex gap-2">
+                        <Skeleton className="h-5 w-16" />
+                        <Skeleton className="h-5 w-20" />
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         ) : items.length === 0 ? (
-          <EmptyState icon="🫧" title="Пока пусто" description="Новые события появятся здесь. Загляните позже." />
+          <EmptyState 
+            icon={
+              tab === "plugin.created" ? "📦" : 
+              tab === "version.released" ? "🏷️" : 
+              tab === "review.added" ? "⭐" : "🫧"
+            }
+            title={
+              tab === "plugin.created" ? "Новых плагинов пока нет" : 
+              tab === "version.released" ? "Новых релизов пока нет" : 
+              tab === "review.added" ? "Новых отзывов пока нет" : "Пока пусто"
+            }
+            description={
+              tab === "plugin.created" ? "Здесь появятся новые плагины от разработчиков" : 
+              tab === "version.released" ? "Здесь появятся обновления плагинов" : 
+              tab === "review.added" ? "Здесь появятся отзывы пользователей" : "Новые события появятся здесь. Загляните позже."
+            }
+          />
         ) : (
           <div className="relative">
             {Object.entries(groups).map(([day, list]) => (
               <div key={day} className="mb-8">
-                <div className="mb-3 pl-2 text-muted-foreground text-xs sm:text-sm">{day}</div>
-                {list.map((it: any, idx: number) => (
-                  <div key={it.id} className="relative pl-14">
-                    <div className="absolute left-6 top-10 bottom-0 w-px bg-border" />
-                    <div className={`absolute left-2 top-1 grid h-9 w-9 place-items-center rounded-full ${bubbleClass(it.type)} shadow ring-2 ring-background`}>
-                      {renderIcon(it.type)}
-                    </div>
-                    <Card className="mb-4 overflow-hidden">
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4">
-                        <CardTitle className="text-base">
-                          {it.type === "plugin.created" && (
-                            <span>Новый плагин: {it.plugin?.name}</span>
-                          )}
-                          {it.type === "version.released" && (
-                            <span>Релиз {it.version?.version} для {it.plugin?.name}</span>
-                          )}
-                          {it.type === "review.added" && (
-                            <span>Отзыв к {it.plugin?.name}</span>
-                          )}
-                        </CardTitle>
-                        <span className="text-muted-foreground text-xs">{formatTimeAgo(it.createdAt)}</span>
-                      </CardHeader>
-                      <Separator />
-                      <CardContent className="p-4">
-                        <div className="flex items-start gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={it.actor?.image ?? undefined} />
-                            <AvatarFallback>{(it.actor?.name ?? "??").slice(0,2).toUpperCase()}</AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0 flex-1">
-                            <div className="mb-1 text-sm">
-                              <span className="font-medium">{it.actor?.name ?? "Unknown"}</span>{" "}
+                <div className="mb-3 flex items-center gap-2">
+                  <div className="h-px flex-1 bg-border" />
+                  <span className="text-muted-foreground text-xs font-medium uppercase tracking-wider">{day}</span>
+                  <div className="h-px flex-1 bg-border" />
+                </div>
+                <div className="space-y-3">
+                  {list.map((it: any, idx: number) => (
+                    <Card key={it.id} className="group overflow-hidden transition-shadow hover:shadow-md">
+                      <CardContent className="p-0">
+                        <div className="flex items-start gap-3 p-3 sm:p-4">
+                          <div className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full ${bubbleClass(it.type)} shadow-sm`}>
+                            {renderIcon(it.type)}
+                          </div>
+                          
+                          <div className="min-w-0 flex-1 space-y-2">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-6 w-6 border">
+                                  <AvatarImage src={it.actor?.image ?? undefined} />
+                                  <AvatarFallback className="text-xs">{(it.actor?.name ?? "??").slice(0,2).toUpperCase()}</AvatarFallback>
+                                </Avatar>
+                                <span className="font-medium text-sm">{it.actor?.name ?? "Unknown"}</span>
+                              </div>
+                              <span className="text-muted-foreground text-xs whitespace-nowrap">{formatTimeAgo(it.createdAt)}</span>
+                            </div>
+
+                            <div className="space-y-1.5">
                               {it.type === "plugin.created" && (
                                 <>
-                                  опубликовал плагин{" "}
-                                  <Link className="underline" href={`/plugins/${it.plugin?.slug}`}>{it.plugin?.name}</Link>
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <span className="text-muted-foreground">Опубликовал новый плагин</span>
+                                  </div>
+                                  <Link 
+                                    className="group/link inline-flex items-baseline gap-2 hover:underline" 
+                                    href={`/plugins/${it.plugin?.slug}`}
+                                  >
+                                    <span className="font-bold text-base leading-tight">{it.plugin?.name}</span>
+                                    {it.plugin && JSON.parse(it.data || "{}").version && (
+                                      <Badge variant="outline" className="text-xs">
+                                        v{JSON.parse(it.data || "{}").version}
+                                      </Badge>
+                                    )}
+                                  </Link>
+                                  {it.message && (
+                                    <p className="text-muted-foreground text-sm line-clamp-2">
+                                      {it.message}
+                                    </p>
+                                  )}
                                 </>
                               )}
+
                               {it.type === "version.released" && (
                                 <>
-                                  выпустил версию {it.version?.version} для{" "}
-                                  <Link className="underline" href={`/plugins/${it.plugin?.slug}`}>{it.plugin?.name}</Link>
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <span className="text-muted-foreground">Обновление для</span>
+                                    <Link className="font-medium hover:underline" href={`/plugins/${it.plugin?.slug}`}>
+                                      {it.plugin?.name}
+                                    </Link>
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <Badge variant="default" className="gap-1 px-2.5 py-1">
+                                      <Tag className="h-3 w-3" />
+                                      v{it.version?.version}
+                                    </Badge>
+                                    {JSON.parse(it.data || "{}").isStable === false ? (
+                                      <Badge variant="outline" className="border-amber-500/50 text-amber-600 text-xs dark:text-amber-400">
+                                        🧪 Бета-версия
+                                      </Badge>
+                                    ) : (
+                                      <Badge variant="outline" className="border-green-500/50 text-green-600 text-xs dark:text-green-400">
+                                        ✓ Стабильная
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  {it.message && it.message !== `v${it.version?.version}` && (
+                                    <div className="rounded-md border-l-2 border-violet-400 bg-muted/50 py-1.5 pl-3 pr-2 text-sm">
+                                      <p className="line-clamp-2">{it.message}</p>
+                                    </div>
+                                  )}
                                 </>
                               )}
+
                               {it.type === "review.added" && (
                                 <>
-                                  оставил отзыв для{" "}
-                                  <Link className="underline" href={`/plugins/${it.plugin?.slug}`}>{it.plugin?.name}</Link>
-                                  {typeof it.rating === "number" && (
-                                    <Badge className="ml-2" variant="secondary">{it.rating}★</Badge>
+                                  <div className="text-sm">
+                                    <span className="text-muted-foreground">Оставил отзыв на плагин</span>{" "}
+                                    <Link className="font-medium hover:underline" href={`/plugins/${it.plugin?.slug}`}>
+                                      {it.plugin?.name}
+                                    </Link>
+                                  </div>
+                                  
+                                  {(() => {
+                                    const displayRating = it.review?.rating ?? it.rating;
+                                    return displayRating !== null && displayRating !== undefined && (
+                                      <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-1 rounded-lg bg-gradient-to-r from-amber-50 to-orange-50 px-2.5 py-1.5 dark:from-amber-950/30 dark:to-orange-950/30">
+                                          {Array.from({ length: 5 }).map((_, i) => (
+                                            <Star
+                                              key={i}
+                                              className={`h-4 w-4 ${
+                                                i < displayRating
+                                                  ? "fill-amber-500 text-amber-500"
+                                                  : "fill-muted-foreground/30 text-muted-foreground/30"
+                                              }`}
+                                            />
+                                          ))}
+                                          <span className="ml-1.5 font-bold text-amber-600 text-sm dark:text-amber-400">
+                                            {displayRating}/5
+                                          </span>
+                                        </div>
+                                        {it.review?.comment && (
+                                          <Badge variant="outline" className="gap-1 text-xs">
+                                            <MessageSquare className="h-3 w-3" />
+                                            С комментарием
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
+
+                                  {it.review?.title && (
+                                    <div className="font-medium text-sm">
+                                      {it.review.title}
+                                    </div>
+                                  )}
+
+                                  {it.review?.comment && (
+                                    <div className="rounded-lg border bg-muted/30 p-3 text-sm">
+                                      <div className="mb-1 flex items-center gap-1.5 text-muted-foreground text-xs">
+                                        <MessageSquare className="h-3.5 w-3.5" />
+                                        <span>Комментарий:</span>
+                                      </div>
+                                      <p className="line-clamp-4 leading-relaxed">{it.review.comment}</p>
+                                      <Link 
+                                        href={`/plugins/${it.plugin?.slug}`}
+                                        className="mt-2 inline-flex text-primary text-xs hover:underline"
+                                      >
+                                        Читать полностью →
+                                      </Link>
+                                    </div>
+                                  )}
+
+                                  {!it.review?.comment && !it.review?.title && (
+                                    <div className="text-muted-foreground text-xs italic">
+                                      Отзыв без комментария
+                                    </div>
                                   )}
                                 </>
                               )}
                             </div>
-                            {it.type === "review.added" && it.review?.comment && (
-                              <div className="text-muted-foreground text-sm">{it.review?.comment}</div>
-                            )}
                           </div>
                         </div>
                       </CardContent>
                     </Card>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             ))}
           </div>

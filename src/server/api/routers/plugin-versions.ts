@@ -120,6 +120,10 @@ export const pluginVersionsRouter = createTRPCRouter({
 				throw new Error("Version not found");
 			}
 
+			const pluginFile = await ctx.db.query.pluginFiles.findFirst({
+				where: eq(pluginFiles.versionId, version[0].id),
+			});
+
 			const latestSecurityCheck = await ctx.db
 				.select()
 				.from(pluginPipelineChecks)
@@ -139,7 +143,8 @@ export const pluginVersionsRouter = createTRPCRouter({
 				})
 				.where(eq(pluginVersions.id, version[0].id));
 
-			const fileName = `${input.pluginSlug}-v${input.version}.plugin`;
+			const originalExtension = pluginFile?.filename?.endsWith('.plugin') ? '.plugin' : '.py';
+			const fileName = `${input.pluginSlug}-v${input.version}${originalExtension}`;
 			const fileContent = version[0].fileContent;
 
 			if (plugin[0].telegramBotDeeplink) {

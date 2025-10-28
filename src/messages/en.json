@@ -185,7 +185,7 @@
 		"uploading": "Uploading...",
 		"upload_error": "Upload error",
 		"file_too_large": "File is too large.",
-		"invalid_file_type": "Invalid file type.",
+		"invalid_file_type": "Invalid file type. Supported formats: .py, .plugin, .txt",
 		"upload_failed": "Upload failed.",
 		"delete": "Delete",
 		"add_screenshot": "Add Screenshot",

@@ -100,6 +100,7 @@ export function UploadVersionDialog({
 		createVersionMutation.mutate({
 			pluginId,
 			...data,
+			filename: file?.name,
 		});
 	};
 
