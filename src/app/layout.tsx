@@ -12,6 +12,7 @@ import { type Locale, locales } from "~/lib/i18n-config";
 import { Navigation } from "~/components/navigation";
 import { Footer } from "~/components/footer";
 import { Toaster } from "~/components/ui/sonner";
+import { TelegramWebAppAuth } from "~/components/telegram-web-app-auth";
 import { auth } from "~/server/auth";
 import { TRPCReactProvider } from "~/trpc/react";
 
@@ -90,6 +91,7 @@ export default async function RootLayout({
 					name="viewport"
 					content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
 				/>
+				<script src="https://telegram.org/js/telegram-web-app.js" async />
 			</head>
 			<body className="overflow-x-hidden bg-background font-sans antialiased">
 				<NextIntlClientProvider messages={messages}>
@@ -101,6 +103,7 @@ export default async function RootLayout({
 								enableSystem
 								disableTransitionOnChange
 							>
+								<TelegramWebAppAuth />
 								<div className="min-h-screen flex flex-col overflow-hidden">
 									<Navigation />
 									<main className="w-full max-w-full overflow-x-hidden flex-1">

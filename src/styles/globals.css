@@ -435,3 +435,140 @@
 		padding-right: 0.75rem;
 	}
 }
+
+/* Анимации для Hero секции */
+@keyframes hero-gradient {
+	0%, 100% {
+		background-position: 0% 50%;
+	}
+	50% {
+		background-position: 100% 50%;
+	}
+}
+
+@keyframes shimmer {
+	0% {
+		background-position: -1000px 0;
+	}
+	100% {
+		background-position: 1000px 0;
+	}
+}
+
+@keyframes pulse-glow {
+	0%, 100% {
+		opacity: 0.3;
+		transform: scale(0.95);
+	}
+	50% {
+		opacity: 0.8;
+		transform: scale(1.05);
+	}
+}
+
+@keyframes float-up {
+	0% {
+		transform: translateY(0);
+		opacity: 0;
+	}
+	50% {
+		opacity: 0.5;
+	}
+	100% {
+		transform: translateY(-100vh);
+		opacity: 0;
+	}
+}
+
+.hero-gradient {
+	background: linear-gradient(
+		-45deg,
+		oklch(0.55 0.22 25 / 0.1),
+		oklch(0.65 0.15 40 / 0.1),
+		oklch(0.55 0.18 10 / 0.1),
+		oklch(0.60 0.20 30 / 0.1)
+	);
+	background-size: 400% 400%;
+	animation: hero-gradient 15s ease infinite;
+}
+
+.shimmer-effect {
+	background: linear-gradient(
+		90deg,
+		transparent 0%,
+		oklch(0.55 0.22 25 / 0.1) 50%,
+		transparent 100%
+	);
+	background-size: 200% 100%;
+	animation: shimmer 3s infinite;
+}
+
+.text-shimmer {
+	background: linear-gradient(
+		90deg,
+		currentColor 0%,
+		oklch(0.55 0.22 25) 50%,
+		currentColor 100%
+	);
+	background-size: 200% 100%;
+	-webkit-background-clip: text;
+	background-clip: text;
+	animation: shimmer 3s infinite;
+}
+
+@keyframes aurora {
+	0% {
+		background-position: 0% 50%;
+		opacity: 0.3;
+	}
+	50% {
+		background-position: 100% 50%;
+		opacity: 0.5;
+	}
+	100% {
+		background-position: 0% 50%;
+		opacity: 0.3;
+	}
+}
+
+.aurora-effect {
+	background: linear-gradient(
+		-45deg,
+		oklch(0.55 0.22 25 / 0.2),
+		oklch(0.65 0.15 40 / 0.15),
+		oklch(0.60 0.18 30 / 0.2),
+		oklch(0.70 0.12 50 / 0.15)
+	);
+	background-size: 400% 400%;
+	animation: aurora 20s ease infinite;
+	filter: blur(60px);
+}
+
+@keyframes float-slow {
+	0%, 100% {
+		transform: translate(0, 0);
+	}
+	25% {
+		transform: translate(20px, -20px);
+	}
+	50% {
+		transform: translate(-20px, 20px);
+	}
+	75% {
+		transform: translate(20px, 10px);
+	}
+}
+
+.float-slow {
+	animation: float-slow 20s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+}

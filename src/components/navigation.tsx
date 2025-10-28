@@ -287,36 +287,81 @@ export function Navigation() {
 
 									{/* Футер с настройками */}
 									<div className="border-t bg-muted/30 p-4">
-
-										{/* Информация о пользователе */}
-										{session?.user && (
-											<div className="flex items-center gap-3 rounded-lg border bg-background p-3">
-												<Avatar className="h-8 w-8">
-													<AvatarImage
-														src={session.user.image || undefined}
-														alt={session.user.name || ""}
-													/>
-													<AvatarFallback className="text-xs">
-														{session.user.name?.slice(0, 2).toUpperCase() ||
-															"??"}
-													</AvatarFallback>
-												</Avatar>
-												<div className="min-w-0 flex-1">
-													<p className="truncate font-medium text-sm">
-														{session.user.name}
-													</p>
-													<p className="truncate text-muted-foreground text-xs">
-														{session.user.email}
-													</p>
+										{session?.user ? (
+											<>
+												{/* Информация о пользователе */}
+												<div className="flex items-center gap-3 rounded-lg border bg-background p-3">
+													<Avatar className="h-8 w-8">
+														<AvatarImage
+															src={session.user.image || undefined}
+															alt={session.user.name || ""}
+														/>
+														<AvatarFallback className="text-xs">
+															{session.user.name?.slice(0, 2).toUpperCase() ||
+																"??"}
+														</AvatarFallback>
+													</Avatar>
+													<div className="min-w-0 flex-1">
+														<p className="truncate font-medium text-sm">
+															{session.user.name}
+														</p>
+														<p className="truncate text-muted-foreground text-xs">
+															{session.user.email}
+														</p>
+													</div>
+													{session.user.telegramUsername && (
+														<Badge
+															variant="secondary"
+															className="flex h-5 w-5 items-center justify-center p-0"
+														>
+															<TelegramIcon className="h-3 w-3" />
+														</Badge>
+													)}
 												</div>
-												{session.user.telegramUsername && (
-													<Badge
-														variant="secondary"
-														className="flex h-5 w-5 items-center justify-center p-0"
+
+												{/* Кнопки профиля и выхода */}
+												<div className="mt-3 space-y-2">
+													<Link
+														href="/profile"
+														onClick={() => setMobileMenuOpen(false)}
+														className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
 													>
-														<TelegramIcon className="h-3 w-3" />
-													</Badge>
-												)}
+														<User className="h-4 w-4" />
+														<span>{t("profile")}</span>
+													</Link>
+													<Link
+														href="/favorites"
+														onClick={() => setMobileMenuOpen(false)}
+														className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
+													>
+														<Heart className="h-4 w-4" />
+														<span>{t("favorites")}</span>
+													</Link>
+													<Link
+														href="/my-plugins"
+														onClick={() => setMobileMenuOpen(false)}
+														className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
+													>
+														<Settings className="h-4 w-4" />
+														<span>{t("my_plugins")}</span>
+													</Link>
+													<button
+														onClick={handleSignOut}
+														className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
+													>
+														<LogOut className="h-4 w-4" />
+														<span>{t("sign_out")}</span>
+													</button>
+												</div>
+											</>
+										) : (
+											<div className="space-y-3">
+												<p className="text-center text-muted-foreground text-sm">
+													Войдите, чтобы загружать плагины и добавлять их в избранное
+												</p>
+												<TelegramLoginButton
+													botUsername={process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME}
+												/>
 											</div>
 										)}
 									</div>
