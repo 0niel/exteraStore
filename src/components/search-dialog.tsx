@@ -1,8 +1,9 @@
 "use client";
 
 import Fuse from "fuse.js";
+import { motion, AnimatePresence } from "framer-motion";
+import type { PanInfo } from "framer-motion";
 import {
-	Calendar,
 	Clock,
 	Download,
 	ExternalLink,
@@ -13,11 +14,13 @@ import {
 	TrendingUp,
 	User,
 	X,
+	ChevronLeft,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useDebounce } from "use-debounce";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -37,6 +40,7 @@ interface SearchDialogProps {
 	trigger?: React.ReactNode;
 	placeholder?: string;
 	className?: string;
+	isMobile?: boolean;
 }
 
 interface SearchFilters {
@@ -101,6 +105,7 @@ export function SearchDialog({
 	trigger,
 	placeholder,
 	className,
+	isMobile = false,
 }: SearchDialogProps) {
 	const t = useTranslations("SearchDialog");
 	const [open, setOpen] = useState(false);
@@ -113,6 +118,11 @@ export function SearchDialog({
 		sortBy: "relevance",
 	});
 	const router = useRouter();
+	const [mounted, setMounted] = useState(false);
+
+	useEffect(() => {
+		setMounted(true);
+	}, []);
 
 	const [debouncedQuery] = useDebounce(query, 150);
 
@@ -177,6 +187,18 @@ export function SearchDialog({
 		}
 	}, []);
 
+	useEffect(() => {
+		if (open && isMobile) {
+			document.body.style.overflow = 'hidden';
+		} else {
+			document.body.style.overflow = '';
+		}
+		
+		return () => {
+			document.body.style.overflow = '';
+		};
+	}, [open, isMobile]);
+
 	const saveSearch = useCallback(
 		(searchQuery: string) => {
 			if (searchQuery.trim().length < 2) return;
@@ -232,6 +254,17 @@ export function SearchDialog({
 		}
 	};
 
+	const handleDragEnd = (_: any, info: PanInfo) => {
+		if (info.offset.y > 120 || info.velocity.y > 500) {
+			setOpen(false);
+		}
+	};
+
+	const handleClose = () => {
+		setOpen(false);
+		setQuery("");
+	};
+
 	const clearRecentSearches = () => {
 		setRecentSearches([]);
 		localStorage.removeItem("recent-searches");
@@ -278,24 +311,484 @@ export function SearchDialog({
 		</Button>
 	);
 
+	const renderSearchResults = () => (
+		<>
+			{isSearching ? (
+				<div className="space-y-3">
+					{Array.from({ length: 5 }).map((_, i) => (
+						<motion.div
+							key={i}
+							initial={{ opacity: 0, y: 10 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ delay: i * 0.05 }}
+							className="flex items-center gap-3 rounded-2xl bg-muted/30 p-3"
+						>
+							<Skeleton className="h-12 w-12 rounded-xl" />
+							<div className="flex-1 space-y-2">
+								<Skeleton className="h-4 w-3/4" />
+								<Skeleton className="h-3 w-1/2" />
+							</div>
+						</motion.div>
+					))}
+				</div>
+			) : searchResults?.plugins.length === 0 ? (
+				<>
+					<EmptyState
+						icon="🔍"
+						title={t("no_results")}
+						description={t("no_results_for", { query })}
+					/>
+					{suggestions && suggestions.length > 0 && (
+						<div className="mt-6 border-t pt-4">
+							<h4 className="mb-3 font-medium text-muted-foreground text-sm">
+								Возможно, вы искали:
+							</h4>
+							<div className="space-y-2">
+								{suggestions.map((suggestion: SearchSuggestion, index: number) => (
+									<motion.button
+										key={index}
+										initial={{ opacity: 0, x: -10 }}
+										animate={{ opacity: 1, x: 0 }}
+										transition={{ delay: index * 0.05 }}
+										whileTap={{ scale: 0.98 }}
+										onClick={() => handleSuggestionClick(suggestion)}
+										className="flex w-full items-center gap-3 overflow-hidden rounded-2xl bg-muted/30 p-3 text-left transition-colors active:bg-muted/50"
+									>
+										<div className="flex h-10 w-10 items-center justify-center rounded-xl bg-background">
+											{getResultIcon(suggestion.type)}
+										</div>
+										<div className="min-w-0 flex-1">
+											<div className="truncate font-medium text-sm">
+												{suggestion.value}
+											</div>
+											<div className="truncate text-muted-foreground text-xs">
+												{suggestion.type === "plugin" && `в ${suggestion.extra}`}
+												{suggestion.type === "category" && `${suggestion.extra} плагинов`}
+												{suggestion.type === "author" && `${suggestion.extra} плагинов`}
+											</div>
+										</div>
+									</motion.button>
+								))}
+							</div>
+						</div>
+					)}
+				</>
+			) : (
+				<div className="space-y-3">
+					<div className="flex items-center justify-between">
+						<h3 className="font-medium text-muted-foreground text-sm">
+							{t("search_results")} ({searchResults?.plugins.length || 0})
+						</h3>
+						{searchResults && searchResults.plugins.length > 0 && (
+							<motion.div whileTap={{ scale: 0.95 }}>
+								<Button
+									variant="ghost"
+									size="sm"
+									onClick={() => handleSearch()}
+									className="h-8 text-xs"
+								>
+									{t("show_all")}
+									<ExternalLink className="ml-1 h-3 w-3" />
+								</Button>
+							</motion.div>
+						)}
+					</div>
+
+					{searchResults?.plugins.map((plugin: SearchResult, index: number) => (
+						<motion.div
+							key={plugin.id}
+							initial={{ opacity: 0, y: 10 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ delay: index * 0.05 }}
+						>
+							<Link
+								href={`/plugins/${plugin.slug}`}
+								onClick={() => setOpen(false)}
+								className="flex items-center gap-3 overflow-hidden rounded-2xl bg-muted/30 p-3 transition-colors active:bg-muted/50"
+							>
+								<div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+									{plugin.featured ? (
+										<Star className="h-5 w-5 text-yellow-500" />
+									) : (
+										<Hash className="h-5 w-5 text-primary" />
+									)}
+								</div>
+								<div className="min-w-0 flex-1">
+									<div className="truncate font-medium text-sm">
+										{highlightText(plugin.name, query)}
+									</div>
+									<div className="line-clamp-2 text-muted-foreground text-xs">
+										{highlightText(plugin.shortDescription || plugin.author, query)}
+									</div>
+								</div>
+								<div className="flex flex-col items-end gap-1">
+									<Badge variant="secondary" className="text-[10px]">
+										{plugin.category}
+									</Badge>
+									<div className="flex items-center gap-2 text-muted-foreground text-[10px]">
+										<span className="flex items-center gap-1">
+											<Star className="h-3 w-3" />
+											{plugin.rating.toFixed(1)}
+										</span>
+										<span className="flex items-center gap-1">
+											<Download className="h-3 w-3" />
+											{plugin.downloadCount}
+										</span>
+									</div>
+								</div>
+							</Link>
+						</motion.div>
+					))}
+				</div>
+			)}
+		</>
+	);
+
+	const renderDefaultContent = () => (
+		<div className="space-y-6 pb-6">
+			{recentSearches.length > 0 && (
+				<motion.div
+					initial={{ opacity: 0, y: 10 }}
+					animate={{ opacity: 1, y: 0 }}
+				>
+					<div className="mb-3 flex items-center justify-between">
+						<h3 className="flex items-center gap-2 font-medium text-muted-foreground text-sm">
+							<Clock className="h-4 w-4" />
+							{t("recent_searches")}
+						</h3>
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={clearRecentSearches}
+							className="h-7 text-xs"
+						>
+							{t("clear")}
+						</Button>
+					</div>
+					<div className="flex flex-wrap gap-2">
+						{recentSearches.map((search, index) => (
+							<motion.div
+								key={index}
+								initial={{ opacity: 0, scale: 0.9 }}
+								animate={{ opacity: 1, scale: 1 }}
+								transition={{ delay: index * 0.05 }}
+								whileTap={{ scale: 0.95 }}
+							>
+								<Badge
+									variant="secondary"
+									className="cursor-pointer transition-colors hover:bg-primary hover:text-primary-foreground"
+									onClick={() => handleSearch(search)}
+								>
+									{search}
+								</Badge>
+							</motion.div>
+						))}
+					</div>
+				</motion.div>
+			)}
+
+			{popularPlugins && popularPlugins.length > 0 && (
+				<motion.div
+					initial={{ opacity: 0, y: 10 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ delay: 0.1 }}
+				>
+					<h3 className="mb-3 flex items-center gap-2 font-medium text-muted-foreground text-sm">
+						<TrendingUp className="h-4 w-4" />
+						{t("popular_plugins")}
+					</h3>
+					<div className="space-y-2">
+						{popularPlugins.map((plugin: any, index: number) => (
+							<motion.div
+								key={plugin.id}
+								initial={{ opacity: 0, x: -10 }}
+								animate={{ opacity: 1, x: 0 }}
+								transition={{ delay: index * 0.05 }}
+							>
+								<Link
+									href={`/plugins/${plugin.slug}`}
+									onClick={() => setOpen(false)}
+									className="flex items-center gap-3 overflow-hidden rounded-2xl bg-muted/30 p-3 transition-colors active:bg-muted/50"
+								>
+									<div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+										{plugin.featured ? (
+											<Star className="h-4 w-4 text-yellow-500" />
+										) : (
+											<Hash className="h-4 w-4 text-primary" />
+										)}
+									</div>
+									<div className="min-w-0 flex-1">
+										<div className="truncate font-medium text-sm">
+											{plugin.name}
+										</div>
+										<div className="text-muted-foreground text-xs">
+											{t("downloads", { count: plugin.downloadCount })}
+										</div>
+									</div>
+									<div className="flex items-center gap-1 text-muted-foreground text-xs">
+										<Star className="h-3 w-3" />
+										{plugin.rating.toFixed(1)}
+									</div>
+								</Link>
+							</motion.div>
+						))}
+					</div>
+				</motion.div>
+			)}
+		</div>
+	);
+
+	if (isMobile) {
+		const modalContent = (
+			<AnimatePresence>
+				{open && (
+					<>
+						<motion.div
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							exit={{ opacity: 0 }}
+							transition={{ duration: 0.2, ease: "easeOut" }}
+							className="fixed inset-0 z-[9999] bg-black/40 backdrop-blur-md"
+							onClick={handleClose}
+						/>
+						<motion.div
+							initial={{ y: "100%" }}
+							animate={{ y: 0 }}
+							exit={{ y: "100%" }}
+							transition={{ 
+								type: "spring",
+								damping: 30,
+								stiffness: 300,
+								mass: 0.8
+							}}
+							drag="y"
+							dragConstraints={{ top: 0, bottom: 0 }}
+							dragElastic={{ top: 0, bottom: 0.5 }}
+							onDragEnd={handleDragEnd}
+							className="fixed inset-x-0 bottom-0 z-[10000] flex max-h-[92vh] flex-col rounded-t-3xl bg-background shadow-2xl"
+						>
+								<div className="flex h-full flex-col overflow-hidden">
+									<motion.div 
+										initial={{ opacity: 0 }}
+										animate={{ opacity: 1 }}
+										transition={{ delay: 0.1 }}
+										className="flex items-center justify-center py-2"
+									>
+										<div className="h-1 w-12 rounded-full bg-muted-foreground/30" />
+									</motion.div>
+
+									<div className="flex items-center justify-between px-4 pb-3">
+										<motion.button
+											initial={{ opacity: 0, x: -10 }}
+											animate={{ opacity: 1, x: 0 }}
+											transition={{ delay: 0.15 }}
+											whileTap={{ scale: 0.9 }}
+											onClick={handleClose}
+											className="flex h-9 w-9 items-center justify-center rounded-full bg-muted/50 active:bg-muted"
+										>
+											<ChevronLeft className="h-5 w-5" />
+										</motion.button>
+										<motion.h2 
+											initial={{ opacity: 0, y: -10 }}
+											animate={{ opacity: 1, y: 0 }}
+											transition={{ delay: 0.15 }}
+											className="font-semibold text-lg"
+										>
+											Поиск
+										</motion.h2>
+										<div className="w-9" />
+									</div>
+
+									<div className="px-4 pb-3">
+										<motion.div
+											initial={{ scale: 0.95, opacity: 0 }}
+											animate={{ scale: 1, opacity: 1 }}
+											transition={{ delay: 0.2, type: "spring", damping: 20 }}
+											className="relative"
+										>
+											<Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+											<Input
+												placeholder={placeholder || t("search_plugins")}
+												value={query}
+												onChange={(e) => setQuery(e.target.value)}
+												onKeyDown={handleKeyDown}
+												className="h-11 rounded-2xl bg-muted/50 pl-10 pr-20 text-base focus:bg-muted"
+												autoFocus
+											/>
+											<div className="absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-1">
+												<AnimatePresence>
+													{query && (
+														<motion.button
+															initial={{ scale: 0, opacity: 0 }}
+															animate={{ scale: 1, opacity: 1 }}
+															exit={{ scale: 0, opacity: 0 }}
+															whileTap={{ scale: 0.9 }}
+															onClick={() => setQuery("")}
+															className="flex h-7 w-7 items-center justify-center rounded-full bg-muted active:bg-muted-foreground/20"
+														>
+															<X className="h-3.5 w-3.5" />
+														</motion.button>
+													)}
+												</AnimatePresence>
+												<motion.button
+													whileTap={{ scale: 0.9 }}
+													onClick={() => setShowFilters(!showFilters)}
+													className={cn(
+														"flex h-7 w-7 items-center justify-center rounded-full transition-colors",
+														hasActiveFilters ? "bg-primary text-primary-foreground" : "bg-muted active:bg-muted-foreground/20"
+													)}
+												>
+													<Filter className="h-3.5 w-3.5" />
+												</motion.button>
+											</div>
+										</motion.div>
+
+										<AnimatePresence>
+											{showFilters && (
+												<motion.div
+													initial={{ height: 0, opacity: 0 }}
+													animate={{ height: "auto", opacity: 1 }}
+													exit={{ height: 0, opacity: 0 }}
+													transition={{ duration: 0.3, ease: "easeInOut" }}
+													className="overflow-hidden"
+												>
+													<div className="mt-3 space-y-3 border-t pt-3">
+														<div className="flex flex-wrap gap-2">
+															<span className="text-sm font-medium">Сортировка:</span>
+															{["relevance", "newest", "popular", "rating", "downloads"].map((sort) => (
+																<motion.div
+																	key={sort}
+																	whileTap={{ scale: 0.95 }}
+																>
+																	<Badge
+																		variant={filters.sortBy === sort ? "default" : "outline"}
+																		className="cursor-pointer"
+																		onClick={() => setFilters(prev => ({ ...prev, sortBy: sort as any }))}
+																	>
+																		{sort === "relevance" && "Релевантность"}
+																		{sort === "newest" && "Новые"}
+																		{sort === "popular" && "Популярные"}
+																		{sort === "rating" && "Рейтинг"}
+																		{sort === "downloads" && "Скачивания"}
+																	</Badge>
+																</motion.div>
+															))}
+														</div>
+
+														<div className="flex flex-wrap gap-2">
+															<span className="text-sm font-medium">Рейтинг:</span>
+															{[4, 3, 2].map((rating) => (
+																<motion.div
+																	key={rating}
+																	whileTap={{ scale: 0.95 }}
+																>
+																	<Badge
+																		variant={filters.minRating === rating ? "default" : "outline"}
+																		className="cursor-pointer"
+																		onClick={() => toggleFilter("minRating", rating)}
+																	>
+																		{rating}+ ⭐
+																	</Badge>
+																</motion.div>
+															))}
+														</div>
+
+														{categories && categories.length > 0 && (
+															<div className="flex flex-wrap gap-2">
+																<span className="text-sm font-medium">Категории:</span>
+																{categories.slice(0, 6).map((category) => (
+																	<motion.div
+																		key={category.slug}
+																		whileTap={{ scale: 0.95 }}
+																	>
+																		<Badge
+																			variant={filters.categories.includes(category.slug) ? "default" : "outline"}
+																			className="cursor-pointer"
+																			onClick={() => toggleFilter("categories", category.slug)}
+																		>
+																			{category.name}
+																		</Badge>
+																	</motion.div>
+																))}
+															</div>
+														)}
+
+														{hasActiveFilters && (
+															<motion.div whileTap={{ scale: 0.95 }}>
+																<Button
+																	variant="outline"
+																	size="sm"
+																	onClick={clearFilters}
+																	className="h-8"
+																>
+																	Сбросить фильтры
+																</Button>
+															</motion.div>
+														)}
+													</div>
+												</motion.div>
+											)}
+										</AnimatePresence>
+									</div>
+
+									<div className="flex-1 overflow-y-auto px-4 pb-6">
+										<AnimatePresence mode="wait">
+											{query.length >= 1 ? (
+												<motion.div
+													key="search-results"
+													initial={{ opacity: 0 }}
+													animate={{ opacity: 1 }}
+													exit={{ opacity: 0 }}
+													transition={{ duration: 0.2 }}
+												>
+													{renderSearchResults()}
+												</motion.div>
+											) : (
+												<motion.div
+													key="default-content"
+													initial={{ opacity: 0 }}
+													animate={{ opacity: 1 }}
+													exit={{ opacity: 0 }}
+													transition={{ duration: 0.2 }}
+												>
+													{renderDefaultContent()}
+												</motion.div>
+											)}
+										</AnimatePresence>
+									</div>
+								</div>
+							</motion.div>
+						</>
+					)}
+				</AnimatePresence>
+		);
+
+		return (
+			<>
+				<div onClick={() => setOpen(true)}>{trigger || defaultTrigger}</div>
+				{mounted && createPortal(modalContent, document.body)}
+			</>
+		);
+	}
+
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>{trigger || defaultTrigger}</DialogTrigger>
 			<DialogContent className="max-w-[95vw] p-0 sm:max-w-2xl md:max-w-3xl">
 				<DialogTitle className="sr-only">{t("search_plugins")}</DialogTitle>
 				<div className="flex max-h-[85vh] flex-col">
-					<div className="border-b p-3 sm:p-4">
+					<div className="border-b p-4">
 						<div className="relative">
-							<Search className="-translate-y-1/2 absolute top-1/2 left-2 h-4 w-4 transform text-muted-foreground sm:left-3" />
+							<Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 							<Input
 								placeholder={placeholder || t("search_plugins")}
 								value={query}
 								onChange={(e) => setQuery(e.target.value)}
 								onKeyDown={handleKeyDown}
-								className="h-10 pr-12 pl-8 text-sm sm:h-12 sm:pr-16 sm:pl-10 sm:text-base"
+								className="h-12 rounded-lg pl-10 pr-16 text-base"
 								autoFocus
 							/>
-							<div className="absolute top-1/2 right-2 flex -translate-y-1/2 items-center gap-1 sm:right-3">
+							<div className="absolute top-1/2 right-3 flex -translate-y-1/2 items-center gap-1">
 								{query && (
 									<Button
 										variant="ghost"
@@ -321,58 +814,52 @@ export function SearchDialog({
 						</div>
 
 						{showFilters && (
-							<div className="mt-3 space-y-3 border-t pt-3">
+							<div className="mt-4 space-y-3 border-t pt-4">
 								<div className="flex flex-wrap gap-2">
-									<div className="flex items-center gap-2">
-										<span className="text-sm font-medium">Сортировка:</span>
-										{["relevance", "newest", "popular", "rating", "downloads"].map((sort) => (
-											<Badge
-												key={sort}
-												variant={filters.sortBy === sort ? "default" : "outline"}
-												className="cursor-pointer"
-												onClick={() => setFilters(prev => ({ ...prev, sortBy: sort as any }))}
-											>
-												{sort === "relevance" && "Релевантность"}
-												{sort === "newest" && "Новые"}
-												{sort === "popular" && "Популярные"}
-												{sort === "rating" && "Рейтинг"}
-												{sort === "downloads" && "Скачивания"}
-											</Badge>
-										))}
-									</div>
+									<span className="text-sm font-medium">Сортировка:</span>
+									{["relevance", "newest", "popular", "rating", "downloads"].map((sort) => (
+										<Badge
+											key={sort}
+											variant={filters.sortBy === sort ? "default" : "outline"}
+											className="cursor-pointer"
+											onClick={() => setFilters(prev => ({ ...prev, sortBy: sort as any }))}
+										>
+											{sort === "relevance" && "Релевантность"}
+											{sort === "newest" && "Новые"}
+											{sort === "popular" && "Популярные"}
+											{sort === "rating" && "Рейтинг"}
+											{sort === "downloads" && "Скачивания"}
+										</Badge>
+									))}
 								</div>
 
 								<div className="flex flex-wrap gap-2">
-									<div className="flex items-center gap-2">
-										<span className="text-sm font-medium">Рейтинг:</span>
-										{[4, 3, 2].map((rating) => (
-											<Badge
-												key={rating}
-												variant={filters.minRating === rating ? "default" : "outline"}
-												className="cursor-pointer"
-												onClick={() => toggleFilter("minRating", rating)}
-											>
-												{rating}+ ⭐
-											</Badge>
-										))}
-									</div>
+									<span className="text-sm font-medium">Рейтинг:</span>
+									{[4, 3, 2].map((rating) => (
+										<Badge
+											key={rating}
+											variant={filters.minRating === rating ? "default" : "outline"}
+											className="cursor-pointer"
+											onClick={() => toggleFilter("minRating", rating)}
+										>
+											{rating}+ ⭐
+										</Badge>
+									))}
 								</div>
 
 								{categories && categories.length > 0 && (
 									<div className="flex flex-wrap gap-2">
-										<div className="flex items-center gap-2">
-											<span className="text-sm font-medium">Категории:</span>
-											{categories.slice(0, 6).map((category) => (
-												<Badge
-													key={category.slug}
-													variant={filters.categories.includes(category.slug) ? "default" : "outline"}
-													className="cursor-pointer"
-													onClick={() => toggleFilter("categories", category.slug)}
-												>
-													{category.name}
-												</Badge>
-											))}
-										</div>
+										<span className="text-sm font-medium">Категории:</span>
+										{categories.slice(0, 6).map((category) => (
+											<Badge
+												key={category.slug}
+												variant={filters.categories.includes(category.slug) ? "default" : "outline"}
+												className="cursor-pointer"
+												onClick={() => toggleFilter("categories", category.slug)}
+											>
+												{category.name}
+											</Badge>
+										))}
 									</div>
 								)}
 
@@ -390,284 +877,11 @@ export function SearchDialog({
 						)}
 					</div>
 
-					<div className="flex-1 overflow-y-auto">
-						{query.length >= 1 ? (
-							<div className="p-3 sm:p-4">
-								{isSearching ? (
-									<div className="space-y-2 sm:space-y-3">
-										{Array.from({ length: 5 }).map((_, i) => (
-											<div
-												key={i}
-												className="flex items-center gap-2 rounded-lg p-2 sm:gap-3 sm:p-3"
-											>
-												<Skeleton className="h-8 w-8 rounded-lg sm:h-10 sm:w-10" />
-												<div className="flex-1 space-y-1 sm:space-y-2">
-													<Skeleton className="h-3 w-3/4 sm:h-4" />
-													<Skeleton className="h-2 w-1/2 sm:h-3" />
-												</div>
-											</div>
-										))}
-									</div>
-								) : searchResults?.plugins.length === 0 ? (
-									<>
-										<EmptyState
-											icon="🔍"
-											title={t("no_results")}
-											description={t("no_results_for", { query })}
-										/>
-										{/* Показываем подсказки даже при отсутствии результатов */}
-										{suggestions && suggestions.length > 0 && (
-											<div className="mt-4 border-t pt-3">
-												<h4 className="mb-2 font-medium text-muted-foreground text-xs sm:text-sm">
-													Возможно, вы искали:
-												</h4>
-												<div className="space-y-1">
-													{suggestions.map((suggestion: SearchSuggestion, index: number) => (
-														<button
-															key={index}
-															onClick={() => handleSuggestionClick(suggestion)}
-															className="flex w-full items-center gap-2 rounded-lg p-2 text-left transition-colors hover:bg-accent sm:gap-3 sm:p-3"
-														>
-															<div className="flex h-6 w-6 items-center justify-center rounded-lg bg-muted sm:h-8 sm:w-8">
-																{getResultIcon(suggestion.type)}
-															</div>
-															<div className="min-w-0 flex-1">
-																<div className="truncate font-medium text-xs sm:text-sm">
-																	{suggestion.value}
-																</div>
-																<div className="text-[10px] text-muted-foreground sm:text-xs">
-																	{suggestion.type === "plugin" && `в ${suggestion.extra}`}
-																	{suggestion.type === "category" && `${suggestion.extra} плагинов`}
-																	{suggestion.type === "author" && `${suggestion.extra} плагинов`}
-																</div>
-															</div>
-														</button>
-													))}
-												</div>
-											</div>
-										)}
-									</>
-								) : (
-									<div className="space-y-1 sm:space-y-2">
-										<div className="mb-3 flex items-center justify-between">
-											<h3 className="font-medium text-muted-foreground text-xs sm:text-sm">
-												{t("search_results")} ({searchResults?.plugins.length || 0})
-											</h3>
-											{searchResults && searchResults.plugins.length > 0 && (
-												<Button
-													variant="ghost"
-													size="sm"
-													onClick={() => handleSearch()}
-													className="h-7 text-xs"
-												>
-													{t("show_all")}
-													<ExternalLink className="ml-1 h-3 w-3" />
-												</Button>
-											)}
-										</div>
-
-										{searchResults?.plugins.map((plugin: SearchResult) => (
-											<Link
-												key={plugin.id}
-												href={`/plugins/${plugin.slug}`}
-												onClick={() => setOpen(false)}
-												className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-accent sm:gap-3 sm:p-3"
-											>
-												<div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 sm:h-10 sm:w-10">
-													{plugin.featured ? (
-														<Star className="h-4 w-4 text-yellow-500 sm:h-5 sm:w-5" />
-													) : (
-														<Hash className="h-4 w-4 text-primary sm:h-5 sm:w-5" />
-													)}
-												</div>
-												<div className="min-w-0 flex-1">
-													<div className="truncate font-medium text-sm sm:text-base">
-														{highlightText(plugin.name, query)}
-													</div>
-													<div className="truncate text-muted-foreground text-xs sm:text-sm">
-														{highlightText(plugin.shortDescription || plugin.author, query)}
-													</div>
-												</div>
-												<div className="flex flex-col items-end gap-1">
-													<div className="flex items-center gap-1 sm:gap-2">
-														<Badge
-															variant="secondary"
-															className="h-5 py-0 text-[10px] sm:text-xs"
-														>
-															{plugin.category}
-														</Badge>
-													</div>
-													<div className="flex items-center gap-2 text-[10px] text-muted-foreground sm:text-xs">
-														<span className="flex items-center gap-1">
-															<Star className="h-3 w-3" />
-															{plugin.rating.toFixed(1)}
-														</span>
-														<span className="flex items-center gap-1">
-															<Download className="h-3 w-3" />
-															{plugin.downloadCount}
-														</span>
-													</div>
-												</div>
-											</Link>
-										))}
-
-										{searchResults?.suggestions && searchResults.suggestions.length > 0 && (
-											<div className="mt-4 border-t pt-3">
-												<h4 className="mb-2 font-medium text-muted-foreground text-xs sm:text-sm">
-													Похожие категории
-												</h4>
-												<div className="flex flex-wrap gap-1 sm:gap-2">
-													{searchResults.suggestions.map((suggestion: { type: string; value: string; count: number }, index: number) => (
-														<Badge
-															key={index}
-															variant="outline"
-															className="cursor-pointer transition-colors hover:bg-primary hover:text-primary-foreground"
-															onClick={() => router.push(`/categories/${suggestion.value}`)}
-														>
-															{suggestion.value} ({suggestion.count})
-														</Badge>
-													))}
-												</div>
-											</div>
-										)}
-									</div>
-								)}
-							</div>
-						) : query.length <= 3 && fuzzyResults.length > 0 ? (
-							<div className="p-3 sm:p-4">
-								<h3 className="mb-2 font-medium text-muted-foreground text-xs sm:text-sm">
-									Возможно, вы ищете
-								</h3>
-								<div className="space-y-1">
-									{fuzzyResults.map((result, index) => {
-										const plugin = result.item as Plugin;
-										return (
-											<Link
-												key={index}
-												href={`/plugins/${plugin.slug}`}
-												onClick={() => setOpen(false)}
-												className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-accent sm:gap-3 sm:p-3"
-											>
-												<div className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10 sm:h-8 sm:w-8">
-													<Hash className="h-3 w-3 text-primary sm:h-4 sm:w-4" />
-												</div>
-												<div className="min-w-0 flex-1">
-													<div className="truncate font-medium text-xs sm:text-sm">
-														{plugin.name}
-													</div>
-													<div className="text-[10px] text-muted-foreground sm:text-xs">
-														{plugin.author}
-													</div>
-												</div>
-												<div className="text-[10px] text-muted-foreground sm:text-xs">
-													⭐ {plugin.rating.toFixed(1)}
-												</div>
-											</Link>
-										);
-									})}
-								</div>
-							</div>
-						) : (
-							<div className="space-y-4 p-3 sm:space-y-6 sm:p-4">
-								{recentSearches.length > 0 && (
-									<div>
-										<div className="mb-2 flex items-center justify-between sm:mb-3">
-											<h3 className="flex items-center gap-1 font-medium text-muted-foreground text-xs sm:gap-2 sm:text-sm">
-												<Clock className="h-3 w-3 sm:h-4 sm:w-4" />
-												{t("recent_searches")}
-											</h3>
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={clearRecentSearches}
-												className="h-7 text-xs"
-											>
-												{t("clear")}
-											</Button>
-										</div>
-										<div className="flex flex-wrap gap-1 sm:gap-2">
-											{recentSearches.map((search, index) => (
-												<Badge
-													key={index}
-													variant="secondary"
-													className="h-5 cursor-pointer py-0 text-xs transition-colors hover:bg-primary hover:text-primary-foreground"
-													onClick={() => handleSearch(search)}
-												>
-													{search}
-												</Badge>
-											))}
-										</div>
-									</div>
-								)}
-
-								{popularPlugins && popularPlugins.length > 0 && (
-									<div>
-										<h3 className="mb-2 flex items-center gap-1 font-medium text-muted-foreground text-xs sm:mb-3 sm:gap-2 sm:text-sm">
-											<TrendingUp className="h-3 w-3 sm:h-4 sm:w-4" />
-											{t("popular_plugins")}
-										</h3>
-										<div className="space-y-1 sm:space-y-2">
-											{popularPlugins.map((plugin: any) => (
-												<Link
-													key={plugin.id}
-													href={`/plugins/${plugin.slug}`}
-													onClick={() => setOpen(false)}
-													className="flex items-center gap-2 rounded-lg p-2 transition-colors hover:bg-accent sm:gap-3 sm:p-3"
-												>
-													<div className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary/10 sm:h-8 sm:w-8">
-														{plugin.featured ? (
-															<Star className="h-3 w-3 text-yellow-500 sm:h-4 sm:w-4" />
-														) : (
-															<Hash className="h-3 w-3 text-primary sm:h-4 sm:w-4" />
-														)}
-													</div>
-													<div className="min-w-0 flex-1">
-														<div className="truncate font-medium text-xs sm:text-sm">
-															{plugin.name}
-														</div>
-														<div className="text-[10px] text-muted-foreground sm:text-xs">
-															{t("downloads", { count: plugin.downloadCount })}
-														</div>
-													</div>
-													<div className="flex items-center gap-1 text-[10px] text-muted-foreground sm:text-xs">
-														<Star className="h-3 w-3" />
-														{plugin.rating.toFixed(1)}
-													</div>
-												</Link>
-											))}
-										</div>
-									</div>
-								)}
-
-								{categories && categories.length > 0 && (
-									<div>
-										<h3 className="mb-2 font-medium text-muted-foreground text-xs sm:mb-3 sm:text-sm">
-											{t("categories")}
-										</h3>
-										<div className="grid grid-cols-1 xs:grid-cols-2 gap-1 sm:gap-2">
-											{categories.slice(0, 8).map((category: any) => (
-												<Link
-													key={category.id}
-													href={`/categories/${category.slug}`}
-													onClick={() => setOpen(false)}
-													className="flex items-center gap-1 rounded-lg p-1.5 text-xs transition-colors hover:bg-accent sm:gap-2 sm:p-2 sm:text-sm"
-												>
-													<Hash className="h-3 w-3 text-muted-foreground sm:h-4 sm:w-4" />
-													<span className="truncate">{category.name}</span>
-													<span className="ml-auto text-[10px] text-muted-foreground sm:text-xs">
-														{category.pluginCount}
-													</span>
-												</Link>
-											))}
-										</div>
-									</div>
-								)}
-							</div>
-						)}
+					<div className="flex-1 overflow-y-auto p-4">
+						{query.length >= 1 ? renderSearchResults() : renderDefaultContent()}
 					</div>
 				</div>
 			</DialogContent>
 		</Dialog>
 	);
 }
-

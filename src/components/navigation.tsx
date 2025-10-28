@@ -101,6 +101,7 @@ export function Navigation() {
 
 					<div className="flex items-center gap-2 sm:gap-4">
 						<SearchDialog
+							isMobile
 							trigger={
 								<Button
 									variant="ghost"
@@ -239,6 +240,7 @@ export function Navigation() {
 									{/* Поиск */}
 									<div className="border-b p-4">
 										<SearchDialog
+											isMobile
 											className="w-full justify-start"
 											placeholder={t("search_placeholder")}
 										/>
