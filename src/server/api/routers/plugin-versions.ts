@@ -1,12 +1,12 @@
 import crypto from "node:crypto";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
 	createTRPCRouter,
 	protectedProcedure,
 	publicProcedure,
 } from "~/server/api/trpc";
-import { pluginFiles, pluginVersions, plugins, pluginActivities } from "~/server/db/schema";
+import { pluginFiles, pluginVersions, plugins, pluginActivities, pluginDownloads } from "~/server/db/schema";
 import { pluginPipelineChecks } from "~/server/db/schema";
 
 export const pluginVersionsRouter = createTRPCRouter({
@@ -120,6 +120,44 @@ export const pluginVersionsRouter = createTRPCRouter({
 				throw new Error("Version not found");
 			}
 
+			const userId = ctx.session?.user?.id;
+
+			if (userId) {
+				const existingDownload = await ctx.db
+					.select()
+					.from(pluginDownloads)
+					.where(
+						and(
+							eq(pluginDownloads.userId, userId),
+							eq(pluginDownloads.versionId, version[0].id),
+						),
+					)
+					.limit(1);
+
+				if (!existingDownload[0]) {
+					await ctx.db.insert(pluginDownloads).values({
+						pluginId: plugin[0].id,
+						versionId: version[0].id,
+						userId: userId,
+						userAgent: ctx.headers.get("user-agent"),
+					});
+
+					await ctx.db
+						.update(pluginVersions)
+						.set({
+							downloadCount: version[0].downloadCount + 1,
+						})
+						.where(eq(pluginVersions.id, version[0].id));
+
+					await ctx.db
+						.update(plugins)
+						.set({
+							downloadCount: sql`${plugins.downloadCount} + 1`,
+						})
+						.where(eq(plugins.id, plugin[0].id));
+				}
+			}
+
 			const pluginFile = await ctx.db.query.pluginFiles.findFirst({
 				where: eq(pluginFiles.versionId, version[0].id),
 			});
@@ -135,13 +173,6 @@ export const pluginVersionsRouter = createTRPCRouter({
 				)
 				.orderBy(desc(pluginPipelineChecks.createdAt))
 				.limit(1);
-
-			await ctx.db
-				.update(pluginVersions)
-				.set({
-					downloadCount: version[0].downloadCount + 1,
-				})
-				.where(eq(pluginVersions.id, version[0].id));
 
 			const originalExtension = pluginFile?.filename?.endsWith('.plugin') ? '.plugin' : '.py';
 			const fileName = `${input.pluginSlug}-v${input.version}${originalExtension}`;

@@ -126,6 +126,9 @@ export const pluginDownloads = pgTable(
 		pluginId: integer("plugin_id")
 			.notNull()
 			.references(() => plugins.id, { onDelete: "cascade" }),
+		versionId: integer("version_id").references(() => pluginVersions.id, {
+			onDelete: "cascade",
+		}),
 		userId: text("user_id").references(() => users.id),
 		ipHash: text("ip_hash"),
 		userAgent: text("user_agent"),
@@ -136,8 +139,10 @@ export const pluginDownloads = pgTable(
 	(t) => [
 		index("download_plugin_idx").on(t.pluginId),
 		index("download_user_idx").on(t.userId),
+		index("download_version_idx").on(t.versionId),
 		index("download_date_idx").on(t.downloadedAt),
 		index("download_ip_hash_idx").on(t.ipHash),
+		index("download_unique_user_version_idx").on(t.userId, t.versionId),
 	],
 );
 
@@ -386,6 +391,10 @@ export const pluginDownloadsRelations = relations(
 		plugin: one(plugins, {
 			fields: [pluginDownloads.pluginId],
 			references: [plugins.id],
+		}),
+		version: one(pluginVersions, {
+			fields: [pluginDownloads.versionId],
+			references: [pluginVersions.id],
 		}),
 		user: one(users, {
 			fields: [pluginDownloads.userId],

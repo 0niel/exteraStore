@@ -3,6 +3,7 @@
 import {
 	CheckCircle,
 	Download,
+	Edit,
 	Loader2,
 	Star,
 	Trash2,
@@ -14,6 +15,7 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
@@ -23,8 +25,17 @@ import {
 	CardHeader,
 	CardTitle,
 } from "~/components/ui/card";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "~/components/ui/dialog";
 import { EmptyState } from "~/components/ui/empty-state";
 import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { env } from "~/env";
 import { api } from "~/trpc/react";
@@ -42,6 +53,13 @@ export default function AdminPluginsPage() {
 	const [status, setStatus] = useState<"pending" | "approved" | "rejected">(
 		"pending",
 	);
+	const [editDialogOpen, setEditDialogOpen] = useState(false);
+	const [editingPlugin, setEditingPlugin] = useState<{
+		id: number;
+		name: string;
+		downloadCount: number;
+	} | null>(null);
+	const [newDownloadCount, setNewDownloadCount] = useState("");
 
 	const isAdmin =
 		session?.user?.role === "admin" ||
@@ -74,11 +92,48 @@ export default function AdminPluginsPage() {
 	const remove = api.adminPlugins.delete.useMutation({
 		onSuccess: () => refetch(),
 	});
+	const updateDownloads = api.adminPlugins.updateDownloadCount.useMutation({
+		onSuccess: () => {
+			toast.success("Количество скачиваний обновлено");
+			setEditDialogOpen(false);
+			setEditingPlugin(null);
+			setNewDownloadCount("");
+			refetch();
+		},
+		onError: (error) => {
+			toast.error("Ошибка при обновлении", {
+				description: error.message,
+			});
+		},
+	});
 
 	const action = (id: number, type: "approve" | "reject" | "delete") => {
 		if (type === "approve") approve.mutate({ id });
 		if (type === "reject") reject.mutate({ id });
 		if (type === "delete") remove.mutate({ id });
+	};
+
+	const openEditDialog = (plugin: any) => {
+		setEditingPlugin({
+			id: plugin.id,
+			name: plugin.name,
+			downloadCount: plugin.downloadCount,
+		});
+		setNewDownloadCount(String(plugin.downloadCount));
+		setEditDialogOpen(true);
+	};
+
+	const handleUpdateDownloads = () => {
+		if (!editingPlugin) return;
+		const count = Number.parseInt(newDownloadCount);
+		if (Number.isNaN(count) || count < 0) {
+			toast.error("Введите корректное число");
+			return;
+		}
+		updateDownloads.mutate({
+			id: editingPlugin.id,
+			downloadCount: count,
+		});
 	};
 
 	return (
@@ -171,6 +226,14 @@ export default function AdminPluginsPage() {
 														</Button>
 													)}
 													<Button
+														variant="outline"
+														size="sm"
+														onClick={() => openEditDialog(plugin)}
+													>
+														<Edit className="mr-1 h-4 w-4" />
+														Downloads
+													</Button>
+													<Button
 														variant="destructive"
 														size="sm"
 														onClick={() => action(plugin.id, "delete")}
@@ -195,6 +258,56 @@ export default function AdminPluginsPage() {
 						</TabsContent>
 					))}
 				</Tabs>
+
+				<Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+					<DialogContent>
+						<DialogHeader>
+							<DialogTitle>Редактировать количество скачиваний</DialogTitle>
+							<DialogDescription>
+								Изменить количество скачиваний для плагина{" "}
+								{editingPlugin?.name}
+							</DialogDescription>
+						</DialogHeader>
+						<div className="space-y-4 py-4">
+							<div className="space-y-2">
+								<Label htmlFor="downloadCount">Количество скачиваний</Label>
+								<Input
+									id="downloadCount"
+									type="number"
+									min="0"
+									value={newDownloadCount}
+									onChange={(e) => setNewDownloadCount(e.target.value)}
+									placeholder="Введите количество"
+								/>
+								<p className="text-muted-foreground text-xs">
+									Текущее значение: {editingPlugin?.downloadCount}
+								</p>
+							</div>
+						</div>
+						<DialogFooter>
+							<Button
+								variant="outline"
+								onClick={() => setEditDialogOpen(false)}
+								disabled={updateDownloads.isPending}
+							>
+								Отмена
+							</Button>
+							<Button
+								onClick={handleUpdateDownloads}
+								disabled={updateDownloads.isPending}
+							>
+								{updateDownloads.isPending ? (
+									<>
+										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+										Сохранение...
+									</>
+								) : (
+									"Сохранить"
+								)}
+							</Button>
+						</DialogFooter>
+					</DialogContent>
+				</Dialog>
 			</div>
 		</div>
 	);

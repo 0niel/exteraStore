@@ -166,34 +166,41 @@ export const telegramNotificationsRouter = createTRPCRouter({
 				throw new Error("Версия не найдена");
 			}
 
-			const rateLimit = await checkDownloadRateLimit(
-				ctx.db,
-				plugin[0].id,
-				userId,
-				ip,
-			);
+			if (userId && version[0]) {
+				const existingDownload = await ctx.db
+					.select()
+					.from(pluginDownloads)
+					.where(
+						and(
+							eq(pluginDownloads.userId, userId),
+							eq(pluginDownloads.versionId, version[0].id),
+						),
+					)
+					.limit(1);
 
-			if (!rateLimit.limited) {
-				await ctx.db.insert(pluginDownloads).values({
-					pluginId: plugin[0].id,
-					userId,
-					ipHash: hashIp(ip),
-					userAgent: ctx.headers.get("user-agent"),
-				});
+				if (!existingDownload[0]) {
+					await ctx.db.insert(pluginDownloads).values({
+						pluginId: plugin[0].id,
+						versionId: version[0].id,
+						userId,
+						ipHash: hashIp(ip),
+						userAgent: ctx.headers.get("user-agent"),
+					});
 
-				await ctx.db
-					.update(plugins)
-					.set({
-						downloadCount: sql`${plugins.downloadCount} + 1`,
-					})
-					.where(eq(plugins.id, plugin[0].id));
+					await ctx.db
+						.update(plugins)
+						.set({
+							downloadCount: sql`${plugins.downloadCount} + 1`,
+						})
+						.where(eq(plugins.id, plugin[0].id));
 
-				await ctx.db
-					.update(pluginVersions)
-					.set({
-						downloadCount: sql`${pluginVersions.downloadCount} + 1`,
-					})
-					.where(eq(pluginVersions.id, version[0].id));
+					await ctx.db
+						.update(pluginVersions)
+						.set({
+							downloadCount: sql`${pluginVersions.downloadCount} + 1`,
+						})
+						.where(eq(pluginVersions.id, version[0].id));
+				}
 			}
 
 			const fileName = `${input.pluginSlug}-v${version[0].version}.plugin`;
@@ -513,26 +520,42 @@ export const telegramNotificationsRouter = createTRPCRouter({
 						"utf-8",
 					);
 
-					await ctx.db.insert(pluginDownloads).values({
-						pluginId: plugin[0].id,
-						userId: input.userId,
-						ipHash: null,
-						userAgent: `Telegram Bot User ${input.userId}`,
-					});
+					if (input.userId && version_data[0]) {
+						const existingDownload = await ctx.db
+							.select()
+							.from(pluginDownloads)
+							.where(
+								and(
+									eq(pluginDownloads.userId, input.userId),
+									eq(pluginDownloads.versionId, version_data[0].id),
+								),
+							)
+							.limit(1);
 
-					await ctx.db
-						.update(plugins)
-						.set({
-							downloadCount: plugin[0].downloadCount + 1,
-						})
-						.where(eq(plugins.id, plugin[0].id));
+						if (!existingDownload[0]) {
+							await ctx.db.insert(pluginDownloads).values({
+								pluginId: plugin[0].id,
+								versionId: version_data[0].id,
+								userId: input.userId,
+								ipHash: null,
+								userAgent: `Telegram Bot User ${input.userId}`,
+							});
 
-					await ctx.db
-						.update(pluginVersions)
-						.set({
-							downloadCount: version_data[0].downloadCount + 1,
-						})
-						.where(eq(pluginVersions.id, version_data[0].id));
+							await ctx.db
+								.update(plugins)
+								.set({
+									downloadCount: plugin[0].downloadCount + 1,
+								})
+								.where(eq(plugins.id, plugin[0].id));
+
+							await ctx.db
+								.update(pluginVersions)
+								.set({
+									downloadCount: version_data[0].downloadCount + 1,
+								})
+								.where(eq(pluginVersions.id, version_data[0].id));
+						}
+					}
 
 					const updatedPlugin = await ctx.db
 						.select()

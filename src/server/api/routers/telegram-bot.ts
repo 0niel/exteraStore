@@ -1,11 +1,11 @@
-import { eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
 	createTRPCRouter,
 	protectedProcedure,
 	publicProcedure,
 } from "~/server/api/trpc";
-import { pluginDownloads, plugins } from "~/server/db/schema";
+import { pluginDownloads, plugins, pluginVersions } from "~/server/db/schema";
 import {
 	checkDownloadRateLimit,
 	hashIp,
@@ -224,27 +224,55 @@ export const telegramBotRouter = createTRPCRouter({
 				const plugin = result[0];
 
 				if (plugin) {
-					const rateLimit = await checkDownloadRateLimit(
-						ctx.db,
-						pluginId,
-						String(input.userId),
-						null,
-					);
+					const latestVersion = await ctx.db
+						.select()
+						.from(pluginVersions)
+						.where(
+							and(
+								eq(pluginVersions.pluginId, pluginId),
+								eq(pluginVersions.isStable, true),
+							),
+						)
+						.orderBy(desc(pluginVersions.createdAt))
+						.limit(1);
 
-					if (!rateLimit.limited) {
-						await ctx.db.insert(pluginDownloads).values({
-							pluginId: pluginId,
-							userId: String(input.userId),
-							ipHash: null,
-							userAgent: `Telegram Bot User ${input.userId}`,
-						});
+					const userId = String(input.userId);
 
-						await ctx.db
-							.update(plugins)
-							.set({
-								downloadCount: sql`${plugins.downloadCount} + 1`,
-							})
-							.where(eq(plugins.id, pluginId));
+					if (latestVersion[0] && userId) {
+						const existingDownload = await ctx.db
+							.select()
+							.from(pluginDownloads)
+							.where(
+								and(
+									eq(pluginDownloads.userId, userId),
+									eq(pluginDownloads.versionId, latestVersion[0].id),
+								),
+							)
+							.limit(1);
+
+						if (!existingDownload[0]) {
+							await ctx.db.insert(pluginDownloads).values({
+								pluginId: pluginId,
+								versionId: latestVersion[0].id,
+								userId: userId,
+								ipHash: null,
+								userAgent: `Telegram Bot User ${input.userId}`,
+							});
+
+							await ctx.db
+								.update(plugins)
+								.set({
+									downloadCount: sql`${plugins.downloadCount} + 1`,
+								})
+								.where(eq(plugins.id, pluginId));
+
+							await ctx.db
+								.update(pluginVersions)
+								.set({
+									downloadCount: sql`${pluginVersions.downloadCount} + 1`,
+								})
+								.where(eq(pluginVersions.id, latestVersion[0].id));
+						}
 					}
 
 					return {

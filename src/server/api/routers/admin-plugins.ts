@@ -309,4 +309,35 @@ export const adminPluginsRouter = createTRPCRouter({
 
 			return { success: true };
 		}),
+	updateDownloadCount: protectedProcedure
+		.input(
+			z.object({
+				id: z.number(),
+				downloadCount: z.number().min(0),
+			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const isAdmin =
+				ctx.session.user.role === "admin" ||
+				ADMINS.includes(
+					(ctx.session.user.telegramUsername ?? "").toLowerCase(),
+				);
+			if (!isAdmin) throw new Error("Unauthorized");
+
+			const [updatedPlugin] = await ctx.db
+				.update(plugins)
+				.set({
+					downloadCount: input.downloadCount,
+					updatedAt: sql`extract(epoch from now())`,
+				})
+				.where(eq(plugins.id, input.id))
+				.returning();
+
+			if (!updatedPlugin) {
+				throw new Error("Plugin not found");
+			}
+
+			revalidatePath(`/plugins/${updatedPlugin.slug}`);
+			return updatedPlugin;
+		}),
 });
