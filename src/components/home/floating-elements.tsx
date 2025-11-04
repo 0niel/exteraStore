@@ -1,9 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Code, Sparkles, Zap, Shield, Star, Heart } from "lucide-react";
+import { Code, Sparkles, Zap, Shield, Star, Heart, type LucideIcon } from "lucide-react";
 
-const icons = [Code, Sparkles, Zap, Shield, Star, Heart];
+const icons: LucideIcon[] = [Code, Sparkles, Zap, Shield, Star, Heart];
 
 export function FloatingElements() {
 	return (
@@ -14,6 +14,8 @@ export function FloatingElements() {
 				const left = 10 + Math.random() * 80;
 				const delay = Math.random() * 5;
 				const duration = 20 + Math.random() * 10;
+
+				if (!Icon) return null;
 
 				return (
 					<motion.div
