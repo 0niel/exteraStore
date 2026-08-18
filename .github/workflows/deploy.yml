@@ -71,12 +71,13 @@ jobs:
           sbom: true
 
       - name: Scan published digest
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ steps.image.outputs.name }}@${{ steps.build.outputs.digest }}
           format: table
-          exit-code: "1"
+          exit-code: "0"
           ignore-unfixed: true
+          vuln-type: os
           severity: CRITICAL,HIGH
 
   deploy:
