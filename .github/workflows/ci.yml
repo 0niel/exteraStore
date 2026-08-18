@@ -60,6 +60,7 @@ jobs:
         run: pnpm build
         env:
           SKIP_ENV_VALIDATION: "1"
+          DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
 
   docker:
     name: Docker build and image scan
@@ -83,7 +84,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Scan Docker image
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: exterastore-ci:${{ github.sha }}
           format: table
@@ -116,7 +117,7 @@ jobs:
         run: pnpm audit --prod --audit-level high
 
       - name: Scan repository
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
