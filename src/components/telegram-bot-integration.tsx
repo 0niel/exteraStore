@@ -206,7 +206,9 @@ export function TelegramBotIntegration({
 
 export function BotIntegrationStatus({
 	hasIntegration,
-}: { hasIntegration: boolean }) {
+}: {
+	hasIntegration: boolean;
+}) {
 	const t = useTranslations("TelegramBotIntegration");
 	return (
 		<div

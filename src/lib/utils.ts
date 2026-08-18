@@ -5,6 +5,14 @@ export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }
 
+export function safeJsonParse<T>(value: string, fallback: T): T {
+	try {
+		return JSON.parse(value) as T;
+	} catch {
+		return fallback;
+	}
+}
+
 export function formatNumber(num: number): string {
 	if (num >= 1000000) {
 		return `${(num / 1000000).toFixed(1)}M`;
@@ -17,15 +25,15 @@ export function formatNumber(num: number): string {
 
 export function formatDate(date: Date | number | string): string {
 	let validDate: Date;
-	
-	if (typeof date === 'number') {
+
+	if (typeof date === "number") {
 		validDate = new Date(date * 1000);
-	} else if (typeof date === 'string') {
+	} else if (typeof date === "string") {
 		validDate = new Date(date);
 	} else {
 		validDate = date;
 	}
-	
+
 	return new Intl.DateTimeFormat("ru-RU", {
 		year: "numeric",
 		month: "long",
@@ -34,9 +42,9 @@ export function formatDate(date: Date | number | string): string {
 }
 
 export function createValidDate(dateInput: Date | number | string): Date {
-	if (typeof dateInput === 'number') {
+	if (typeof dateInput === "number") {
 		return new Date(dateInput * 1000);
-	} else if (typeof dateInput === 'string') {
+	} else if (typeof dateInput === "string") {
 		return new Date(dateInput);
 	} else {
 		return dateInput;
@@ -120,4 +128,13 @@ export function formatBytes(bytes: number): string {
 	const i = Math.floor(Math.log(bytes) / Math.log(k));
 
 	return `${Number.parseFloat((bytes / k ** i).toFixed(2))} ${sizes[i]}`;
+}
+
+export function escapeHtml(unsafe: string): string {
+	return unsafe
+		.replace(/&/g, "&amp;")
+		.replace(/</g, "&lt;")
+		.replace(/>/g, "&gt;")
+		.replace(/"/g, "&quot;")
+		.replace(/'/g, "&#039;");
 }

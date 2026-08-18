@@ -1,6 +1,7 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { env } from "~/env";
+import { escapeHtml } from "~/lib/utils";
 import {
 	createTRPCRouter,
 	protectedProcedure,
@@ -9,16 +10,18 @@ import {
 import {
 	notifications,
 	pluginDownloads,
-	pluginVersions,
 	plugins,
-	userNotificationSettings,
+	pluginVersions,
 	userPluginSubscriptions,
 	users,
 } from "~/server/db/schema";
+import { checkDownloadRateLimit, hashIp } from "~/server/lib/rate-limiter";
 import {
-	checkDownloadRateLimit,
-	hashIp,
-} from "~/server/lib/rate-limiter";
+	sendTelegramDocument,
+	sendTelegramMessage,
+	setTelegramWebhook,
+	type TelegramMessageOptions,
+} from "~/server/lib/telegram-client";
 
 const ADMINS = (env.INITIAL_ADMINS ?? "i_am_oniel")
 	.split(",")
@@ -26,44 +29,12 @@ const ADMINS = (env.INITIAL_ADMINS ?? "i_am_oniel")
 	.filter(Boolean);
 
 class TelegramBot {
-	private static readonly BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-	private static readonly API_URL =
-		`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
-
 	static async sendMessage(
 		chatId: string,
 		text: string,
-		options?: {
-			parse_mode?: "HTML" | "Markdown";
-			reply_markup?: any;
-		},
+		options?: TelegramMessageOptions,
 	) {
-		if (!TelegramBot.BOT_TOKEN) {
-			throw new Error("Telegram bot token not configured");
-		}
-
-		try {
-			const response = await fetch(`${TelegramBot.API_URL}/sendMessage`, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify({
-					chat_id: chatId,
-					text,
-					...options,
-				}),
-			});
-
-			if (!response.ok) {
-				throw new Error(`Telegram API error: ${response.statusText}`);
-			}
-
-			return await response.json();
-		} catch (error) {
-			console.error("Failed to send Telegram message:", error);
-			throw error;
-		}
+		return sendTelegramMessage(chatId, text, options);
 	}
 
 	static async sendDocument(
@@ -72,36 +43,11 @@ class TelegramBot {
 		filename: string,
 		caption?: string,
 	) {
-		if (!TelegramBot.BOT_TOKEN) {
-			throw new Error("Telegram bot token not configured");
-		}
-
-		try {
-			const formData = new FormData();
-			formData.append("chat_id", chatId);
-			formData.append("document", new Blob([document]), filename);
-			if (caption) {
-				formData.append("caption", caption);
-			}
-
-			const response = await fetch(`${TelegramBot.API_URL}/sendDocument`, {
-				method: "POST",
-				body: formData,
-			});
-
-			if (!response.ok) {
-				throw new Error(`Telegram API error: ${response.statusText}`);
-			}
-
-			return await response.json();
-		} catch (error) {
-			console.error("Failed to send Telegram document:", error);
-			throw error;
-		}
+		return sendTelegramDocument(chatId, document, filename, caption);
 	}
 
 	static createDeepLink(pluginSlug: string, version?: string): string {
-		const botUsername = process.env.TELEGRAM_BOT_USERNAME;
+		const botUsername = env.TELEGRAM_BOT_USERNAME;
 		if (!botUsername) {
 			throw new Error("Telegram bot username not configured");
 		}
@@ -114,7 +60,7 @@ class TelegramBot {
 }
 
 export const telegramNotificationsRouter = createTRPCRouter({
-	sendPlugin: publicProcedure
+	sendPlugin: protectedProcedure
 		.input(
 			z.object({
 				pluginSlug: z.string(),
@@ -123,20 +69,44 @@ export const telegramNotificationsRouter = createTRPCRouter({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const ip = ctx.headers.get("x-forwarded-for");
-			const userId = ctx.session?.user.id;
+			const ip =
+				ctx.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+				ctx.headers.get("x-real-ip");
+			const userId = ctx.session.user.id;
+
+			if (
+				ctx.session.user.role !== "admin" &&
+				input.chatId !== ctx.session.user.telegramId
+			) {
+				throw new Error("Недостаточно прав");
+			}
 
 			const plugin = await ctx.db
 				.select()
 				.from(plugins)
-				.where(eq(plugins.slug, input.pluginSlug))
+				.where(
+					and(
+						eq(plugins.slug, input.pluginSlug),
+						eq(plugins.status, "approved"),
+					),
+				)
 				.limit(1);
 
 			if (!plugin[0]) {
 				throw new Error("Плагин не найден");
 			}
 
-			let version;
+			const rateLimit = await checkDownloadRateLimit(
+				ctx.db,
+				plugin[0].id,
+				userId,
+				ip,
+			);
+			if (rateLimit.limited) {
+				throw new Error(rateLimit.reason);
+			}
+
+			let version: (typeof pluginVersions.$inferSelect)[];
 			if (input.version) {
 				version = await ctx.db
 					.select()
@@ -166,46 +136,9 @@ export const telegramNotificationsRouter = createTRPCRouter({
 				throw new Error("Версия не найдена");
 			}
 
-			if (userId && version[0]) {
-				const existingDownload = await ctx.db
-					.select()
-					.from(pluginDownloads)
-					.where(
-						and(
-							eq(pluginDownloads.userId, userId),
-							eq(pluginDownloads.versionId, version[0].id),
-						),
-					)
-					.limit(1);
-
-				if (!existingDownload[0]) {
-					await ctx.db.insert(pluginDownloads).values({
-						pluginId: plugin[0].id,
-						versionId: version[0].id,
-						userId,
-						ipHash: hashIp(ip),
-						userAgent: ctx.headers.get("user-agent"),
-					});
-
-					await ctx.db
-						.update(plugins)
-						.set({
-							downloadCount: sql`${plugins.downloadCount} + 1`,
-						})
-						.where(eq(plugins.id, plugin[0].id));
-
-					await ctx.db
-						.update(pluginVersions)
-						.set({
-							downloadCount: sql`${pluginVersions.downloadCount} + 1`,
-						})
-						.where(eq(pluginVersions.id, version[0].id));
-				}
-			}
-
 			const fileName = `${input.pluginSlug}-v${version[0].version}.plugin`;
 			const fileContent = Buffer.from(version[0].fileContent, "utf-8");
-			const caption = `Плагин ${plugin[0].name} версии ${version[0].version}`;
+			const caption = `Плагин ${escapeHtml(plugin[0].name)} версии ${escapeHtml(version[0].version)}`;
 
 			await TelegramBot.sendDocument(
 				input.chatId,
@@ -213,6 +146,38 @@ export const telegramNotificationsRouter = createTRPCRouter({
 				fileName,
 				caption,
 			);
+
+			const existingDownload = await ctx.db
+				.select({ id: pluginDownloads.id })
+				.from(pluginDownloads)
+				.where(
+					and(
+						eq(pluginDownloads.userId, userId),
+						eq(pluginDownloads.versionId, version[0].id),
+					),
+				)
+				.limit(1);
+
+			await ctx.db.insert(pluginDownloads).values({
+				pluginId: plugin[0].id,
+				versionId: version[0].id,
+				userId,
+				ipHash: hashIp(ip),
+				userAgent: ctx.headers.get("user-agent"),
+			});
+
+			if (!existingDownload[0]) {
+				await ctx.db
+					.update(plugins)
+					.set({ downloadCount: sql`${plugins.downloadCount} + 1` })
+					.where(eq(plugins.id, plugin[0].id));
+				await ctx.db
+					.update(pluginVersions)
+					.set({
+						downloadCount: sql`${pluginVersions.downloadCount} + 1`,
+					})
+					.where(eq(pluginVersions.id, version[0].id));
+			}
 
 			return { success: true };
 		}),
@@ -224,11 +189,16 @@ export const telegramNotificationsRouter = createTRPCRouter({
 				version: z.string().optional(),
 			}),
 		)
-		.mutation(async ({ ctx, input }) => {
+		.query(async ({ ctx, input }) => {
 			const plugin = await ctx.db
 				.select({ id: plugins.id })
 				.from(plugins)
-				.where(eq(plugins.slug, input.pluginSlug))
+				.where(
+					and(
+						eq(plugins.slug, input.pluginSlug),
+						eq(plugins.status, "approved"),
+					),
+				)
 				.limit(1);
 
 			if (!plugin[0]) {
@@ -239,13 +209,6 @@ export const telegramNotificationsRouter = createTRPCRouter({
 				input.pluginSlug,
 				input.version,
 			);
-
-			await ctx.db
-				.update(plugins)
-				.set({
-					telegramBotDeeplink: deepLink,
-				})
-				.where(eq(plugins.id, plugin[0].id));
 
 			return { deepLink };
 		}),
@@ -299,18 +262,21 @@ export const telegramNotificationsRouter = createTRPCRouter({
 
 			for (const subscriber of subscribers) {
 				try {
-					const chatId = subscriber.telegramChatId ?? subscriber.user.telegramId;
+					const chatId =
+						subscriber.telegramChatId ?? subscriber.user.telegramId;
 					if (chatId) {
+						const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+						const pluginUrl = `${baseUrl}/plugins/${plugin[0].slug}`;
 						const message = `🎉 Обновление плагина!\n\n🔌 *${plugin[0].name}* v${input.newVersion} теперь доступен.\n\nНажмите, чтобы посмотреть детали.`;
 
-                        await TelegramBot.sendMessage(chatId, message, {
+						await TelegramBot.sendMessage(chatId, message, {
 							parse_mode: "Markdown",
 							reply_markup: {
 								inline_keyboard: [
 									[
 										{
-                                            text: "👀 Посмотреть",
-                                            callback_data: `plugin_${plugin[0].id}`,
+											text: "👀 Посмотреть",
+											url: pluginUrl,
 										},
 									],
 								],
@@ -390,19 +356,24 @@ export const telegramNotificationsRouter = createTRPCRouter({
 	markAsRead: protectedProcedure
 		.input(
 			z.object({
-				notificationIds: z.array(z.number()),
+				notificationIds: z.array(z.number()).min(1).max(100),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
 			await ctx.db
 				.update(notifications)
 				.set({ isRead: true })
-				.where(and(eq(notifications.userId, ctx.session.user.id)));
+				.where(
+					and(
+						eq(notifications.userId, ctx.session.user.id),
+						inArray(notifications.id, input.notificationIds),
+					),
+				);
 
 			return { success: true };
 		}),
 
-	handleBotCommand: publicProcedure
+	handleBotCommand: protectedProcedure
 		.input(
 			z.object({
 				chatId: z.string(),
@@ -412,11 +383,23 @@ export const telegramNotificationsRouter = createTRPCRouter({
 		)
 		.mutation(async ({ ctx, input }) => {
 			try {
+				const isAdmin =
+					ctx.session.user.role === "admin" ||
+					ADMINS.includes(
+						(ctx.session.user.telegramUsername ?? "").toLowerCase(),
+					);
+				if (!isAdmin) {
+					throw new Error("Unauthorized");
+				}
+
 				if (input.command.startsWith("setadmin")) {
 					const parts = input.command.split(" ");
 					const targetUsername = parts[1]?.replace("@", "").toLowerCase();
 					if (!targetUsername) {
-						await TelegramBot.sendMessage(input.chatId, "❌ Требуется имя пользователя");
+						await TelegramBot.sendMessage(
+							input.chatId,
+							"❌ Требуется имя пользователя",
+						);
 						return { success: false };
 					}
 
@@ -428,7 +411,6 @@ export const telegramNotificationsRouter = createTRPCRouter({
 								.limit(1)
 						: [];
 
-					const requesterUsername = requester[0]?.username?.toLowerCase() ?? "";
 					const requesterIsAdmin =
 						requester[0]?.role === "admin" ||
 						(requester[0]?.username &&
@@ -465,7 +447,9 @@ export const telegramNotificationsRouter = createTRPCRouter({
 					const plugin = await ctx.db
 						.select()
 						.from(plugins)
-						.where(eq(plugins.slug, pluginSlug))
+						.where(
+							and(eq(plugins.slug, pluginSlug), eq(plugins.status, "approved")),
+						)
 						.limit(1);
 
 					if (!plugin[0]) {
@@ -480,11 +464,14 @@ export const telegramNotificationsRouter = createTRPCRouter({
 					);
 
 					if (rateLimit.limited) {
-						await TelegramBot.sendMessage(input.chatId, `❌ ${rateLimit.reason}`);
+						await TelegramBot.sendMessage(
+							input.chatId,
+							`❌ ${rateLimit.reason}`,
+						);
 						return { success: false };
 					}
 
-					let version_data;
+					let version_data: (typeof pluginVersions.$inferSelect)[];
 					if (versionStr) {
 						version_data = await ctx.db
 							.select()
@@ -515,10 +502,26 @@ export const telegramNotificationsRouter = createTRPCRouter({
 					}
 
 					const fileName = `${pluginSlug}-v${version_data[0].version}.plugin`;
-					const fileContent = Buffer.from(
-						version_data[0].fileContent,
-						"utf-8",
-					);
+					const fileContent = Buffer.from(version_data[0].fileContent, "utf-8");
+
+					if (input.userId) {
+						const user = await ctx.db
+							.select({
+								isBanned: users.isBanned,
+								bannedReason: users.bannedReason,
+							})
+							.from(users)
+							.where(eq(users.id, input.userId))
+							.limit(1);
+
+						if (user[0]?.isBanned) {
+							await TelegramBot.sendMessage(
+								input.chatId,
+								`❌ ${user[0].bannedReason || "Your account has been banned"}`,
+							);
+							return { success: false, action: "user_banned" };
+						}
+					}
 
 					if (input.userId && version_data[0]) {
 						const existingDownload = await ctx.db
@@ -563,10 +566,18 @@ export const telegramNotificationsRouter = createTRPCRouter({
 						.where(eq(plugins.id, plugin[0].id))
 						.limit(1);
 
+					const safeName = escapeHtml(updatedPlugin[0]?.name || "");
+					const safeDesc = escapeHtml(
+						updatedPlugin[0]?.shortDescription ||
+							updatedPlugin[0]?.description.substring(0, 100) ||
+							"",
+					);
+					const safeAuthor = escapeHtml(updatedPlugin[0]?.author || "");
+
 					const caption =
-						`🔌 <b>${updatedPlugin[0]?.name}</b> v${version_data[0].version}\n\n` +
-						`📝 ${updatedPlugin[0]?.shortDescription || updatedPlugin[0]?.description.substring(0, 100)}...\n\n` +
-						`👤 Автор: ${updatedPlugin[0]?.author}\n📊 Рейтинг: ${updatedPlugin[0]?.rating.toFixed(1)}/5 (${updatedPlugin[0]?.ratingCount} отзывов)\n⬇️ Скачиваний: ${updatedPlugin[0]?.downloadCount}\n\nУстановите этот плагин в exteraGram!`;
+						`🔌 <b>${safeName}</b> v${version_data[0].version}\n\n` +
+						`📝 ${safeDesc}...\n\n` +
+						`👤 Автор: ${safeAuthor}\n📊 Рейтинг: ${updatedPlugin[0]?.rating.toFixed(1)}/5 (${updatedPlugin[0]?.ratingCount} отзывов)\n⬇️ Скачиваний: ${updatedPlugin[0]?.downloadCount}\n\nУстановите этот плагин в exteraGram!`;
 
 					await TelegramBot.sendDocument(
 						input.chatId,
@@ -597,12 +608,15 @@ export const telegramNotificationsRouter = createTRPCRouter({
 	broadcast: protectedProcedure
 		.input(
 			z.object({
-				message: z.string().min(1),
+				message: z.string().min(1).max(4096),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const isAdmin = ctx.session.user.role === "admin" || 
-				ADMINS.includes(ctx.session.user.name?.toLowerCase() ?? "");
+			const isAdmin =
+				ctx.session.user.role === "admin" ||
+				ADMINS.includes(
+					(ctx.session.user.telegramUsername ?? "").toLowerCase(),
+				);
 
 			if (!isAdmin) {
 				throw new Error("Unauthorized");
@@ -629,7 +643,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 					results.failed++;
 				}
 
-				await new Promise(resolve => setTimeout(resolve, 100));
+				await new Promise((resolve) => setTimeout(resolve, 100));
 			}
 
 			return results;
@@ -639,12 +653,15 @@ export const telegramNotificationsRouter = createTRPCRouter({
 		.input(
 			z.object({
 				username: z.string().min(1),
-				message: z.string().min(1),
+				message: z.string().min(1).max(4096),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const isAdmin = ctx.session.user.role === "admin" || 
-				ADMINS.includes(ctx.session.user.name?.toLowerCase() ?? "");
+			const isAdmin =
+				ctx.session.user.role === "admin" ||
+				ADMINS.includes(
+					(ctx.session.user.telegramUsername ?? "").toLowerCase(),
+				);
 
 			if (!isAdmin) {
 				throw new Error("Unauthorized");
@@ -672,12 +689,15 @@ export const telegramNotificationsRouter = createTRPCRouter({
 		.input(
 			z.object({
 				chatId: z.string(),
-				message: z.string().min(1),
+				message: z.string().min(1).max(4096),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const isAdmin = ctx.session.user.role === "admin" || 
-				ADMINS.includes(ctx.session.user.name?.toLowerCase() ?? "");
+			const isAdmin =
+				ctx.session.user.role === "admin" ||
+				ADMINS.includes(
+					(ctx.session.user.telegramUsername ?? "").toLowerCase(),
+				);
 
 			if (!isAdmin) {
 				throw new Error("Unauthorized");
@@ -695,35 +715,20 @@ export const telegramNotificationsRouter = createTRPCRouter({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const isAdmin = ctx.session.user.role === "admin" || 
-				ADMINS.includes(ctx.session.user.name?.toLowerCase() ?? "");
+			const isAdmin =
+				ctx.session.user.role === "admin" ||
+				ADMINS.includes(
+					(ctx.session.user.telegramUsername ?? "").toLowerCase(),
+				);
 
 			if (!isAdmin) {
 				throw new Error("Unauthorized");
 			}
 
-			if (!process.env.TELEGRAM_BOT_TOKEN) {
+			if (!env.TELEGRAM_BOT_TOKEN) {
 				throw new Error("Telegram bot token not configured");
 			}
-
-			const response = await fetch(
-				`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/setWebhook`,
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						url: input.url,
-					}),
-				},
-			);
-
-			if (!response.ok) {
-				throw new Error(`Failed to set webhook: ${response.statusText}`);
-			}
-
-			const data = await response.json();
+			const data = await setTelegramWebhook(input.url);
 			return { success: true, data };
 		}),
 });

@@ -1,18 +1,17 @@
 import "~/styles/globals.css";
 
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
+import { cookies, headers } from "next/headers";
 import { SessionProvider } from "next-auth/react";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages } from "next-intl/server";
 import { ThemeProvider } from "next-themes";
-import { Inter } from "next/font/google";
-import { cookies, headers } from "next/headers";
-import { type Locale, locales } from "~/lib/i18n-config";
-
-import { Navigation } from "~/components/navigation";
 import { Footer } from "~/components/footer";
-import { Toaster } from "~/components/ui/sonner";
+import { Navigation } from "~/components/navigation";
 import { TelegramWebAppAuth } from "~/components/telegram-web-app-auth";
+import { Toaster } from "~/components/ui/sonner";
+import { type Locale, locales } from "~/lib/i18n-config";
 import { auth } from "~/server/auth";
 import { TRPCReactProvider } from "~/trpc/react";
 
@@ -45,6 +44,17 @@ export const metadata: Metadata = {
 		locale: "en_US",
 		alternateLocale: "ru_RU",
 	},
+};
+
+export const viewport: Viewport = {
+	width: "device-width",
+	initialScale: 1,
+	viewportFit: "cover",
+	userScalable: true,
+	themeColor: [
+		{ media: "(prefers-color-scheme: light)", color: "#ffffff" },
+		{ media: "(prefers-color-scheme: dark)", color: "#171717" },
+	],
 };
 
 async function getServerLocale(): Promise<Locale> {
@@ -85,15 +95,17 @@ export default async function RootLayout({
 	const locale = await getServerLocale();
 
 	return (
-		<html lang={locale} className={`${inter.variable}`}>
+		<html lang={locale} className={inter.variable} suppressHydrationWarning>
 			<head>
-				<meta
-					name="viewport"
-					content="width=device-width, initial-scale=1.0, maximum-scale=1.0"
-				/>
 				<script src="https://telegram.org/js/telegram-web-app.js" async />
 			</head>
 			<body className="overflow-x-hidden bg-background font-sans antialiased">
+				<a
+					href="#main-content"
+					className="fixed top-[max(.5rem,env(safe-area-inset-top))] left-2 z-100 -translate-y-24 rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground shadow-lg transition-transform focus:translate-y-0"
+				>
+					Перейти к содержимому
+				</a>
 				<NextIntlClientProvider messages={messages}>
 					<SessionProvider session={session}>
 						<TRPCReactProvider>
@@ -104,9 +116,13 @@ export default async function RootLayout({
 								disableTransitionOnChange
 							>
 								<TelegramWebAppAuth />
-								<div className="min-h-screen flex flex-col overflow-hidden">
+								<div className="flex min-h-dvh flex-col overflow-x-hidden">
 									<Navigation />
-									<main className="w-full max-w-full overflow-x-hidden flex-1">
+									<main
+										id="main-content"
+										tabIndex={-1}
+										className="w-full max-w-full flex-1 overflow-x-hidden focus:outline-none"
+									>
 										{children}
 									</main>
 									<Footer />

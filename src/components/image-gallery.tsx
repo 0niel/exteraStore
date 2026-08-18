@@ -52,9 +52,11 @@ export function ImageGallery({
 		<>
 			<div className={`space-y-4 ${className}`}>
 				<div className="group relative overflow-hidden rounded-xl border">
-					<div
-						className="relative aspect-video cursor-pointer"
+					<button
+						type="button"
+						className="relative block aspect-video w-full cursor-pointer text-left"
 						onClick={() => openModal(selectedImage)}
+						aria-label={`Открыть изображение ${selectedImage + 1}`}
 					>
 						<Image
 							src={images[selectedImage] ?? images[0] ?? ""}
@@ -95,7 +97,7 @@ export function ImageGallery({
 								)}
 							</div>
 						)}
-					</div>
+					</button>
 				</div>
 
 				{images.length > 1 && (
@@ -103,8 +105,9 @@ export function ImageGallery({
 						{images.map((image, index) => (
 							<button
 								key={index}
+								type="button"
 								onClick={() => setSelectedImage(index)}
-								className={`relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg border-2 transition-all duration-200 ${
+								className={`relative h-16 w-24 shrink-0 overflow-hidden rounded-lg border-2 transition-all duration-200 ${
 									selectedImage === index
 										? "border-primary ring-2 ring-primary/20"
 										: "border-muted hover:border-muted-foreground"
@@ -147,7 +150,7 @@ export function ImageGallery({
 							<Button
 								variant="ghost"
 								size="icon"
-								className="-translate-y-1/2 absolute top-1/2 left-4 z-10 h-12 w-12 rounded-full bg-black/50 text-white hover:bg-black/70"
+								className="absolute top-1/2 left-4 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-black/50 text-white hover:bg-black/70"
 								onClick={prevImage}
 							>
 								<ChevronLeft className="h-6 w-6" />
@@ -170,14 +173,14 @@ export function ImageGallery({
 							<Button
 								variant="ghost"
 								size="icon"
-								className="-translate-y-1/2 absolute top-1/2 right-4 z-10 h-12 w-12 rounded-full bg-black/50 text-white hover:bg-black/70"
+								className="absolute top-1/2 right-4 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-black/50 text-white hover:bg-black/70"
 								onClick={nextImage}
 							>
 								<ChevronRight className="h-6 w-6" />
 							</Button>
 						)}
 
-						<div className="-translate-x-1/2 absolute bottom-4 left-1/2">
+						<div className="absolute bottom-4 left-1/2 -translate-x-1/2">
 							<div className="rounded-full bg-black/60 px-4 py-2 text-white backdrop-blur-sm">
 								<span className="text-sm">
 									{selectedImage + 1} из {images.length}

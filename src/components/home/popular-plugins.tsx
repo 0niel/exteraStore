@@ -1,10 +1,10 @@
 "use client";
 
-import { useTranslations } from "next-intl";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
-import { type plugins } from "~/server/db/schema";
+import type { plugins } from "~/server/db/schema";
 import { api } from "~/trpc/react";
 import { PluginCard } from "../plugin-card";
 
@@ -19,7 +19,7 @@ export function PopularPlugins() {
 	return (
 		<section className="container mx-auto px-4 py-12 md:px-6 lg:py-16">
 			<div className="mb-8 flex items-center justify-between">
-				<h2 className="text-2xl font-bold tracking-tight md:text-3xl">
+				<h2 className="font-bold text-2xl tracking-tight md:text-3xl">
 					{t("popularPlugins")}
 				</h2>
 				<Link href="/plugins?sortBy=downloads">

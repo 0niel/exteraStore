@@ -8,10 +8,10 @@ import {
 	Settings,
 	Users,
 } from "lucide-react";
-import { useSession } from "next-auth/react";
-import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import { Button } from "~/components/ui/button";
 import { env } from "~/env";
 
@@ -22,7 +22,9 @@ const ADMINS = (env.NEXT_PUBLIC_INITIAL_ADMINS ?? "i_am_oniel")
 
 export default function AdminLayout({
 	children,
-}: { children: React.ReactNode }) {
+}: {
+	children: React.ReactNode;
+}) {
 	const { data: session } = useSession();
 	const pathname = usePathname();
 	const t = useTranslations("AdminLayout");
@@ -44,6 +46,12 @@ export default function AdminLayout({
 			active: pathname === "/admin/plugins",
 		},
 		{
+			href: "/admin/users",
+			label: "Пользователи",
+			icon: <Users className="mr-2 h-4 w-4" />,
+			active: pathname === "/admin/users",
+		},
+		{
 			href: "/admin/categories",
 			label: t("categories"),
 			icon: <Layers className="mr-2 h-4 w-4" />,
@@ -55,7 +63,6 @@ export default function AdminLayout({
 			icon: <Bot className="mr-2 h-4 w-4" />,
 			active: pathname === "/admin/bot",
 		},
-		// Можно добавить другие разделы админки
 	];
 
 	return (

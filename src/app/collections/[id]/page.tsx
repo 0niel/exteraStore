@@ -1,6 +1,13 @@
 "use client";
 
-import { Sparkles, Calendar, ArrowLeft, Star, Download, User } from "lucide-react";
+import {
+	ArrowLeft,
+	Calendar,
+	Download,
+	Sparkles,
+	Star,
+	User,
+} from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
@@ -65,15 +72,18 @@ function CollectionSkeleton() {
 export default function CollectionDetailPage() {
 	const params = useParams();
 	const router = useRouter();
-	const collectionId = parseInt(params.id as string);
+	const collectionId = Number.parseInt(params.id as string);
 
-	const { data: collections, isLoading } = api.aiCollections.getAICollections.useQuery({ limit: 20 });
-	
+	const { data: collections, isLoading } =
+		api.aiCollections.getAICollections.useQuery({ limit: 20 });
+
 	const collection = collections?.find((c: any) => c.id === collectionId);
 	const plugins = collection?.plugins || [];
 
-	const gradientColor = collectionColors[collection?.name as keyof typeof collectionColors] || "";
-	const emoji = collectionIcons[collection?.name as keyof typeof collectionIcons] || "🔮";
+	const gradientColor =
+		collectionColors[collection?.name as keyof typeof collectionColors] || "";
+	const emoji =
+		collectionIcons[collection?.name as keyof typeof collectionIcons] || "🔮";
 
 	if (isLoading) {
 		return (
@@ -142,12 +152,15 @@ export default function CollectionDetailPage() {
 					<div className="relative overflow-hidden rounded-2xl">
 						<div className={cn("h-48 bg-gradient-to-br", gradientColor)}>
 							<div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-							<div className="absolute bottom-6 left-6 right-6 text-white">
+							<div className="absolute right-6 bottom-6 left-6 text-white">
 								<div className="mb-3 flex items-center gap-3">
-									<div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm text-2xl">
+									<div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 text-2xl backdrop-blur-sm">
 										{emoji}
 									</div>
-									<Badge variant="secondary" className="bg-white/20 text-white backdrop-blur-sm">
+									<Badge
+										variant="secondary"
+										className="bg-white/20 text-white backdrop-blur-sm"
+									>
 										ИИ подборка
 									</Badge>
 								</div>
@@ -173,14 +186,23 @@ export default function CollectionDetailPage() {
 						<div className="text-center">
 							<div className="flex items-center justify-center gap-1 font-bold text-lg text-primary">
 								<Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-								{plugins.length > 0 ? (plugins.reduce((acc: number, p: any) => acc + p.rating, 0) / plugins.length).toFixed(1) : "0.0"}
+								{plugins.length > 0
+									? (
+											plugins.reduce(
+												(acc: number, p: any) => acc + p.rating,
+												0,
+											) / plugins.length
+										).toFixed(1)
+									: "0.0"}
 							</div>
-							<div className="text-muted-foreground text-xs">Средний рейтинг</div>
+							<div className="text-muted-foreground text-xs">
+								Средний рейтинг
+							</div>
 						</div>
 						<div className="text-center">
 							<div className="flex items-center justify-center gap-1 font-bold text-lg text-primary">
 								<Calendar className="h-4 w-4" />
-								{formatDate(collection.generatedAt).split(' ')[0]}
+								{formatDate(collection.generatedAt).split(" ")[0]}
 							</div>
 							<div className="text-muted-foreground text-xs">Создана</div>
 						</div>
@@ -192,7 +214,12 @@ export default function CollectionDetailPage() {
 					<div className="flex items-center justify-between">
 						<h2 className="font-bold text-2xl">Плагины в подборке</h2>
 						<Badge variant="outline" className="text-sm">
-							{plugins.length} {plugins.length === 1 ? "плагин" : plugins.length < 5 ? "плагина" : "плагинов"}
+							{plugins.length}{" "}
+							{plugins.length === 1
+								? "плагин"
+								: plugins.length < 5
+									? "плагина"
+									: "плагинов"}
 						</Badge>
 					</div>
 
@@ -223,11 +250,14 @@ export default function CollectionDetailPage() {
 								🤖
 							</div>
 							<div>
-								<h3 className="mb-2 font-bold text-lg">Создано искусственным интеллектом</h3>
+								<h3 className="mb-2 font-bold text-lg">
+									Создано искусственным интеллектом
+								</h3>
 								<p className="mb-4 text-muted-foreground">
-									Эта подборка была автоматически создана нашим ИИ на основе анализа рейтингов, 
-									отзывов пользователей и популярности плагинов. Подборки обновляются еженедельно, 
-									чтобы всегда предлагать самые актуальные и качественные решения.
+									Эта подборка была автоматически создана нашим ИИ на основе
+									анализа рейтингов, отзывов пользователей и популярности
+									плагинов. Подборки обновляются еженедельно, чтобы всегда
+									предлагать самые актуальные и качественные решения.
 								</p>
 								<div className="flex flex-wrap gap-2">
 									<Badge variant="secondary">Анализ рейтингов</Badge>

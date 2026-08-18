@@ -12,11 +12,13 @@ import {
 	Trash2,
 	User,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { DonationRequisitesEditor } from "@/components/donations/donation-requisites-editor";
+import { DonationWidget } from "@/components/donations/donation-widget";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -50,6 +52,7 @@ export default function ProfilePage() {
 		bio: "",
 		website: "",
 		links: [] as CustomLink[],
+		donationRequisites: [] as any[],
 	});
 
 	const { data: userProfile, isLoading } = api.users.getProfile.useQuery(
@@ -74,11 +77,15 @@ export default function ProfilePage() {
 			const parsedLinks = userProfile.links
 				? JSON.parse(userProfile.links)
 				: [];
+			const parsedDonations = userProfile.donationRequisites
+				? JSON.parse(userProfile.donationRequisites)
+				: [];
 			setFormData({
 				name: userProfile.name || "",
 				bio: userProfile.bio || "",
 				website: userProfile.website || "",
 				links: parsedLinks,
+				donationRequisites: parsedDonations,
 			});
 		}
 	}, [userProfile]);
@@ -108,6 +115,7 @@ export default function ProfilePage() {
 		const dataToSend = {
 			...formData,
 			links: JSON.stringify(formData.links),
+			donationRequisites: JSON.stringify(formData.donationRequisites),
 		};
 		updateProfileMutation.mutate(dataToSend);
 	};
@@ -117,11 +125,15 @@ export default function ProfilePage() {
 			const parsedLinks = userProfile.links
 				? JSON.parse(userProfile.links)
 				: [];
+			const parsedDonations = userProfile.donationRequisites
+				? JSON.parse(userProfile.donationRequisites)
+				: [];
 			setFormData({
 				name: userProfile.name || "",
 				bio: userProfile.bio || "",
 				website: userProfile.website || "",
 				links: parsedLinks,
+				donationRequisites: parsedDonations,
 			});
 		}
 		setIsEditing(false);
@@ -148,6 +160,9 @@ export default function ProfilePage() {
 	};
 
 	const userLinks = userProfile?.links ? JSON.parse(userProfile.links) : [];
+	const userDonations = userProfile?.donationRequisites
+		? JSON.parse(userProfile.donationRequisites)
+		: [];
 
 	return (
 		<div className="bg-background py-8">
@@ -361,6 +376,25 @@ export default function ProfilePage() {
 														</a>
 													</Button>
 												))}
+											</div>
+										) : (
+											<p className="mt-1 text-muted-foreground text-sm">
+												{t("not_specified")}
+											</p>
+										)}
+									</div>
+
+									<div>
+										{isEditing ? (
+											<DonationRequisitesEditor
+												value={formData.donationRequisites as any}
+												onChange={(next) =>
+													setFormData({ ...formData, donationRequisites: next })
+												}
+											/>
+										) : userDonations.length > 0 ? (
+											<div className="mt-2">
+												<DonationWidget methods={userDonations} />
 											</div>
 										) : (
 											<p className="mt-1 text-muted-foreground text-sm">

@@ -8,14 +8,18 @@ import {
 	publicProcedure,
 } from "~/server/api/trpc";
 import {
+	notifications,
+	pluginActivities,
 	pluginCategories,
 	pluginDownloads,
+	pluginPipelineChecks,
 	pluginReviews,
 	plugins,
+	userPluginSubscriptions,
 	users,
-	pluginPipelineChecks,
-	pluginActivities,
 } from "~/server/db/schema";
+import { verifyCaptcha } from "~/server/lib/captcha";
+import { checkDownloadRateLimit, hashIp } from "~/server/lib/rate-limiter";
 
 export const pluginsRouter = createTRPCRouter({
 	getAll: publicProcedure
@@ -79,8 +83,8 @@ export const pluginsRouter = createTRPCRouter({
 						.where(
 							and(
 								eq(pluginPipelineChecks.pluginId, plugin.id),
-								eq(pluginPipelineChecks.checkType, "security")
-							)
+								eq(pluginPipelineChecks.checkType, "security"),
+							),
 						)
 						.orderBy(desc(pluginPipelineChecks.createdAt))
 						.limit(1);
@@ -89,7 +93,7 @@ export const pluginsRouter = createTRPCRouter({
 						...plugin,
 						latestSecurityCheck: latestSecurityCheck[0] || null,
 					};
-				})
+				}),
 			);
 
 			return {
@@ -119,8 +123,8 @@ export const pluginsRouter = createTRPCRouter({
 				.where(
 					and(
 						eq(pluginPipelineChecks.pluginId, plugin[0].id),
-						eq(pluginPipelineChecks.checkType, "security")
-					)
+						eq(pluginPipelineChecks.checkType, "security"),
+					),
 				)
 				.orderBy(desc(pluginPipelineChecks.createdAt))
 				.limit(1);
@@ -178,124 +182,122 @@ export const pluginsRouter = createTRPCRouter({
 			};
 		}),
 
-		updateReview: protectedProcedure
-			.input(
-				z.object({
-					reviewId: z.number(),
-					rating: z.number().min(1).max(5).optional(),
-					title: z.string().min(1).max(256).optional(),
-					comment: z.string().max(2000).optional(),
-				}),
-			)
-			.mutation(async ({ ctx, input }) => {
-				const existing = await ctx.db
-					.select({
-						id: pluginReviews.id,
-						pluginId: pluginReviews.pluginId,
-						userId: pluginReviews.userId,
-					})
-					.from(pluginReviews)
-					.where(eq(pluginReviews.id, input.reviewId))
-					.limit(1);
-
-				if (!existing[0]) {
-					throw new Error("Review not found");
-				}
-
-				const isOwner = existing[0].userId === ctx.session.user.id;
-				const isAdmin = ctx.session.user.role === "admin";
-				if (!isOwner && !isAdmin) {
-					throw new Error("Unauthorized");
-				}
-
-				const [updated] = await ctx.db
-					.update(pluginReviews)
-					.set({
-						rating: input.rating ?? undefined,
-						title: input.title ?? undefined,
-						comment: input.comment ?? undefined,
-						updatedAt: sql`extract(epoch from now())`,
-					})
-					.where(eq(pluginReviews.id, input.reviewId))
-					.returning();
-
-				// recalc plugin rating
-				const avgRating = await ctx.db
-					.select({
-						avg: sql<number>`AVG(${pluginReviews.rating})`,
-						count: count(),
-					})
-					.from(pluginReviews)
-					.where(eq(pluginReviews.pluginId, existing[0].pluginId));
-
-				await ctx.db
-					.update(plugins)
-					.set({
-						rating: Number(avgRating[0]?.avg ?? 0),
-						ratingCount: Number(avgRating[0]?.count ?? 0),
-					})
-					.where(eq(plugins.id, existing[0].pluginId));
-
-				// Log activity (non-blocking)
-				try {
-					await ctx.db.insert(pluginActivities).values({
-						type: "review.updated",
-						actorId: ctx.session.user.id,
-						pluginId: existing[0].pluginId,
-						reviewId: updated.id,
-						message: updated.title ?? null,
-					});
-				} catch {}
-
-				return updated;
+	updateReview: protectedProcedure
+		.input(
+			z.object({
+				reviewId: z.number(),
+				rating: z.number().min(1).max(5).optional(),
+				title: z.string().min(1).max(256).optional(),
+				comment: z.string().max(2000).optional(),
 			}),
+		)
+		.mutation(async ({ ctx, input }) => {
+			const existing = await ctx.db
+				.select({
+					id: pluginReviews.id,
+					pluginId: pluginReviews.pluginId,
+					userId: pluginReviews.userId,
+				})
+				.from(pluginReviews)
+				.where(eq(pluginReviews.id, input.reviewId))
+				.limit(1);
 
-		deleteReview: protectedProcedure
-			.input(z.object({ reviewId: z.number() }))
-			.mutation(async ({ ctx, input }) => {
-				const existing = await ctx.db
-					.select({
-						id: pluginReviews.id,
-						pluginId: pluginReviews.pluginId,
-						userId: pluginReviews.userId,
-					})
-					.from(pluginReviews)
-					.where(eq(pluginReviews.id, input.reviewId))
-					.limit(1);
+			if (!existing[0]) {
+				throw new Error("Review not found");
+			}
 
-				if (!existing[0]) {
-					throw new Error("Review not found");
-				}
+			const isOwner = existing[0].userId === ctx.session.user.id;
+			const isAdmin = ctx.session.user.role === "admin";
+			if (!isOwner && !isAdmin) {
+				throw new Error("Unauthorized");
+			}
 
-				const isOwner = existing[0].userId === ctx.session.user.id;
-				const isAdmin = ctx.session.user.role === "admin";
-				if (!isOwner && !isAdmin) {
-					throw new Error("Unauthorized");
-				}
+			const [updated] = await ctx.db
+				.update(pluginReviews)
+				.set({
+					rating: input.rating ?? undefined,
+					title: input.title ?? undefined,
+					comment: input.comment ?? undefined,
+					updatedAt: sql`extract(epoch from now())`,
+				})
+				.where(eq(pluginReviews.id, input.reviewId))
+				.returning();
 
-				await ctx.db
-					.delete(pluginReviews)
-					.where(eq(pluginReviews.id, input.reviewId));
+			const avgRating = await ctx.db
+				.select({
+					avg: sql<number>`AVG(${pluginReviews.rating})`,
+					count: count(),
+				})
+				.from(pluginReviews)
+				.where(eq(pluginReviews.pluginId, existing[0].pluginId));
 
-				// recalc plugin rating
-				const avgRating = await ctx.db
-					.select({
-						avg: sql<number>`COALESCE(AVG(${pluginReviews.rating}), 0)` ,
-						count: count(),
-					})
-					.from(pluginReviews)
-					.where(eq(pluginReviews.pluginId, existing[0].pluginId));
+			await ctx.db
+				.update(plugins)
+				.set({
+					rating: Number(avgRating[0]?.avg ?? 0),
+					ratingCount: Number(avgRating[0]?.count ?? 0),
+				})
+				.where(eq(plugins.id, existing[0].pluginId));
 
-				await ctx.db
-					.update(plugins)
-					.set({
-						rating: Number(avgRating[0]?.avg ?? 0),
-						ratingCount: Number(avgRating[0]?.count ?? 0),
-					})
-					.where(eq(plugins.id, existing[0].pluginId));
+			// Log activity (non-blocking)
+			try {
+				await ctx.db.insert(pluginActivities).values({
+					type: "review.updated",
+					actorId: ctx.session.user.id,
+					pluginId: existing[0].pluginId,
+					reviewId: updated.id,
+					message: updated.title ?? null,
+				});
+			} catch {}
 
-				return { success: true };
-			}),
+			return updated;
+		}),
+
+	deleteReview: protectedProcedure
+		.input(z.object({ reviewId: z.number() }))
+		.mutation(async ({ ctx, input }) => {
+			const existing = await ctx.db
+				.select({
+					id: pluginReviews.id,
+					pluginId: pluginReviews.pluginId,
+					userId: pluginReviews.userId,
+				})
+				.from(pluginReviews)
+				.where(eq(pluginReviews.id, input.reviewId))
+				.limit(1);
+
+			if (!existing[0]) {
+				throw new Error("Review not found");
+			}
+
+			const isOwner = existing[0].userId === ctx.session.user.id;
+			const isAdmin = ctx.session.user.role === "admin";
+			if (!isOwner && !isAdmin) {
+				throw new Error("Unauthorized");
+			}
+
+			await ctx.db
+				.delete(pluginReviews)
+				.where(eq(pluginReviews.id, input.reviewId));
+
+			const avgRating = await ctx.db
+				.select({
+					avg: sql<number>`COALESCE(AVG(${pluginReviews.rating}), 0)`,
+					count: count(),
+				})
+				.from(pluginReviews)
+				.where(eq(pluginReviews.pluginId, existing[0].pluginId));
+
+			await ctx.db
+				.update(plugins)
+				.set({
+					rating: Number(avgRating[0]?.avg ?? 0),
+					ratingCount: Number(avgRating[0]?.count ?? 0),
+				})
+				.where(eq(plugins.id, existing[0].pluginId));
+
+			return { success: true };
+		}),
 
 	addReview: protectedProcedure
 		.input(
@@ -304,9 +306,18 @@ export const pluginsRouter = createTRPCRouter({
 				rating: z.number().min(1).max(5),
 				title: z.string().min(1).max(256).optional(),
 				comment: z.string().max(2000).optional(),
+				captchaToken: z.string().min(1),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
+			const captchaValid = await verifyCaptcha(
+				input.captchaToken,
+				ctx.headers.get("x-forwarded-for") || ctx.headers.get("x-real-ip"),
+			);
+			if (!captchaValid) {
+				throw new Error("Captcha verification failed");
+			}
+
 			const existingReview = await ctx.db
 				.select()
 				.from(pluginReviews)
@@ -371,35 +382,73 @@ export const pluginsRouter = createTRPCRouter({
 			z.object({
 				pluginId: z.number(),
 				userAgent: z.string().optional(),
-				ipAddress: z.string().optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
+			const ipAddress =
+				ctx.headers.get("x-forwarded-for") || ctx.headers.get("x-real-ip");
+
+			const rateLimit = await checkDownloadRateLimit(
+				ctx.db,
+				input.pluginId,
+				ctx.session?.user?.id,
+				ipAddress,
+			);
+
+			if (rateLimit.limited) {
+				throw new Error(rateLimit.reason);
+			}
+
 			const latestSecurityCheck = await ctx.db
 				.select()
 				.from(pluginPipelineChecks)
 				.where(
 					and(
 						eq(pluginPipelineChecks.pluginId, input.pluginId),
-						eq(pluginPipelineChecks.checkType, "security")
-					)
+						eq(pluginPipelineChecks.checkType, "security"),
+					),
 				)
 				.orderBy(desc(pluginPipelineChecks.createdAt))
 				.limit(1);
+
+			const ipHashValue = hashIp(ipAddress);
+
+			const conditions = [];
+			conditions.push(eq(pluginDownloads.pluginId, input.pluginId));
+
+			if (ctx.session?.user?.id) {
+				conditions.push(eq(pluginDownloads.userId, ctx.session.user.id));
+			} else if (ipHashValue) {
+				conditions.push(eq(pluginDownloads.ipHash, ipHashValue));
+			}
+
+			const existingDownload =
+				conditions.length > 1
+					? await ctx.db
+							.select({ id: pluginDownloads.id })
+							.from(pluginDownloads)
+							.where(and(...conditions))
+							.limit(1)
+					: null;
+
+			const isFirstDownload =
+				!existingDownload || existingDownload.length === 0;
 
 			await ctx.db.insert(pluginDownloads).values({
 				pluginId: input.pluginId,
 				userId: ctx.session?.user?.id,
 				userAgent: input.userAgent,
-				ipAddress: input.ipAddress,
+				ipHash: ipHashValue,
 			});
 
-			await ctx.db
-				.update(plugins)
-				.set({
-					downloadCount: sql`${plugins.downloadCount} + 1`,
-				})
-				.where(eq(plugins.id, input.pluginId));
+			if (isFirstDownload) {
+				await ctx.db
+					.update(plugins)
+					.set({
+						downloadCount: sql`${plugins.downloadCount} + 1`,
+					})
+					.where(eq(plugins.id, input.pluginId));
+			}
 
 			const plugin = await ctx.db
 				.select({ telegramBotDeeplink: plugins.telegramBotDeeplink })
@@ -411,6 +460,7 @@ export const pluginsRouter = createTRPCRouter({
 				success: true,
 				telegramBotDeeplink: plugin[0]?.telegramBotDeeplink,
 				securityCheck: latestSecurityCheck[0] || null,
+				isFirstDownload,
 			};
 		}),
 
@@ -460,7 +510,10 @@ export const pluginsRouter = createTRPCRouter({
 
 			// Создаем мапу для быстрого доступа к статистике
 			const downloadsMap = new Map(
-				recentDownloads.map((item: any) => [item.pluginId, Number(item.downloadCount)])
+				recentDownloads.map((item: any) => [
+					item.pluginId,
+					Number(item.downloadCount),
+				]),
 			);
 
 			// Получаем плагины и вычисляем popularity score
@@ -470,22 +523,25 @@ export const pluginsRouter = createTRPCRouter({
 				.where(
 					and(
 						eq(plugins.status, "approved"),
-						inArray(plugins.id, recentDownloads.map((d: any) => d.pluginId))
-					)
+						inArray(
+							plugins.id,
+							recentDownloads.map((d: any) => d.pluginId),
+						),
+					),
 				);
 
 			// Вычисляем popularity score и сортируем
 			const pluginsWithScore = allPlugins.map((plugin: any) => {
 				const recentDownloadCount = downloadsMap.get(plugin.id) || 0;
 				const daysSinceCreation = Math.floor(
-					(Date.now() - plugin.createdAt * 1000) / (1000 * 60 * 60 * 24)
+					(Date.now() - plugin.createdAt * 1000) / (1000 * 60 * 60 * 24),
 				);
 
 				const popularityScore =
 					// Скачивания за период (70% веса)
 					Number(recentDownloadCount) * 0.7 +
 					// Рейтинг с учетом количества отзывов (20% веса)
-					(plugin.rating * Math.min(plugin.ratingCount / 10.0, 1.0)) * 20 * 0.2 +
+					plugin.rating * Math.min(plugin.ratingCount / 10.0, 1.0) * 20 * 0.2 +
 					// Свежесть плагина - бонус для новых плагинов (10% веса)
 					Math.max(0, 30 - daysSinceCreation) * 0.1;
 
@@ -508,79 +564,165 @@ export const pluginsRouter = createTRPCRouter({
 			}),
 		)
 		.query(async ({ ctx, input }) => {
-			const thirtyDaysAgo = Math.floor(
-				(Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000,
-			);
+			const now = Date.now();
+			const oneDayMs = 24 * 60 * 60 * 1000;
+			const oneWeekAgo = Math.floor((now - 7 * oneDayMs) / 1000);
+			const twoWeeksAgo = Math.floor((now - 14 * oneDayMs) / 1000);
+			const threeWeeksAgo = Math.floor((now - 21 * oneDayMs) / 1000);
+			const fourWeeksAgo = Math.floor((now - 28 * oneDayMs) / 1000);
 
-			// Формула трендовости: скачивания за месяц (80%) + рост рейтинга (15%) + новизна (5%)
-			const trendingScore = sql<number>`
-				(
-					-- Скачивания за последний месяц (80% веса)
-					COALESCE(recent_downloads.download_count, 0) * 0.8 +
-					-- Рейтинг с бонусом за количество отзывов (15% веса)
-					(${plugins.rating} * LEAST(${plugins.ratingCount} / 5.0, 1.0)) * 15 * 0.15 +
-					-- Бонус для совсем новых плагинов (5% веса)
-					CASE
-						WHEN EXTRACT(days FROM NOW() - TO_TIMESTAMP(${plugins.createdAt})) <= 7 THEN 10
-						WHEN EXTRACT(days FROM NOW() - TO_TIMESTAMP(${plugins.createdAt})) <= 30 THEN 5
-						ELSE 0
-					END * 0.05
-				)
-			`;
-
-			// Сначала получаем статистику скачиваний за месяц
-			const recentDownloads = await ctx.db
+			const lastWeekDownloads = await ctx.db
 				.select({
 					pluginId: pluginDownloads.pluginId,
 					downloadCount: count(pluginDownloads.id),
 				})
 				.from(pluginDownloads)
-				.where(sql`${pluginDownloads.downloadedAt} >= ${thirtyDaysAgo}`)
+				.where(sql`${pluginDownloads.downloadedAt} >= ${oneWeekAgo}`)
 				.groupBy(pluginDownloads.pluginId);
 
-			if (recentDownloads.length === 0) {
+			const prevWeekDownloads = await ctx.db
+				.select({
+					pluginId: pluginDownloads.pluginId,
+					downloadCount: count(pluginDownloads.id),
+				})
+				.from(pluginDownloads)
+				.where(
+					sql`${pluginDownloads.downloadedAt} >= ${twoWeeksAgo} AND ${pluginDownloads.downloadedAt} < ${oneWeekAgo}`,
+				)
+				.groupBy(pluginDownloads.pluginId);
+
+			const thirdWeekDownloads = await ctx.db
+				.select({
+					pluginId: pluginDownloads.pluginId,
+					downloadCount: count(pluginDownloads.id),
+				})
+				.from(pluginDownloads)
+				.where(
+					sql`${pluginDownloads.downloadedAt} >= ${threeWeeksAgo} AND ${pluginDownloads.downloadedAt} < ${twoWeeksAgo}`,
+				)
+				.groupBy(pluginDownloads.pluginId);
+
+			const fourthWeekDownloads = await ctx.db
+				.select({
+					pluginId: pluginDownloads.pluginId,
+					downloadCount: count(pluginDownloads.id),
+				})
+				.from(pluginDownloads)
+				.where(
+					sql`${pluginDownloads.downloadedAt} >= ${fourWeeksAgo} AND ${pluginDownloads.downloadedAt} < ${threeWeeksAgo}`,
+				)
+				.groupBy(pluginDownloads.pluginId);
+
+			const lastWeekMap = new Map(
+				lastWeekDownloads.map((item: any) => [
+					item.pluginId,
+					Number(item.downloadCount),
+				]),
+			);
+			const prevWeekMap = new Map(
+				prevWeekDownloads.map((item: any) => [
+					item.pluginId,
+					Number(item.downloadCount),
+				]),
+			);
+			const thirdWeekMap = new Map(
+				thirdWeekDownloads.map((item: any) => [
+					item.pluginId,
+					Number(item.downloadCount),
+				]),
+			);
+			const fourthWeekMap = new Map(
+				fourthWeekDownloads.map((item: any) => [
+					item.pluginId,
+					Number(item.downloadCount),
+				]),
+			);
+
+			const allPluginIds = new Set([
+				...lastWeekMap.keys(),
+				...prevWeekMap.keys(),
+				...thirdWeekMap.keys(),
+				...fourthWeekMap.keys(),
+			]);
+
+			if (allPluginIds.size === 0) {
 				return [];
 			}
 
-			// Создаем мапу для быстрого доступа к статистике
-			const downloadsMap = new Map(
-				recentDownloads.map((item: any) => [item.pluginId, Number(item.downloadCount)])
-			);
+			const pluginIds = Array.from(allPluginIds) as number[];
 
-			// Получаем плагины и вычисляем trending score
 			const allPlugins = await ctx.db
 				.select()
 				.from(plugins)
 				.where(
-					and(
-						eq(plugins.status, "approved"),
-						inArray(plugins.id, recentDownloads.map((d: any) => d.pluginId))
-					)
+					and(eq(plugins.status, "approved"), inArray(plugins.id, pluginIds)),
 				);
 
-			// Вычисляем trending score и сортируем
-			const pluginsWithScore = allPlugins.map((plugin: any) => {
-				const recentDownloadCount = downloadsMap.get(plugin.id) || 0;
+			const pluginsWithTrendScore = allPlugins.map((plugin: any) => {
+				const week1 = Number(lastWeekMap.get(plugin.id) || 0);
+				const week2 = Number(prevWeekMap.get(plugin.id) || 0);
+				const week3 = Number(thirdWeekMap.get(plugin.id) || 0);
+				const week4 = Number(fourthWeekMap.get(plugin.id) || 0);
+
 				const daysSinceCreation = Math.floor(
-					(Date.now() - plugin.createdAt * 1000) / (1000 * 60 * 60 * 24)
+					(now - plugin.createdAt * 1000) / oneDayMs,
 				);
+
+				const avgPrevious = (week2 + week3 + week4) / 3 || 1;
+				const velocityScore = week1 / avgPrevious;
+
+				const growthWeek2 = week2 > 0 ? (week1 - week2) / week2 : week1;
+				const growthWeek3 = week3 > 0 ? (week2 - week3) / week3 : week2;
+				const accelerationScore =
+					growthWeek3 > 0 ? growthWeek2 / growthWeek3 : growthWeek2;
+
+				const consistencyScore =
+					week1 > 0 && week2 > 0 && week3 > 0
+						? 1.5
+						: week1 > 0 && week2 > 0
+							? 1.2
+							: 1.0;
+
+				const freshBonus =
+					daysSinceCreation <= 7
+						? 3.0
+						: daysSinceCreation <= 14
+							? 2.5
+							: daysSinceCreation <= 30
+								? 2.0
+								: daysSinceCreation <= 60
+									? 1.5
+									: 1.0;
+
+				const minDownloads = 5;
+				if (week1 < minDownloads) {
+					return {
+						...plugin,
+						trendingScore: 0,
+						week1,
+						velocityScore: 0,
+					};
+				}
 
 				const trendingScore =
-					// Скачивания за последний месяц (80% веса)
-					Number(recentDownloadCount) * 0.8 +
-					// Рейтинг с бонусом за количество отзывов (15% веса)
-					(plugin.rating * Math.min(plugin.ratingCount / 5.0, 1.0)) * 15 * 0.15 +
-					// Бонус для совсем новых плагинов (5% веса)
-					(daysSinceCreation <= 7 ? 10 : daysSinceCreation <= 30 ? 5 : 0) * 0.05;
+					velocityScore * 40 +
+					Math.max(0, Math.min(accelerationScore, 5)) * 20 +
+					week1 * 2 +
+					consistencyScore * 10 +
+					freshBonus * 8;
 
 				return {
 					...plugin,
 					trendingScore,
+					week1,
+					week2,
+					week3,
+					velocityScore,
+					accelerationScore,
 				};
 			});
 
-			// Сортируем по trending score и возвращаем топ
-			return pluginsWithScore
+			return pluginsWithTrendScore
 				.sort((a: any, b: any) => b.trendingScore - a.trendingScore)
 				.slice(0, input.limit);
 		}),
@@ -609,12 +751,13 @@ export const pluginsRouter = createTRPCRouter({
 			}
 
 			const baseSlug = generateSlug(input.name);
+			const finalSlug = `${baseSlug}.${input.id}`;
 
 			const [updatedPlugin] = await ctx.db
 				.update(plugins)
 				.set({
 					name: input.name,
-					slug: baseSlug,
+					slug: finalSlug,
 					shortDescription: input.shortDescription,
 					description: input.description,
 					category: input.categorySlug,
@@ -625,8 +768,8 @@ export const pluginsRouter = createTRPCRouter({
 				.where(eq(plugins.id, input.id))
 				.returning();
 
-			revalidatePath(`/plugins/${baseSlug}`);
-			revalidatePath(`/my-plugins/${baseSlug}/manage`);
+			revalidatePath(`/plugins/${finalSlug}`);
+			revalidatePath(`/my-plugins/${finalSlug}/manage`);
 
 			return updatedPlugin;
 		}),
@@ -684,7 +827,7 @@ export const pluginsRouter = createTRPCRouter({
 				.toLowerCase()
 				.trim()
 				.split(/\s+/)
-				.filter(term => term.length > 0);
+				.filter((term) => term.length > 0);
 
 			if (searchTerms.length === 0) {
 				return { plugins: [], suggestions: [] };
@@ -693,15 +836,15 @@ export const pluginsRouter = createTRPCRouter({
 			// Создаем более гибкие паттерны поиска
 			const queryLower = input.query.toLowerCase().trim();
 			const likePattern = `%${queryLower}%`;
-			
-			// Создаем паттерны для каждого слова
-			const wordPatterns = searchTerms.map(term => `%${term}%`);
 
-			let whereConditions = [eq(plugins.status, "approved")];
+			// Создаем паттерны для каждого слова
+			const wordPatterns = searchTerms.map((term) => `%${term}%`);
+
+			const whereConditions = [eq(plugins.status, "approved")];
 
 			if (input.categories && input.categories.length > 0) {
 				whereConditions.push(
-					sql`${plugins.category} = ANY(${JSON.stringify(input.categories)})`
+					sql`${plugins.category} = ANY(${JSON.stringify(input.categories)})`,
 				);
 			}
 
@@ -772,16 +915,19 @@ export const pluginsRouter = createTRPCRouter({
 			)`;
 
 			// Дополнительное условие для поиска по отдельным словам
-			const wordsCondition = searchTerms.length > 1 ? sql`OR (${
-				sql.join(
-					searchTerms.map(term => sql`(
+			const wordsCondition =
+				searchTerms.length > 1
+					? sql`OR (${sql.join(
+							searchTerms.map(
+								(term) => sql`(
 						LOWER(${plugins.name}) LIKE ${`%${term}%`} OR
 						LOWER(${plugins.shortDescription}) LIKE ${`%${term}%`} OR
 						LOWER(${plugins.description}) LIKE ${`%${term}%`}
-					)`),
-					sql` AND `
-				)
-			})` : sql``;
+					)`,
+							),
+							sql` AND `,
+						)})`
+					: sql``;
 
 			const finalSearchCondition = sql`(${searchCondition} ${wordsCondition})`;
 			whereConditions.push(finalSearchCondition);
@@ -823,7 +969,8 @@ export const pluginsRouter = createTRPCRouter({
 					featured: plugins.featured,
 					screenshots: plugins.screenshots,
 					createdAt: plugins.createdAt,
-					relevanceScore: input.sortBy === "relevance" ? relevanceScore : sql`NULL`,
+					relevanceScore:
+						input.sortBy === "relevance" ? relevanceScore : sql`NULL`,
 				})
 				.from(plugins)
 				.where(and(...whereConditions))
@@ -837,12 +984,7 @@ export const pluginsRouter = createTRPCRouter({
 					count: sql<number>`COUNT(*)`,
 				})
 				.from(plugins)
-				.where(
-					and(
-						eq(plugins.status, "approved"),
-						finalSearchCondition
-					)
-				)
+				.where(and(eq(plugins.status, "approved"), finalSearchCondition))
 				.groupBy(plugins.category)
 				.orderBy(desc(sql`COUNT(*)`))
 				.limit(5);
@@ -852,11 +994,13 @@ export const pluginsRouter = createTRPCRouter({
 				suggestionQuery,
 			]);
 
-			const suggestions = categoryStats.map((stat: { category: string; count: number }) => ({
-				type: "category" as const,
-				value: stat.category,
-				count: stat.count,
-			}));
+			const suggestions = categoryStats.map(
+				(stat: { category: string; count: number }) => ({
+					type: "category" as const,
+					value: stat.category,
+					count: stat.count,
+				}),
+			);
 
 			return {
 				plugins: results,
@@ -871,60 +1015,61 @@ export const pluginsRouter = createTRPCRouter({
 		.query(async ({ ctx, input }) => {
 			const likePattern = `%${input.query.toLowerCase()}%`;
 
-			const [pluginSuggestions, categorySuggestions, authorSuggestions] = await Promise.all([
-				ctx.db
-					.select({
-						type: sql`'plugin'`,
-						value: plugins.name,
-						slug: plugins.slug,
-						extra: plugins.category,
-					})
-					.from(plugins)
-					.where(
-						and(
-							eq(plugins.status, "approved"),
-							sql`LOWER(${plugins.name}) LIKE ${likePattern}`
+			const [pluginSuggestions, categorySuggestions, authorSuggestions] =
+				await Promise.all([
+					ctx.db
+						.select({
+							type: sql`'plugin'`,
+							value: plugins.name,
+							slug: plugins.slug,
+							extra: plugins.category,
+						})
+						.from(plugins)
+						.where(
+							and(
+								eq(plugins.status, "approved"),
+								sql`LOWER(${plugins.name}) LIKE ${likePattern}`,
+							),
 						)
-					)
-					.orderBy(desc(plugins.downloadCount))
-					.limit(5),
+						.orderBy(desc(plugins.downloadCount))
+						.limit(5),
 
-				ctx.db
-					.select({
-						type: sql`'category'`,
-						value: plugins.category,
-						slug: plugins.category,
-						extra: sql<number>`COUNT(*)`,
-					})
-					.from(plugins)
-					.where(
-						and(
-							eq(plugins.status, "approved"),
-							sql`LOWER(${plugins.category}) LIKE ${likePattern}`
+					ctx.db
+						.select({
+							type: sql`'category'`,
+							value: plugins.category,
+							slug: plugins.category,
+							extra: sql<number>`COUNT(*)`,
+						})
+						.from(plugins)
+						.where(
+							and(
+								eq(plugins.status, "approved"),
+								sql`LOWER(${plugins.category}) LIKE ${likePattern}`,
+							),
 						)
-					)
-					.groupBy(plugins.category)
-					.orderBy(desc(sql`COUNT(*)`))
-					.limit(3),
+						.groupBy(plugins.category)
+						.orderBy(desc(sql`COUNT(*)`))
+						.limit(3),
 
-				ctx.db
-					.select({
-						type: sql`'author'`,
-						value: plugins.author,
-						slug: plugins.author,
-						extra: sql<number>`COUNT(*)`,
-					})
-					.from(plugins)
-					.where(
-						and(
-							eq(plugins.status, "approved"),
-							sql`LOWER(${plugins.author}) LIKE ${likePattern}`
+					ctx.db
+						.select({
+							type: sql`'author'`,
+							value: plugins.author,
+							slug: plugins.author,
+							extra: sql<number>`COUNT(*)`,
+						})
+						.from(plugins)
+						.where(
+							and(
+								eq(plugins.status, "approved"),
+								sql`LOWER(${plugins.author}) LIKE ${likePattern}`,
+							),
 						)
-					)
-					.groupBy(plugins.author)
-					.orderBy(desc(sql`COUNT(*)`))
-					.limit(3),
-			]);
+						.groupBy(plugins.author)
+						.orderBy(desc(sql`COUNT(*)`))
+						.limit(3),
+				]);
 
 			return [
 				...pluginSuggestions,
@@ -977,7 +1122,11 @@ export const pluginsRouter = createTRPCRouter({
 				})
 				.from(plugins)
 				.where(sql`LOWER(${plugins.name}) LIKE ${likePattern}`)
-				.orderBy(desc(plugins.rating), desc(plugins.ratingCount), desc(plugins.createdAt))
+				.orderBy(
+					desc(plugins.rating),
+					desc(plugins.ratingCount),
+					desc(plugins.createdAt),
+				)
 				.limit(input.limit);
 
 			return list;

@@ -1,14 +1,14 @@
 "use client";
 
+import { Loader2, Send } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
-import { Loader2, Send } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { useState } from "react";
-import { toast } from "sonner";
 import { api } from "~/trpc/react";
 
 export default function TelegramBotAdminPage() {
@@ -22,7 +22,9 @@ export default function TelegramBotAdminPage() {
 
 	const broadcastMutation = api.telegramNotifications.broadcast.useMutation({
 		onSuccess: (data: { sent: number; failed: number }) => {
-			toast.success(t("broadcastSuccess", { sent: data.sent, failed: data.failed }));
+			toast.success(
+				t("broadcastSuccess", { sent: data.sent, failed: data.failed }),
+			);
 			setBroadcastMessage("");
 		},
 		onError: (error) => {
@@ -31,29 +33,32 @@ export default function TelegramBotAdminPage() {
 		},
 	});
 
-	const personalMessageMutation = api.telegramNotifications.sendPersonalMessage.useMutation({
-		onSuccess: () => {
-			toast.success(t("personalMessageSuccess"));
-			setPersonalUsername("");
-			setPersonalMessage("");
-		},
-		onError: (error) => {
-			toast.error(t("personalMessageError"));
-			console.error("Personal message error:", error);
-		},
-	});
+	const personalMessageMutation =
+		api.telegramNotifications.sendPersonalMessage.useMutation({
+			onSuccess: () => {
+				toast.success(t("personalMessageSuccess"));
+				setPersonalUsername("");
+				setPersonalMessage("");
+			},
+			onError: (error) => {
+				toast.error(t("personalMessageError"));
+				console.error("Personal message error:", error);
+			},
+		});
 
-	const testMessageMutation = api.telegramNotifications.testMessage.useMutation({
-		onSuccess: () => {
-			toast.success(t("testMessageSuccess"));
-			setTestChatId("");
-			setTestMessage("");
+	const testMessageMutation = api.telegramNotifications.testMessage.useMutation(
+		{
+			onSuccess: () => {
+				toast.success(t("testMessageSuccess"));
+				setTestChatId("");
+				setTestMessage("");
+			},
+			onError: (error) => {
+				toast.error(t("testMessageError"));
+				console.error("Test message error:", error);
+			},
 		},
-		onError: (error) => {
-			toast.error(t("testMessageError"));
-			console.error("Test message error:", error);
-		},
-	});
+	);
 
 	const setWebhookMutation = api.telegramNotifications.setWebhook.useMutation({
 		onSuccess: () => {
@@ -113,8 +118,8 @@ export default function TelegramBotAdminPage() {
 	};
 
 	return (
-		<div className="container mx-auto p-6 space-y-6">
-			<h1 className="text-3xl font-bold">{t("title")}</h1>
+		<div className="container mx-auto space-y-6 p-6">
+			<h1 className="font-bold text-3xl">{t("title")}</h1>
 
 			<div className="grid gap-6 md:grid-cols-2">
 				<Card>

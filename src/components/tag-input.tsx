@@ -53,8 +53,10 @@ export function TagInput({
 					<Badge key={index} variant="secondary">
 						{tag}
 						<button
+							type="button"
 							onClick={() => handleRemoveTag(tag)}
 							className="ml-1 rounded-full hover:bg-muted-foreground/20"
+							aria-label={`Удалить ${tag}`}
 						>
 							<X className="h-3 w-3" />
 						</button>
@@ -69,7 +71,6 @@ export function TagInput({
 					className="m-0 h-auto flex-1 border-0 p-0 shadow-none focus-visible:ring-0"
 				/>
 			</div>
-			{/* Suggestions can be implemented here later */}
 		</div>
 	);
 }

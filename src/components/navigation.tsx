@@ -1,6 +1,7 @@
 "use client";
 
 import {
+	Activity,
 	Grid3X3,
 	Heart,
 	Home,
@@ -13,16 +14,16 @@ import {
 	Sparkles,
 	User,
 	Users,
-	Activity,
 } from "lucide-react";
-import { signOut, useSession } from "next-auth/react";
-import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { signOut, useSession } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { TelegramIcon } from "~/components/icons/telegram-icon";
-
+import { LanguageSwitcher } from "~/components/language-switcher";
 import { SearchDialog } from "~/components/search-dialog";
+import { ThemeToggle } from "~/components/theme-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -59,30 +60,35 @@ export function Navigation() {
 	};
 
 	return (
-		<header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-			<div className="container mx-auto px-2 sm:px-4">
-				<div className="flex h-14 items-center justify-between sm:h-16">
-					<div className="flex items-center gap-4 sm:gap-8">
-						<Link href="/" className="flex items-center gap-1 sm:gap-2">
-							<div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary sm:h-8 sm:w-8">
-								<span className="font-bold text-primary-foreground text-xs sm:text-sm">
+		<header className="sticky top-0 z-50 w-full border-b bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-background/80">
+			<div className="container mx-auto px-3 sm:px-4">
+				<div className="flex h-16 items-center justify-between gap-2">
+					<div className="flex min-w-0 items-center gap-6">
+						<Link
+							href="/"
+							className="flex min-h-11 shrink-0 items-center gap-2 rounded-lg focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+							aria-label="exteraStore"
+						>
+							<div className="flex size-9 items-center justify-center rounded-xl bg-primary">
+								<span className="font-bold text-primary-foreground text-sm">
 									eS
 								</span>
 							</div>
-							<span className="hidden font-bold text-lg sm:block sm:text-xl">
+							<span className="hidden font-bold text-xl sm:block">
 								exteraStore
 							</span>
 						</Link>
 
-						<nav className="hidden items-center gap-3 sm:gap-6 md:flex">
+						<nav className="hidden items-center gap-5 xl:flex">
 							{navigation.map((item) => (
 								<Link
 									key={item.name}
 									href={item.href}
+									aria-current={pathname === item.href ? "page" : undefined}
 									className={cn(
-										"font-medium text-xs transition-colors hover:text-primary sm:text-sm",
+										"flex min-h-11 items-center border-transparent border-b-2 font-medium text-sm transition-colors hover:text-primary",
 										pathname === item.href
-											? "text-primary"
+											? "border-primary text-primary"
 											: "text-muted-foreground",
 									)}
 								>
@@ -92,21 +98,22 @@ export function Navigation() {
 						</nav>
 					</div>
 
-					<div className="mx-2 hidden max-w-md flex-1 sm:mx-4 md:mx-8 lg:flex">
+					<div className="mx-4 hidden max-w-md flex-1 lg:flex">
 						<SearchDialog
 							className="w-full justify-start text-xs sm:text-sm"
 							placeholder={t("search_placeholder")}
 						/>
 					</div>
 
-					<div className="flex items-center gap-2 sm:gap-4">
+					<div className="flex shrink-0 items-center gap-1 sm:gap-2">
 						<SearchDialog
 							isMobile
 							trigger={
 								<Button
 									variant="ghost"
 									size="icon"
-									className="h-8 w-8 lg:hidden"
+									className="lg:hidden"
+									aria-label={t("search_placeholder")}
 								>
 									<Search className="h-4 w-4" />
 								</Button>
@@ -115,11 +122,7 @@ export function Navigation() {
 
 						{session?.user ? (
 							<>
-								<Button
-									asChild
-									size="sm"
-									className="hidden bg-primary text-primary-foreground hover:bg-primary/90 sm:flex"
-								>
+								<Button asChild size="sm" className="hidden sm:flex">
 									<Link href="/upload">
 										<Plus className="mr-1 h-4 w-4" />
 										<span className="hidden sm:inline">
@@ -133,9 +136,11 @@ export function Navigation() {
 									<DropdownMenuTrigger asChild>
 										<Button
 											variant="ghost"
-											className="relative h-7 w-7 rounded-full p-0 sm:h-8 sm:w-8"
+											size="icon"
+											className="relative rounded-full p-0"
+											aria-label={session.user.name || t("profile")}
 										>
-											<Avatar className="h-7 w-7 sm:h-8 sm:w-8">
+											<Avatar className="size-9">
 												<AvatarImage
 													src={session.user.image || undefined}
 													alt={session.user.name || ""}
@@ -147,7 +152,7 @@ export function Navigation() {
 											{session.user.telegramUsername && (
 												<Badge
 													variant="secondary"
-													className="-top-1 -right-1 absolute flex h-3 w-3 items-center justify-center p-0 sm:h-4 sm:w-4"
+													className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center p-0 sm:h-4 sm:w-4"
 												>
 													<TelegramIcon className="h-2 w-2" />
 												</Badge>
@@ -214,19 +219,19 @@ export function Navigation() {
 								<Button
 									variant="ghost"
 									size="icon"
-									className="h-8 w-8 md:hidden"
+									className="xl:hidden"
+									aria-label="Open navigation menu"
 								>
-									<Menu className="h-4 w-4" />
+									<Menu className="h-5 w-5" />
 								</Button>
 							</SheetTrigger>
 							<SheetContent
 								side="right"
-								className="w-full p-0 sm:w-[85vw] sm:max-w-[400px]"
+								className="flex h-full w-[min(100%,24rem)] flex-col p-0 pb-[env(safe-area-inset-bottom)]"
 							>
-								{/* Header с логотипом и крестиком */}
-								<div className="flex items-center justify-between border-b p-4">
+								<div className="flex min-h-16 items-center border-b px-4">
 									<div className="flex items-center gap-2">
-										<div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+										<div className="flex size-9 items-center justify-center rounded-xl bg-primary">
 											<span className="font-bold text-primary-foreground text-sm">
 												eS
 											</span>
@@ -235,31 +240,30 @@ export function Navigation() {
 									</div>
 								</div>
 
-								{/* Основной контент */}
-								<div className="flex h-full flex-col">
-									{/* Поиск */}
+								<div className="flex min-h-0 flex-1 flex-col">
 									<div className="border-b p-4">
 										<SearchDialog
 											isMobile
-											className="w-full justify-start"
+											className="h-11 w-full justify-start"
 											placeholder={t("search_placeholder")}
 										/>
 									</div>
 
-									{/* Навигация */}
-									<div className="flex-1 p-4">
+									<div className="flex-1 overflow-y-auto p-4">
 										<nav className="space-y-1">
 											{navigation.map((item) => {
 												const IconComponent = item.icon;
+												const active = pathname === item.href;
 												return (
 													<Link
 														key={item.name}
 														href={item.href}
 														onClick={() => setMobileMenuOpen(false)}
+														aria-current={active ? "page" : undefined}
 														className={cn(
-															"flex items-center gap-3 rounded-lg px-3 py-3 font-medium text-sm transition-all duration-200",
-															pathname === item.href
-																? "bg-primary text-primary-foreground shadow-sm"
+															"flex min-h-11 touch-manipulation items-center gap-3 rounded-lg px-3 py-2 font-medium text-sm transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+															active
+																? "bg-primary/10 text-primary"
 																: "hover:bg-accent hover:text-accent-foreground",
 														)}
 													>
@@ -270,13 +274,12 @@ export function Navigation() {
 											})}
 										</nav>
 
-										{/* Кнопка загрузки плагина */}
 										{session?.user && (
 											<div className="mt-6 border-t pt-4">
 												<Link
 													href="/upload"
 													onClick={() => setMobileMenuOpen(false)}
-													className="flex items-center gap-3 rounded-lg bg-primary px-3 py-3 font-medium text-primary-foreground text-sm transition-colors hover:bg-primary/90"
+													className="flex min-h-11 items-center gap-3 rounded-lg bg-primary px-3 py-2 font-medium text-primary-foreground text-sm transition-colors hover:bg-primary/90"
 												>
 													<Plus className="h-4 w-4" />
 													{t("upload_plugin")}
@@ -285,11 +288,15 @@ export function Navigation() {
 										)}
 									</div>
 
-									{/* Футер с настройками */}
 									<div className="border-t bg-muted/30 p-4">
+										<div className="mb-4 flex items-center justify-between gap-3">
+											<div className="flex items-center gap-1">
+												<ThemeToggle />
+												<LanguageSwitcher />
+											</div>
+										</div>
 										{session?.user ? (
 											<>
-												{/* Информация о пользователе */}
 												<div className="flex items-center gap-3 rounded-lg border bg-background p-3">
 													<Avatar className="h-8 w-8">
 														<AvatarImage
@@ -319,12 +326,11 @@ export function Navigation() {
 													)}
 												</div>
 
-												{/* Кнопки профиля и выхода */}
 												<div className="mt-3 space-y-2">
 													<Link
 														href="/profile"
 														onClick={() => setMobileMenuOpen(false)}
-														className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
+														className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
 													>
 														<User className="h-4 w-4" />
 														<span>{t("profile")}</span>
@@ -332,7 +338,7 @@ export function Navigation() {
 													<Link
 														href="/favorites"
 														onClick={() => setMobileMenuOpen(false)}
-														className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
+														className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
 													>
 														<Heart className="h-4 w-4" />
 														<span>{t("favorites")}</span>
@@ -340,14 +346,15 @@ export function Navigation() {
 													<Link
 														href="/my-plugins"
 														onClick={() => setMobileMenuOpen(false)}
-														className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
+														className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
 													>
 														<Settings className="h-4 w-4" />
 														<span>{t("my_plugins")}</span>
 													</Link>
 													<button
+														type="button"
 														onClick={handleSignOut}
-														className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
+														className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
 													>
 														<LogOut className="h-4 w-4" />
 														<span>{t("sign_out")}</span>
@@ -357,10 +364,13 @@ export function Navigation() {
 										) : (
 											<div className="space-y-3">
 												<p className="text-center text-muted-foreground text-sm">
-													Войдите, чтобы загружать плагины и добавлять их в избранное
+													Войдите, чтобы загружать плагины и добавлять их в
+													избранное
 												</p>
 												<TelegramLoginButton
-													botUsername={process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME}
+													botUsername={
+														process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME
+													}
 												/>
 											</div>
 										)}

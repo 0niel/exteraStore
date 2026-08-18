@@ -17,20 +17,22 @@ import {
 	Shield,
 	Star,
 	Tag,
-	Trash2,
 	ThumbsUp,
+	Trash2,
 	User,
 	Zap,
 } from "lucide-react";
-import { useSession } from "next-auth/react";
-import { useTranslations } from "next-intl";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
 
 import { toast } from "sonner";
+import { DonationWidget } from "@/components/donations/donation-widget";
+import { SmartCaptcha } from "~/components/captcha/smart-captcha";
 import { ImageGallery } from "~/components/image-gallery";
 import { PluginPipeline } from "~/components/plugin-pipeline";
 import { PluginSubscription } from "~/components/plugin-subscription";
@@ -49,7 +51,6 @@ import {
 	CardHeader,
 	CardTitle,
 } from "~/components/ui/card";
-import { SecurityWarning } from "~/components/ui/security-warning";
 import {
 	Dialog,
 	DialogContent,
@@ -60,11 +61,16 @@ import {
 } from "~/components/ui/dialog";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import { SecurityWarning } from "~/components/ui/security-warning";
 import { Separator } from "~/components/ui/separator";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Textarea } from "~/components/ui/textarea";
-import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "~/components/ui/tooltip";
 import { cn, formatDate, formatNumber } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
@@ -78,10 +84,11 @@ export default function PluginDetailPage() {
 	const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
 	const [reviewRating, setReviewRating] = useState(5);
 	const [reviewComment, setReviewComment] = useState("");
+	const [reviewCaptchaToken, setReviewCaptchaToken] = useState("");
 	const [isFavorited, setIsFavorited] = useState(false);
-    const [editingReviewId, setEditingReviewId] = useState<number | null>(null);
-    const [editingRating, setEditingRating] = useState<number>(5);
-    const [editingComment, setEditingComment] = useState("");
+	const [editingReviewId, setEditingReviewId] = useState<number | null>(null);
+	const [editingRating, setEditingRating] = useState<number>(5);
+	const [editingComment, setEditingComment] = useState("");
 
 	const { data: plugin, isLoading } = api.plugins.getBySlug.useQuery({ slug });
 	const { data: reviewsData, refetch: refetchReviews } =
@@ -105,16 +112,25 @@ export default function PluginDetailPage() {
 
 	const downloadMutation = api.plugins.download.useMutation({
 		onSuccess: (data) => {
-			if (data.securityCheck && data.securityCheck.status !== "passed" && data.securityCheck.details) {
+			if (
+				data.securityCheck &&
+				data.securityCheck.status !== "passed" &&
+				data.securityCheck.details
+			) {
 				const details = JSON.parse(data.securityCheck.details);
-				if (details.classification === "critical" || details.classification === "unsafe") {
+				if (
+					details.classification === "critical" ||
+					details.classification === "unsafe"
+				) {
 					toast.error("🛡️ Плагин не прошел проверку безопасности", {
-						description: "Обнаружены критические проблемы. Используйте на свой страх и риск.",
+						description:
+							"Обнаружены критические проблемы. Используйте на свой страх и риск.",
 						duration: 6000,
 					});
 				} else if (details.classification === "potentially_unsafe") {
 					toast.warning("⚠️ Потенциальные проблемы безопасности", {
-						description: "В плагине обнаружены потенциальные проблемы. Будьте осторожны.",
+						description:
+							"В плагине обнаружены потенциальные проблемы. Будьте осторожны.",
 						duration: 4000,
 					});
 				}
@@ -141,26 +157,26 @@ export default function PluginDetailPage() {
 		},
 	});
 
-    const updateReviewMutation = api.plugins.updateReview.useMutation({
-        onSuccess: () => {
-            toast.success("Отзыв обновлен");
-            setEditingReviewId(null);
-            refetchReviews();
-        },
-        onError: (error) => {
-            toast.error(`Ошибка при обновлении: ${error.message}`);
-        },
-    });
+	const updateReviewMutation = api.plugins.updateReview.useMutation({
+		onSuccess: () => {
+			toast.success("Отзыв обновлен");
+			setEditingReviewId(null);
+			refetchReviews();
+		},
+		onError: (error) => {
+			toast.error(`Ошибка при обновлении: ${error.message}`);
+		},
+	});
 
-    const deleteReviewMutation = api.plugins.deleteReview.useMutation({
-        onSuccess: () => {
-            toast.success("Отзыв удален");
-            refetchReviews();
-        },
-        onError: (error) => {
-            toast.error(`Ошибка при удалении: ${error.message}`);
-        },
-    });
+	const deleteReviewMutation = api.plugins.deleteReview.useMutation({
+		onSuccess: () => {
+			toast.success("Отзыв удален");
+			refetchReviews();
+		},
+		onError: (error) => {
+			toast.error(`Ошибка при удалении: ${error.message}`);
+		},
+	});
 
 	const toggleFavoriteMutation = api.favorites.toggle.useMutation({
 		onSuccess: (data) => {
@@ -180,17 +196,22 @@ export default function PluginDetailPage() {
 		downloadMutation.mutate({
 			pluginId: plugin.id,
 			userAgent: navigator.userAgent,
-			ipAddress: undefined,
 		});
 	};
 
 	const handleAddReview = () => {
 		if (!plugin) return;
 
+		if (!reviewCaptchaToken) {
+			toast.error("Пожалуйста, пройдите проверку капчи.");
+			return;
+		}
+
 		addReviewMutation.mutate({
 			pluginId: plugin.id,
 			rating: reviewRating,
 			comment: reviewComment || undefined,
+			captchaToken: reviewCaptchaToken,
 		});
 	};
 
@@ -293,12 +314,12 @@ export default function PluginDetailPage() {
 	const categoryName =
 		categories?.find((c) => c.slug === plugin.category)?.name ||
 		plugin.category;
-  const hasLinks = Boolean(plugin.githubUrl || plugin.documentationUrl);
+	const hasLinks = Boolean(plugin.githubUrl || plugin.documentationUrl);
 
 	return (
 		<div className="bg-background">
 			{/* Mobile Header */}
-			<div className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 lg:hidden">
+			<div className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 lg:hidden">
 				<div className="flex items-center justify-between px-4 py-3">
 					<Button
 						variant="ghost"
@@ -349,17 +370,17 @@ export default function PluginDetailPage() {
 						<div className="flex items-start gap-4">
 							<div
 								className={cn(
-									"flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-2xl shadow-lg",
+									"flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl shadow-lg",
 									plugin.category === "ui" &&
-										"bg-gradient-to-br from-purple-500 to-pink-500",
+										"bg-linear-to-br from-purple-500 to-pink-500",
 									plugin.category === "utility" &&
-										"bg-gradient-to-br from-blue-500 to-cyan-500",
+										"bg-linear-to-br from-blue-500 to-cyan-500",
 									plugin.category === "security" &&
-										"bg-gradient-to-br from-red-500 to-orange-500",
+										"bg-linear-to-br from-red-500 to-orange-500",
 									plugin.category === "automation" &&
-										"bg-gradient-to-br from-green-500 to-emerald-500",
+										"bg-linear-to-br from-green-500 to-emerald-500",
 									plugin.category === "development" &&
-										"bg-gradient-to-br from-indigo-500 to-purple-500",
+										"bg-linear-to-br from-indigo-500 to-purple-500",
 									![
 										"ui",
 										"utility",
@@ -367,7 +388,7 @@ export default function PluginDetailPage() {
 										"automation",
 										"development",
 									].includes(plugin.category) &&
-										"bg-gradient-to-br from-gray-500 to-slate-500",
+										"bg-linear-to-br from-gray-500 to-slate-500",
 								)}
 							>
 								<Code className="h-8 w-8 text-white" />
@@ -402,16 +423,21 @@ export default function PluginDetailPage() {
 								</div>
 
 								{/* Meta Info */}
-                                <div className="mt-3 flex flex-wrap items-center gap-3 text-muted-foreground text-sm">
-                                    <Link href={`/developers/${plugin.authorId}`} className="group inline-flex items-center gap-1 hover:text-foreground">
-                                        <Avatar className="h-5 w-5">
-                                            <AvatarImage src={authorData?.image || undefined} />
-                                            <AvatarFallback className="text-xs">
-                                                {plugin.author.slice(0, 1).toUpperCase()}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <span className="font-medium group-hover:underline">{authorData?.name || plugin.author}</span>
-                                    </Link>
+								<div className="mt-3 flex flex-wrap items-center gap-3 text-muted-foreground text-sm">
+									<Link
+										href={`/developers/${plugin.authorId}`}
+										className="group inline-flex items-center gap-1 hover:text-foreground"
+									>
+										<Avatar className="h-5 w-5">
+											<AvatarImage src={authorData?.image || undefined} />
+											<AvatarFallback className="text-xs">
+												{plugin.author.slice(0, 1).toUpperCase()}
+											</AvatarFallback>
+										</Avatar>
+										<span className="font-medium group-hover:underline">
+											{authorData?.name || plugin.author}
+										</span>
+									</Link>
 									<Badge variant="outline" className="text-xs">
 										{categoryName}
 									</Badge>
@@ -493,20 +519,32 @@ export default function PluginDetailPage() {
 					</div>
 
 					{/* Security Warning */}
-					{plugin.latestSecurityCheck && plugin.latestSecurityCheck.status !== "passed" && plugin.latestSecurityCheck.details && (
-						<div className="mb-6">
-							<SecurityWarning
-								securityResult={{
-									status: plugin.latestSecurityCheck.classification as "safe" | "warning" | "danger",
-									classification: plugin.latestSecurityCheck.classification as "safe" | "potentially_unsafe" | "unsafe" | "critical",
-									shortDescription: plugin.latestSecurityCheck.shortDescription,
-									issues: JSON.parse(plugin.latestSecurityCheck.details).issues || [],
-								}}
-								variant="banner"
-								showDetails={true}
-							/>
-						</div>
-					)}
+					{plugin.latestSecurityCheck &&
+						plugin.latestSecurityCheck.status !== "passed" &&
+						plugin.latestSecurityCheck.details && (
+							<div className="mb-6">
+								<SecurityWarning
+									securityResult={{
+										status: plugin.latestSecurityCheck.classification as
+											| "safe"
+											| "warning"
+											| "danger",
+										classification: plugin.latestSecurityCheck.classification as
+											| "safe"
+											| "potentially_unsafe"
+											| "unsafe"
+											| "critical",
+										shortDescription:
+											plugin.latestSecurityCheck.shortDescription,
+										issues:
+											JSON.parse(plugin.latestSecurityCheck.details).issues ||
+											[],
+									}}
+									variant="banner"
+									showDetails={true}
+								/>
+							</div>
+						)}
 
 					{/* Screenshots */}
 					{screenshots.length > 0 && (
@@ -550,120 +588,187 @@ export default function PluginDetailPage() {
 							</div>
 
 							{/* Additional Info Cards */}
-                            <div className={cn("mt-8 grid gap-4", hasLinks ? "sm:grid-cols-2" : "sm:grid-cols-1") }>
-                                {/* Author Card */}
-                                <Link href={`/developers/${plugin.authorId}`} className="group">
-                                    <Card className="transition-colors group-hover:border-primary/30">
-                                        <CardContent className="p-4">
-                                            <div className="flex items-start gap-3">
-                                                <Avatar className="h-12 w-12">
-                                                    <AvatarImage src={authorData?.image || undefined} />
-                                                    <AvatarFallback className="text-sm">
-                                                        {(authorData?.name || plugin.author).slice(0, 2).toUpperCase()}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                <div className="min-w-0 flex-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <h3 className="truncate font-semibold">
-                                                            {authorData?.name || plugin.author}
-                                                        </h3>
-                                                        {authorData?.isVerified && (
-                                                            <Badge className="bg-blue-600 text-xs">
-                                                                <Shield className="mr-1 h-3 w-3" />
-                                                                Проверен
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                    {authorData?.telegramUsername && (
-                                                        <p className="text-primary text-sm">@{authorData.telegramUsername}</p>
-                                                    )}
-                                                    {authorData?.bio && (
-                                                        <p className="mt-1 line-clamp-2 text-muted-foreground text-sm">
-                                                            {authorData.bio}
-                                                        </p>
-                                                    )}
-                                                    {authorData?.stats && (
-                                                        <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-                                                            <div>
-                                                                <div className="font-semibold text-sm">{authorData.stats.totalPlugins || 0}</div>
-                                                                <div className="text-muted-foreground text-xs">Плагинов</div>
-                                                            </div>
-                                                            <div>
-                                                                <div className="font-semibold text-sm">{formatNumber(Number(authorData.stats.totalDownloads) || 0)}</div>
-                                                                <div className="text-muted-foreground text-xs">Скачиваний</div>
-                                                            </div>
-                                                            <div>
-                                                                <div className="flex items-center justify-center gap-1 font-semibold text-sm">
-                                                                    <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-                                                                    {(Number(authorData.stats.averageRating) || 0).toFixed(1)}
-                                                                </div>
-                                                                <div className="text-muted-foreground text-xs">Рейтинг</div>
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            <div className="mt-3 flex gap-2">
-                                                {authorData?.githubUsername && (
-                                                    <Button asChild variant="outline" size="sm">
-                                                        <a href={`https://github.com/${authorData.githubUsername}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2">
-                                                            <Github className="h-4 w-4" /> GitHub
-                                                        </a>
-                                                    </Button>
-                                                )}
-                                                {authorData?.website && (
-                                                    <Button asChild variant="outline" size="sm">
-                                                        <a href={authorData.website} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2">
-                                                            <Globe className="h-4 w-4" /> Веб-сайт
-                                                        </a>
-                                                    </Button>
-                                                )}
-                                                {authorData?.telegramUsername && (
-                                                    <Button asChild variant="outline" size="sm">
-                                                        <a href={`https://t.me/${authorData.telegramUsername}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2">
-                                                            <MessageSquare className="h-4 w-4" /> Telegram
-                                                        </a>
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                </Link>
+							<div
+								className={cn(
+									"mt-8 grid gap-4",
+									hasLinks ? "sm:grid-cols-2" : "sm:grid-cols-1",
+								)}
+							>
+								<Card className="transition-colors hover:border-primary/30">
+									<CardContent className="p-4">
+										<Link
+											href={`/developers/${plugin.authorId}`}
+											className="group flex items-start gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+										>
+											<Avatar className="h-12 w-12">
+												<AvatarImage src={authorData?.image || undefined} />
+												<AvatarFallback className="text-sm">
+													{(authorData?.name || plugin.author)
+														.slice(0, 2)
+														.toUpperCase()}
+												</AvatarFallback>
+											</Avatar>
+											<div className="min-w-0 flex-1">
+												<div className="flex items-center gap-2">
+													<h3 className="truncate font-semibold">
+														{authorData?.name || plugin.author}
+													</h3>
+													{authorData?.isVerified && (
+														<Badge className="bg-blue-600 text-xs">
+															<Shield className="mr-1 h-3 w-3" />
+															Проверен
+														</Badge>
+													)}
+												</div>
+												{authorData?.telegramUsername && (
+													<p className="text-primary text-sm">
+														@{authorData.telegramUsername}
+													</p>
+												)}
+												{authorData?.bio && (
+													<p className="mt-1 line-clamp-2 text-muted-foreground text-sm">
+														{authorData.bio}
+													</p>
+												)}
+												{authorData?.stats && (
+													<div className="mt-3 grid grid-cols-3 gap-2 text-center">
+														<div>
+															<div className="font-semibold text-sm">
+																{authorData.stats.totalPlugins || 0}
+															</div>
+															<div className="text-muted-foreground text-xs">
+																Плагинов
+															</div>
+														</div>
+														<div>
+															<div className="font-semibold text-sm">
+																{formatNumber(
+																	Number(authorData.stats.totalDownloads) || 0,
+																)}
+															</div>
+															<div className="text-muted-foreground text-xs">
+																Скачиваний
+															</div>
+														</div>
+														<div>
+															<div className="flex items-center justify-center gap-1 font-semibold text-sm">
+																<Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+																{(
+																	Number(authorData.stats.averageRating) || 0
+																).toFixed(1)}
+															</div>
+															<div className="text-muted-foreground text-xs">
+																Рейтинг
+															</div>
+														</div>
+													</div>
+												)}
+											</div>
+										</Link>
+										<div className="mt-3 flex gap-2">
+											{authorData?.githubUsername && (
+												<Button asChild variant="outline" size="sm">
+													<a
+														href={`https://github.com/${authorData.githubUsername}`}
+														target="_blank"
+														rel="noopener noreferrer"
+														className="inline-flex items-center gap-2"
+													>
+														<Github className="h-4 w-4" /> GitHub
+													</a>
+												</Button>
+											)}
+											{authorData?.website && (
+												<Button asChild variant="outline" size="sm">
+													<a
+														href={authorData.website}
+														target="_blank"
+														rel="noopener noreferrer"
+														className="inline-flex items-center gap-2"
+													>
+														<Globe className="h-4 w-4" /> Веб-сайт
+													</a>
+												</Button>
+											)}
+											{authorData?.telegramUsername && (
+												<Button asChild variant="outline" size="sm">
+													<a
+														href={`https://t.me/${authorData.telegramUsername}`}
+														target="_blank"
+														rel="noopener noreferrer"
+														className="inline-flex items-center gap-2"
+													>
+														<MessageSquare className="h-4 w-4" /> Telegram
+													</a>
+												</Button>
+											)}
+										</div>
+									</CardContent>
+								</Card>
 
-                                {/* Links Card */}
-                                {(plugin.githubUrl || plugin.documentationUrl) && (
-                                    <Card>
-                                        <CardContent className="p-4">
-                                            <div className="flex flex-wrap gap-2">
-                                                {plugin.githubUrl && (
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <Button asChild variant="outline" size="sm">
-                                                                <a href={plugin.githubUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2">
-                                                                    <Github className="h-4 w-4" /> Исходный код <ExternalLink className="h-3 w-3" />
-                                                                </a>
-                                                            </Button>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>Открыть репозиторий GitHub</TooltipContent>
-                                                    </Tooltip>
-                                                )}
-                                                {plugin.documentationUrl && (
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <Button asChild variant="outline" size="sm">
-                                                                <a href={plugin.documentationUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2">
-                                                                    <FileText className="h-4 w-4" /> Документация <ExternalLink className="h-3 w-3" />
-                                                                </a>
-                                                            </Button>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>Открыть документацию</TooltipContent>
-                                                    </Tooltip>
-                                                )}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                )}
-                            </div>
+								{(plugin.githubUrl || plugin.documentationUrl) && (
+									<Card>
+										<CardContent className="p-4">
+											<div className="flex flex-wrap gap-2">
+												{plugin.githubUrl && (
+													<Tooltip>
+														<TooltipTrigger asChild>
+															<Button asChild variant="outline" size="sm">
+																<a
+																	href={plugin.githubUrl}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center gap-2"
+																>
+																	<Github className="h-4 w-4" /> Исходный код{" "}
+																	<ExternalLink className="h-3 w-3" />
+																</a>
+															</Button>
+														</TooltipTrigger>
+														<TooltipContent>
+															Открыть репозиторий GitHub
+														</TooltipContent>
+													</Tooltip>
+												)}
+												{plugin.documentationUrl && (
+													<Tooltip>
+														<TooltipTrigger asChild>
+															<Button asChild variant="outline" size="sm">
+																<a
+																	href={plugin.documentationUrl}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center gap-2"
+																>
+																	<FileText className="h-4 w-4" /> Документация{" "}
+																	<ExternalLink className="h-3 w-3" />
+																</a>
+															</Button>
+														</TooltipTrigger>
+														<TooltipContent>
+															Открыть документацию
+														</TooltipContent>
+													</Tooltip>
+												)}
+											</div>
+										</CardContent>
+									</Card>
+								)}
+
+								{authorData?.donationRequisites && (
+									<DonationWidget
+										methods={(() => {
+											try {
+												return JSON.parse(
+													authorData.donationRequisites || "null",
+												);
+											} catch {
+												return null;
+											}
+										})()}
+									/>
+								)}
+							</div>
 						</TabsContent>
 
 						<TabsContent value="versions" className="mt-6">
@@ -695,8 +800,10 @@ export default function PluginDetailPage() {
 															{[1, 2, 3, 4, 5].map((star) => (
 																<button
 																	key={star}
+																	type="button"
 																	onClick={() => setReviewRating(star)}
 																	className="transition-colors"
+																	aria-label={`Оценить на ${star}`}
 																>
 																	<Star
 																		className={cn(
@@ -718,12 +825,17 @@ export default function PluginDetailPage() {
 													rows={3}
 													className="resize-none"
 												/>
+												<SmartCaptcha
+													onSuccess={setReviewCaptchaToken}
+													onError={() => setReviewCaptchaToken("")}
+												/>
 												<div className="flex justify-end">
 													<Button
 														onClick={handleAddReview}
 														disabled={
 															addReviewMutation.isPending ||
-															!reviewComment.trim()
+															!reviewComment.trim() ||
+															!reviewCaptchaToken
 														}
 														size="sm"
 													>
@@ -747,7 +859,7 @@ export default function PluginDetailPage() {
 											comment: string | null;
 											helpful: number;
 											createdAt: string | Date;
-                                            userId: string;
+											userId: string;
 											user: {
 												name: string | null;
 												image: string | null;
@@ -766,111 +878,125 @@ export default function PluginDetailPage() {
 															</AvatarFallback>
 														</Avatar>
 														<div className="flex-1 space-y-2">
-                                            <div className="flex items-center justify-between gap-2">
-                                                <div className="flex items-center gap-2">
-													<span className="font-medium text-sm">
-														{review.user?.name}
-													</span>
-													<div className="flex">
-														{[1, 2, 3, 4, 5].map((star) => (
-															<Star
-																key={star}
-																className={cn(
-																	"h-3 w-3",
-																	star <= review.rating
-																		? "fill-yellow-400 text-yellow-400"
-																		: "text-muted-foreground",
+															<div className="flex items-center justify-between gap-2">
+																<div className="flex items-center gap-2">
+																	<span className="font-medium text-sm">
+																		{review.user?.name}
+																	</span>
+																	<div className="flex">
+																		{[1, 2, 3, 4, 5].map((star) => (
+																			<Star
+																				key={star}
+																				className={cn(
+																					"h-3 w-3",
+																					star <= review.rating
+																						? "fill-yellow-400 text-yellow-400"
+																						: "text-muted-foreground",
+																				)}
+																			/>
+																		))}
+																	</div>
+																	<span className="text-muted-foreground text-xs">
+																		{formatDate(review.createdAt)}
+																	</span>
+																</div>
+																{(session?.user?.id === review.userId ||
+																	session?.user?.role === "admin") && (
+																	<div className="flex items-center gap-2">
+																		<Button
+																			variant="outline"
+																			size="sm"
+																			onClick={() => {
+																				setEditingReviewId(review.id);
+																				setEditingRating(review.rating);
+																				setEditingComment(review.comment ?? "");
+																			}}
+																		>
+																			<Edit className="mr-2 h-3.5 w-3.5" />{" "}
+																			Редактировать
+																		</Button>
+																		<Button
+																			variant="outline"
+																			size="sm"
+																			onClick={() => {
+																				if (confirm("Удалить отзыв?")) {
+																					deleteReviewMutation.mutate({
+																						reviewId: review.id,
+																					});
+																				}
+																			}}
+																		>
+																			<Trash2 className="mr-2 h-3.5 w-3.5" />{" "}
+																			Удалить
+																		</Button>
+																	</div>
 																)}
-															/>
-														))}
+															</div>
+															{editingReviewId === review.id ? (
+																<div className="space-y-2">
+																	<div className="flex gap-1">
+																		{[1, 2, 3, 4, 5].map((star) => (
+																			<button
+																				key={star}
+																				type="button"
+																				onClick={() => setEditingRating(star)}
+																				aria-label={`Изменить оценку на ${star}`}
+																			>
+																				<Star
+																					className={cn(
+																						"h-4 w-4",
+																						star <= editingRating
+																							? "fill-yellow-400 text-yellow-400"
+																							: "text-muted-foreground",
+																					)}
+																				/>
+																			</button>
+																		))}
+																	</div>
+																	<Textarea
+																		value={editingComment}
+																		onChange={(e) =>
+																			setEditingComment(e.target.value)
+																		}
+																		rows={3}
+																		className="resize-none"
+																	/>
+																	<div className="flex gap-2">
+																		<Button
+																			size="sm"
+																			onClick={() => {
+																				updateReviewMutation.mutate({
+																					reviewId: review.id,
+																					rating: editingRating,
+																					comment: editingComment,
+																				});
+																			}}
+																			disabled={updateReviewMutation.isPending}
+																		>
+																			Сохранить
+																		</Button>
+																		<Button
+																			variant="outline"
+																			size="sm"
+																			onClick={() => setEditingReviewId(null)}
+																		>
+																			Отмена
+																		</Button>
+																	</div>
+																</div>
+															) : (
+																review.comment && (
+																	<p className="text-muted-foreground text-sm">
+																		{review.comment}
+																	</p>
+																)
+															)}
+														</div>
 													</div>
-													<span className="text-muted-foreground text-xs">
-														{formatDate(review.createdAt)}
-													</span>
-                                                </div>
-                                                {(session?.user?.id === review.userId || session?.user?.role === "admin") && (
-                                                    <div className="flex items-center gap-2">
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => {
-                                                                setEditingReviewId(review.id);
-                                                                setEditingRating(review.rating);
-                                                                setEditingComment(review.comment ?? "");
-                                                            }}
-                                                        >
-                                                            <Edit className="mr-2 h-3.5 w-3.5" /> Редактировать
-                                                        </Button>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => {
-                                                                if (confirm("Удалить отзыв?")) {
-                                                                    deleteReviewMutation.mutate({ reviewId: review.id });
-                                                                }
-                                                            }}
-                                                        >
-                                                            <Trash2 className="mr-2 h-3.5 w-3.5" /> Удалить
-                                                        </Button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            {editingReviewId === review.id ? (
-                                                <div className="space-y-2">
-                                                    <div className="flex gap-1">
-                                                        {[1, 2, 3, 4, 5].map((star) => (
-                                                            <button key={star} onClick={() => setEditingRating(star)}>
-                                                                <Star
-                                                                    className={cn(
-                                                                        "h-4 w-4",
-                                                                        star <= editingRating ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground",
-                                                                    )}
-                                                                />
-                                                            </button>
-                                                        ))}
-                                                    </div>
-                                                    <Textarea
-                                                        value={editingComment}
-                                                        onChange={(e) => setEditingComment(e.target.value)}
-                                                        rows={3}
-                                                        className="resize-none"
-                                                    />
-                                                    <div className="flex gap-2">
-                                                        <Button
-                                                            size="sm"
-                                                            onClick={() => {
-                                                                updateReviewMutation.mutate({
-                                                                    reviewId: review.id,
-                                                                    rating: editingRating,
-                                                                    comment: editingComment,
-                                                                });
-                                                            }}
-                                                            disabled={updateReviewMutation.isPending}
-                                                        >
-                                                            Сохранить
-                                                        </Button>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => setEditingReviewId(null)}
-                                                        >
-                                                            Отмена
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                review.comment && (
-                                                    <p className="text-muted-foreground text-sm">
-                                                        {review.comment}
-                                                    </p>
-                                                )
-                                            )}
-                                        </div>
- 										</div>
- 									</CardContent>
- 								</Card>
- 							),
- 						)}
+												</CardContent>
+											</Card>
+										),
+									)}
 								</div>
 							</div>
 						</TabsContent>

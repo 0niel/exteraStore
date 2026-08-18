@@ -22,7 +22,13 @@ let client: Client | null = null;
 let postgresClient: postgres.Sql | null = null;
 
 if (isPostgres && env.DATABASE_URL) {
-	postgresClient = globalForDb.postgresClient ?? postgres(env.DATABASE_URL);
+	postgresClient =
+		globalForDb.postgresClient ??
+		postgres(env.DATABASE_URL, {
+			max: env.NODE_ENV === "production" ? 50 : 10,
+			idle_timeout: 20,
+			connect_timeout: 15,
+		});
 	if (env.NODE_ENV !== "production")
 		globalForDb.postgresClient = postgresClient;
 

@@ -1,9 +1,9 @@
 "use client";
 
 import { Edit, Loader2, Plus, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "~/components/ui/badge";
@@ -52,7 +52,7 @@ export default function AdminCategoriesPage() {
 	const t = useTranslations("AdminCategories");
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-	const [editingCategory, setEditingCategory] = useState<any>(null);
+	const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 	const [deletingCategoryId, setDeletingCategoryId] = useState<number | null>(
 		null,
 	);

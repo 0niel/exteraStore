@@ -12,13 +12,15 @@ import {
 	Tags,
 	UploadCloud,
 } from "lucide-react";
-import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { useDebounce } from "use-debounce";
 import { z } from "zod";
+import { SmartCaptcha } from "~/components/captcha/smart-captcha";
 import { MarkdownEditor } from "~/components/markdown-editor";
 import { ScreenshotUploader } from "~/components/screenshot-uploader";
 import { TagInput } from "~/components/tag-input";
@@ -46,9 +48,8 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "~/components/ui/select";
-import { api } from "~/trpc/react";
 import type { RouterOutputs } from "~/trpc/react";
-import { useDebounce } from "use-debounce";
+import { api } from "~/trpc/react";
 
 const formSchema = z.object({
 	name: z
@@ -95,6 +96,7 @@ export default function UploadPluginPage() {
 	const [fileContent, setFileContent] = useState("");
 	const [fileName, setFileName] = useState<string | null>(null);
 	const [screenshots, setScreenshots] = useState<string[]>([]);
+	const [captchaToken, setCaptchaToken] = useState<string>("");
 
 	const { data: categories, isLoading: areCategoriesLoading } =
 		api.categories.getAll.useQuery();
@@ -117,10 +119,11 @@ export default function UploadPluginPage() {
 	// Поиск похожих плагинов по названию (для предотвращения дубликатов)
 	const watchedName = form.watch("name");
 	const [debouncedName] = useDebounce(watchedName, 300);
-	const { data: similar, isFetching: isSimilarFetching } = api.plugins.similarByName.useQuery(
-		{ name: debouncedName || "", limit: 5 },
-		{ enabled: (debouncedName || "").trim().length >= 2 },
-	);
+	const { data: similar, isFetching: isSimilarFetching } =
+		api.plugins.similarByName.useQuery(
+			{ name: debouncedName || "", limit: 5 },
+			{ enabled: (debouncedName || "").trim().length >= 2 },
+		);
 
 	type SimilarPlugin = RouterOutputs["plugins"]["similarByName"][number];
 
@@ -173,6 +176,11 @@ export default function UploadPluginPage() {
 			return;
 		}
 
+		if (!captchaToken) {
+			toast.error("Пожалуйста, пройдите проверку капчи.");
+			return;
+		}
+
 		const cleanedData = {
 			...data,
 			category: data.categorySlug || "utility",
@@ -182,6 +190,7 @@ export default function UploadPluginPage() {
 			screenshots: JSON.stringify(screenshots),
 			fileContent,
 			filename: fileName || undefined,
+			captchaToken,
 		};
 
 		createPlugin.mutate(cleanedData);
@@ -222,7 +231,7 @@ export default function UploadPluginPage() {
 	}
 
 	return (
-		<section className="bg-muted/40 py-4 sm:py-8 md:py-12 min-h-screen">
+		<section className="min-h-screen bg-muted/40 py-4 sm:py-8 md:py-12">
 			<div className="container mx-auto max-w-6xl px-3 sm:px-4">
 				<div className="mb-6 text-center sm:mb-8">
 					<h1 className="mb-2 font-bold text-2xl sm:text-3xl md:text-4xl">
@@ -265,18 +274,31 @@ export default function UploadPluginPage() {
 													{(similar?.length ?? 0) > 0 && (
 														<div className="mt-2 rounded-lg border bg-muted/40 p-3 text-xs">
 															<div className="mb-2 font-medium text-muted-foreground">
-																Найдены похожие плагины. Пожалуйста, убедитесь, что вы не публикуете дубликат:
+																Найдены похожие плагины. Пожалуйста, убедитесь,
+																что вы не публикуете дубликат:
 															</div>
 															<ul className="space-y-1">
 																{similar!.map((p: SimilarPlugin) => (
-																	<li key={p.id} className="flex items-center justify-between gap-2">
+																	<li
+																		key={p.id}
+																		className="flex items-center justify-between gap-2"
+																	>
 																		<div className="truncate">
-																			<span className="font-medium">{p.name}</span>
+																			<span className="font-medium">
+																				{p.name}
+																			</span>
 																			{p.shortDescription && (
-																				<span className="ml-2 text-muted-foreground">{p.shortDescription}</span>
+																				<span className="ml-2 text-muted-foreground">
+																					{p.shortDescription}
+																				</span>
 																			)}
 																		</div>
-																		<Link className="shrink-0 underline" href={`/plugins/${p.slug}`}>Открыть</Link>
+																		<Link
+																			className="shrink-0 underline"
+																			href={`/plugins/${p.slug}`}
+																		>
+																			Открыть
+																		</Link>
 																	</li>
 																))}
 															</ul>
@@ -514,13 +536,23 @@ export default function UploadPluginPage() {
 										/>
 										{fileContent && (
 											<p className="mt-2 text-muted-foreground text-sm">
-												{fileContent.length.toLocaleString()} байт выбрано{fileName ? ` — ${fileName}` : ""}.
+												{fileContent.length.toLocaleString()} байт выбрано
+												{fileName ? ` — ${fileName}` : ""}.
 											</p>
 										)}
 									</CardContent>
 								</Card>
 							</div>
 						</div>
+
+						<Card>
+							<CardContent className="pt-6">
+								<SmartCaptcha
+									onSuccess={setCaptchaToken}
+									onError={() => setCaptchaToken("")}
+								/>
+							</CardContent>
+						</Card>
 
 						<div className="flex flex-col justify-end gap-3 sm:flex-row sm:gap-4">
 							<Button
@@ -533,7 +565,9 @@ export default function UploadPluginPage() {
 							</Button>
 							<Button
 								type="submit"
-								disabled={createPlugin.isPending || !fileContent}
+								disabled={
+									createPlugin.isPending || !fileContent || !captchaToken
+								}
 								className="w-full sm:w-auto"
 							>
 								{createPlugin.isPending ? (

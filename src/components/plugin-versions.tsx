@@ -13,20 +13,13 @@ import {
 	Hash,
 	Tag as TagIcon,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
 import Link from "next/link";
-import { useState } from "react";
+import { useTranslations } from "next-intl";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "~/components/ui/card";
+import { Card, CardContent } from "~/components/ui/card";
 import {
 	Dialog,
 	DialogContent,
@@ -36,35 +29,69 @@ import {
 	DialogTrigger,
 } from "~/components/ui/dialog";
 import { Skeleton } from "~/components/ui/skeleton";
-import { VersionDiffDialog } from "~/components/version-diff-dialog";
-import { formatBytes, formatDate } from "~/lib/utils";
+import { formatBytes, formatDate, safeJsonParse } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
 interface PluginVersionsProps {
 	pluginSlug: string;
 }
 
+interface PluginVersion {
+	id: number;
+	version: string;
+	changelog: string | null;
+	fileSize: number;
+	fileHash: string;
+	gitCommitHash: string | null;
+	gitBranch: string | null;
+	gitTag: string | null;
+	isStable: boolean;
+	downloadCount: number;
+	createdAt: number;
+	createdBy: {
+		id: string;
+		name: string | null;
+		image: string | null;
+	};
+}
+
 export function PluginVersions({ pluginSlug }: PluginVersionsProps) {
 	const t = useTranslations("PluginVersions");
-	const [selectedVersion, setSelectedVersion] = useState<string | null>(null);
 
-	const { data: versions, isLoading } = api.pluginVersions.getVersions.useQuery(
-		{ pluginSlug },
-	);
+	const {
+		data: versions,
+		error: versionsError,
+		isError: isVersionsError,
+		isLoading,
+		refetch: refetchVersions,
+	} = api.pluginVersions.getVersions.useQuery({ pluginSlug });
 
 	const downloadVersionMutation =
 		api.pluginVersions.downloadVersion.useMutation({
 			onSuccess: (data) => {
-				if (data.securityCheck && data.securityCheck.status !== "passed" && data.securityCheck.details) {
-					const details = JSON.parse(data.securityCheck.details);
-					if (details.classification === "critical" || details.classification === "unsafe") {
+				if (
+					data.securityCheck &&
+					data.securityCheck.status !== "passed" &&
+					data.securityCheck.details
+				) {
+					const details = safeJsonParse<unknown>(
+						data.securityCheck.details,
+						null,
+					);
+					const classification =
+						typeof details === "object" && details !== null
+							? (details as Record<string, unknown>).classification
+							: undefined;
+					if (classification === "critical" || classification === "unsafe") {
 						toast.error("🛡️ Версия не прошла проверку безопасности", {
-							description: "Обнаружены критические проблемы. Используйте на свой страх и риск.",
+							description:
+								"Обнаружены критические проблемы. Используйте на свой страх и риск.",
 							duration: 6000,
 						});
-					} else if (details.classification === "potentially_unsafe") {
+					} else if (classification === "potentially_unsafe") {
 						toast.warning("⚠️ Потенциальные проблемы безопасности", {
-							description: "В версии обнаружены потенциальные проблемы. Будьте осторожны.",
+							description:
+								"В версии обнаружены потенциальные проблемы. Будьте осторожны.",
 							duration: 4000,
 						});
 					}
@@ -77,6 +104,18 @@ export function PluginVersions({ pluginSlug }: PluginVersionsProps) {
 						duration: 3000,
 					});
 				} else {
+					const blob = new Blob([data.fileContent], {
+						type: data.mimeType,
+					});
+					const downloadUrl = URL.createObjectURL(blob);
+					const link = document.createElement("a");
+					link.href = downloadUrl;
+					link.download = data.fileName;
+					document.body.appendChild(link);
+					link.click();
+					link.remove();
+					setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
+
 					toast.success("✅ Версия успешно скачана", {
 						description: "Установите плагин через настройки exteraGram",
 						duration: 3000,
@@ -116,6 +155,29 @@ export function PluginVersions({ pluginSlug }: PluginVersionsProps) {
 		);
 	}
 
+	if (isVersionsError) {
+		return (
+			<Card>
+				<CardContent className="pt-6">
+					<div className="space-y-4 py-8 text-center">
+						<AlertCircle className="mx-auto h-12 w-12 text-destructive" />
+						<div>
+							<h3 className="font-medium text-lg">
+								Не удалось загрузить версии
+							</h3>
+							<p className="text-muted-foreground text-sm">
+								{versionsError.message}
+							</p>
+						</div>
+						<Button variant="outline" onClick={() => void refetchVersions()}>
+							Повторить
+						</Button>
+					</div>
+				</CardContent>
+			</Card>
+		);
+	}
+
 	if (!versions || versions.length === 0) {
 		return (
 			<Card>
@@ -147,7 +209,7 @@ export function PluginVersions({ pluginSlug }: PluginVersionsProps) {
 			</div>
 
 			<div className="space-y-3">
-				{versions.map((version: any, index: any) => (
+				{versions.map((version: PluginVersion, index: number) => (
 					<Card
 						key={version.id}
 						className={index === 0 ? "border-primary" : ""}
@@ -283,33 +345,33 @@ export function PluginVersions({ pluginSlug }: PluginVersionsProps) {
 											<div className="space-y-4">
 												<div className="grid grid-cols-2 gap-4">
 													<div>
-														<label className="font-medium text-sm">
+														<div className="font-medium text-sm">
 															{t("file_size")}
-														</label>
+														</div>
 														<p className="text-muted-foreground text-sm">
 															{formatBytes(version.fileSize)}
 														</p>
 													</div>
 													<div>
-														<label className="font-medium text-sm">
+														<div className="font-medium text-sm">
 															{t("downloads")}
-														</label>
+														</div>
 														<p className="text-muted-foreground text-sm">
 															{version.downloadCount}
 														</p>
 													</div>
 													<div>
-														<label className="font-medium text-sm">
+														<div className="font-medium text-sm">
 															{t("creation_date")}
-														</label>
+														</div>
 														<p className="text-muted-foreground text-sm">
 															{formatDate(version.createdAt)}
 														</p>
 													</div>
 													<div>
-														<label className="font-medium text-sm">
+														<div className="font-medium text-sm">
 															{t("type")}
-														</label>
+														</div>
 														<p className="text-muted-foreground text-sm">
 															{version.isStable ? t("stable") : t("beta")}
 														</p>
@@ -317,9 +379,9 @@ export function PluginVersions({ pluginSlug }: PluginVersionsProps) {
 												</div>
 
 												<div>
-													<label className="font-medium text-sm">
+													<div className="font-medium text-sm">
 														{t("sha256_hash")}
-													</label>
+													</div>
 													<p className="rounded bg-muted p-2 font-mono text-muted-foreground text-xs">
 														{version.fileHash}
 													</p>
@@ -329,9 +391,9 @@ export function PluginVersions({ pluginSlug }: PluginVersionsProps) {
 													version.gitBranch ||
 													version.gitTag) && (
 													<div>
-														<label className="font-medium text-sm">
+														<div className="font-medium text-sm">
 															{t("git_info")}
-														</label>
+														</div>
 														<div className="space-y-1 text-muted-foreground text-sm">
 															{version.gitCommitHash && (
 																<p>
@@ -363,9 +425,9 @@ export function PluginVersions({ pluginSlug }: PluginVersionsProps) {
 
 												{version.changelog && (
 													<div>
-														<label className="font-medium text-sm">
+														<div className="font-medium text-sm">
 															{t("changelog")}
-														</label>
+														</div>
 														<div className="prose prose-sm prose-neutral dark:prose-invert mt-2 max-w-none rounded bg-muted p-3">
 															<ReactMarkdown>{version.changelog}</ReactMarkdown>
 														</div>

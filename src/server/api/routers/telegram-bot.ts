@@ -5,11 +5,13 @@ import {
 	protectedProcedure,
 	publicProcedure,
 } from "~/server/api/trpc";
-import { pluginDownloads, plugins, pluginVersions } from "~/server/db/schema";
 import {
-	checkDownloadRateLimit,
-	hashIp,
-} from "~/server/lib/rate-limiter";
+	pluginDownloads,
+	plugins,
+	pluginVersions,
+	users,
+} from "~/server/db/schema";
+import { checkDownloadRateLimit, hashIp } from "~/server/lib/rate-limiter";
 
 const botUserSchema = z.object({
 	id: z.number(),
@@ -237,6 +239,28 @@ export const telegramBotRouter = createTRPCRouter({
 						.limit(1);
 
 					const userId = String(input.userId);
+
+					if (userId) {
+						const user = await ctx.db
+							.select({
+								isBanned: users.isBanned,
+								bannedReason: users.bannedReason,
+							})
+							.from(users)
+							.where(eq(users.id, userId))
+							.limit(1);
+
+						if (user[0]?.isBanned) {
+							return {
+								success: false,
+								answerCallbackQuery: {
+									callback_query_id: input.callbackQueryId,
+									text: user[0].bannedReason || "Your account has been banned",
+									show_alert: true,
+								},
+							};
+						}
+					}
 
 					if (latestVersion[0] && userId) {
 						const existingDownload = await ctx.db

@@ -63,7 +63,9 @@ declare global {
 export function useTelegramWebApp() {
 	const [isReady, setIsReady] = useState(false);
 	const [webApp, setWebApp] = useState<TelegramWebApp | null>(null);
-	const [user, setUser] = useState<TelegramWebApp["initDataUnsafe"]["user"] | null>(null);
+	const [user, setUser] = useState<
+		TelegramWebApp["initDataUnsafe"]["user"] | null
+	>(null);
 
 	useEffect(() => {
 		if (typeof window === "undefined") return;
@@ -73,10 +75,10 @@ export function useTelegramWebApp() {
 				const tg = window.Telegram.WebApp;
 				setWebApp(tg);
 				setUser(tg.initDataUnsafe.user || null);
-				
+
 				tg.ready();
 				tg.expand();
-				
+
 				setIsReady(true);
 			}
 		};
@@ -84,7 +86,9 @@ export function useTelegramWebApp() {
 		if (window.Telegram?.WebApp) {
 			checkTelegram();
 		} else {
-			const script = document.querySelector('script[src="https://telegram.org/js/telegram-web-app.js"]');
+			const script = document.querySelector(
+				'script[src="https://telegram.org/js/telegram-web-app.js"]',
+			);
 			if (script) {
 				script.addEventListener("load", checkTelegram);
 			} else {
@@ -101,4 +105,3 @@ export function useTelegramWebApp() {
 		isTelegramWebApp: isReady && !!user,
 	};
 }
-

@@ -1,14 +1,14 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Loader2, Upload } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
-import { api } from "~/trpc/react";
-
-import { Loader2, Upload } from "lucide-react";
+import { SmartCaptcha } from "~/components/captcha/smart-captcha";
+import { MarkdownEditor } from "~/components/markdown-editor";
 import { Button } from "~/components/ui/button";
 import {
 	Dialog,
@@ -29,7 +29,7 @@ import {
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { Switch } from "~/components/ui/switch";
-import { MarkdownEditor } from "~/components/markdown-editor";
+import { api } from "~/trpc/react";
 
 const uploadVersionSchema = z.object({
 	version: z
@@ -57,6 +57,8 @@ export function UploadVersionDialog({
 	const t = useTranslations("UploadVersionDialog");
 	const [open, setOpen] = useState(false);
 	const [file, setFile] = useState<File | null>(null);
+	const [captchaToken, setCaptchaToken] = useState<string>("");
+	const [captchaKey, setCaptchaKey] = useState(0);
 
 	const form = useForm<UploadVersionForm>({
 		resolver: zodResolver(uploadVersionSchema),
@@ -74,16 +76,24 @@ export function UploadVersionDialog({
 			setOpen(false);
 			form.reset();
 			setFile(null);
+			setCaptchaToken("");
 			onUploadSuccess();
 		},
 		onError: (error) => {
+			setCaptchaToken("");
+			setCaptchaKey((value) => value + 1);
 			toast.error(t("upload_error", { error: error.message }));
 		},
 	});
 
 	const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		const selectedFile = event.target.files?.[0];
-		if (selectedFile && (selectedFile.name.endsWith('.py') || selectedFile.name.endsWith('.plugin') || selectedFile.name.endsWith('.txt'))) {
+		if (
+			selectedFile &&
+			(selectedFile.name.endsWith(".py") ||
+				selectedFile.name.endsWith(".plugin") ||
+				selectedFile.name.endsWith(".txt"))
+		) {
 			setFile(selectedFile);
 			const reader = new FileReader();
 			reader.onload = (e) => {
@@ -97,15 +107,27 @@ export function UploadVersionDialog({
 	};
 
 	const onSubmit = (data: UploadVersionForm) => {
+		if (!captchaToken) {
+			toast.error("Пожалуйста, пройдите проверку капчи.");
+			return;
+		}
+
 		createVersionMutation.mutate({
 			pluginId,
 			...data,
 			filename: file?.name,
+			captchaToken,
 		});
 	};
 
+	const handleOpenChange = (nextOpen: boolean) => {
+		setOpen(nextOpen);
+		setCaptchaToken("");
+		setCaptchaKey((value) => value + 1);
+	};
+
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
+		<Dialog open={open} onOpenChange={handleOpenChange}>
 			<DialogTrigger asChild>
 				<Button className="w-full sm:w-auto">
 					<Upload className="mr-2 h-4 w-4" />
@@ -113,23 +135,30 @@ export function UploadVersionDialog({
 					<span className="sm:hidden">Загрузить версию</span>
 				</Button>
 			</DialogTrigger>
-			<DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto sm:max-h-[85vh]">
+			<DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto sm:max-h-[85vh]">
 				<DialogHeader>
-					<DialogTitle className="text-lg sm:text-xl">{t("upload_new_version")}</DialogTitle>
+					<DialogTitle className="text-lg sm:text-xl">
+						{t("upload_new_version")}
+					</DialogTitle>
 					<DialogDescription className="text-sm">
 						{t("upload_new_version_description")}
 					</DialogDescription>
 				</DialogHeader>
 
 				<Form {...form}>
-					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
+					<form
+						onSubmit={form.handleSubmit(onSubmit)}
+						className="space-y-4 sm:space-y-6"
+					>
 						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-4">
 							<FormField
 								control={form.control}
 								name="version"
 								render={({ field }) => (
 									<FormItem>
-										<FormLabel className="text-sm font-medium">{t("version")} *</FormLabel>
+										<FormLabel className="font-medium text-sm">
+											{t("version")} *
+										</FormLabel>
 										<FormControl>
 											<Input
 												placeholder={t("version_placeholder")}
@@ -137,7 +166,9 @@ export function UploadVersionDialog({
 												className="text-sm"
 											/>
 										</FormControl>
-										<FormDescription className="text-xs">{t("semantic_version")}</FormDescription>
+										<FormDescription className="text-xs">
+											{t("semantic_version")}
+										</FormDescription>
 										<FormMessage />
 									</FormItem>
 								)}
@@ -149,7 +180,7 @@ export function UploadVersionDialog({
 								render={({ field }) => (
 									<FormItem className="flex flex-col space-y-3 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0 sm:p-4">
 										<div className="space-y-0.5">
-											<FormLabel className="text-sm font-medium sm:text-base">
+											<FormLabel className="font-medium text-sm sm:text-base">
 												{t("stable_version")}
 											</FormLabel>
 											<FormDescription className="text-xs sm:text-sm">
@@ -170,9 +201,11 @@ export function UploadVersionDialog({
 						<FormField
 							control={form.control}
 							name="fileContent"
-							render={({ field }) => (
+							render={() => (
 								<FormItem>
-									<FormLabel className="text-sm font-medium">{t("plugin_file")} *</FormLabel>
+									<FormLabel className="font-medium text-sm">
+										{t("plugin_file")} *
+									</FormLabel>
 									<FormControl>
 										<div className="space-y-2">
 											<Input
@@ -182,7 +215,7 @@ export function UploadVersionDialog({
 												className="cursor-pointer text-sm"
 											/>
 											{file && (
-												<p className="text-muted-foreground text-xs sm:text-sm break-all">
+												<p className="break-all text-muted-foreground text-xs sm:text-sm">
 													{t("selected_file")}: {file.name}
 												</p>
 											)}
@@ -201,7 +234,9 @@ export function UploadVersionDialog({
 							name="changelog"
 							render={({ field }) => (
 								<FormItem>
-									<FormLabel className="text-sm font-medium">{t("changelog")}</FormLabel>
+									<FormLabel className="font-medium text-sm">
+										{t("changelog")}
+									</FormLabel>
 									<FormControl>
 										<MarkdownEditor
 											value={field.value || ""}
@@ -221,18 +256,24 @@ export function UploadVersionDialog({
 							)}
 						/>
 
+						<SmartCaptcha
+							key={captchaKey}
+							onSuccess={setCaptchaToken}
+							onError={() => setCaptchaToken("")}
+						/>
+
 						<div className="flex flex-col gap-2 pt-2 sm:flex-row sm:justify-end sm:gap-2">
 							<Button
 								type="button"
 								variant="outline"
-								onClick={() => setOpen(false)}
+								onClick={() => handleOpenChange(false)}
 								className="w-full sm:w-auto"
 							>
 								{t("cancel")}
 							</Button>
 							<Button
 								type="submit"
-								disabled={createVersionMutation.isPending}
+								disabled={createVersionMutation.isPending || !captchaToken}
 								className="w-full sm:w-auto"
 							>
 								{createVersionMutation.isPending && (

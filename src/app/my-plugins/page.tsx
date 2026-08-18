@@ -13,10 +13,10 @@ import {
 	Trash2,
 	Upload,
 } from "lucide-react";
-import { useSession } from "next-auth/react";
-import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -113,7 +113,7 @@ export default function MyPluginsPage() {
 
 				<div className="mb-6">
 					<div className="relative max-w-md">
-						<Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 transform text-muted-foreground" />
+						<Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
 						<Input
 							placeholder="Поиск среди ваших плагинов..."
 							value={searchQuery}
@@ -285,7 +285,7 @@ function PluginCard({ plugin }: { plugin: typeof Plugin.$inferSelect }) {
 				</div>
 
 				{/* Планшетная версия - dropdown menu */}
-				<div className="hidden sm:flex lg:hidden items-center gap-2">
+				<div className="hidden items-center gap-2 sm:flex lg:hidden">
 					<Button variant="outline" size="sm" asChild className="flex-1">
 						<Link href={`/plugins/${plugin.slug}`}>
 							<Eye className="mr-2 h-4 w-4" />
@@ -300,13 +300,19 @@ function PluginCard({ plugin }: { plugin: typeof Plugin.$inferSelect }) {
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="end">
 							<DropdownMenuItem asChild>
-								<Link href={`/plugins/${plugin.slug}/versions`} className="flex items-center">
+								<Link
+									href={`/plugins/${plugin.slug}/versions`}
+									className="flex items-center"
+								>
 									<GitBranch className="mr-2 h-4 w-4" />
 									{t("versions")}
 								</Link>
 							</DropdownMenuItem>
 							<DropdownMenuItem asChild>
-								<Link href={`/my-plugins/${plugin.slug}/manage`} className="flex items-center">
+								<Link
+									href={`/my-plugins/${plugin.slug}/manage`}
+									className="flex items-center"
+								>
 									<Settings className="mr-2 h-4 w-4" />
 									{t("manage")}
 								</Link>
@@ -315,18 +321,36 @@ function PluginCard({ plugin }: { plugin: typeof Plugin.$inferSelect }) {
 					</DropdownMenu>
 				</div>
 
-				<div className="hidden lg:flex items-center gap-1">
-					<Button variant="outline" size="sm" asChild className="flex-1" title={t("view")}>
+				<div className="hidden items-center gap-1 lg:flex">
+					<Button
+						variant="outline"
+						size="sm"
+						asChild
+						className="flex-1"
+						title={t("view")}
+					>
 						<Link href={`/plugins/${plugin.slug}`}>
 							<Eye className="h-4 w-4" />
 						</Link>
 					</Button>
-					<Button variant="outline" size="sm" asChild className="flex-1" title={t("versions")}>
+					<Button
+						variant="outline"
+						size="sm"
+						asChild
+						className="flex-1"
+						title={t("versions")}
+					>
 						<Link href={`/plugins/${plugin.slug}/versions`}>
 							<GitBranch className="h-4 w-4" />
 						</Link>
 					</Button>
-					<Button variant="outline" size="sm" asChild className="flex-1" title={t("manage")}>
+					<Button
+						variant="outline"
+						size="sm"
+						asChild
+						className="flex-1"
+						title={t("manage")}
+					>
 						<Link href={`/my-plugins/${plugin.slug}/manage`}>
 							<Settings className="h-4 w-4" />
 						</Link>

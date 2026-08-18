@@ -7,13 +7,23 @@ import {
 	GitCommit,
 	Loader2,
 	MoreVertical,
-	User,
 	Trash2,
+	User,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "~/components/ui/alert-dialog";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
@@ -29,16 +39,6 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import {
-	AlertDialog,
-	AlertDialogAction,
-	AlertDialogCancel,
-	AlertDialogContent,
-	AlertDialogDescription,
-	AlertDialogFooter,
-	AlertDialogHeader,
-	AlertDialogTitle,
-} from "~/components/ui/alert-dialog";
 import {
 	Table,
 	TableBody,
@@ -60,7 +60,11 @@ export function PluginManageVersions({
 	pluginSlug,
 }: PluginManageVersionsProps) {
 	const t = useTranslations("PluginManageVersions");
-	const { data: versions, isLoading, refetch } = api.pluginUpload.getVersions.useQuery({
+	const {
+		data: versions,
+		isLoading,
+		refetch,
+	} = api.pluginUpload.getVersions.useQuery({
 		pluginId,
 	});
 
@@ -223,7 +227,8 @@ export function PluginManageVersions({
 					<AlertDialogHeader>
 						<AlertDialogTitle>Удалить версию?</AlertDialogTitle>
 						<AlertDialogDescription>
-							Это действие нельзя отменить. Версия v{versionToDelete} будет удалена.
+							Это действие нельзя отменить. Версия v{versionToDelete} будет
+							удалена.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>

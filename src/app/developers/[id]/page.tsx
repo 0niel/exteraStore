@@ -19,11 +19,12 @@ import {
 	TrendingUp,
 	Trophy,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
+import { DonationWidget } from "@/components/donations/donation-widget";
 import { PluginCard } from "~/components/plugin-card";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
@@ -96,7 +97,7 @@ function getNextTierProgress(
 		{ score: 500, name: "Pro" },
 		{ score: 2000, name: "Expert" },
 		{ score: 5000, name: "Master" },
-		{ score: 10000, name: "Legend" }
+		{ score: 10000, name: "Legend" },
 	];
 
 	let currentTierIndex = 0;
@@ -295,7 +296,7 @@ export default function DeveloperProfilePage() {
 									</Avatar>
 									<div
 										className={cn(
-											"-bottom-2 -right-2 absolute flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r shadow-xl",
+											"absolute -right-2 -bottom-2 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r shadow-xl",
 											tier.color,
 										)}
 									>
@@ -374,20 +375,35 @@ export default function DeveloperProfilePage() {
 										<div className="mt-6">
 											<div className="mb-2 flex items-center justify-between text-sm">
 												<span className="text-muted-foreground">
-													{tierProgress.nextTier ? `Прогресс до ${tierProgress.nextTier.name}` : "Прогресс"}
+													{tierProgress.nextTier
+														? `Прогресс до ${tierProgress.nextTier.name}`
+														: "Прогресс"}
 												</span>
 												<span className="font-medium">
 													{Math.round(tierProgress.progress)}%
 												</span>
 											</div>
-											<Progress value={tierProgress.progress} className="h-3 bg-muted/30" />
+											<Progress
+												value={tierProgress.progress}
+												className="h-3 bg-muted/30"
+											/>
 											{tierProgress.nextTier && (
 												<div className="mt-2 text-center">
-													<div className="text-xs text-muted-foreground">
-														Нужно еще <span className="font-medium text-primary">{Math.ceil(tierProgress.scoreNeeded)}</span> очков для ранга <span className="font-medium">{tierProgress.nextTier.name}</span>
+													<div className="text-muted-foreground text-xs">
+														Нужно еще{" "}
+														<span className="font-medium text-primary">
+															{Math.ceil(tierProgress.scoreNeeded)}
+														</span>{" "}
+														очков для ранга{" "}
+														<span className="font-medium">
+															{tierProgress.nextTier.name}
+														</span>
 													</div>
-													<div className="mt-1 text-xs text-muted-foreground">
-														Текущий счет: <span className="font-medium">{Math.floor(tierProgress.currentScore)}</span>
+													<div className="mt-1 text-muted-foreground text-xs">
+														Текущий счет:{" "}
+														<span className="font-medium">
+															{Math.floor(tierProgress.currentScore)}
+														</span>
 													</div>
 												</div>
 											)}
@@ -456,6 +472,17 @@ export default function DeveloperProfilePage() {
 
 						{/* Sidebar */}
 						<div className="space-y-6">
+							{developer.donationRequisites && (
+								<DonationWidget
+									methods={(() => {
+										try {
+											return JSON.parse(developer.donationRequisites || "null");
+										} catch {
+											return null;
+										}
+									})()}
+								/>
+							)}
 							{/* Quick Actions */}
 							<Card>
 								<CardHeader>

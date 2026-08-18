@@ -1,7 +1,15 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Code, Sparkles, Zap, Shield, Star, Heart, type LucideIcon } from "lucide-react";
+import {
+	Code,
+	Heart,
+	type LucideIcon,
+	Shield,
+	Sparkles,
+	Star,
+	Zap,
+} from "lucide-react";
 
 const icons: LucideIcon[] = [Code, Sparkles, Zap, Shield, Star, Heart];
 
@@ -46,4 +54,3 @@ export function FloatingElements() {
 		</div>
 	);
 }
-

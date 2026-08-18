@@ -1,9 +1,9 @@
 "use client";
 
 import { Heart, Loader2, Search } from "lucide-react";
-import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useState } from "react";
 import { PluginCard } from "~/components/plugin-card";
 import { Button } from "~/components/ui/button";
@@ -78,7 +78,7 @@ export default function FavoritesPage() {
 
 				<div className="mb-6">
 					<div className="relative max-w-md">
-						<Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 transform text-muted-foreground" />
+						<Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
 						<Input
 							placeholder="Поиск среди избранных..."
 							value={searchQuery}
@@ -109,10 +109,7 @@ export default function FavoritesPage() {
 					<>
 						<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
 							{filteredFavorites.map((plugin: typeof Plugin.$inferSelect) => (
-								<PluginCard
-									key={plugin.id}
-									plugin={plugin}
-								/>
+								<PluginCard key={plugin.id} plugin={plugin} />
 							))}
 						</div>
 

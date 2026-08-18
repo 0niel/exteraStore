@@ -7,12 +7,13 @@
  * need to use are documented accordingly near the end.
  */
 
-import { TRPCError, initTRPC } from "@trpc/server";
+import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
 
 import { auth } from "~/server/auth";
 import { db } from "~/server/db";
+import type { users } from "~/server/db/schema";
 
 /**
  * 1. CONTEXT
@@ -119,10 +120,27 @@ export const publicProcedure = t.procedure.use(timingMiddleware);
  */
 export const protectedProcedure = t.procedure
 	.use(timingMiddleware)
-	.use(({ ctx, next }) => {
+	.use(async ({ ctx, next }) => {
 		if (!ctx.session?.user) {
 			throw new TRPCError({ code: "UNAUTHORIZED" });
 		}
+
+		const user = await ctx.db.query.users.findFirst({
+			where: (usersTable: typeof users, { eq }: any) =>
+				eq(usersTable.id, ctx.session!.user.id),
+			columns: {
+				isBanned: true,
+				bannedReason: true,
+			},
+		});
+
+		if (user?.isBanned) {
+			throw new TRPCError({
+				code: "FORBIDDEN",
+				message: user.bannedReason || "Your account has been banned",
+			});
+		}
+
 		return next({
 			ctx: {
 				session: { ...ctx.session, user: ctx.session.user },

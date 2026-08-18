@@ -14,8 +14,7 @@ import {
 	User,
 } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -252,9 +251,7 @@ export default function PluginDiffPage() {
 								</div>
 								<div className="flex items-center gap-2 text-muted-foreground text-sm">
 									<Calendar className="h-4 w-4" />
-									<span>
-										{formatDate(diffData.fromVersion.createdAt)}
-									</span>
+									<span>{formatDate(diffData.fromVersion.createdAt)}</span>
 								</div>
 								<div className="flex items-center gap-2 text-muted-foreground text-sm">
 									<GitBranch className="h-4 w-4" />
@@ -293,9 +290,7 @@ export default function PluginDiffPage() {
 								</div>
 								<div className="flex items-center gap-2 text-muted-foreground text-sm">
 									<Calendar className="h-4 w-4" />
-									<span>
-										{formatDate(diffData.toVersion.createdAt)}
-									</span>
+									<span>{formatDate(diffData.toVersion.createdAt)}</span>
 								</div>
 								<div className="flex items-center gap-2 text-muted-foreground text-sm">
 									<GitBranch className="h-4 w-4" />

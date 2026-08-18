@@ -5,7 +5,7 @@ global:
 
 api:
   dashboard: true
-  insecure: true
+  insecure: false
 
 providers:
   docker:
@@ -37,10 +37,8 @@ certificatesResolvers:
 
 log:
   level: INFO
-  filePath: "/var/log/traefik/traefik.log"
 
-accessLog:
-  filePath: "/var/log/traefik/access.log"
+accessLog: {}
 
 metrics:
   prometheus:

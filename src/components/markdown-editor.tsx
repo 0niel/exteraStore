@@ -13,11 +13,11 @@ import { useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
+import { TextImprovementButton } from "~/components/text-improvement-button";
 import { Button } from "~/components/ui/button";
 import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Textarea } from "~/components/ui/textarea";
-import { TextImprovementButton } from "~/components/text-improvement-button";
 
 interface MarkdownEditorProps {
 	value: string;
@@ -71,10 +71,16 @@ export function MarkdownEditor({
 				<div className="border-b">
 					<div className="flex items-center justify-between px-2 py-1.5 sm:px-3 sm:py-2">
 						<TabsList className="h-7 sm:h-8">
-							<TabsTrigger value="write" className="text-xs sm:text-sm px-2 sm:px-3">
+							<TabsTrigger
+								value="write"
+								className="px-2 text-xs sm:px-3 sm:text-sm"
+							>
 								Write
 							</TabsTrigger>
-							<TabsTrigger value="preview" className="text-xs sm:text-sm px-2 sm:px-3">
+							<TabsTrigger
+								value="preview"
+								className="px-2 text-xs sm:px-3 sm:text-sm"
+							>
 								Preview
 							</TabsTrigger>
 						</TabsList>

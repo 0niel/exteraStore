@@ -1,5 +1,5 @@
-import { getRequestConfig } from "next-intl/server";
 import { cookies, headers } from "next/headers";
+import { getRequestConfig } from "next-intl/server";
 import { type Locale, locales } from "~/lib/i18n-config";
 
 export { locales, type Locale };

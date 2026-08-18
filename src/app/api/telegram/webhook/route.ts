@@ -1,143 +1,70 @@
 import { and, desc, eq, like, or, sql } from "drizzle-orm";
 import { type NextRequest, NextResponse } from "next/server";
-import { createValidDate } from "~/lib/utils";
+import { env } from "~/env";
+import { createValidDate, escapeHtml } from "~/lib/utils";
 import { db } from "~/server/db";
 import {
 	type plugins as Plugin,
 	pluginCategories,
-	pluginVersions,
+	pluginDownloads,
 	plugins,
-	users,
+	pluginVersions,
 	userPluginSubscriptions,
+	users,
 } from "~/server/db/schema";
+import { checkDownloadRateLimit, hashIp } from "~/server/lib/rate-limiter";
+import {
+	answerTelegramCallback,
+	editTelegramMessage,
+	sendTelegramDocument,
+	sendTelegramMessage,
+	type TelegramMessageOptions,
+	type TelegramReplyMarkup,
+} from "~/server/lib/telegram-client";
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const API_URL = `https://api.telegram.org/bot${BOT_TOKEN}`;
-
-async function sendMessage(chatId: string, text: string, options?: any) {
-	if (!BOT_TOKEN) return;
-
-	try {
-		await fetch(`${API_URL}/sendMessage`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				chat_id: chatId,
-				text,
-				parse_mode: "HTML",
-				...options,
-			}),
-		});
-	} catch (error) {
-		console.error("Failed to send Telegram message:", error);
-	}
+async function sendMessage(
+	chatId: string,
+	text: string,
+	options?: TelegramMessageOptions,
+) {
+	if (!env.TELEGRAM_BOT_TOKEN) return;
+	await sendTelegramMessage(chatId, text, { parse_mode: "HTML", ...options });
 }
 
 async function sendMessageWithKeyboard(
 	chatId: string,
 	text: string,
-	keyboard: any,
-	options?: any,
+	keyboard: TelegramReplyMarkup,
+	options?: TelegramMessageOptions,
 ) {
-	if (!BOT_TOKEN) {
-		console.error("[sendMessageWithKeyboard] BOT_TOKEN is not set");
-		return;
-	}
-
-	try {
-		console.log(
-			`[sendMessageWithKeyboard] Sending message to chat ${chatId} with keyboard`,
-		);
-		const response = await fetch(`${API_URL}/sendMessage`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				chat_id: chatId,
-				text,
-				parse_mode: "HTML",
-				reply_markup: keyboard,
-				...options,
-			}),
-		});
-
-		const responseText = await response.text();
-		console.log(
-			`[sendMessageWithKeyboard] Response status: ${response.status}, body: ${responseText}`,
-		);
-
-		if (!response.ok) {
-			console.error(
-				`[sendMessageWithKeyboard] Failed to send message: ${response.status} ${responseText}`,
-			);
-		}
-	} catch (error) {
-		console.error(
-			"[sendMessageWithKeyboard] Failed to send Telegram message with keyboard:",
-			error,
-		);
-	}
+	if (!env.TELEGRAM_BOT_TOKEN) return;
+	await sendTelegramMessage(chatId, text, {
+		parse_mode: "HTML",
+		reply_markup: keyboard,
+		...options,
+	});
 }
 
 async function editMessage(
 	chatId: string,
 	messageId: number,
 	text: string,
-	keyboard?: any,
+	keyboard?: TelegramReplyMarkup,
 ) {
-	if (!BOT_TOKEN) {
-		console.error("[editMessage] BOT_TOKEN is not set");
-		return;
-	}
-
-	try {
-		console.log(`[editMessage] Editing message ${messageId} in chat ${chatId}`);
-		const response = await fetch(`${API_URL}/editMessageText`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				chat_id: chatId,
-				message_id: messageId,
-				text,
-				parse_mode: "HTML",
-				reply_markup: keyboard,
-			}),
-		});
-
-		const responseText = await response.text();
-		console.log(
-			`[editMessage] Response status: ${response.status}, body: ${responseText}`,
-		);
-
-		if (!response.ok) {
-			console.error(
-				`[editMessage] Failed to edit message: ${response.status} ${responseText}`,
-			);
-		}
-	} catch (error) {
-		console.error("[editMessage] Failed to edit Telegram message:", error);
-	}
+	if (!env.TELEGRAM_BOT_TOKEN) return;
+	await editTelegramMessage(chatId, messageId, text, {
+		parse_mode: "HTML",
+		reply_markup: keyboard,
+	});
 }
 
 async function answerCallbackQuery(
 	queryId: string,
 	text: string,
-	showAlert: boolean = false,
+	showAlert = false,
 ) {
-	if (!BOT_TOKEN) return;
-
-	try {
-		await fetch(`${API_URL}/answerCallbackQuery`, {
-			method: "POST",
-			headers: { "Content-Type": "application/json" },
-			body: JSON.stringify({
-				callback_query_id: queryId,
-				text,
-				show_alert: showAlert,
-			}),
-		});
-	} catch (error) {
-		console.error("Failed to answer callback query:", error);
-	}
+	if (!env.TELEGRAM_BOT_TOKEN) return;
+	await answerTelegramCallback(queryId, text, showAlert);
 }
 
 async function sendDocument(
@@ -146,79 +73,35 @@ async function sendDocument(
 	filename: string,
 	caption?: string,
 ) {
-	if (!BOT_TOKEN) {
-		console.error("[sendDocument] BOT_TOKEN is not set");
-		return;
-	}
-
-	try {
-		console.log(
-			`[sendDocument] Creating FormData for file: ${filename}, size: ${document.length} bytes`,
-		);
-		const formData = new FormData();
-		formData.append("chat_id", chatId);
-		formData.append("document", new Blob([document]), filename);
-		if (caption) {
-			formData.append("caption", caption);
-			formData.append("parse_mode", "HTML");
-		}
-
-		console.log(`[sendDocument] Sending request to ${API_URL}/sendDocument`);
-		const response = await fetch(`${API_URL}/sendDocument`, {
-			method: "POST",
-			body: formData,
-		});
-
-		const responseText = await response.text();
-		console.log(
-			`[sendDocument] Response status: ${response.status}, body: ${responseText}`,
-		);
-
-		if (!response.ok) {
-			console.error(
-				`[sendDocument] Failed to send document: ${response.status} ${responseText}`,
-			);
-		}
-	} catch (error) {
-		console.error("[sendDocument] Failed to send Telegram document:", error);
-	}
+	if (!env.TELEGRAM_BOT_TOKEN) return;
+	await sendTelegramDocument(chatId, document, filename, caption);
 }
 
 export async function POST(request: NextRequest) {
-	try {
-		console.log(
-			"[Webhook] Received request from:",
-			request.headers.get("user-agent"),
-		);
-		console.log(
-			"[Webhook] Request headers:",
-			Object.fromEntries(request.headers.entries()),
-		);
+	if (
+		!env.TELEGRAM_WEBHOOK_SECRET ||
+		request.headers.get("x-telegram-bot-api-secret-token") !==
+			env.TELEGRAM_WEBHOOK_SECRET
+	) {
+		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+	}
 
-		const body = await request.json();
-		console.log("[Webhook] Request body:", JSON.stringify(body, null, 2));
+	try {
+		const body = await request.json().catch(() => null);
+		if (!body || typeof body !== "object") {
+			return NextResponse.json({ error: "Invalid update" }, { status: 400 });
+		}
 
 		if (body.callback_query) {
 			const callbackQuery = body.callback_query;
 			const chatId = callbackQuery.message.chat.id.toString();
 			const userId = callbackQuery.from.id.toString();
-			const data = callbackQuery.data;
-			const messageId = callbackQuery.message.message_id;
 
-			console.log(
-				`[Webhook] Processing callback query from user ${userId}: "${data}"`,
-			);
-
-			await handleCallbackQuery(
-				callbackQuery,
-				userId,
-				chatId,
-			);
+			await handleCallbackQuery(callbackQuery, userId, chatId);
 			return NextResponse.json({ ok: true });
 		}
 
 		if (!body.message) {
-			console.log("[Webhook] No message in body, returning ok");
 			return NextResponse.json({ ok: true });
 		}
 
@@ -226,10 +109,6 @@ export async function POST(request: NextRequest) {
 		const chatId = message.chat.id.toString();
 		const text = message.text || "";
 		const userId = message.from.id.toString();
-
-		console.log(
-			`[Webhook] Processing message from user ${userId} in chat ${chatId}: "${text}"`,
-		);
 
 		if (text.startsWith("/start")) {
 			const params = text.split(" ")[1];
@@ -305,46 +184,58 @@ async function handlePluginDownload(
 			: parts.slice(1).join("_");
 		const version = hasVersion && lastPart ? lastPart.substring(1) : undefined;
 
-		console.log(
-			`[Webhook] Parsed plugin identifier: "${pluginIdentifier}", version: "${version}"`,
-		);
-
 		const isNumericId = /^\d+$/.test(pluginIdentifier);
 
-		let plugin;
+		let plugin: (typeof plugins.$inferSelect)[];
 		if (isNumericId) {
-			console.log(
-				`[Webhook] Searching for plugin with ID: ${pluginIdentifier}`,
-			);
 			plugin = await db
 				.select()
 				.from(plugins)
-				.where(eq(plugins.id, Number.parseInt(pluginIdentifier)))
+				.where(
+					and(
+						eq(plugins.id, Number.parseInt(pluginIdentifier, 10)),
+						eq(plugins.status, "approved"),
+					),
+				)
 				.limit(1);
 		} else {
-			console.log(
-				`[Webhook] Searching for plugin with slug: "${pluginIdentifier}"`,
-			);
 			plugin = await db
 				.select()
 				.from(plugins)
-				.where(eq(plugins.slug, pluginIdentifier))
+				.where(
+					and(
+						eq(plugins.slug, pluginIdentifier),
+						eq(plugins.status, "approved"),
+					),
+				)
 				.limit(1);
 		}
 
 		if (!plugin[0]) {
-			console.log(
-				`[Webhook] Plugin not found with ${isNumericId ? "ID" : "slug"}: "${pluginIdentifier}"`,
-			);
 			await sendMessage(chatId, "❌ Плагин не найден.");
 			return;
 		}
 
-		console.log(
-			`[Webhook] Found plugin: ${plugin[0].name} (ID: ${plugin[0].id})`,
+		const telegramUser = await db
+			.select({ id: users.id })
+			.from(users)
+			.where(eq(users.telegramId, userId))
+			.limit(1);
+		const internalUserId = telegramUser[0]?.id;
+		const rateLimitIp = internalUserId ? null : `telegram:${userId}`;
+		const rateLimit = await checkDownloadRateLimit(
+			db,
+			plugin[0].id,
+			internalUserId,
+			rateLimitIp,
 		);
 
-		let pluginVersion;
+		if (rateLimit.limited) {
+			await sendMessage(chatId, `❌ ${rateLimit.reason}`);
+			return;
+		}
+
+		let pluginVersion: (typeof pluginVersions.$inferSelect)[];
 		if (version) {
 			pluginVersion = await db
 				.select()
@@ -371,64 +262,76 @@ async function handlePluginDownload(
 		}
 
 		if (!pluginVersion || !pluginVersion[0]) {
-			console.log(
-				`[Webhook] No version found for plugin: ${plugin[0].name}, requested version: ${version || "latest stable"}`,
-			);
 			await sendMessage(chatId, "❌ Версия плагина не найдена.");
 			return;
 		}
 
-		console.log(
-			`[Webhook] Found version: ${pluginVersion[0].version} (ID: ${pluginVersion[0].id})`,
-		);
-
 		const fileName = `${plugin[0].slug}-v${pluginVersion[0].version}.plugin`;
 		const fileContent = Buffer.from(pluginVersion[0].fileContent, "utf-8");
-
-		console.log(
-			`[Webhook] Preparing to send file: ${fileName}, size: ${fileContent.length} bytes`,
+		const safeName = escapeHtml(plugin[0].name);
+		const safeDesc = escapeHtml(
+			plugin[0].shortDescription || plugin[0].description.substring(0, 100),
 		);
+		const safeAuthor = escapeHtml(plugin[0].author);
+		const caption = `🔌 <b>${safeName}</b> v${pluginVersion[0].version}\n\n📝 ${safeDesc}...\n\n👤 Автор: ${safeAuthor}\n📊 Рейтинг: ${plugin[0].rating.toFixed(1)}/5 (${plugin[0].ratingCount} отзывов)\n⬇️ Скачиваний: ${plugin[0].downloadCount}\n\nУстановите плагин в exteraGram!`;
 
-		await db
-			.update(plugins)
-			.set({
-				downloadCount: plugin[0].downloadCount + 1,
-			})
-			.where(eq(plugins.id, plugin[0].id));
+		await sendDocument(chatId, fileContent, fileName, caption);
 
-		await db
-			.update(pluginVersions)
-			.set({
-				downloadCount: pluginVersion[0].downloadCount + 1,
-			})
-			.where(eq(pluginVersions.id, pluginVersion[0].id));
-
-		const updatedPlugin = await db
-			.select()
-			.from(plugins)
-			.where(eq(plugins.id, plugin[0].id))
+		const downloadIdentity = internalUserId
+			? {
+					condition: eq(pluginDownloads.userId, internalUserId),
+					ipHash: null,
+				}
+			: (() => {
+					const ipHash = hashIp(`telegram:${userId}`);
+					if (!ipHash) {
+						throw new Error("Download identity is unavailable");
+					}
+					return {
+						condition: eq(pluginDownloads.ipHash, ipHash),
+						ipHash,
+					};
+				})();
+		const existingDownload = await db
+			.select({ id: pluginDownloads.id })
+			.from(pluginDownloads)
+			.where(
+				and(
+					eq(pluginDownloads.versionId, pluginVersion[0].id),
+					downloadIdentity.condition,
+				),
+			)
 			.limit(1);
 
-		const caption = `🔌 <b>${updatedPlugin[0]?.name}</b> v${pluginVersion[0].version}\n\n📝 ${updatedPlugin[0]?.shortDescription || updatedPlugin[0]?.description.substring(0, 100)}...\n\n👤 Автор: ${updatedPlugin[0]?.author}\n📊 Рейтинг: ${updatedPlugin[0]?.rating.toFixed(1)}/5 (${updatedPlugin[0]?.ratingCount} отзывов)\n⬇️ Скачиваний: ${updatedPlugin[0]?.downloadCount}\n\nУстановите плагин в exteraGram!`;
+		await db.insert(pluginDownloads).values({
+			pluginId: plugin[0].id,
+			versionId: pluginVersion[0].id,
+			userId: internalUserId,
+			ipHash: downloadIdentity.ipHash,
+			userAgent: `Telegram Bot User ${userId}`,
+		});
 
-		console.log(`[Webhook] Sending document to chat ${chatId}`);
-		await sendDocument(chatId, fileContent, fileName, caption);
-		console.log("[Webhook] Document sent successfully");
+		if (!existingDownload[0]) {
+			await db
+				.update(plugins)
+				.set({ downloadCount: sql`${plugins.downloadCount} + 1` })
+				.where(eq(plugins.id, plugin[0].id));
+			await db
+				.update(pluginVersions)
+				.set({
+					downloadCount: sql`${pluginVersions.downloadCount} + 1`,
+				})
+				.where(eq(pluginVersions.id, pluginVersion[0].id));
+		}
 
 		try {
-			const existingUser = await db
-				.select()
-				.from(users)
-				.where(eq(users.telegramId, userId))
-				.limit(1);
-
-			if (existingUser[0]) {
+			if (internalUserId) {
 				const existingSubscription = await db
 					.select()
 					.from(userPluginSubscriptions)
 					.where(
 						and(
-							eq(userPluginSubscriptions.userId, existingUser[0].id),
+							eq(userPluginSubscriptions.userId, internalUserId),
 							eq(userPluginSubscriptions.pluginId, plugin[0].id),
 							eq(userPluginSubscriptions.subscriptionType, "updates"),
 						),
@@ -437,13 +340,12 @@ async function handlePluginDownload(
 
 				if (!existingSubscription[0]) {
 					await db.insert(userPluginSubscriptions).values({
-						userId: existingUser[0].id,
+						userId: internalUserId,
 						pluginId: plugin[0].id,
 						subscriptionType: "updates",
 						telegramChatId: chatId,
 						isActive: true,
 					});
-					console.log(`[Webhook] User ${existingUser[0].id} subscribed to plugin ${plugin[0].id} updates`);
 				}
 			}
 		} catch (error) {
@@ -460,7 +362,7 @@ async function handlePluginDownload(
 
 async function showMainMenu(
 	chatId: string,
-	userId: string,
+	_userId: string,
 	messageId?: number,
 ) {
 	const keyboard = {
@@ -511,13 +413,8 @@ async function handleCallbackQuery(
 		return;
 	}
 
-	console.log(
-		`[handleCallbackQuery] Processing callback: action="${data}", chatId=${chatId}, messageId=${callbackQuery.message.message_id}`,
-	);
-
 	try {
 		await answerCallbackQuery(queryId, "✅ Processing...");
-		console.log("[handleCallbackQuery] Callback query answered successfully");
 	} catch (error) {
 		console.error(
 			"[handleCallbackQuery] Error answering callback query:",
@@ -526,10 +423,6 @@ async function handleCallbackQuery(
 	}
 
 	const [action, ...params] = data.split("_");
-	console.log(
-		`[handleCallbackQuery] Parsed action: "${action}", params:`,
-		params,
-	);
 
 	switch (action) {
 		case "search":
@@ -559,20 +452,28 @@ async function handleCallbackQuery(
 			break;
 
 		case "categories": {
-			const page = Number.parseInt(params[0] || "0") || 0;
+			const page = Number.parseInt(params[0] || "0", 10) || 0;
 			await showCategories(chatId, page, callbackQuery.message.message_id);
 			break;
 		}
 
 		case "popular": {
-			const popularPage = Number.parseInt(params[0] || "0") || 0;
-			await showPopularPlugins(chatId, popularPage, callbackQuery.message.message_id);
+			const popularPage = Number.parseInt(params[0] || "0", 10) || 0;
+			await showPopularPlugins(
+				chatId,
+				popularPage,
+				callbackQuery.message.message_id,
+			);
 			break;
 		}
 
 		case "recent": {
-			const recentPage = Number.parseInt(params[0] || "0") || 0;
-			await showRecentPlugins(chatId, recentPage, callbackQuery.message.message_id);
+			const recentPage = Number.parseInt(params[0] || "0", 10) || 0;
+			await showRecentPlugins(
+				chatId,
+				recentPage,
+				callbackQuery.message.message_id,
+			);
 			break;
 		}
 
@@ -592,23 +493,31 @@ async function handleCallbackQuery(
 
 		case "plugin": {
 			const pluginToken = params[0];
-			let pluginId = Number.parseInt(pluginToken || "0");
+			let pluginId = Number.parseInt(pluginToken || "0", 10);
 			if ((!pluginId || Number.isNaN(pluginId)) && pluginToken) {
-				// Fallback: treat token as slug
 				try {
 					const found = await db
 						.select({ id: plugins.id })
 						.from(plugins)
-						.where(eq(plugins.slug, pluginToken))
+						.where(
+							and(
+								eq(plugins.slug, pluginToken),
+								eq(plugins.status, "approved"),
+							),
+						)
 						.limit(1);
 					pluginId = found[0]?.id ?? 0;
-				} catch (e) {
+				} catch {
 					pluginId = 0;
 				}
 			}
 
 			if (pluginId && !Number.isNaN(pluginId)) {
-				await showPluginDetails(chatId, pluginId, callbackQuery.message.message_id);
+				await showPluginDetails(
+					chatId,
+					pluginId,
+					callbackQuery.message.message_id,
+				);
 			} else {
 				await answerCallbackQuery(queryId, "❌ Плагин не найден", true);
 			}
@@ -616,7 +525,7 @@ async function handleCallbackQuery(
 		}
 
 		case "download": {
-			const downloadPluginId = Number.parseInt(params[0] || "0");
+			const downloadPluginId = Number.parseInt(params[0] || "0", 10);
 			if (downloadPluginId) {
 				await handlePluginDownload(
 					chatId,
@@ -629,7 +538,7 @@ async function handleCallbackQuery(
 
 		case "category": {
 			const categoryName = params[0];
-			const categoryPage = Number.parseInt(params[1] || "0") || 0;
+			const categoryPage = Number.parseInt(params[1] || "0", 10) || 0;
 			if (categoryName) {
 				await showPluginsByCategory(
 					chatId,
@@ -642,7 +551,6 @@ async function handleCallbackQuery(
 		}
 
 		default:
-			console.log(`[handleCallbackQuery] Unknown action: "${action}"`);
 			await showMainMenu(chatId, userId, callbackQuery.message.message_id);
 			break;
 	}
@@ -651,7 +559,7 @@ async function handleCallbackQuery(
 async function handleUnsubscribe(
 	data: string,
 	userId: string,
-	chatId: string,
+	_chatId: string,
 	queryId: string,
 ) {
 	try {
@@ -716,11 +624,14 @@ async function handleSearch(
 			.select()
 			.from(plugins)
 			.where(
-				or(
-					like(plugins.name, `%${query}%`),
-					like(plugins.description, `%${query}%`),
-					like(plugins.shortDescription, `%${query}%`),
-					like(plugins.tags, `%${query}%`),
+				and(
+					eq(plugins.status, "approved"),
+					or(
+						like(plugins.name, `%${query}%`),
+						like(plugins.description, `%${query}%`),
+						like(plugins.shortDescription, `%${query}%`),
+						like(plugins.tags, `%${query}%`),
+					),
 				),
 			)
 			.limit(limit + 1)
@@ -748,8 +659,12 @@ async function handleSearch(
 		let message = `🔍 <b>Поиск: "${query}"</b>\n\n📦 Найдено ${results.length} плагин${results.length === 1 ? "" : results.length < 5 ? "а" : "ов"}:\n\n`;
 
 		results.forEach((plugin: typeof Plugin.$inferSelect, index: number) => {
-			message += `${index + 1 + offset}. <b>${plugin.name}</b>\n`;
-			message += `   📝 ${plugin.shortDescription || plugin.description.substring(0, 50)}...\n`;
+			const safeName = escapeHtml(plugin.name);
+			const safeDesc = escapeHtml(
+				plugin.shortDescription || plugin.description.substring(0, 50),
+			);
+			message += `${index + 1 + offset}. <b>${safeName}</b>\n`;
+			message += `   📝 ${safeDesc}...\n`;
 			message += `   ⭐ ${plugin.rating.toFixed(1)} (${plugin.ratingCount}) • ⬇️ ${plugin.downloadCount}\n\n`;
 		});
 
@@ -906,7 +821,9 @@ async function showPluginsByCategory(
 		const categoryPlugins = await db
 			.select()
 			.from(plugins)
-			.where(eq(plugins.category, categorySlug))
+			.where(
+				and(eq(plugins.category, categorySlug), eq(plugins.status, "approved")),
+			)
 			.limit(limit + 1)
 			.offset(offset);
 
@@ -991,6 +908,7 @@ async function showPopularPlugins(
 		const popularPlugins = await db
 			.select()
 			.from(plugins)
+			.where(eq(plugins.status, "approved"))
 			.orderBy(desc(plugins.downloadCount), desc(plugins.rating))
 			.limit(limit + 1)
 			.offset(offset);
@@ -1002,8 +920,12 @@ async function showPopularPlugins(
 		message += `📦 Топ ${results.length} плагин${results.length === 1 ? "" : results.length < 5 ? "а" : "ов"}:\n\n`;
 
 		results.forEach((plugin: typeof Plugin.$inferSelect, index: number) => {
-			message += `${index + 1 + offset}. <b>${plugin.name}</b>\n`;
-			message += `   📝 ${plugin.shortDescription || plugin.description.substring(0, 50)}...\n`;
+			const safeName = escapeHtml(plugin.name);
+			const safeDesc = escapeHtml(
+				plugin.shortDescription || plugin.description.substring(0, 50),
+			);
+			message += `${index + 1 + offset}. <b>${safeName}</b>\n`;
+			message += `   📝 ${safeDesc}...\n`;
 			message += `   ⭐ ${plugin.rating.toFixed(1)} (${plugin.ratingCount}) • ⬇️ ${plugin.downloadCount}\n\n`;
 		});
 
@@ -1064,6 +986,7 @@ async function showRecentPlugins(
 		const recentPlugins = await db
 			.select()
 			.from(plugins)
+			.where(eq(plugins.status, "approved"))
 			.orderBy(desc(plugins.createdAt))
 			.limit(limit + 1)
 			.offset(offset);
@@ -1078,8 +1001,12 @@ async function showRecentPlugins(
 			const createdDate = createValidDate(plugin.createdAt).toLocaleDateString(
 				"ru-RU",
 			);
-			message += `${index + 1 + offset}. <b>${plugin.name}</b>\n`;
-			message += `   📝 ${plugin.shortDescription || plugin.description.substring(0, 50)}...\n`;
+			const safeName = escapeHtml(plugin.name);
+			const safeDesc = escapeHtml(
+				plugin.shortDescription || plugin.description.substring(0, 50),
+			);
+			message += `${index + 1 + offset}. <b>${safeName}</b>\n`;
+			message += `   📝 ${safeDesc}...\n`;
 			message += `   📅 ${createdDate} • ⭐ ${plugin.rating.toFixed(1)} • ⬇️ ${plugin.downloadCount}\n\n`;
 		});
 
@@ -1184,7 +1111,7 @@ async function showPluginDetails(
 		const plugin = await db
 			.select()
 			.from(plugins)
-			.where(eq(plugins.id, pluginId))
+			.where(and(eq(plugins.id, pluginId), eq(plugins.status, "approved")))
 			.limit(1);
 
 		if (!plugin[0]) {
@@ -1193,15 +1120,20 @@ async function showPluginDetails(
 		}
 
 		const p = plugin[0];
-		let message = `📦 <b>${p.name}</b>\n\n`;
-		message += `📝 <b>Описание:</b>\n${p.description}\n\n`;
-		message += `👤 <b>Автор:</b> ${p.author}\n`;
+		const safeName = escapeHtml(p.name);
+		const safeDesc = escapeHtml(p.description);
+		const safeAuthor = escapeHtml(p.author);
+		const safeTags = escapeHtml(p.tags || "");
+
+		let message = `📦 <b>${safeName}</b>\n\n`;
+		message += `📝 <b>Описание:</b>\n${safeDesc}\n\n`;
+		message += `👤 <b>Автор:</b> ${safeAuthor}\n`;
 		message += `📊 <b>Рейтинг:</b> ⭐ ${p.rating.toFixed(1)}/5 (${p.ratingCount} отзывов)\n`;
 		message += `⬇️ <b>Скачиваний:</b> ${p.downloadCount}\n`;
 		message += `📅 <b>Обновлен:</b> ${createValidDate(p.updatedAt || p.createdAt).toLocaleDateString("ru-RU")}\n`;
 
 		if (p.tags) {
-			message += `🏷️ <b>Теги:</b> ${p.tags}\n`;
+			message += `🏷️ <b>Теги:</b> ${safeTags}\n`;
 		}
 
 		if (p.price > 0) {
@@ -1276,7 +1208,8 @@ async function getPluginsCount(): Promise<number> {
 	try {
 		const result = await db
 			.select({ count: sql<number>`count(*)` })
-			.from(plugins);
+			.from(plugins)
+			.where(eq(plugins.status, "approved"));
 		return result[0]?.count || 0;
 	} catch {
 		return 0;

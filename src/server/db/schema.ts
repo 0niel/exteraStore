@@ -231,10 +231,18 @@ export const pluginActivities = pgTable(
 	{
 		id: serial("id").primaryKey(),
 		type: text("type").notNull(),
-		actorId: text("actor_id").references(() => users.id, { onDelete: "set null" }),
-		pluginId: integer("plugin_id").references(() => plugins.id, { onDelete: "cascade" }),
-		versionId: integer("version_id").references(() => pluginVersions.id, { onDelete: "cascade" }),
-		reviewId: integer("review_id").references(() => pluginReviews.id, { onDelete: "cascade" }),
+		actorId: text("actor_id").references(() => users.id, {
+			onDelete: "set null",
+		}),
+		pluginId: integer("plugin_id").references(() => plugins.id, {
+			onDelete: "cascade",
+		}),
+		versionId: integer("version_id").references(() => pluginVersions.id, {
+			onDelete: "cascade",
+		}),
+		reviewId: integer("review_id").references(() => pluginReviews.id, {
+			onDelete: "cascade",
+		}),
 		rating: integer("rating"),
 		message: text("message"),
 		data: text("data"),
@@ -291,8 +299,13 @@ export const users = pgTable(
 		bio: text("bio"),
 		website: text("website"),
 		links: text("links"),
+		donationRequisites: text("donation_requisites"),
 		role: text("role").default("user").notNull(),
 		isVerified: boolean("is_verified").default(false).notNull(),
+		isBanned: boolean("is_banned").default(false).notNull(),
+		bannedAt: integer("banned_at"),
+		bannedReason: text("banned_reason"),
+		bannedBy: text("banned_by"),
 		createdAt: integer("created_at")
 			.default(sql`extract(epoch from now())`)
 			.notNull(),
@@ -301,6 +314,7 @@ export const users = pgTable(
 	(t) => [
 		index("created_at_idx").on(t.createdAt),
 		index("updated_at_idx").on(t.updatedAt),
+		index("is_banned_idx").on(t.isBanned),
 	],
 );
 
@@ -351,24 +365,27 @@ export const pluginFilesRelations = relations(pluginFiles, ({ one }) => ({
 	}),
 }));
 
-export const pluginActivitiesRelations = relations(pluginActivities, ({ one }) => ({
-	actor: one(users, {
-		fields: [pluginActivities.actorId],
-		references: [users.id],
+export const pluginActivitiesRelations = relations(
+	pluginActivities,
+	({ one }) => ({
+		actor: one(users, {
+			fields: [pluginActivities.actorId],
+			references: [users.id],
+		}),
+		plugin: one(plugins, {
+			fields: [pluginActivities.pluginId],
+			references: [plugins.id],
+		}),
+		version: one(pluginVersions, {
+			fields: [pluginActivities.versionId],
+			references: [pluginVersions.id],
+		}),
+		review: one(pluginReviews, {
+			fields: [pluginActivities.reviewId],
+			references: [pluginReviews.id],
+		}),
 	}),
-	plugin: one(plugins, {
-		fields: [pluginActivities.pluginId],
-		references: [plugins.id],
-	}),
-	version: one(pluginVersions, {
-		fields: [pluginActivities.versionId],
-		references: [pluginVersions.id],
-	}),
-	review: one(pluginReviews, {
-		fields: [pluginActivities.reviewId],
-		references: [pluginReviews.id],
-	}),
-}));
+);
 
 export const pluginGitReposRelations = relations(pluginGitRepos, ({ one }) => ({
 	plugin: one(plugins, {
@@ -470,4 +487,165 @@ export const verificationTokens = pgTable(
 	(t) => [primaryKey(t.identifier, t.token)],
 );
 
-export * from "./pipeline-schema";
+export const notifications = pgTable(
+	"extera_plugins_notification",
+	{
+		id: serial("id").primaryKey(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		pluginId: integer("plugin_id").references(() => plugins.id, {
+			onDelete: "cascade",
+		}),
+		type: text("type").notNull(),
+		title: text("title").notNull(),
+		message: text("message").notNull(),
+		data: text("data"),
+		isRead: boolean("is_read").default(false).notNull(),
+		sentToTelegram: boolean("sent_to_telegram").default(false).notNull(),
+		telegramMessageId: text("telegram_message_id"),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+	},
+	(t) => [
+		index("notification_user_idx").on(t.userId),
+		index("notification_plugin_idx").on(t.pluginId),
+		index("notification_type_idx").on(t.type),
+		index("notification_read_idx").on(t.isRead),
+	],
+);
+
+export const pluginPipelineChecks = pgTable(
+	"extera_plugins_plugin_pipeline_check",
+	{
+		id: serial("id").primaryKey(),
+		pluginId: integer("plugin_id")
+			.notNull()
+			.references(() => plugins.id, { onDelete: "cascade" }),
+		checkType: text("check_type").notNull(),
+		status: text("status").default("pending").notNull(),
+		score: real("score"),
+		details: text("details"),
+		classification: text("classification").default("safe"),
+		shortDescription: text("short_description"),
+		errorMessage: text("error_message"),
+		llmModel: text("llm_model"),
+		llmPrompt: text("llm_prompt"),
+		llmResponse: text("llm_response"),
+		executionTime: integer("execution_time"),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+		completedAt: integer("completed_at"),
+	},
+	(t) => [
+		index("pipeline_plugin_idx").on(t.pluginId),
+		index("pipeline_status_idx").on(t.status),
+		index("pipeline_type_idx").on(t.checkType),
+	],
+);
+
+export const pluginPipelineQueue = pgTable(
+	"extera_plugins_plugin_pipeline_queue",
+	{
+		id: serial("id").primaryKey(),
+		pluginId: integer("plugin_id")
+			.notNull()
+			.references(() => plugins.id, { onDelete: "cascade" }),
+		priority: integer("priority").default(5).notNull(),
+		status: text("status").default("queued").notNull(),
+		retryCount: integer("retry_count").default(0).notNull(),
+		maxRetries: integer("max_retries").default(3).notNull(),
+		errorMessage: text("error_message"),
+		scheduledAt: integer("scheduled_at"),
+		startedAt: integer("started_at"),
+		completedAt: integer("completed_at"),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+	},
+	(t) => [
+		index("queue_status_idx").on(t.status),
+		index("queue_priority_idx").on(t.priority),
+		index("queue_scheduled_idx").on(t.scheduledAt),
+	],
+);
+
+export const userNotificationSettings = pgTable(
+	"extera_plugins_user_notification_setting",
+	{
+		id: serial("id").primaryKey(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" })
+			.unique(),
+		enablePluginUpdates: boolean("enable_plugin_updates")
+			.default(true)
+			.notNull(),
+		enableSecurityAlerts: boolean("enable_security_alerts")
+			.default(true)
+			.notNull(),
+		enableReviewNotifications: boolean("enable_review_notifications")
+			.default(false)
+			.notNull(),
+		enableTelegramNotifications: boolean("enable_telegram_notifications")
+			.default(true)
+			.notNull(),
+		telegramChatId: text("telegram_chat_id"),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+		updatedAt: integer("updated_at"),
+	},
+	(t) => [index("notification_settings_user_idx").on(t.userId)],
+);
+
+export const userPluginSubscriptions = pgTable(
+	"extera_plugins_user_plugin_subscription",
+	{
+		id: serial("id").primaryKey(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		pluginId: integer("plugin_id")
+			.notNull()
+			.references(() => plugins.id, { onDelete: "cascade" }),
+		subscriptionType: text("subscription_type").notNull(),
+		isActive: boolean("is_active").default(true).notNull(),
+		telegramChatId: text("telegram_chat_id"),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+	},
+	(t) => [
+		index("subscription_user_idx").on(t.userId),
+		index("subscription_plugin_idx").on(t.pluginId),
+		index("subscription_type_idx").on(t.subscriptionType),
+		index("subscription_unique_idx").on(
+			t.userId,
+			t.pluginId,
+			t.subscriptionType,
+		),
+	],
+);
+
+export const aiPluginCollections = pgTable(
+	"extera_plugins_ai_plugin_collection",
+	{
+		id: serial("id").primaryKey(),
+		name: text("name").notNull(),
+		description: text("description"),
+		pluginIds: integer("plugin_ids").array().notNull(),
+		generatedAt: integer("generated_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+	},
+	(t) => [
+		index("ai_collection_name_idx").on(t.name),
+		index("ai_collection_generated_at_idx").on(t.generatedAt),
+	],
+);

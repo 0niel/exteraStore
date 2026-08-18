@@ -1,127 +1,107 @@
-version: '3.8'
-
 services:
   traefik:
-    image: traefik:v3.0
-    container_name: traefik
+    image: traefik:v3.3
     restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik:/etc/traefik
-      - ./traefik/acme:/acme
-    command:
-      - --api.dashboard=true
-      - --api.insecure=true
-      - --providers.docker=true
-      - --providers.docker.exposedbydefault=false
-      - --providers.file.directory=/etc/traefik
-      - --providers.file.watch=true
-      - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
-      - --entrypoints.web.http.redirections.entrypoint.to=websecure
-      - --entrypoints.web.http.redirections.entrypoint.scheme=https
-      - --certificatesresolvers.letsencrypt.acme.email=admin@exterastore.app
-      - --certificatesresolvers.letsencrypt.acme.storage=/acme/acme.json
-      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
-      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
-      - --log.level=INFO
-      - --accesslog=true
+      - ${DEPLOY_ROOT:?DEPLOY_ROOT is required}/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ${DEPLOY_ROOT:?DEPLOY_ROOT is required}/traefik/acme:/acme
     networks:
       - traefik-network
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.traefik.rule=Host(`traefik.exterastore.app`)"
-      - "traefik.http.routers.traefik.tls.certresolver=letsencrypt"
-      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
 
   postgres:
     image: postgres:16-alpine
-    container_name: postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: extera_plugins
-      POSTGRES_USER: extera_user
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-secure_password_change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-extera_plugins}
+      POSTGRES_USER: ${POSTGRES_USER:-extera_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./postgres/init:/docker-entrypoint-initdb.d
-    ports:
-      - "5432:5432"
     networks:
       - app-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U extera_user -d extera_plugins"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
       start_period: 30s
 
   redis:
     image: redis:7-alpine
-    container_name: redis
     restart: unless-stopped
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_password_change_me}
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --requirepass
+      - ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     volumes:
       - redis_data:/data
-    ports:
-      - "6379:6379"
     networks:
       - app-network
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
+      test: ["CMD-SHELL", "REDISCLI_AUTH=$$REDIS_PASSWORD redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
 
   migrate:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: builder
-    command: pnpm db:migrate
+    image: ${APP_IMAGE:?APP_IMAGE must be a GHCR digest reference}
+    pull_policy: always
+    command: ["pnpm", "exec", "drizzle-kit", "migrate", "--config=drizzle.config.ts"]
     environment:
-      DATABASE_URL: postgresql://extera_user:${POSTGRES_PASSWORD:-secure_password_change_me}@postgres:5432/extera_plugins
-      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_password_change_me}@redis:6379
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
       NODE_ENV: production
+      SKIP_ENV_VALIDATION: "1"
     depends_on:
       postgres:
         condition: service_healthy
     networks:
       - app-network
+    profiles:
+      - deploy
 
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: runner
-    container_name: extera-app
+    image: ${APP_IMAGE:?APP_IMAGE must be a GHCR digest reference}
+    pull_policy: always
     restart: unless-stopped
     environment:
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
-      DATABASE_URL: postgresql://extera_user:${POSTGRES_PASSWORD:-secure_password_change_me}@postgres:5432/extera_plugins
-      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_password_change_me}@redis:6379
-      AUTH_SECRET: ${AUTH_SECRET}
-      NEXTAUTH_URL: https://exterastore.app
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
-      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME}
-      NEXT_PUBLIC_TELEGRAM_BOT_USERNAME: ${NEXT_PUBLIC_TELEGRAM_BOT_USERNAME}
-      YANDEX_STORAGE_ACCESS_KEY: ${YANDEX_STORAGE_ACCESS_KEY}
-      YANDEX_STORAGE_SECRET_KEY: ${YANDEX_STORAGE_SECRET_KEY}
-      YANDEX_STORAGE_BUCKET: ${YANDEX_STORAGE_BUCKET}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?NEXTAUTH_SECRET is required}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      REDIS_URL: ${REDIS_URL:?REDIS_URL is required}
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is required}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-https://exterastore.app}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?TELEGRAM_BOT_TOKEN is required}
+      TELEGRAM_BOT_USERNAME: ${TELEGRAM_BOT_USERNAME:?TELEGRAM_BOT_USERNAME is required}
+      NEXT_PUBLIC_TELEGRAM_BOT_USERNAME: ${NEXT_PUBLIC_TELEGRAM_BOT_USERNAME:?NEXT_PUBLIC_TELEGRAM_BOT_USERNAME is required}
+      TELEGRAM_API_BASE_URL: ${TELEGRAM_API_BASE_URL:?TELEGRAM_API_BASE_URL is required}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:?TELEGRAM_WEBHOOK_SECRET is required}
+      CRON_SECRET: ${CRON_SECRET:?CRON_SECRET is required}
+      YANDEX_STORAGE_ACCESS_KEY: ${YANDEX_STORAGE_ACCESS_KEY:?YANDEX_STORAGE_ACCESS_KEY is required}
+      YANDEX_STORAGE_SECRET_KEY: ${YANDEX_STORAGE_SECRET_KEY:?YANDEX_STORAGE_SECRET_KEY is required}
+      YANDEX_STORAGE_BUCKET: ${YANDEX_STORAGE_BUCKET:?YANDEX_STORAGE_BUCKET is required}
       YANDEX_STORAGE_REGION: ${YANDEX_STORAGE_REGION:-ru-central1}
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:?OPENROUTER_API_KEY is required}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:?OPENROUTER_MODEL is required}
+      UPLOADTHING_SECRET: ${UPLOADTHING_SECRET:-}
+      UPLOADTHING_APP_ID: ${UPLOADTHING_APP_ID:-}
+      YANDEX_CAPTCHA_SECRET_KEY: ${YANDEX_CAPTCHA_SECRET_KEY:?YANDEX_CAPTCHA_SECRET_KEY is required}
+      NEXT_PUBLIC_YANDEX_CAPTCHA_CLIENT_KEY: ${NEXT_PUBLIC_YANDEX_CAPTCHA_CLIENT_KEY:?NEXT_PUBLIC_YANDEX_CAPTCHA_CLIENT_KEY is required}
+      INITIAL_ADMINS: ${INITIAL_ADMINS:-i_am_oniel}
+      NEXT_PUBLIC_INITIAL_ADMINS: ${NEXT_PUBLIC_INITIAL_ADMINS:-}
       NODE_ENV: production
       PORT: 3000
     volumes:
       - app_data:/app/data
     depends_on:
-      migrate:
-        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -129,27 +109,38 @@ services:
     networks:
       - app-network
       - traefik-network
+    security_opt:
+      - no-new-privileges:true
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.app.rule=Host(`exterastore.app`) || Host(`www.exterastore.app`)"
+      - "traefik.http.routers.app.entrypoints=websecure"
+      - "traefik.http.routers.app.tls=true"
       - "traefik.http.routers.app.tls.certresolver=letsencrypt"
       - "traefik.http.services.app.loadbalancer.server.port=3000"
       - "traefik.http.middlewares.www-redirect.redirectregex.regex=^https://www\\.exterastore\\.app/(.*)"
       - "traefik.http.middlewares.www-redirect.redirectregex.replacement=https://exterastore.app/$${1}"
-      - "traefik.http.routers.app.middlewares=www-redirect"
       - "traefik.http.middlewares.security-headers.headers.customrequestheaders.X-Forwarded-Proto=https"
       - "traefik.http.middlewares.security-headers.headers.customresponseheaders.X-Frame-Options=DENY"
       - "traefik.http.middlewares.security-headers.headers.customresponseheaders.X-Content-Type-Options=nosniff"
       - "traefik.http.middlewares.security-headers.headers.customresponseheaders.Referrer-Policy=strict-origin-when-cross-origin"
       - "traefik.http.middlewares.security-headers.headers.customresponseheaders.Permissions-Policy=camera=(), microphone=(), geolocation=()"
-      - "traefik.http.routers.app.middlewares=security-headers"
+      - "traefik.http.middlewares.rate-limit.ratelimit.average=100"
+      - "traefik.http.middlewares.rate-limit.ratelimit.period=1m"
+      - "traefik.http.middlewares.rate-limit.ratelimit.burst=50"
+      - "traefik.http.middlewares.rate-limit-downloads.ratelimit.average=30"
+      - "traefik.http.middlewares.rate-limit-downloads.ratelimit.period=1m"
+      - "traefik.http.middlewares.rate-limit-downloads.ratelimit.burst=10"
+      - "traefik.http.middlewares.rate-limit-api.ratelimit.average=60"
+      - "traefik.http.middlewares.rate-limit-api.ratelimit.period=1m"
+      - "traefik.http.middlewares.rate-limit-api.ratelimit.burst=20"
+      - "traefik.http.routers.app.middlewares=www-redirect,security-headers,rate-limit"
 
   prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
+    image: prom/prometheus:v3.5.0
     restart: unless-stopped
     ports:
-      - "9090:9090"
+      - "127.0.0.1:9090:9090"
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
@@ -166,13 +157,10 @@ services:
       - monitoring
 
   grafana:
-    image: grafana/grafana:latest
-    container_name: grafana
+    image: grafana/grafana:12.1.0
     restart: unless-stopped
-    ports:
-      - "3001:3000"
     environment:
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?GRAFANA_PASSWORD is required}
     volumes:
       - grafana_data:/var/lib/grafana
     networks:
@@ -183,6 +171,8 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.grafana.rule=Host(`grafana.exterastore.app`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls=true"
       - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
 
