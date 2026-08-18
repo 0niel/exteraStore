@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { signIn, useSession } from "next-auth/react";
-import { useTelegramWebApp } from "~/hooks/use-telegram-web-app";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { useTelegramWebApp } from "~/hooks/use-telegram-web-app";
 
 export function TelegramWebAppAuth() {
 	const { isTelegramWebApp, webApp, user } = useTelegramWebApp();
@@ -11,7 +11,13 @@ export function TelegramWebAppAuth() {
 	const [authAttempted, setAuthAttempted] = useState(false);
 
 	useEffect(() => {
-		if (!isTelegramWebApp || !webApp || !user || authAttempted || session?.user) {
+		if (
+			!isTelegramWebApp ||
+			!webApp ||
+			!user ||
+			authAttempted ||
+			session?.user
+		) {
 			return;
 		}
 
@@ -20,7 +26,7 @@ export function TelegramWebAppAuth() {
 				setAuthAttempted(true);
 
 				const initDataUnsafe = webApp.initDataUnsafe;
-				
+
 				const credentials = {
 					id: user.id.toString(),
 					first_name: user.first_name,
@@ -58,4 +64,3 @@ export function TelegramWebAppAuth() {
 
 	return null;
 }
-

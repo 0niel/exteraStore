@@ -1,25 +1,29 @@
-import { and, count, desc, eq, inArray, like, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, like, sql } from "drizzle-orm";
 import { z } from "zod";
+import { env } from "~/env";
 import {
+	type createTRPCContext,
 	createTRPCRouter,
 	protectedProcedure,
 	publicProcedure,
 } from "~/server/api/trpc";
 import {
+	aiPluginCollections,
 	notifications,
 	pluginPipelineChecks,
 	pluginPipelineQueue,
+	plugins,
+	pluginVersions,
 	userNotificationSettings,
 	userPluginSubscriptions,
-	aiPluginCollections,
-} from "~/server/db/pipeline-schema";
-import { pluginVersions, plugins } from "~/server/db/schema";
+	users,
+} from "~/server/db/schema";
+import { sendTelegramMessage } from "~/server/lib/telegram-client";
 import { PluginAIChecker } from "./plugin-pipeline-ai";
 
-let isGeneratingCollections = false;
+type PipelineContext = Awaited<ReturnType<typeof createTRPCContext>>;
 
-// Функция для обработки одного элемента очереди
-async function processQueueItem(ctx: any, queueItemId: number) {
+async function processQueueItem(ctx: PipelineContext, queueItemId: number) {
 	const queueItem = await ctx.db
 		.select()
 		.from(pluginPipelineQueue)
@@ -87,7 +91,7 @@ async function processQueueItem(ctx: any, queueItemId: number) {
 					pluginId: item.pluginId,
 					checkType: check.type,
 					status: "running",
-					llmModel: "google/gemini-2.5-pro-exp-03-25",
+					llmModel: env.OPENROUTER_MODEL,
 					llmPrompt: `Version: ${latestVersion[0].version}`,
 				});
 
@@ -115,13 +119,12 @@ async function processQueueItem(ctx: any, queueItemId: number) {
 							eq(pluginPipelineChecks.status, "running"),
 						),
 					);
-			} catch (error) {
+			} catch {
 				await ctx.db
 					.update(pluginPipelineChecks)
 					.set({
 						status: "error",
-						errorMessage:
-							error instanceof Error ? error.message : "Unknown error",
+						errorMessage: "AI check failed",
 						completedAt: Math.floor(Date.now() / 1000),
 					})
 					.where(
@@ -161,8 +164,13 @@ async function processQueueItem(ctx: any, queueItemId: number) {
 
 		if (hasCriticalIssues) {
 			const subscribers = await ctx.db
-				.select()
+				.select({
+					userId: userPluginSubscriptions.userId,
+					telegramChatId: userPluginSubscriptions.telegramChatId,
+					userTelegramId: users.telegramId,
+				})
 				.from(userPluginSubscriptions)
+				.leftJoin(users, eq(userPluginSubscriptions.userId, users.id))
 				.where(
 					and(
 						eq(userPluginSubscriptions.pluginId, item.pluginId),
@@ -170,6 +178,9 @@ async function processQueueItem(ctx: any, queueItemId: number) {
 						eq(userPluginSubscriptions.isActive, true),
 					),
 				);
+
+			const baseUrl = env.NEXTAUTH_URL || "http://localhost:3000";
+			const pluginUrl = `${baseUrl}/plugins/${plugin[0].slug}`;
 
 			for (const subscriber of subscribers) {
 				await ctx.db.insert(notifications).values({
@@ -179,6 +190,26 @@ async function processQueueItem(ctx: any, queueItemId: number) {
 					title: "Критические проблемы найдены",
 					message: `В плагине ${plugin[0].name} обнаружены критические проблемы безопасности или производительности. Проверьте результаты проверки.`,
 				});
+
+				const chatId = subscriber.telegramChatId ?? subscriber.userTelegramId;
+				if (chatId && env.TELEGRAM_BOT_TOKEN) {
+					try {
+						await sendTelegramMessage(
+							chatId,
+							`🚨 *Предупреждение безопасности!*\n\n🔌 Плагин: *${plugin[0].name}*\n\nОбнаружены критические проблемы безопасности или производительности. Рекомендуем проверить плагин.`,
+							{
+								parse_mode: "Markdown",
+								reply_markup: {
+									inline_keyboard: [
+										[{ text: "🔍 Посмотреть детали", url: pluginUrl }],
+									],
+								},
+							},
+						);
+					} catch {
+						console.error("Failed to send security alert TG notification");
+					}
+				}
 			}
 		}
 
@@ -205,7 +236,12 @@ export const pluginPipelineRouter = createTRPCRouter({
 			const plugin = await ctx.db
 				.select({ id: plugins.id })
 				.from(plugins)
-				.where(eq(plugins.slug, input.pluginSlug))
+				.where(
+					and(
+						eq(plugins.slug, input.pluginSlug),
+						eq(plugins.status, "approved"),
+					),
+				)
 				.limit(1);
 
 			if (!plugin[0]) {
@@ -242,7 +278,6 @@ export const pluginPipelineRouter = createTRPCRouter({
 				throw new Error("Unauthorized");
 			}
 
-			// Получаем последнюю версию плагина
 			const latestVersion = await ctx.db
 				.select({
 					id: pluginVersions.id,
@@ -258,7 +293,6 @@ export const pluginPipelineRouter = createTRPCRouter({
 				throw new Error("No version found for this plugin");
 			}
 
-			// Проверяем, была ли уже проведена проверка для этой версии
 			const versionTag = `%Version: ${latestVersion[0].version}%`;
 			const existingChecks = await ctx.db
 				.select()
@@ -271,11 +305,10 @@ export const pluginPipelineRouter = createTRPCRouter({
 				)
 				.limit(1);
 
-			if (existingChecks.length > 0) {
+			if (existingChecks.length > 0 && ctx.session.user.role !== "admin") {
 				throw new Error("Checks already performed for the latest version");
 			}
 
-			// Проверяем, нет ли уже активной проверки в очереди
 			const activeQueue = await ctx.db
 				.select()
 				.from(pluginPipelineQueue)
@@ -287,7 +320,7 @@ export const pluginPipelineRouter = createTRPCRouter({
 				)
 				.limit(1);
 
-			if (activeQueue.length > 0) {
+			if (activeQueue.length > 0 && ctx.session.user.role !== "admin") {
 				throw new Error("Checks are already in progress for this plugin");
 			}
 
@@ -300,28 +333,32 @@ export const pluginPipelineRouter = createTRPCRouter({
 				})
 				.returning();
 
-			// Автоматически обрабатываем очередь в фоне
-			processQueueItem(ctx, queueItem.id).catch((error) => {
-				console.error("Error processing queue item in background:", error);
+			processQueueItem(ctx, queueItem.id).catch(() => {
+				console.error("Error processing queue item in background");
 			});
 
 			return queueItem;
 		}),
 
-	getQueueStatus: publicProcedure
-		.query(async ({ ctx }) => {
-			const queueItems = await ctx.db
-				.select()
-				.from(pluginPipelineQueue)
-				.where(sql`${pluginPipelineQueue.status} IN ('queued', 'processing')`)
-				.orderBy(desc(pluginPipelineQueue.createdAt));
+	getQueueStatus: publicProcedure.query(async ({ ctx }) => {
+		const queueItems = await ctx.db
+			.select()
+			.from(pluginPipelineQueue)
+			.where(sql`${pluginPipelineQueue.status} IN ('queued', 'processing')`)
+			.orderBy(desc(pluginPipelineQueue.createdAt));
 
-			return {
-				totalInQueue: queueItems.length,
-				processing: queueItems.filter((item: any) => item.status === "processing").length,
-				queued: queueItems.filter((item: any) => item.status === "queued").length,
-			};
-		}),
+		return {
+			totalInQueue: queueItems.length,
+			processing: queueItems.filter(
+				(item: typeof pluginPipelineQueue.$inferSelect) =>
+					item.status === "processing",
+			).length,
+			queued: queueItems.filter(
+				(item: typeof pluginPipelineQueue.$inferSelect) =>
+					item.status === "queued",
+			).length,
+		};
+	}),
 
 	getPluginQueueStatus: publicProcedure
 		.input(z.object({ pluginSlug: z.string() }))
@@ -329,7 +366,12 @@ export const pluginPipelineRouter = createTRPCRouter({
 			const plugin = await ctx.db
 				.select({ id: plugins.id })
 				.from(plugins)
-				.where(eq(plugins.slug, input.pluginSlug))
+				.where(
+					and(
+						eq(plugins.slug, input.pluginSlug),
+						eq(plugins.status, "approved"),
+					),
+				)
 				.limit(1);
 
 			if (!plugin[0]) {
@@ -342,8 +384,8 @@ export const pluginPipelineRouter = createTRPCRouter({
 				.where(
 					and(
 						eq(pluginPipelineQueue.pluginId, plugin[0].id),
-						sql`${pluginPipelineQueue.status} IN ('queued', 'processing')`
-					)
+						sql`${pluginPipelineQueue.status} IN ('queued', 'processing')`,
+					),
 				)
 				.limit(1);
 
@@ -429,7 +471,7 @@ export const pluginPipelineRouter = createTRPCRouter({
 								pluginId: item.pluginId,
 								checkType: check.type,
 								status: "running",
-								llmModel: "google/gemini-2.5-pro",
+								llmModel: env.OPENROUTER_MODEL,
 								llmPrompt: `Version: ${latestVersion[0].version}`,
 							});
 
@@ -457,13 +499,12 @@ export const pluginPipelineRouter = createTRPCRouter({
 										eq(pluginPipelineChecks.status, "running"),
 									),
 								);
-						} catch (error) {
+						} catch {
 							await ctx.db
 								.update(pluginPipelineChecks)
 								.set({
 									status: "error",
-									errorMessage:
-										error instanceof Error ? error.message : "Unknown error",
+									errorMessage: "AI check failed",
 									completedAt: Math.floor(Date.now() / 1000),
 								})
 								.where(
@@ -505,8 +546,13 @@ export const pluginPipelineRouter = createTRPCRouter({
 
 					if (hasCriticalIssues) {
 						const subscribers = await ctx.db
-							.select()
+							.select({
+								userId: userPluginSubscriptions.userId,
+								telegramChatId: userPluginSubscriptions.telegramChatId,
+								userTelegramId: users.telegramId,
+							})
 							.from(userPluginSubscriptions)
+							.leftJoin(users, eq(userPluginSubscriptions.userId, users.id))
 							.where(
 								and(
 									eq(userPluginSubscriptions.pluginId, item.pluginId),
@@ -518,6 +564,9 @@ export const pluginPipelineRouter = createTRPCRouter({
 								),
 							);
 
+						const baseUrl = env.NEXTAUTH_URL || "http://localhost:3000";
+						const pluginUrl = `${baseUrl}/plugins/${plugin[0].slug}`;
+
 						for (const subscriber of subscribers) {
 							await ctx.db.insert(notifications).values({
 								userId: subscriber.userId,
@@ -526,6 +575,34 @@ export const pluginPipelineRouter = createTRPCRouter({
 								title: "Критические проблемы найдены",
 								message: `В плагине ${plugin[0].name} обнаружены критические проблемы безопасности или производительности. Проверьте результаты проверки.`,
 							});
+
+							const chatId =
+								subscriber.telegramChatId ?? subscriber.userTelegramId;
+							if (chatId && env.TELEGRAM_BOT_TOKEN) {
+								try {
+									await sendTelegramMessage(
+										chatId,
+										`🚨 *Предупреждение безопасности!*\n\n🔌 Плагин: *${plugin[0].name}*\n\nОбнаружены критические проблемы безопасности или производительности. Рекомендуем проверить плагин.`,
+										{
+											parse_mode: "Markdown",
+											reply_markup: {
+												inline_keyboard: [
+													[
+														{
+															text: "🔍 Посмотреть детали",
+															url: pluginUrl,
+														},
+													],
+												],
+											},
+										},
+									);
+								} catch {
+									console.error(
+										"Failed to send security alert TG notification",
+									);
+								}
+							}
 						}
 					}
 
@@ -556,9 +633,12 @@ export const pluginPipelineRouter = createTRPCRouter({
 	improveText: protectedProcedure
 		.input(
 			z.object({
-				text: z.string().min(1, "Текст не может быть пустым"),
+				text: z
+					.string()
+					.min(1, "Текст не может быть пустым")
+					.max(20_000, "Текст слишком длинный"),
 				textType: z.enum(["description", "changelog"]),
-				pluginName: z.string().optional(),
+				pluginName: z.string().max(256).optional(),
 			}),
 		)
 		.mutation(async ({ input }) => {
@@ -574,9 +654,46 @@ export const pluginPipelineRouter = createTRPCRouter({
 					input.pluginName,
 				);
 				return result;
+			} catch {
+				throw new Error("AI request failed");
 			} finally {
 				aiChecker.cleanup();
 			}
+		}),
+
+	getSubscriptions: protectedProcedure
+		.input(z.object({ pluginId: z.number() }))
+		.query(async ({ ctx, input }) => {
+			const subs = await ctx.db
+				.select({
+					subscriptionType: userPluginSubscriptions.subscriptionType,
+					isActive: userPluginSubscriptions.isActive,
+				})
+				.from(userPluginSubscriptions)
+				.where(
+					and(
+						eq(userPluginSubscriptions.userId, ctx.session.user.id),
+						eq(userPluginSubscriptions.pluginId, input.pluginId),
+					),
+				);
+
+			return {
+				updates:
+					subs.find(
+						(s: { subscriptionType: string; isActive: boolean }) =>
+							s.subscriptionType === "updates",
+					)?.isActive ?? false,
+				reviews:
+					subs.find(
+						(s: { subscriptionType: string; isActive: boolean }) =>
+							s.subscriptionType === "reviews",
+					)?.isActive ?? false,
+				security_alerts:
+					subs.find(
+						(s: { subscriptionType: string; isActive: boolean }) =>
+							s.subscriptionType === "security_alerts",
+					)?.isActive ?? false,
+			};
 		}),
 
 	subscribe: protectedProcedure
@@ -587,6 +704,33 @@ export const pluginPipelineRouter = createTRPCRouter({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
+			const existing = await ctx.db
+				.select({ id: userPluginSubscriptions.id })
+				.from(userPluginSubscriptions)
+				.where(
+					and(
+						eq(userPluginSubscriptions.userId, ctx.session.user.id),
+						eq(userPluginSubscriptions.pluginId, input.pluginId),
+						eq(
+							userPluginSubscriptions.subscriptionType,
+							input.subscriptionType,
+						),
+					),
+				)
+				.limit(1);
+
+			if (existing[0]) {
+				const [subscription] = await ctx.db
+					.update(userPluginSubscriptions)
+					.set({
+						isActive: true,
+						telegramChatId: ctx.session.user.telegramId ?? undefined,
+					})
+					.where(eq(userPluginSubscriptions.id, existing[0].id))
+					.returning();
+				return subscription;
+			}
+
 			const [subscription] = await ctx.db
 				.insert(userPluginSubscriptions)
 				.values({
@@ -595,7 +739,6 @@ export const pluginPipelineRouter = createTRPCRouter({
 					subscriptionType: input.subscriptionType,
 					telegramChatId: ctx.session.user.telegramId,
 				})
-				.onConflictDoNothing()
 				.returning();
 
 			return subscription;
@@ -671,8 +814,21 @@ export const pluginPipelineRouter = createTRPCRouter({
 		}),
 });
 
-async function _generateAndSaveAICollections(ctx: any, themes: string[]) {
-	const allPlugins = await ctx.db
+export const DEFAULT_AI_COLLECTION_THEMES = [
+	"Полезные инструменты",
+	"Удивить друзей",
+	"Для работы и учебы",
+	"Кастомизация интерфейса",
+	"Развлечения и мемы",
+	"Продуктивность",
+	"Безопасность и приватность",
+] as const;
+
+export async function generateAndSaveAICollections(
+	database: typeof import("~/server/db").db,
+	themes: readonly string[],
+) {
+	const allPlugins = await database
 		.select({
 			id: plugins.id,
 			name: plugins.name,
@@ -686,7 +842,6 @@ async function _generateAndSaveAICollections(ctx: any, themes: string[]) {
 		.where(eq(plugins.status, "approved"));
 
 	if (allPlugins.length === 0) {
-		console.log("No approved plugins found to generate collections.");
 		return [];
 	}
 
@@ -705,7 +860,7 @@ async function _generateAndSaveAICollections(ctx: any, themes: string[]) {
 				theme,
 			);
 
-			const [savedCollection] = await ctx.db
+			const [savedCollection] = await database
 				.insert(aiPluginCollections)
 				.values({
 					name: collection.collectionName,
@@ -719,11 +874,11 @@ async function _generateAndSaveAICollections(ctx: any, themes: string[]) {
 				status: "success",
 				collection: savedCollection,
 			});
-		} catch (error) {
+		} catch {
 			results.push({
 				theme,
 				status: "failed",
-				error: error instanceof Error ? error.message : "Unknown error",
+				error: "Generation failed",
 			});
 		}
 	}
@@ -736,24 +891,14 @@ export const aiCollectionsRouter = createTRPCRouter({
 	generateAndSaveAICollections: protectedProcedure
 		.input(
 			z.object({
-				themes: z
-					.array(z.string())
-					.default([
-						"Полезные инструменты",
-						"Удивить друзей",
-						"Для работы и учебы",
-						"Кастомизация интерфейса",
-						"Развлечения и мемы",
-						"Продуктивность",
-						"Безопасность и приватность",
-					]),
+				themes: z.array(z.string()).default([...DEFAULT_AI_COLLECTION_THEMES]),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
 			if (ctx.session.user.role !== "admin") {
 				throw new Error("Unauthorized");
 			}
-			return _generateAndSaveAICollections(ctx, input.themes);
+			return generateAndSaveAICollections(ctx.db, input.themes);
 		}),
 
 	getAICollections: publicProcedure
@@ -763,43 +908,6 @@ export const aiCollectionsRouter = createTRPCRouter({
 			}),
 		)
 		.query(async ({ ctx, input }) => {
-			const sevenDaysAgo = Math.floor(
-				(Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000,
-			);
-
-			const latestCollection = await ctx.db
-				.select()
-				.from(aiPluginCollections)
-				.orderBy(desc(aiPluginCollections.generatedAt))
-				.limit(1);
-
-			const needsUpdate =
-				!latestCollection[0] ||
-				latestCollection[0].generatedAt < sevenDaysAgo;
-
-			if (needsUpdate && !isGeneratingCollections) {
-				isGeneratingCollections = true;
-				// Запускаем генерацию в фоне, не дожидаясь ее завершения
-				_generateAndSaveAICollections(ctx, [
-					"Полезные инструменты",
-					"Удивить друзей",
-					"Для работы и учебы",
-					"Кастомизация интерфейса",
-					"Развлечения и мемы",
-					"Продуктивность",
-					"Безопасность и приватность",
-				])
-					.catch((err: any) => {
-						console.error(
-							"Failed to regenerate AI collections in background:",
-							err,
-						);
-					})
-					.finally(() => {
-						isGeneratingCollections = false;
-					});
-			}
-
 			const collections = await ctx.db
 				.select()
 				.from(aiPluginCollections)
@@ -816,7 +924,12 @@ export const aiCollectionsRouter = createTRPCRouter({
 						const pluginsInCollection = await ctx.db
 							.select()
 							.from(plugins)
-							.where(inArray(plugins.id, collection.pluginIds));
+							.where(
+								and(
+									inArray(plugins.id, collection.pluginIds),
+									eq(plugins.status, "approved"),
+								),
+							);
 
 						return {
 							...collection,

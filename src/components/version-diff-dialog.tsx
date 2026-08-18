@@ -60,7 +60,9 @@ export function VersionDiffDialog({
 	);
 
 	const sortedVersions = [...versions].sort(
-		(a, b) => createValidDate(b.createdAt).getTime() - createValidDate(a.createdAt).getTime(),
+		(a, b) =>
+			createValidDate(b.createdAt).getTime() -
+			createValidDate(a.createdAt).getTime(),
 	);
 
 	const renderDiff = () => {

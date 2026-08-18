@@ -1,11 +1,15 @@
-import { and, count, desc, eq, not, sql } from "drizzle-orm";
-import { asc } from "drizzle-orm";
+import { and, asc, count, desc, eq, not, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { env } from "~/env";
 import { TelegramNotifications } from "~/lib/telegram-notifications";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { pluginActivities, pluginCategories, plugins, users } from "~/server/db/schema";
+import {
+	pluginActivities,
+	pluginCategories,
+	plugins,
+	users,
+} from "~/server/db/schema";
 
 const ADMINS = (env.INITIAL_ADMINS ?? "i_am_oniel")
 	.split(",")

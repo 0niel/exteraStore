@@ -1,11 +1,11 @@
 "use client";
 
-import { Sparkles, Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
-import { api } from "~/trpc/react";
 import { Button } from "~/components/ui/button";
+import { api } from "~/trpc/react";
 
 interface TextImprovementButtonProps {
 	text: string;
@@ -14,7 +14,13 @@ interface TextImprovementButtonProps {
 	onImprovedText: (improvedText: string) => void;
 	disabled?: boolean;
 	size?: "default" | "sm" | "lg" | "icon";
-	variant?: "default" | "outline" | "secondary" | "ghost" | "link" | "destructive";
+	variant?:
+		| "default"
+		| "outline"
+		| "secondary"
+		| "ghost"
+		| "link"
+		| "destructive";
 	className?: string;
 }
 
@@ -76,4 +82,4 @@ export function TextImprovementButton({
 			{isImproving ? t("improving") : t("improve_text")}
 		</Button>
 	);
-} 
+}

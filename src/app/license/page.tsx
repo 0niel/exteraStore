@@ -11,8 +11,8 @@ export default function LicensePage() {
 				title={t("title")}
 				description={t("description")}
 			/>
-			
-			<div className="mt-8 prose prose-neutral dark:prose-invert max-w-none">
+
+			<div className="prose prose-neutral dark:prose-invert mt-8 max-w-none">
 				<h2>{t("platform_license.title")}</h2>
 				<p>{t("platform_license.content")}</p>
 
@@ -28,10 +28,10 @@ export default function LicensePage() {
 				<h2>{t("contact.title")}</h2>
 				<p>{t("contact.content")}</p>
 
-				<p className="text-sm text-muted-foreground mt-8">
+				<p className="mt-8 text-muted-foreground text-sm">
 					{t("last_updated")}: {new Date().toLocaleDateString()}
 				</p>
 			</div>
 		</div>
 	);
-} 
+}

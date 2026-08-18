@@ -1,52 +1,29 @@
 import { env } from "~/env.js";
+import {
+	sendTelegramMessage,
+	type TelegramReplyMarkup,
+} from "~/server/lib/telegram-client";
 
 interface TelegramMessage {
 	chat_id: number | string;
 	text: string;
 	parse_mode?: "HTML" | "Markdown" | "MarkdownV2";
-	reply_markup?: {
-		inline_keyboard?: Array<
-			Array<{
-				text: string;
-				url?: string;
-				callback_data?: string;
-			}>
-		>;
-	};
+	reply_markup?: TelegramReplyMarkup;
 }
 
 export class TelegramNotifications {
-	private static readonly BOT_TOKEN = env.TELEGRAM_BOT_TOKEN;
-	private static readonly API_URL =
-		`https://api.telegram.org/bot${TelegramNotifications.BOT_TOKEN}`;
-
 	static async sendMessage(message: TelegramMessage): Promise<boolean> {
-		if (!TelegramNotifications.BOT_TOKEN) {
+		if (!env.TELEGRAM_BOT_TOKEN) {
 			console.error("Telegram bot token not configured");
 			return false;
 		}
 
 		try {
-			const response = await fetch(
-				`${TelegramNotifications.API_URL}/sendMessage`,
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify(message),
-				},
-			);
-
-			if (!response.ok) {
-				const errorData = await response.text();
-				console.error("Failed to send Telegram message:", errorData);
-				return false;
-			}
-
+			const { chat_id, text, ...options } = message;
+			await sendTelegramMessage(chat_id, text, options);
 			return true;
-		} catch (error) {
-			console.error("Error sending Telegram message:", error);
+		} catch {
+			console.error("Error sending Telegram message");
 			return false;
 		}
 	}

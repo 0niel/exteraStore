@@ -3,9 +3,9 @@ import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import {
 	pluginActivities,
+	pluginReviews,
 	plugins,
 	pluginVersions,
-	pluginReviews,
 	users,
 } from "~/server/db/schema";
 
@@ -27,7 +27,9 @@ export const pulseRouter = createTRPCRouter({
 				input.types && input.types.length
 					? inArray(pluginActivities.type, input.types)
 					: undefined,
-				input.pluginId ? eq(pluginActivities.pluginId, input.pluginId) : undefined,
+				input.pluginId
+					? eq(pluginActivities.pluginId, input.pluginId)
+					: undefined,
 				input.actorId ? eq(pluginActivities.actorId, input.actorId) : undefined,
 			].filter(Boolean) as any[];
 
@@ -97,5 +99,3 @@ export const pulseRouter = createTRPCRouter({
 			};
 		}),
 });
-
-

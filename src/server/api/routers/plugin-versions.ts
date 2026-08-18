@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
@@ -6,8 +5,15 @@ import {
 	protectedProcedure,
 	publicProcedure,
 } from "~/server/api/trpc";
-import { pluginFiles, pluginVersions, plugins, pluginActivities, pluginDownloads } from "~/server/db/schema";
-import { pluginPipelineChecks } from "~/server/db/schema";
+import {
+	pluginDownloads,
+	pluginFiles,
+	pluginPipelineChecks,
+	plugins,
+	pluginVersions,
+	users,
+} from "~/server/db/schema";
+import { checkDownloadRateLimit, hashIp } from "~/server/lib/rate-limiter";
 
 export const pluginVersionsRouter = createTRPCRouter({
 	getVersions: publicProcedure
@@ -16,7 +22,12 @@ export const pluginVersionsRouter = createTRPCRouter({
 			const plugin = await ctx.db
 				.select({ id: plugins.id })
 				.from(plugins)
-				.where(eq(plugins.slug, input.pluginSlug))
+				.where(
+					and(
+						eq(plugins.slug, input.pluginSlug),
+						eq(plugins.status, "approved"),
+					),
+				)
 				.limit(1);
 
 			if (!plugin[0]) {
@@ -37,10 +48,13 @@ export const pluginVersionsRouter = createTRPCRouter({
 					downloadCount: pluginVersions.downloadCount,
 					createdAt: pluginVersions.createdAt,
 					createdBy: {
-						name: pluginVersions.createdById,
+						id: users.id,
+						name: users.name,
+						image: users.image,
 					},
 				})
 				.from(pluginVersions)
+				.innerJoin(users, eq(pluginVersions.createdById, users.id))
 				.where(eq(pluginVersions.pluginId, plugin[0].id))
 				.orderBy(desc(pluginVersions.createdAt));
 
@@ -58,7 +72,12 @@ export const pluginVersionsRouter = createTRPCRouter({
 			const plugin = await ctx.db
 				.select({ id: plugins.id })
 				.from(plugins)
-				.where(eq(plugins.slug, input.pluginSlug))
+				.where(
+					and(
+						eq(plugins.slug, input.pluginSlug),
+						eq(plugins.status, "approved"),
+					),
+				)
 				.limit(1);
 
 			if (!plugin[0]) {
@@ -98,11 +117,31 @@ export const pluginVersionsRouter = createTRPCRouter({
 					telegramBotDeeplink: plugins.telegramBotDeeplink,
 				})
 				.from(plugins)
-				.where(eq(plugins.slug, input.pluginSlug))
+				.where(
+					and(
+						eq(plugins.slug, input.pluginSlug),
+						eq(plugins.status, "approved"),
+					),
+				)
 				.limit(1);
 
 			if (!plugin[0]) {
 				throw new Error("Plugin not found");
+			}
+
+			const userId = ctx.session?.user?.id;
+			const ipAddress =
+				ctx.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+				ctx.headers.get("x-real-ip");
+			const rateLimit = await checkDownloadRateLimit(
+				ctx.db,
+				plugin[0].id,
+				userId,
+				ipAddress,
+			);
+
+			if (rateLimit.limited) {
+				throw new Error(rateLimit.reason);
 			}
 
 			const version = await ctx.db
@@ -120,42 +159,47 @@ export const pluginVersionsRouter = createTRPCRouter({
 				throw new Error("Version not found");
 			}
 
-			const userId = ctx.session?.user?.id;
+			const ipHashValue = hashIp(ipAddress);
+			const identityCondition = userId
+				? eq(pluginDownloads.userId, userId)
+				: ipHashValue
+					? eq(pluginDownloads.ipHash, ipHashValue)
+					: undefined;
+			const existingDownload = identityCondition
+				? await ctx.db
+						.select({ id: pluginDownloads.id })
+						.from(pluginDownloads)
+						.where(
+							and(
+								eq(pluginDownloads.versionId, version[0].id),
+								identityCondition,
+							),
+						)
+						.limit(1)
+				: [];
 
-			if (userId) {
-				const existingDownload = await ctx.db
-					.select()
-					.from(pluginDownloads)
-					.where(
-						and(
-							eq(pluginDownloads.userId, userId),
-							eq(pluginDownloads.versionId, version[0].id),
-						),
-					)
-					.limit(1);
+			await ctx.db.insert(pluginDownloads).values({
+				pluginId: plugin[0].id,
+				versionId: version[0].id,
+				userId,
+				ipHash: ipHashValue,
+				userAgent: ctx.headers.get("user-agent"),
+			});
 
-				if (!existingDownload[0]) {
-					await ctx.db.insert(pluginDownloads).values({
-						pluginId: plugin[0].id,
-						versionId: version[0].id,
-						userId: userId,
-						userAgent: ctx.headers.get("user-agent"),
-					});
+			if (!existingDownload[0]) {
+				await ctx.db
+					.update(pluginVersions)
+					.set({
+						downloadCount: sql`${pluginVersions.downloadCount} + 1`,
+					})
+					.where(eq(pluginVersions.id, version[0].id));
 
-					await ctx.db
-						.update(pluginVersions)
-						.set({
-							downloadCount: version[0].downloadCount + 1,
-						})
-						.where(eq(pluginVersions.id, version[0].id));
-
-					await ctx.db
-						.update(plugins)
-						.set({
-							downloadCount: sql`${plugins.downloadCount} + 1`,
-						})
-						.where(eq(plugins.id, plugin[0].id));
-				}
+				await ctx.db
+					.update(plugins)
+					.set({
+						downloadCount: sql`${plugins.downloadCount} + 1`,
+					})
+					.where(eq(plugins.id, plugin[0].id));
 			}
 
 			const pluginFile = await ctx.db.query.pluginFiles.findFirst({
@@ -168,13 +212,15 @@ export const pluginVersionsRouter = createTRPCRouter({
 				.where(
 					and(
 						eq(pluginPipelineChecks.pluginId, plugin[0].id),
-						eq(pluginPipelineChecks.checkType, "security")
-					)
+						eq(pluginPipelineChecks.checkType, "security"),
+					),
 				)
 				.orderBy(desc(pluginPipelineChecks.createdAt))
 				.limit(1);
 
-			const originalExtension = pluginFile?.filename?.endsWith('.plugin') ? '.plugin' : '.py';
+			const originalExtension = pluginFile?.filename?.endsWith(".plugin")
+				? ".plugin"
+				: ".py";
 			const fileName = `${input.pluginSlug}-v${input.version}${originalExtension}`;
 			const fileContent = version[0].fileContent;
 
@@ -194,7 +240,10 @@ export const pluginVersionsRouter = createTRPCRouter({
 				fileName,
 				fileContent,
 				fileSize: version[0].fileSize,
-				mimeType: "application/x-python",
+				mimeType:
+					originalExtension === ".plugin"
+						? "application/octet-stream"
+						: "text/x-python",
 				securityCheck: latestSecurityCheck[0] || null,
 			};
 		}),
@@ -211,7 +260,12 @@ export const pluginVersionsRouter = createTRPCRouter({
 			const plugin = await ctx.db
 				.select({ id: plugins.id })
 				.from(plugins)
-				.where(eq(plugins.slug, input.pluginSlug))
+				.where(
+					and(
+						eq(plugins.slug, input.pluginSlug),
+						eq(plugins.status, "approved"),
+					),
+				)
 				.limit(1);
 
 			if (!plugin[0]) {
@@ -269,7 +323,12 @@ export const pluginVersionsRouter = createTRPCRouter({
 			const plugin = await ctx.db
 				.select({ id: plugins.id })
 				.from(plugins)
-				.where(eq(plugins.slug, input.pluginSlug))
+				.where(
+					and(
+						eq(plugins.slug, input.pluginSlug),
+						eq(plugins.status, "approved"),
+					),
+				)
 				.limit(1);
 
 			if (!plugin[0]) {
@@ -315,7 +374,12 @@ export const pluginVersionsRouter = createTRPCRouter({
 			const plugin = await ctx.db
 				.select({ id: plugins.id })
 				.from(plugins)
-				.where(eq(plugins.slug, input.pluginSlug))
+				.where(
+					and(
+						eq(plugins.slug, input.pluginSlug),
+						eq(plugins.status, "approved"),
+					),
+				)
 				.limit(1);
 
 			if (!plugin[0]) {
@@ -362,125 +426,6 @@ export const pluginVersionsRouter = createTRPCRouter({
 					createdAt: toVersionData.createdAt,
 				},
 			};
-		}),
-
-	createVersion: protectedProcedure
-		.input(
-			z.object({
-				pluginSlug: z.string(),
-				version: z.string().min(1).max(50),
-				fileContent: z.string().min(1),
-				changelog: z.string().optional(),
-				isStable: z.boolean().default(true),
-			}),
-		)
-		.mutation(async ({ ctx, input }) => {
-			const plugin = await ctx.db
-				.select({
-					id: plugins.id,
-					authorId: plugins.authorId,
-					slug: plugins.slug,
-				})
-				.from(plugins)
-				.where(eq(plugins.slug, input.pluginSlug))
-				.limit(1);
-
-			if (!plugin[0] || plugin[0].authorId !== ctx.session.user.id) {
-				throw new Error("Plugin not found or unauthorized");
-			}
-
-			const existingVersion = await ctx.db
-				.select()
-				.from(pluginVersions)
-				.where(
-					and(
-						eq(pluginVersions.pluginId, plugin[0].id),
-						eq(pluginVersions.version, input.version),
-					),
-				)
-				.limit(1);
-
-			if (existingVersion[0]) {
-				throw new Error("Version already exists");
-			}
-
-			const fileHash = crypto
-				.createHash("sha256")
-				.update(input.fileContent)
-				.digest("hex");
-			const fileSize = Buffer.byteLength(input.fileContent, "utf8");
-
-			const [version] = await ctx.db
-				.insert(pluginVersions)
-				.values({
-					pluginId: plugin[0].id,
-					version: input.version,
-					changelog: input.changelog,
-					fileContent: input.fileContent,
-					fileSize,
-					fileHash,
-					isStable: input.isStable,
-					createdById: ctx.session.user.id,
-				})
-				.returning();
-
-			if (version) {
-				await ctx.db.insert(pluginFiles).values({
-					pluginId: plugin[0].id,
-					versionId: version.id,
-					filename: `${plugin[0].slug}-v${input.version}.plugin`,
-					content: input.fileContent,
-					size: fileSize,
-					hash: fileHash,
-				});
-
-				if (input.isStable) {
-					await ctx.db
-						.update(plugins)
-						.set({
-							version: input.version,
-							changelog: input.changelog,
-							updatedAt: Math.floor(Date.now() / 1000),
-						})
-						.where(eq(plugins.id, plugin[0].id));
-				}
-
-				// Логируем активность: релиз версии
-				try {
-					await ctx.db.insert(pluginActivities).values({
-						type: "version.released",
-						actorId: ctx.session.user.id,
-						pluginId: plugin[0].id,
-						versionId: version.id,
-						message: `v${input.version}`,
-						data: JSON.stringify({ isStable: input.isStable }),
-					});
-				} catch {}
-
-				try {
-					if (input.isStable) {
-						const { telegramNotificationsRouter } = await import("~/server/api/routers/telegram-notifications");
-						const notifySubscribers = telegramNotificationsRouter.createCaller(ctx);
-						await notifySubscribers.notifySubscribers({
-							pluginId: plugin[0].id,
-							newVersion: input.version,
-						});
-					}
-				} catch (error) {
-					console.error("Failed to send notifications:", error);
-				}
-
-				// Автоматически запускаем проверки безопасности для новой версии
-				try {
-					const { pluginPipelineRouter } = await import("~/server/api/routers/plugin-pipeline");
-					const pipelineRouter = pluginPipelineRouter.createCaller(ctx);
-					await pipelineRouter.runChecks({ pluginId: plugin[0].id });
-				} catch (error) {
-					console.error("Failed to auto-run security checks:", error);
-				}
-			}
-
-			return version;
 		}),
 
 	deleteVersion: protectedProcedure

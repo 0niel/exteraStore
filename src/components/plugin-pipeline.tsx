@@ -22,7 +22,7 @@ import {
 	PopoverTrigger,
 } from "~/components/ui/popover";
 import { Skeleton } from "~/components/ui/skeleton";
-import { createValidDate, formatDate } from "~/lib/utils";
+import { createValidDate, formatDate, safeJsonParse } from "~/lib/utils";
 import { api } from "~/trpc/react";
 import { Card } from "./ui/card";
 
@@ -102,7 +102,7 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 					{[1, 2].map((i) => (
 						<div
 							key={i}
-							className="flex items-center gap-4 border-b border-border px-4 py-4 last:border-b-0"
+							className="flex items-center gap-4 border-border border-b px-4 py-4 last:border-b-0"
 						>
 							<Skeleton className="h-2.5 w-2.5 rounded-full" />
 							<div className="flex-1 space-y-2">
@@ -137,10 +137,11 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 
 	const latestChecks = Object.entries(groupedChecks).map(
 		([type, typeChecks]) => {
-			const latest = 		(typeChecks as any[]).sort(
-			(a: any, b: any) =>
-				createValidDate(b.createdAt).getTime() - createValidDate(a.createdAt).getTime(),
-		)[0];
+			const latest = (typeChecks as any[]).sort(
+				(a: any, b: any) =>
+					createValidDate(b.createdAt).getTime() -
+					createValidDate(a.createdAt).getTime(),
+			)[0];
 			return { type, check: latest };
 		},
 	);
@@ -200,7 +201,8 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 			{latestChecks.length > 0 && (
 				<Card className="overflow-hidden">
 					{latestChecks.map(({ type, check }, index) => {
-						const IconComponent = checkTypeIcons[type as keyof typeof checkTypeIcons] || Shield;
+						const IconComponent =
+							checkTypeIcons[type as keyof typeof checkTypeIcons] || Shield;
 						const typeName =
 							checkTypeNames[type as keyof typeof checkTypeNames] || type;
 
@@ -236,7 +238,7 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 								key={type}
 								className={`group flex items-center gap-4 px-4 py-4 transition-all duration-200 hover:bg-accent/50 ${
 									index !== latestChecks.length - 1
-										? "border-b border-border"
+										? "border-border border-b"
 										: ""
 								}`}
 							>
@@ -256,13 +258,20 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 												{typeName}
 											</span>
 											<div className="flex items-center gap-1">
-												<StatusIcon className={`h-3 w-3 ${
-													check?.status === "running" ? "animate-spin" : ""
-												} ${
-													check?.status === "passed" ? "text-green-600" :
-													check?.status === "failed" || check?.status === "error" ? "text-red-600" :
-													check?.status === "running" ? "text-yellow-600" : "text-muted-foreground"
-												}`} />
+												<StatusIcon
+													className={`h-3 w-3 ${
+														check?.status === "running" ? "animate-spin" : ""
+													} ${
+														check?.status === "passed"
+															? "text-green-600"
+															: check?.status === "failed" ||
+																	check?.status === "error"
+																? "text-red-600"
+																: check?.status === "running"
+																	? "text-yellow-600"
+																	: "text-muted-foreground"
+													}`}
+												/>
 												<span
 													className={`rounded-full px-2 py-0.5 font-medium text-xs ${
 														check?.status === "running"
@@ -354,7 +363,7 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 												align="end"
 												side="bottom"
 											>
-												<div className="border-b border-border bg-accent/50 p-4">
+												<div className="border-border border-b bg-accent/50 p-4">
 													<h4 className="flex items-center gap-2 font-semibold text-foreground">
 														<div className="h-2 w-2 rounded-full bg-green-500"></div>
 														{t("check_details")}
@@ -362,7 +371,14 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 												</div>
 												<div className="max-h-60 overflow-y-auto p-4">
 													<pre className="whitespace-pre-wrap rounded-md border border-border bg-muted p-3 text-muted-foreground text-xs leading-relaxed">
-														{JSON.stringify(JSON.parse(check.details), null, 2)}
+														{JSON.stringify(
+															safeJsonParse<unknown>(
+																check.details,
+																check.details,
+															),
+															null,
+															2,
+														)}
 													</pre>
 												</div>
 											</PopoverContent>
@@ -385,7 +401,7 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 												align="end"
 												side="bottom"
 											>
-												<div className="border-b border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/30">
+												<div className="border-red-200 border-b bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/30">
 													<h4 className="flex items-center gap-2 font-semibold text-red-900 dark:text-red-400">
 														<div className="h-2 w-2 rounded-full bg-red-500"></div>
 														{t("error_details")}
@@ -407,7 +423,7 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 			)}
 
 			{latestChecks.length === 0 && !isRunning && (
-				<div className="rounded-lg border-2 border-dashed border-border bg-muted/30 p-8 text-center transition-all duration-200 hover:bg-muted/50">
+				<div className="rounded-lg border-2 border-border border-dashed bg-muted/30 p-8 text-center transition-all duration-200 hover:bg-muted/50">
 					<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary/10 to-primary/20 shadow-sm">
 						<Shield className="h-7 w-7 text-primary" />
 					</div>

@@ -1,91 +1,63 @@
 name: Deploy
 
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
 
 concurrency:
   group: production
   cancel-in-progress: false
 
 jobs:
-  test:
-    name: 🧪 Test & Build
-    runs-on: ubuntu-latest
-    steps:
-      - name: 📥 Checkout
-        uses: actions/checkout@v4
-
-      - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.11.0
-
-      - name: ⚡ Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-
-      - name: 🔧 Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: 🔍 Type check
-        run: pnpm typecheck
-
-      - name: 🏗️ Build
-        run: pnpm build
-        env:
-          SKIP_ENV_VALIDATION: 1
-          NEXTAUTH_SECRET: dummy-secret-for-build
-          NEXTAUTH_URL: https://localhost:3000
-          DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
-          YANDEX_STORAGE_ACCESS_KEY: dummy-access-key
-          YANDEX_STORAGE_SECRET_KEY: dummy-secret-key
-          YANDEX_STORAGE_BUCKET: dummy-bucket
-          YANDEX_STORAGE_REGION: ru-central1
-
   build-and-push:
-    name: 🐳 Build & Push Image
-    needs: test
+    name: Build, publish and scan
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     outputs:
-      image: ${{ steps.meta.outputs.tags }}
-      digest: ${{ steps.build.outputs.digest }}
+      image_ref: ${{ steps.image.outputs.name }}@${{ steps.build.outputs.digest }}
     steps:
-      - name: 📥 Checkout
+      - name: Checkout tested commit
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
 
-      - name: 🔧 Set up Docker Buildx
+      - name: Set image name
+        id: image
+        run: echo "name=${REGISTRY}/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: 🔑 Login to Container Registry
+      - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 🏷️ Extract metadata
+      - name: Create image metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ steps.image.outputs.name }}
           tags: |
-            type=ref,event=branch
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest
+            type=raw,value=sha-${{ github.event.workflow_run.head_sha }}
 
-      - name: 🚀 Build and push
+      - name: Build and push
         id: build
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
@@ -95,48 +67,94 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
+          provenance: mode=max
+          sbom: true
+
+      - name: Scan published digest
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: ${{ steps.image.outputs.name }}@${{ steps.build.outputs.digest }}
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          severity: CRITICAL,HIGH
 
   deploy:
-    name: 🚀 Deploy to Production
+    name: Deploy production digest
     needs: build-and-push
     runs-on: ubuntu-latest
     environment: production
+    permissions:
+      contents: read
     steps:
-      - name: 📥 Checkout
+      - name: Checkout tested commit
         uses: actions/checkout@v4
-
-      - name: 🔑 Setup SSH
-        uses: webfactory/ssh-agent@v0.9.0
         with:
-          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
 
-      - name: 🌐 Add server to known hosts
-        run: ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
-
-      - name: 📂 Copy files to server
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
         run: |
-          scp -r docker-compose.yml traefik/ monitoring/ postgres/ ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:~/exterastore/
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
 
-      - name: 🏗️ Deploy application
+      - name: Upload deployment bundle
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
         run: |
-          ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
-            cd ~/exterastore
-            
-            docker network create traefik-network 2>/dev/null || true
-            
-            mkdir -p traefik/acme
-            chmod 600 traefik/acme
-            
-            echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            
-            docker compose down
-            docker compose pull
-            docker compose up --build -d
-            
-            docker image prune -f
-          EOF
+          tar -czf - \
+            docker-compose.yml \
+            traefik/traefik.yml \
+            monitoring/prometheus.yml \
+            scripts/deploy-remote.sh \
+            scripts/backup-db.sh \
+            scripts/rollback.sh |
+            ssh -p "$SERVER_PORT" -i ~/.ssh/deploy_key -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+              "$SERVER_USER@$SERVER_HOST" \
+              'mkdir -p ~/exterastore/traefik/acme ~/exterastore/scripts ~/exterastore/monitoring && tar -xzf - -C ~/exterastore && chmod 700 ~/exterastore/scripts/*.sh'
 
-      - name: ✅ Health check
+      - name: Log server in to GHCR
+        env:
+          GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
+          GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
         run: |
-          sleep 30
-          curl -f https://exterastore.app/api/health
+          printf '%s' "$GHCR_READ_TOKEN" | \
+            ssh -p "$SERVER_PORT" -i ~/.ssh/deploy_key -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+              "$SERVER_USER@$SERVER_HOST" "docker login ghcr.io --username '$GHCR_USERNAME' --password-stdin"
+
+      - name: Deploy pinned image
+        id: deploy
+        env:
+          IMAGE_REF: ${{ needs.build-and-push.outputs.image_ref }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          ssh -p "$SERVER_PORT" -i ~/.ssh/deploy_key -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "$SERVER_USER@$SERVER_HOST" "cd ~/exterastore && ./scripts/deploy-remote.sh '$IMAGE_REF'"
+
+      - name: Check public health
+        id: health
+        env:
+          HEALTHCHECK_URL: ${{ secrets.HEALTHCHECK_URL }}
+        run: curl --fail --location --retry 12 --retry-delay 5 --retry-all-errors --connect-timeout 10 --max-time 20 "$HEALTHCHECK_URL"
+
+      - name: Roll back after public health failure
+        if: ${{ failure() && steps.deploy.outcome == 'success' && steps.health.outcome == 'failure' }}
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          ssh -p "$SERVER_PORT" -i ~/.ssh/deploy_key -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "$SERVER_USER@$SERVER_HOST" "cd ~/exterastore && ./scripts/rollback.sh"

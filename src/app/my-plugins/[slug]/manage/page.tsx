@@ -15,13 +15,11 @@ import {
 	Trash2,
 	UploadCloud,
 } from "lucide-react";
-import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { api } from "~/trpc/react";
-
 import { MarkdownEditor } from "~/components/markdown-editor";
 import { PluginManageVersions } from "~/components/plugin-manage-versions";
 import { ScreenshotUploader } from "~/components/screenshot-uploader";
@@ -56,6 +54,7 @@ import {
 } from "~/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { UploadVersionDialog } from "~/components/upload-version-dialog";
+import { api } from "~/trpc/react";
 
 type FormData = {
 	name: string;

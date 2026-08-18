@@ -1,26 +1,24 @@
 import { NextResponse } from "next/server";
-import { api } from "~/trpc/server";
+import { env } from "~/env";
+import {
+	DEFAULT_AI_COLLECTION_THEMES,
+	generateAndSaveAICollections,
+} from "~/server/api/routers/plugin-pipeline";
+import { db } from "~/server/db";
 
 export async function GET(request: Request) {
 	const authHeader = request.headers.get("authorization");
-	if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+	if (!env.CRON_SECRET || authHeader !== `Bearer ${env.CRON_SECRET}`) {
 		return new Response("Unauthorized", {
 			status: 401,
 		});
 	}
 
 	try {
-		const result = await api.aiCollections.generateAndSaveAICollections({
-			themes: [
-				"Полезные инструменты",
-				"Удивить друзей",
-				"Для работы и учебы",
-				"Кастомизация интерфейса",
-				"Развлечения и мемы",
-				"Продуктивность",
-				"Безопасность и приватность",
-			],
-		});
+		const result = await generateAndSaveAICollections(
+			db,
+			DEFAULT_AI_COLLECTION_THEMES,
+		);
 
 		return NextResponse.json({ success: true, data: result });
 	} catch (error) {

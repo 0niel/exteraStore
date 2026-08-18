@@ -1,16 +1,17 @@
 import { adminPluginsRouter } from "~/server/api/routers/admin-plugins";
+import { adminUsersRouter } from "~/server/api/routers/admin-users";
 import { categoriesRouter } from "~/server/api/routers/categories";
 import { developersRouter } from "~/server/api/routers/developers";
 import { favoritesRouter } from "~/server/api/routers/favorites";
 import {
-	pluginPipelineRouter,
 	aiCollectionsRouter,
+	pluginPipelineRouter,
 } from "~/server/api/routers/plugin-pipeline";
 import { pluginUploadRouter } from "~/server/api/routers/plugin-upload";
 import { pluginVersionsRouter } from "~/server/api/routers/plugin-versions";
 import { pluginsRouter } from "~/server/api/routers/plugins";
-import { pulseRouter } from "~/server/api/routers/pulse";
 import { postRouter } from "~/server/api/routers/post";
+import { pulseRouter } from "~/server/api/routers/pulse";
 import { telegramBotRouter } from "~/server/api/routers/telegram-bot";
 import { telegramNotificationsRouter } from "~/server/api/routers/telegram-notifications";
 import { usersRouter } from "~/server/api/routers/users";
@@ -29,6 +30,7 @@ export const appRouter = createTRPCRouter({
 	developers: developersRouter,
 	users: usersRouter,
 	adminPlugins: adminPluginsRouter,
+	adminUsers: adminUsersRouter,
 	aiCollections: aiCollectionsRouter,
 	pulse: pulseRouter,
 });

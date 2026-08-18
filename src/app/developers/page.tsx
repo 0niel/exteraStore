@@ -18,13 +18,12 @@ import {
 	Users,
 	Zap,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
 import {
 	Card,
 	CardContent,
@@ -35,6 +34,11 @@ import {
 import { Input } from "~/components/ui/input";
 import { Progress } from "~/components/ui/progress";
 import { Skeleton } from "~/components/ui/skeleton";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "~/components/ui/tooltip";
 import { cn, formatNumber } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
@@ -46,34 +50,39 @@ function getDeveloperTier(downloads: number, rating: number, plugins: number) {
 			name: "Legend",
 			color: "from-yellow-400 to-orange-500",
 			icon: Crown,
-			bgColor: "from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20",
+			bgColor:
+				"from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20",
 		};
 	if (score >= 5000)
 		return {
 			name: "Master",
 			color: "from-purple-400 to-pink-500",
 			icon: Trophy,
-			bgColor: "from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20",
+			bgColor:
+				"from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20",
 		};
 	if (score >= 2000)
-		return { 
-			name: "Expert", 
-			color: "from-blue-400 to-cyan-500", 
+		return {
+			name: "Expert",
+			color: "from-blue-400 to-cyan-500",
 			icon: Award,
-			bgColor: "from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20",
+			bgColor:
+				"from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20",
 		};
 	if (score >= 500)
 		return {
 			name: "Pro",
 			color: "from-green-400 to-emerald-500",
 			icon: Target,
-			bgColor: "from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20",
+			bgColor:
+				"from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20",
 		};
 	return {
 		name: "Rising",
 		color: "from-gray-400 to-slate-500",
 		icon: Sparkles,
-		bgColor: "from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20",
+		bgColor:
+			"from-gray-50 to-slate-50 dark:from-gray-900/20 dark:to-slate-900/20",
 	};
 }
 
@@ -87,7 +96,8 @@ function getTierProgress(downloads: number, rating: number, plugins: number) {
 		if (score >= tiers[i]!) currentTier = i;
 	}
 
-	if (currentTier === tiers.length - 1) return { progress: 100, nextTier: null };
+	if (currentTier === tiers.length - 1)
+		return { progress: 100, nextTier: null };
 
 	const currentTierScore = tiers[currentTier]!;
 	const nextTierScore = tiers[currentTier + 1]!;
@@ -95,10 +105,10 @@ function getTierProgress(downloads: number, rating: number, plugins: number) {
 	const next = nextTierScore - currentTierScore;
 	const progress = Math.min((current / next) * 100, 100);
 
-	return { 
-		progress, 
+	return {
+		progress,
 		nextTier: tierNames[currentTier + 1] || null,
-		scoreNeeded: nextTierScore - score
+		scoreNeeded: nextTierScore - score,
 	};
 }
 
@@ -135,7 +145,7 @@ export default function DevelopersPage() {
 
 				<div className="mb-6">
 					<div className="relative mx-auto max-w-md">
-						<Search className="-translate-y-1/2 absolute top-1/2 left-3 h-4 w-4 text-muted-foreground" />
+						<Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 						<Input
 							placeholder="Поиск разработчиков..."
 							value={searchQuery}
@@ -198,7 +208,7 @@ export default function DevelopersPage() {
 				) : (
 					<>
 						<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-														{filteredDevelopers.map((developer: any) => {
+							{filteredDevelopers.map((developer: any) => {
 								const tier = getDeveloperTier(
 									developer.totalDownloads || 0,
 									developer.averageRating || 0,
@@ -220,14 +230,16 @@ export default function DevelopersPage() {
 										}
 									>
 										{/* Tier accent border */}
-										<div className={cn(
-											"absolute inset-x-0 top-0 h-1 bg-gradient-to-r",
-											tier.color
-										)} />
-										
-										<CardContent className="relative p-6 h-full flex flex-col">
+										<div
+											className={cn(
+												"absolute inset-x-0 top-0 h-1 bg-gradient-to-r",
+												tier.color,
+											)}
+										/>
+
+										<CardContent className="relative flex h-full flex-col p-6">
 											{/* Header with avatar and tier */}
-											<div className="flex items-start gap-4 mb-4">
+											<div className="mb-4 flex items-start gap-4">
 												<div className="relative">
 													<Avatar className="h-14 w-14 border-2 border-background shadow-lg">
 														<AvatarImage
@@ -235,10 +247,12 @@ export default function DevelopersPage() {
 															alt={developer.name || ""}
 															className="object-cover"
 														/>
-														<AvatarFallback className={cn(
-															"bg-gradient-to-br font-medium text-sm text-white",
-															tier.color
-														)}>
+														<AvatarFallback
+															className={cn(
+																"bg-gradient-to-br font-medium text-sm text-white",
+																tier.color,
+															)}
+														>
 															{(developer.name || "??")
 																.slice(0, 2)
 																.toUpperCase()}
@@ -246,7 +260,7 @@ export default function DevelopersPage() {
 													</Avatar>
 													<div
 														className={cn(
-															"-bottom-1 -right-1 absolute flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-r shadow-lg border-2 border-background",
+															"absolute -right-1 -bottom-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-background bg-gradient-to-r shadow-lg",
 															tier.color,
 														)}
 													>
@@ -261,7 +275,7 @@ export default function DevelopersPage() {
 													<div className="mt-2">
 														<Badge
 															className={cn(
-																"border-0 bg-gradient-to-r text-white text-xs shadow-md px-3 py-1",
+																"border-0 bg-gradient-to-r px-3 py-1 text-white text-xs shadow-md",
 																tier.color,
 															)}
 														>
@@ -289,8 +303,8 @@ export default function DevelopersPage() {
 															{Math.round(progress.progress)}%
 														</span>
 													</div>
-													<Progress 
-														value={progress.progress} 
+													<Progress
+														value={progress.progress}
 														className="h-1.5"
 													/>
 												</div>
@@ -340,7 +354,7 @@ export default function DevelopersPage() {
 														<Button
 															variant="ghost"
 															size="sm"
-															className="h-8 w-8 p-0 hover:bg-primary/10 transition-colors"
+															className="h-8 w-8 p-0 transition-colors hover:bg-primary/10"
 															onClick={(e) => {
 																e.stopPropagation();
 																window.open(
@@ -356,7 +370,7 @@ export default function DevelopersPage() {
 														<Button
 															variant="ghost"
 															size="sm"
-															className="h-8 w-8 p-0 hover:bg-primary/10 transition-colors"
+															className="h-8 w-8 p-0 transition-colors hover:bg-primary/10"
 															onClick={(e) => {
 																e.stopPropagation();
 																window.open(developer.website, "_blank");
@@ -370,7 +384,7 @@ export default function DevelopersPage() {
 												<Button
 													size="sm"
 													variant="ghost"
-													className="h-8 w-8 p-0 hover:bg-primary/10 transition-colors opacity-60 group-hover:opacity-100"
+													className="h-8 w-8 p-0 opacity-60 transition-colors hover:bg-primary/10 group-hover:opacity-100"
 												>
 													<ExternalLink className="h-4 w-4" />
 												</Button>

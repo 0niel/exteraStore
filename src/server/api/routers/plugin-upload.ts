@@ -4,12 +4,13 @@ import { z } from "zod";
 import { generateSlug, generateUniqueSlug } from "~/lib/utils";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import {
+	pluginActivities,
 	pluginFiles,
 	pluginGitRepos,
-	pluginVersions,
 	plugins,
-	pluginActivities,
+	pluginVersions,
 } from "~/server/db/schema";
+import { verifyCaptcha } from "~/server/lib/captcha";
 
 const createPluginSchema = z.object({
 	name: z.string().min(1).max(256),
@@ -24,6 +25,7 @@ const createPluginSchema = z.object({
 	changelog: z.string().optional(),
 	githubUrl: z.string().url().optional(),
 	documentationUrl: z.string().url().optional(),
+	captchaToken: z.string().min(1),
 });
 
 const updatePluginFromGitSchema = z.object({
@@ -45,12 +47,21 @@ const createVersionSchema = z.object({
 	gitBranch: z.string().optional(),
 	gitTag: z.string().optional(),
 	isStable: z.boolean().default(true),
+	captchaToken: z.string().min(1),
 });
 
 export const pluginUploadRouter = createTRPCRouter({
 	create: protectedProcedure
 		.input(createPluginSchema)
 		.mutation(async ({ ctx, input }) => {
+			const captchaValid = await verifyCaptcha(
+				input.captchaToken,
+				ctx.headers.get("x-forwarded-for") || ctx.headers.get("x-real-ip"),
+			);
+			if (!captchaValid) {
+				throw new Error("Captcha verification failed");
+			}
+
 			// Не позволяем создавать плагины с уже существующим названием (игнор регистра, пробелы)
 			const normalized = input.name.trim().toLowerCase();
 			const existing = await ctx.db
@@ -59,7 +70,9 @@ export const pluginUploadRouter = createTRPCRouter({
 				.where(sql`LOWER(${plugins.name}) = ${normalized}`)
 				.limit(1);
 			if (existing[0]) {
-				throw new Error("Плагин с таким названием уже существует. Пожалуйста, проверьте похожие плагины и выберите уникальное имя.");
+				throw new Error(
+					"Плагин с таким названием уже существует. Пожалуйста, проверьте похожие плагины и выберите уникальное имя.",
+				);
 			}
 			const baseSlug = generateSlug(input.name);
 			const fileHash = crypto
@@ -112,7 +125,7 @@ export const pluginUploadRouter = createTRPCRouter({
 				.returning();
 
 			const savedFilename = input.filename
-				? `${finalSlug}${input.filename.endsWith('.plugin') ? '.plugin' : '.py'}`
+				? `${finalSlug}${input.filename.endsWith(".plugin") ? ".plugin" : ".py"}`
 				: `${finalSlug}.py`;
 
 			await ctx.db.insert(pluginFiles).values({
@@ -138,7 +151,9 @@ export const pluginUploadRouter = createTRPCRouter({
 
 			// Автоматически запускаем проверки безопасности для нового плагина
 			try {
-				const { pluginPipelineRouter } = await import("~/server/api/routers/plugin-pipeline");
+				const { pluginPipelineRouter } = await import(
+					"~/server/api/routers/plugin-pipeline"
+				);
 				const pipelineRouter = pluginPipelineRouter.createCaller(ctx);
 				await pipelineRouter.runChecks({ pluginId: plugin.id });
 			} catch (error) {
@@ -151,6 +166,14 @@ export const pluginUploadRouter = createTRPCRouter({
 	createVersion: protectedProcedure
 		.input(createVersionSchema)
 		.mutation(async ({ ctx, input }) => {
+			const captchaValid = await verifyCaptcha(
+				input.captchaToken,
+				ctx.headers.get("x-forwarded-for") || ctx.headers.get("x-real-ip"),
+			);
+			if (!captchaValid) {
+				throw new Error("Captcha verification failed");
+			}
+
 			const plugin = await ctx.db.query.plugins.findFirst({
 				where: eq(plugins.id, input.pluginId),
 			});
@@ -183,7 +206,9 @@ export const pluginUploadRouter = createTRPCRouter({
 				.returning();
 
 			if (version) {
-				const versionSavedFilename = input.filename ? `${plugin.slug}${input.filename.endsWith('.plugin') ? '.plugin' : '.py'}` : `${plugin.slug}.py`;
+				const versionSavedFilename = input.filename
+					? `${plugin.slug}${input.filename.endsWith(".plugin") ? ".plugin" : ".py"}`
+					: `${plugin.slug}.py`;
 				await ctx.db.insert(pluginFiles).values({
 					pluginId: input.pluginId,
 					versionId: version.id,
@@ -217,8 +242,11 @@ export const pluginUploadRouter = createTRPCRouter({
 
 				try {
 					if (input.isStable) {
-						const { telegramNotificationsRouter } = await import("~/server/api/routers/telegram-notifications");
-						const notifySubscribers = telegramNotificationsRouter.createCaller(ctx);
+						const { telegramNotificationsRouter } = await import(
+							"~/server/api/routers/telegram-notifications"
+						);
+						const notifySubscribers =
+							telegramNotificationsRouter.createCaller(ctx);
 						await notifySubscribers.notifySubscribers({
 							pluginId: input.pluginId,
 							newVersion: input.version,
@@ -230,7 +258,9 @@ export const pluginUploadRouter = createTRPCRouter({
 
 				// Автоматически запускаем проверки безопасности для новой версии
 				try {
-					const { pluginPipelineRouter } = await import("~/server/api/routers/plugin-pipeline");
+					const { pluginPipelineRouter } = await import(
+						"~/server/api/routers/plugin-pipeline"
+					);
 					const pipelineRouter = pluginPipelineRouter.createCaller(ctx);
 					await pipelineRouter.runChecks({ pluginId: input.pluginId });
 				} catch (error) {
@@ -373,7 +403,9 @@ export const pluginUploadRouter = createTRPCRouter({
 
 				// Автоматически запускаем проверки безопасности для обновленной версии
 				try {
-					const { pluginPipelineRouter } = await import("~/server/api/routers/plugin-pipeline");
+					const { pluginPipelineRouter } = await import(
+						"~/server/api/routers/plugin-pipeline"
+					);
 					const pipelineRouter = pluginPipelineRouter.createCaller(ctx);
 					await pipelineRouter.runChecks({ pluginId: input.pluginId });
 				} catch (error) {

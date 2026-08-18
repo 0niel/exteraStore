@@ -10,10 +10,10 @@ import {
 	User,
 	XCircle,
 } from "lucide-react";
-import { useSession } from "next-auth/react";
-import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "~/components/ui/badge";
@@ -45,6 +45,18 @@ const ADMINS = (env.NEXT_PUBLIC_INITIAL_ADMINS ?? "i_am_oniel")
 	.map((a) => a.trim().toLowerCase())
 	.filter(Boolean);
 
+interface AdminPlugin {
+	id: number;
+	name: string;
+	slug: string;
+	description: string;
+	shortDescription?: string;
+	author: string;
+	downloadCount: number;
+	rating: number;
+	status: string;
+}
+
 export default function AdminPluginsPage() {
 	const router = useRouter();
 	const { data: session } = useSession();
@@ -72,16 +84,15 @@ export default function AdminPluginsPage() {
 		}
 	}, [session, router, isAdmin]);
 
-	if (!session || !isAdmin) {
-		return null;
-	}
-
-	const { data, refetch, isFetching } = api.adminPlugins.getPlugins.useQuery({
-		page: 1,
-		limit: 50,
-		status,
-		search,
-	});
+	const { data, refetch, isFetching } = api.adminPlugins.getPlugins.useQuery(
+		{
+			page: 1,
+			limit: 50,
+			status,
+			search,
+		},
+		{ enabled: Boolean(session && isAdmin) },
+	);
 
 	const approve = api.adminPlugins.approve.useMutation({
 		onSuccess: () => refetch(),
@@ -107,13 +118,17 @@ export default function AdminPluginsPage() {
 		},
 	});
 
+	if (!session || !isAdmin) {
+		return null;
+	}
+
 	const action = (id: number, type: "approve" | "reject" | "delete") => {
 		if (type === "approve") approve.mutate({ id });
 		if (type === "reject") reject.mutate({ id });
 		if (type === "delete") remove.mutate({ id });
 	};
 
-	const openEditDialog = (plugin: any) => {
+	const openEditDialog = (plugin: AdminPlugin) => {
 		setEditingPlugin({
 			id: plugin.id,
 			name: plugin.name,
@@ -148,7 +163,12 @@ export default function AdminPluginsPage() {
 					className="mb-6"
 				/>
 
-				<Tabs defaultValue="pending" onValueChange={(v) => setStatus(v as any)}>
+				<Tabs
+					defaultValue="pending"
+					onValueChange={(v) =>
+						setStatus(v as "pending" | "approved" | "rejected")
+					}
+				>
 					<TabsList>
 						<TabsTrigger value="pending">{t("pending")}</TabsTrigger>
 						<TabsTrigger value="approved">{t("approved")}</TabsTrigger>
@@ -169,7 +189,7 @@ export default function AdminPluginsPage() {
 								/>
 							) : (
 								<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-									{data?.plugins.map((plugin: any) => (
+									{data?.plugins.map((plugin: AdminPlugin) => (
 										<Card key={plugin.id} className="group">
 											<CardHeader>
 												<CardTitle>{plugin.name}</CardTitle>
@@ -193,7 +213,12 @@ export default function AdminPluginsPage() {
 													</span>
 												</div>
 												<Badge variant="outline">
-													{t(plugin.status as any)}
+													{t(
+														plugin.status as
+															| "pending"
+															| "approved"
+															| "rejected",
+													)}
 												</Badge>
 												<div className="flex flex-wrap gap-2">
 													{tab !== "approved" && (
@@ -264,8 +289,7 @@ export default function AdminPluginsPage() {
 						<DialogHeader>
 							<DialogTitle>Редактировать количество скачиваний</DialogTitle>
 							<DialogDescription>
-								Изменить количество скачиваний для плагина{" "}
-								{editingPlugin?.name}
+								Изменить количество скачиваний для плагина {editingPlugin?.name}
 							</DialogDescription>
 						</DialogHeader>
 						<div className="space-y-4 py-4">

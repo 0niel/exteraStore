@@ -1,12 +1,18 @@
 "use client";
 
-import { Filter, Grid, List, Search, SlidersHorizontal } from "lucide-react";
-import { useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
-
-import { PageHeader } from "~/components/page-header";
+import {
+	ChevronLeft,
+	ChevronRight,
+	Grid2X2,
+	List,
+	Search,
+	SlidersHorizontal,
+	X,
+} from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useDebounce } from "use-debounce";
 import { PluginCard } from "~/components/plugin-card";
-import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { EmptyState } from "~/components/ui/empty-state";
 import { Input } from "~/components/ui/input";
@@ -17,373 +23,311 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "~/components/ui/select";
-import { Separator } from "~/components/ui/separator";
-import {
-	Sheet,
-	SheetContent,
-	SheetDescription,
-	SheetHeader,
-	SheetTitle,
-	SheetTrigger,
-} from "~/components/ui/sheet";
 import { Skeleton } from "~/components/ui/skeleton";
-import type { pluginCategories } from "~/server/db/schema";
+import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
+
+type SortOption = "newest" | "popular" | "rating" | "downloads";
+
+interface PluginCategory {
+	id: number;
+	slug: string;
+	name: string;
+}
+
+const isSortOption = (value: string | null): value is SortOption =>
+	value === "newest" ||
+	value === "popular" ||
+	value === "rating" ||
+	value === "downloads";
+
+function CatalogSkeleton({ compact = false }: { compact?: boolean }) {
+	return (
+		<div
+			className={cn(
+				compact ? "space-y-3" : "grid gap-5 sm:grid-cols-2 xl:grid-cols-3",
+			)}
+		>
+			{Array.from({ length: compact ? 6 : 9 }).map((_, index) => (
+				<Skeleton
+					key={index}
+					className={cn("rounded-xl", compact ? "h-28" : "h-104")}
+				/>
+			))}
+		</div>
+	);
+}
 
 function PluginsContent() {
 	const searchParams = useSearchParams();
+	const router = useRouter();
+	const initialSort = searchParams.get("sort");
+	const featuredOnly = searchParams.get("featured") === "true";
+	const currentQuery = searchParams.toString();
 	const [search, setSearch] = useState(searchParams.get("search") || "");
 	const [category, setCategory] = useState(searchParams.get("category") || "");
-	const [sortBy, setSortBy] = useState<
-		"newest" | "popular" | "rating" | "downloads"
-	>((searchParams.get("sort") as any) || "newest");
+	const [sortBy, setSortBy] = useState<SortOption>(
+		isSortOption(initialSort) ? initialSort : "newest",
+	);
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 	const [page, setPage] = useState(1);
+	const [debouncedSearch] = useDebounce(search.trim(), 250);
 
-	const { data: pluginsData, isLoading } = api.plugins.getAll.useQuery({
+	const {
+		data: pluginsData,
+		isLoading,
+		isFetching,
+		isError,
+		refetch,
+	} = api.plugins.getAll.useQuery({
 		page,
 		limit: 12,
-		search: search || undefined,
+		search: debouncedSearch || undefined,
 		category: category || undefined,
 		sortBy,
-		featured: searchParams.get("featured") === "true" || undefined,
+		featured: featuredOnly || undefined,
 	});
-
 	const { data: categories } = api.plugins.getCategories.useQuery();
 
-	const handleSearch = (value: string) => {
-		setSearch(value);
-		setPage(1);
-	};
+	useEffect(() => {
+		const params = new URLSearchParams();
+		if (debouncedSearch) params.set("search", debouncedSearch);
+		if (category) params.set("category", category);
+		if (sortBy !== "newest") params.set("sort", sortBy);
+		if (featuredOnly) params.set("featured", "true");
+		const queryString = params.toString();
+		if (queryString !== currentQuery) {
+			router.replace(queryString ? `/plugins?${queryString}` : "/plugins", {
+				scroll: false,
+			});
+		}
+	}, [category, currentQuery, debouncedSearch, featuredOnly, router, sortBy]);
 
-	const handleCategoryChange = (value: string) => {
-		setCategory(value === "all" ? "" : value);
-		setPage(1);
-	};
+	const hasFilters =
+		Boolean(search) || Boolean(category) || sortBy !== "newest" || featuredOnly;
 
-	const handleSortChange = (
-		value: "newest" | "popular" | "rating" | "downloads",
-	) => {
-		setSortBy(value);
+	const pageLabel = useMemo(() => {
+		if (!pluginsData) return "";
+		const from = (page - 1) * 12 + 1;
+		const to = Math.min(page * 12, pluginsData.totalCount);
+		return `${from}–${to} из ${pluginsData.totalCount}`;
+	}, [page, pluginsData]);
+
+	const clearFilters = () => {
+		setSearch("");
+		setCategory("");
+		setSortBy("newest");
 		setPage(1);
+		router.replace("/plugins", { scroll: false });
 	};
 
 	return (
-		<div className="bg-background">
-			<div className="container mx-auto px-4 py-8">
-				<PageHeader
-					badge="Каталог"
-					title="Каталог плагинов"
-					description="Откройте для себя тысячи плагинов для exteraGram"
-					icon={Grid}
-				/>
-
-				{/* Search and Filters */}
-				<div className="mb-8 space-y-6">
-					{/* Search Bar */}
-					<div className="relative mx-auto max-w-2xl">
-						<Search className="-translate-y-1/2 absolute top-1/2 left-3 h-5 w-5 transform text-muted-foreground" />
-						<Input
-							placeholder="Поиск плагинов..."
-							value={search}
-							onChange={(e) => handleSearch(e.target.value)}
-							className="h-12 pl-10"
-						/>
-					</div>
-
-					{/* Filters Row */}
-					<div className="rounded-lg border bg-card/50 p-4 backdrop-blur-sm">
-						<div className="flex flex-col items-start justify-between gap-4 lg:flex-row lg:items-center">
-							<div className="flex flex-wrap gap-3">
-								{/* Category Filter */}
-								<div className="space-y-1">
-									<label className="font-medium text-muted-foreground text-xs">
-										Категория
-									</label>
-									<Select
-										value={category || "all"}
-										onValueChange={handleCategoryChange}
-									>
-										<SelectTrigger className="w-40">
-											<SelectValue placeholder="Все категории" />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="all">Все категории</SelectItem>
-											{categories?.map(
-												(cat: typeof pluginCategories.$inferSelect) => (
-													<SelectItem key={cat.id} value={cat.slug}>
-														{cat.name}
-													</SelectItem>
-												),
-											)}
-										</SelectContent>
-									</Select>
-								</div>
-
-								{/* Sort Filter */}
-								<div className="space-y-1">
-									<label className="font-medium text-muted-foreground text-xs">
-										Сортировка
-									</label>
-									<Select value={sortBy} onValueChange={handleSortChange}>
-										<SelectTrigger className="w-40">
-											<SelectValue placeholder="Сортировка" />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="newest">Новые</SelectItem>
-											<SelectItem value="popular">Популярные</SelectItem>
-											<SelectItem value="rating">По рейтингу</SelectItem>
-											<SelectItem value="downloads">По загрузкам</SelectItem>
-										</SelectContent>
-									</Select>
-								</div>
-							</div>
-
-							{/* Mobile Filters */}
-							<Sheet>
-								<SheetTrigger asChild>
-									<Button variant="outline" className="sm:hidden">
-										<SlidersHorizontal className="mr-2 h-4 w-4" />
-										Фильтры
-									</Button>
-								</SheetTrigger>
-								<SheetContent>
-									<SheetHeader>
-										<SheetTitle>Фильтры</SheetTitle>
-										<SheetDescription>
-											Настройте параметры поиска плагинов
-										</SheetDescription>
-									</SheetHeader>
-									<div className="mt-6 space-y-4">
-										{/* Mobile filters content */}
-										<div>
-											<label className="mb-2 block font-medium text-sm">
-												Категория
-											</label>
-											<Select
-												value={category || "all"}
-												onValueChange={handleCategoryChange}
-											>
-												<SelectTrigger>
-													<SelectValue placeholder="Выберите категорию" />
-												</SelectTrigger>
-												<SelectContent>
-													<SelectItem value="all">Все категории</SelectItem>
-													{categories?.map(
-														(cat: typeof pluginCategories.$inferSelect) => (
-															<SelectItem key={cat.id} value={cat.slug}>
-																{cat.name}
-															</SelectItem>
-														),
-													)}
-												</SelectContent>
-											</Select>
-										</div>
-									</div>
-								</SheetContent>
-							</Sheet>
-						</div>
-
-						{/* View Mode and Results Count */}
-						<div className="mt-3 flex flex-col items-start justify-between gap-3 sm:flex-row sm:items-center">
-							<div className="text-muted-foreground text-sm">
-								{pluginsData && (
-									<>
-										<span className="font-medium">
-											{pluginsData.plugins.length}
-										</span>
-										<span> из </span>
-										<span className="font-medium">
-											{pluginsData.totalCount}
-										</span>
-										<span> плагинов</span>
-									</>
-								)}
-							</div>
-
-							<div className="flex items-center gap-1">
-								<Button
-									variant={viewMode === "grid" ? "default" : "ghost"}
-									size="sm"
-									onClick={() => setViewMode("grid")}
-									className="h-8 w-8 p-0"
-								>
-									<Grid className="h-4 w-4" />
-								</Button>
-								<Button
-									variant={viewMode === "list" ? "default" : "ghost"}
-									size="sm"
-									onClick={() => setViewMode("list")}
-									className="h-8 w-8 p-0"
-								>
-									<List className="h-4 w-4" />
-								</Button>
-							</div>
-						</div>
-					</div>
-
-					{/* Active Filters */}
-					{(search || category || searchParams.get("featured")) && (
-						<div className="mt-4 flex flex-wrap gap-2">
-							<span className="text-muted-foreground text-sm">
-								Активные фильтры:
-							</span>
-							{search && (
-								<Badge
-									variant="secondary"
-									className="cursor-pointer"
-									onClick={() => handleSearch("")}
-								>
-									Поиск: {search} ×
-								</Badge>
-							)}
-							{category && (
-								<Badge
-									variant="secondary"
-									className="cursor-pointer"
-									onClick={() => handleCategoryChange("all")}
-								>
-									Категория:{" "}
-									{
-										categories?.find(
-											(c: typeof pluginCategories.$inferSelect) =>
-												c.slug === category,
-										)?.name
-									}{" "}
-									×
-								</Badge>
-							)}
-							{searchParams.get("featured") && (
-								<Badge variant="secondary">Рекомендуемые</Badge>
-							)}
-						</div>
-					)}
+		<div className="min-h-[70vh]">
+			<header className="border-b bg-muted/20">
+				<div className="container mx-auto px-4 py-8 sm:py-12">
+					<p className="font-medium text-primary text-sm">Каталог exteraGram</p>
+					<h1 className="mt-2 text-balance font-bold text-3xl tracking-tight sm:text-5xl">
+						Найдите плагин под свою задачу
+					</h1>
+					<p className="mt-3 max-w-2xl text-muted-foreground sm:text-lg">
+						Ищите по названию, выбирайте категорию и сортируйте по реальным
+						оценкам сообщества.
+					</p>
 				</div>
+			</header>
 
-				{/* Results */}
-				<div className="mb-8">
-					{isLoading ? (
-						<div
-							className={`${
-								viewMode === "grid"
-									? "grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-									: "flex flex-col gap-4"
-							}`}
-						>
-							{Array.from({ length: 12 }).map((_, i) => (
-								<div
-									key={i}
-									className="overflow-hidden rounded-lg border bg-card/50 backdrop-blur-sm"
+			<div className="container mx-auto px-4 py-6 sm:py-8">
+				<div className="sticky top-[calc(4rem+env(safe-area-inset-top))] z-20 -mx-4 mb-7 border-b bg-background/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:rounded-2xl sm:border sm:p-4">
+					<div className="grid gap-3 lg:grid-cols-[minmax(16rem,1fr)_13rem_13rem_auto]">
+						<label className="relative block">
+							<span className="sr-only">Поиск по каталогу</span>
+							<Search className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-muted-foreground" />
+							<Input
+								value={search}
+								onChange={(event) => {
+									setSearch(event.target.value);
+									setPage(1);
+								}}
+								placeholder="Название плагина"
+								className="h-11 pr-11 pl-10"
+							/>
+							{search && (
+								<button
+									type="button"
+									onClick={() => {
+										setSearch("");
+										setPage(1);
+									}}
+									className="absolute top-1/2 right-0 flex size-11 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+									aria-label="Очистить поиск"
 								>
-									<Skeleton className="h-32 w-full" />
-									<div className="space-y-2 p-4">
-										<Skeleton className="h-5 w-3/4" />
-										<Skeleton className="h-4 w-full" />
-										<Skeleton className="h-4 w-2/3" />
-										<div className="flex items-center justify-between pt-2">
-											<Skeleton className="h-4 w-16" />
-											<Skeleton className="h-8 w-20" />
-										</div>
-									</div>
-								</div>
-							))}
-						</div>
-					) : pluginsData?.plugins.length === 0 ? (
-						<EmptyState
-							icon="🔍"
-							title="Плагины не найдены"
-							description="Попробуйте изменить параметры поиска или фильтры"
-							actionLabel="Сбросить фильтры"
-							onAction={() => {
-								setSearch("");
-								setCategory("");
+									<X className="size-4" />
+								</button>
+							)}
+						</label>
+
+						<Select
+							value={category || "all"}
+							onValueChange={(value) => {
+								setCategory(value === "all" ? "" : value);
 								setPage(1);
 							}}
-						/>
-					) : (
-						<div
-							className={`${
-								viewMode === "grid"
-									? "grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-									: "flex flex-col gap-4"
-							}`}
 						>
-							{pluginsData?.plugins.map((plugin: any) => (
-								<PluginCard
-									key={plugin.id}
-									plugin={plugin}
-									compact={viewMode === "list"}
-									className={viewMode === "list" ? "max-w-none" : ""}
-								/>
-							))}
-						</div>
-					)}
+							<SelectTrigger className="h-11 w-full" aria-label="Категория">
+								<SelectValue placeholder="Все категории" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="all">Все категории</SelectItem>
+								{categories?.map((item: PluginCategory) => (
+									<SelectItem key={item.id} value={item.slug}>
+										{item.name}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+
+						<Select
+							value={sortBy}
+							onValueChange={(value) => {
+								setSortBy(value as SortOption);
+								setPage(1);
+							}}
+						>
+							<SelectTrigger className="h-11 w-full" aria-label="Сортировка">
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="newest">Сначала новые</SelectItem>
+								<SelectItem value="popular">Популярные</SelectItem>
+								<SelectItem value="rating">По рейтингу</SelectItem>
+								<SelectItem value="downloads">По загрузкам</SelectItem>
+							</SelectContent>
+						</Select>
+
+						{hasFilters && (
+							<Button variant="ghost" onClick={clearFilters}>
+								<X />
+								Сбросить
+							</Button>
+						)}
+					</div>
 				</div>
 
-				{/* Pagination */}
-				{pluginsData && pluginsData.totalPages > 1 && (
-					<div className="rounded-lg border bg-card/50 p-4 backdrop-blur-sm">
-						<div className="flex items-center justify-center gap-2">
-							<Button
-								variant="outline"
-								disabled={page === 1}
-								onClick={() => setPage(page - 1)}
-								size="sm"
-							>
-								← Предыдущая
-							</Button>
-
-							<div className="flex items-center gap-1">
-								{Array.from(
-									{ length: Math.min(5, pluginsData.totalPages) },
-									(_, i) => {
-										const pageNum = i + 1;
-										return (
-											<Button
-												key={pageNum}
-												variant={page === pageNum ? "default" : "outline"}
-												size="sm"
-												onClick={() => setPage(pageNum)}
-												className="h-8 w-8 p-0"
-											>
-												{pageNum}
-											</Button>
-										);
-									},
-								)}
-								{pluginsData.totalPages > 5 && (
-									<>
-										<span className="px-1 text-muted-foreground text-sm">
-											...
-										</span>
-										<Button
-											variant={
-												page === pluginsData.totalPages ? "default" : "outline"
-											}
-											size="sm"
-											onClick={() => setPage(pluginsData.totalPages)}
-											className="h-8 w-8 p-0"
-										>
-											{pluginsData.totalPages}
-										</Button>
-									</>
-								)}
-							</div>
-
-							<Button
-								variant="outline"
-								disabled={page === pluginsData.totalPages}
-								onClick={() => setPage(page + 1)}
-								size="sm"
-							>
-								Следующая →
-							</Button>
-						</div>
-
-						<div className="mt-3 text-center text-muted-foreground text-xs">
-							Страница {page} из {pluginsData.totalPages}
-						</div>
+				<div className="mb-5 flex min-h-11 items-center justify-between gap-3">
+					<div className="flex min-w-0 items-center gap-2 text-muted-foreground text-sm">
+						<SlidersHorizontal className="size-4 shrink-0" />
+						<span className="truncate">
+							{isLoading ? "Загружаем каталог" : pageLabel}
+						</span>
+						{isFetching && !isLoading && (
+							<span className="size-2 animate-pulse rounded-full bg-primary" />
+						)}
 					</div>
+					<fieldset className="flex rounded-xl border p-1">
+						<legend className="sr-only">Вид каталога</legend>
+						<button
+							type="button"
+							onClick={() => setViewMode("grid")}
+							className={cn(
+								"flex size-11 items-center justify-center rounded-lg transition-colors",
+								viewMode === "grid"
+									? "bg-primary text-primary-foreground"
+									: "hover:bg-muted",
+							)}
+							aria-label="Сетка"
+							aria-pressed={viewMode === "grid"}
+						>
+							<Grid2X2 className="size-4" />
+						</button>
+						<button
+							type="button"
+							onClick={() => setViewMode("list")}
+							className={cn(
+								"flex size-11 items-center justify-center rounded-lg transition-colors",
+								viewMode === "list"
+									? "bg-primary text-primary-foreground"
+									: "hover:bg-muted",
+							)}
+							aria-label="Список"
+							aria-pressed={viewMode === "list"}
+						>
+							<List className="size-4" />
+						</button>
+					</fieldset>
+				</div>
+
+				{isLoading ? (
+					<CatalogSkeleton compact={viewMode === "list"} />
+				) : isError ? (
+					<EmptyState
+						icon="↻"
+						title="Не удалось загрузить каталог"
+						description="Проверьте соединение и повторите попытку."
+						actionLabel="Повторить"
+						onAction={() => void refetch()}
+					/>
+				) : pluginsData?.plugins.length === 0 ? (
+					<EmptyState
+						icon="⌕"
+						title="Плагины не найдены"
+						description="Измените запрос или сбросьте фильтры."
+						actionLabel="Сбросить фильтры"
+						onAction={clearFilters}
+					/>
+				) : (
+					<div
+						className={cn(
+							viewMode === "grid"
+								? "grid gap-5 sm:grid-cols-2 xl:grid-cols-3"
+								: "space-y-3",
+						)}
+					>
+						{pluginsData?.plugins.map((plugin) => (
+							<PluginCard
+								key={plugin.id}
+								plugin={plugin}
+								compact={viewMode === "list"}
+							/>
+						))}
+					</div>
+				)}
+
+				{pluginsData && pluginsData.totalPages > 1 && (
+					<nav
+						className="mt-8 flex items-center justify-between gap-3 border-t pt-6"
+						aria-label="Страницы каталога"
+					>
+						<Button
+							variant="outline"
+							disabled={page === 1}
+							onClick={() => {
+								setPage((current) => Math.max(1, current - 1));
+								window.scrollTo({ top: 0, behavior: "smooth" });
+							}}
+							aria-label="Предыдущая страница"
+						>
+							<ChevronLeft />
+							<span className="hidden sm:inline">Назад</span>
+						</Button>
+						<span className="text-center text-muted-foreground text-sm">
+							<span className="font-medium text-foreground">{page}</span> из{" "}
+							{pluginsData.totalPages}
+						</span>
+						<Button
+							variant="outline"
+							disabled={page === pluginsData.totalPages}
+							onClick={() => {
+								setPage((current) =>
+									Math.min(pluginsData.totalPages, current + 1),
+								);
+								window.scrollTo({ top: 0, behavior: "smooth" });
+							}}
+							aria-label="Следующая страница"
+						>
+							<span className="hidden sm:inline">Дальше</span>
+							<ChevronRight />
+						</Button>
+					</nav>
 				)}
 			</div>
 		</div>
@@ -392,7 +336,7 @@ function PluginsContent() {
 
 export default function PluginsPage() {
 	return (
-		<Suspense fallback={<div>Loading...</div>}>
+		<Suspense fallback={<CatalogSkeleton />}>
 			<PluginsContent />
 		</Suspense>
 	);

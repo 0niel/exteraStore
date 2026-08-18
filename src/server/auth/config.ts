@@ -188,7 +188,6 @@ export const authConfig = {
 			return token;
 		},
 		session: async ({ session, token }) => {
-			console.log("[SessionCallback] token -> session", token);
 			session.user = {
 				...session.user,
 				id: token.id as string,
@@ -198,23 +197,9 @@ export const authConfig = {
 			};
 			return session;
 		},
-		signIn: async ({ user, account, profile }) => {
-			console.log("[SignInCallback] signIn", {
-				userId: user.id,
-				provider: account?.provider,
-			});
-			if (account?.provider === "telegram") {
-				return true;
-			}
-			if (account?.provider === "discord") {
-			}
-			return true;
-		},
+		signIn: async () => true,
 	},
 	events: {
-		createSession: async (ctx: any) => {
-			console.log("[EVENT] createSession", ctx);
-		},
 		error: async (err: any) => {
 			console.error("[EVENT] error", err);
 		},

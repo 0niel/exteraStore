@@ -1,6 +1,15 @@
 "use client";
 
-import { Sparkles, Calendar, TrendingUp, Users, Zap, Heart, Star, ArrowRight } from "lucide-react";
+import {
+	ArrowRight,
+	Calendar,
+	Heart,
+	Sparkles,
+	Star,
+	TrendingUp,
+	Users,
+	Zap,
+} from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -45,7 +54,7 @@ function CollectionSkeleton() {
 			<div className="relative">
 				<Skeleton className="h-32 w-full" />
 				<div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-				<div className="absolute bottom-4 left-4 right-4">
+				<div className="absolute right-4 bottom-4 left-4">
 					<Skeleton className="mb-2 h-6 w-3/4" />
 					<Skeleton className="h-4 w-full" />
 				</div>
@@ -65,27 +74,35 @@ function CollectionSkeleton() {
 }
 
 function CollectionCard({ collection }: { collection: any }) {
-	const IconComponent = collectionIcons[collection.name as keyof typeof collectionIcons] || Sparkles;
-	const gradientColor = collectionColors[collection.name as keyof typeof collectionColors] || "";
-	
+	const IconComponent =
+		collectionIcons[collection.name as keyof typeof collectionIcons] ||
+		Sparkles;
+	const gradientColor =
+		collectionColors[collection.name as keyof typeof collectionColors] || "";
+
 	const pluginData = collection.plugins || [];
 
 	return (
-		<Card className="group overflow-hidden border bg-card/50 backdrop-blur-sm transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
+		<Card className="group overflow-hidden border bg-card/50 backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
 			<div className="relative">
 				{/* Gradient Header */}
 				<div className={cn("h-32 bg-gradient-to-br", gradientColor)}>
 					<div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-					<div className="absolute bottom-4 left-4 right-4 text-white">
+					<div className="absolute right-4 bottom-4 left-4 text-white">
 						<div className="mb-2 flex items-center gap-2">
 							<div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
 								<IconComponent className="h-4 w-4" />
 							</div>
-							<Badge variant="secondary" className="bg-white/20 text-white backdrop-blur-sm">
+							<Badge
+								variant="secondary"
+								className="bg-white/20 text-white backdrop-blur-sm"
+							>
 								ИИ подборка
 							</Badge>
 						</div>
-						<h3 className="font-bold text-lg leading-tight">{collection.name}</h3>
+						<h3 className="font-bold text-lg leading-tight">
+							{collection.name}
+						</h3>
 						<p className="mt-1 line-clamp-2 text-sm text-white/90">
 							{collection.description}
 						</p>
@@ -94,7 +111,7 @@ function CollectionCard({ collection }: { collection: any }) {
 			</div>
 
 			<CardContent className="p-4">
-				<div className="mb-3 flex items-center justify-between text-sm text-muted-foreground">
+				<div className="mb-3 flex items-center justify-between text-muted-foreground text-sm">
 					<div className="flex items-center gap-1">
 						<Calendar className="h-3 w-3" />
 						<span>{formatDate(collection.createdAt)}</span>
@@ -120,7 +137,7 @@ function CollectionCard({ collection }: { collection: any }) {
 										{plugin.shortDescription || plugin.description}
 									</p>
 								</div>
-								<div className="flex items-center gap-1 text-xs text-muted-foreground">
+								<div className="flex items-center gap-1 text-muted-foreground text-xs">
 									<Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
 									<span>{plugin.rating.toFixed(1)}</span>
 								</div>
@@ -146,20 +163,22 @@ function CollectionCard({ collection }: { collection: any }) {
 
 export default function CollectionsPage() {
 	const [activeTab, setActiveTab] = useState("all");
-	
-	const { data: collections, isLoading } = api.aiCollections.getAICollections.useQuery({ limit: 20 });
 
-	const filteredCollections = collections?.filter((collection: any) => {
-		if (activeTab === "all") return true;
-		if (activeTab === "recent") {
-			const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-			return new Date(collection.createdAt).getTime() > weekAgo;
-		}
-		if (activeTab === "popular") {
-			return collection.plugins && collection.plugins.length >= 5;
-		}
-		return true;
-	}) || [];
+	const { data: collections, isLoading } =
+		api.aiCollections.getAICollections.useQuery({ limit: 20 });
+
+	const filteredCollections =
+		collections?.filter((collection: any) => {
+			if (activeTab === "all") return true;
+			if (activeTab === "recent") {
+				const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+				return new Date(collection.createdAt).getTime() > weekAgo;
+			}
+			if (activeTab === "popular") {
+				return collection.plugins && collection.plugins.length >= 5;
+			}
+			return true;
+		}) || [];
 
 	return (
 		<div className="bg-background">
@@ -180,11 +199,13 @@ export default function CollectionsPage() {
 							</div>
 							<div>
 								<p className="font-bold text-lg">{collections?.length || 0}</p>
-								<p className="text-muted-foreground text-sm">Активных подборок</p>
+								<p className="text-muted-foreground text-sm">
+									Активных подборок
+								</p>
 							</div>
 						</CardContent>
 					</Card>
-					
+
 					<Card className="border bg-card/50 backdrop-blur-sm">
 						<CardContent className="flex items-center gap-3 p-4">
 							<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
@@ -192,13 +213,18 @@ export default function CollectionsPage() {
 							</div>
 							<div>
 								<p className="font-bold text-lg">
-									{collections?.reduce((acc: number, c: any) => acc + (c.plugins?.length || 0), 0) || 0}
+									{collections?.reduce(
+										(acc: number, c: any) => acc + (c.plugins?.length || 0),
+										0,
+									) || 0}
 								</p>
-								<p className="text-muted-foreground text-sm">Плагинов в подборках</p>
+								<p className="text-muted-foreground text-sm">
+									Плагинов в подборках
+								</p>
 							</div>
 						</CardContent>
 					</Card>
-					
+
 					<Card className="border bg-card/50 backdrop-blur-sm">
 						<CardContent className="flex items-center gap-3 p-4">
 							<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/10">
@@ -206,7 +232,9 @@ export default function CollectionsPage() {
 							</div>
 							<div>
 								<p className="font-bold text-lg">Еженедельно</p>
-								<p className="text-muted-foreground text-sm">Обновление подборок</p>
+								<p className="text-muted-foreground text-sm">
+									Обновление подборок
+								</p>
 							</div>
 						</CardContent>
 					</Card>
@@ -297,11 +325,15 @@ export default function CollectionsPage() {
 								<Sparkles className="h-6 w-6 text-purple-500" />
 							</div>
 							<div>
-								<h3 className="mb-2 font-bold text-lg">Как работают ИИ-подборки?</h3>
+								<h3 className="mb-2 font-bold text-lg">
+									Как работают ИИ-подборки?
+								</h3>
 								<p className="mb-4 text-muted-foreground">
-									Наш искусственный интеллект анализирует тысячи плагинов, их рейтинги, отзывы и популярность, 
-									чтобы создать тематические подборки лучших решений. Подборки обновляются еженедельно, 
-									чтобы всегда предлагать вам самые актуальные и качественные плагины.
+									Наш искусственный интеллект анализирует тысячи плагинов, их
+									рейтинги, отзывы и популярность, чтобы создать тематические
+									подборки лучших решений. Подборки обновляются еженедельно,
+									чтобы всегда предлагать вам самые актуальные и качественные
+									плагины.
 								</p>
 								<div className="flex flex-wrap gap-2">
 									<Badge variant="secondary">Анализ рейтингов</Badge>

@@ -18,6 +18,7 @@ export const usersRouter = createTRPCRouter({
 				bio: users.bio,
 				website: users.website,
 				links: users.links,
+				donationRequisites: users.donationRequisites,
 				githubUsername: users.githubUsername,
 				telegramUsername: users.telegramUsername,
 				isVerified: users.isVerified,
@@ -57,6 +58,7 @@ export const usersRouter = createTRPCRouter({
 				bio: z.string().max(1000).optional(),
 				website: z.string().url().optional().or(z.literal("")),
 				links: z.string().optional(),
+				donationRequisites: z.string().optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -67,6 +69,8 @@ export const usersRouter = createTRPCRouter({
 			if (input.website !== undefined)
 				updateData.website = input.website || null;
 			if (input.links !== undefined) updateData.links = input.links || null;
+			if (input.donationRequisites !== undefined)
+				updateData.donationRequisites = input.donationRequisites || null;
 
 			await ctx.db
 				.update(users)
@@ -91,6 +95,7 @@ export const usersRouter = createTRPCRouter({
 					bio: users.bio,
 					website: users.website,
 					links: users.links,
+					donationRequisites: users.donationRequisites,
 					githubUsername: users.githubUsername,
 					telegramUsername: users.telegramUsername,
 					isVerified: users.isVerified,

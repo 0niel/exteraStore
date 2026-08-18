@@ -8,8 +8,8 @@ import {
 	Upload,
 	X,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { toast } from "sonner";
@@ -51,29 +51,32 @@ export function ScreenshotUploader({
 	const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
 	const [isUploading, setIsUploading] = useState(false);
 
-	const uploadFile = async (file: File): Promise<string> => {
-		const formData = new FormData();
-		formData.append("files", file);
-		formData.append("pluginSlug", pluginSlug);
-		formData.append("imageType", "screenshot");
+	const uploadFile = useCallback(
+		async (file: File): Promise<string> => {
+			const formData = new FormData();
+			formData.append("files", file);
+			formData.append("pluginSlug", pluginSlug);
+			formData.append("imageType", "screenshot");
 
-		const response = await fetch("/api/upload/images", {
-			method: "POST",
-			body: formData,
-		});
+			const response = await fetch("/api/upload/images", {
+				method: "POST",
+				body: formData,
+			});
 
-		if (!response.ok) {
-			const error = await response.json();
-			throw new Error(error.error || t("upload_failed"));
-		}
+			if (!response.ok) {
+				const error = await response.json();
+				throw new Error(error.error || t("upload_failed"));
+			}
 
-		const result = await response.json();
-		if (result.errors && result.errors.length > 0) {
-			throw new Error(result.errors[0]);
-		}
+			const result = await response.json();
+			if (result.errors && result.errors.length > 0) {
+				throw new Error(result.errors[0]);
+			}
 
-		return result.uploadedUrls[0];
-	};
+			return result.uploadedUrls[0];
+		},
+		[pluginSlug, t],
+	);
 
 	const onDrop = useCallback(
 		async (acceptedFiles: File[]) => {
@@ -158,10 +161,10 @@ export function ScreenshotUploader({
 		[
 			screenshots,
 			onScreenshotsChange,
-			pluginSlug,
 			maxFiles,
 			uploadingFiles.length,
 			t,
+			uploadFile,
 		],
 	);
 

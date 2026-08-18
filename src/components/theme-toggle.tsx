@@ -1,8 +1,8 @@
 "use client";
 
-import { Moon, Sun, Monitor } from "lucide-react";
-import { useTheme } from "next-themes";
+import { Monitor, Moon, Sun } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
 import { Button } from "~/components/ui/button";
@@ -23,13 +23,15 @@ export function ThemeToggle() {
 	}, []);
 
 	if (!mounted) {
-		return <Button variant="ghost" size="icon" className="h-8 w-8" />;
+		return (
+			<Button variant="ghost" size="icon" disabled aria-label={t("loading")} />
+		);
 	}
 
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<Button variant="ghost" size="icon" className="h-8 w-8">
+				<Button variant="ghost" size="icon" aria-label={t("toggle_theme")}>
 					{resolvedTheme === "dark" ? (
 						<Moon className="h-4 w-4" />
 					) : (
@@ -57,7 +59,7 @@ export function ThemeToggle() {
 }
 
 export function CompactThemeToggle() {
-	const { theme, setTheme, resolvedTheme } = useTheme();
+	const { theme, setTheme } = useTheme();
 	const [mounted, setMounted] = useState(false);
 	const t = useTranslations("ThemeToggle");
 
@@ -68,9 +70,9 @@ export function CompactThemeToggle() {
 	if (!mounted) {
 		return (
 			<div className="flex items-center gap-1">
-				<div className="h-6 w-6 bg-muted rounded animate-pulse" />
-				<div className="h-6 w-6 bg-muted rounded animate-pulse" />
-				<div className="h-6 w-6 bg-muted rounded animate-pulse" />
+				<div className="size-11 animate-pulse rounded-lg bg-muted" />
+				<div className="size-11 animate-pulse rounded-lg bg-muted" />
+				<div className="size-11 animate-pulse rounded-lg bg-muted" />
 			</div>
 		);
 	}
@@ -85,16 +87,19 @@ export function CompactThemeToggle() {
 		<div className="flex items-center gap-1">
 			{themes.map(({ key, icon: Icon, label }) => (
 				<button
+					type="button"
 					key={key}
 					onClick={() => setTheme(key)}
-					className={`h-6 w-6 rounded flex items-center justify-center transition-colors ${
-						theme === key 
-							? 'bg-primary text-primary-foreground' 
-							: 'hover:bg-muted text-muted-foreground hover:text-foreground'
+					className={`flex size-11 touch-manipulation items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${
+						theme === key
+							? "bg-primary text-primary-foreground"
+							: "text-muted-foreground hover:bg-muted hover:text-foreground"
 					}`}
 					title={label}
+					aria-label={label}
+					aria-pressed={theme === key}
 				>
-					<Icon className="h-3 w-3" />
+					<Icon className="h-4 w-4" />
 				</button>
 			))}
 		</div>
@@ -102,7 +107,7 @@ export function CompactThemeToggle() {
 }
 
 export function FooterThemeToggle() {
-	const { theme, setTheme, resolvedTheme } = useTheme();
+	const { theme, setTheme } = useTheme();
 	const [mounted, setMounted] = useState(false);
 	const t = useTranslations("ThemeToggle");
 
@@ -112,9 +117,11 @@ export function FooterThemeToggle() {
 
 	if (!mounted) {
 		return (
-			<div className="flex items-center justify-between w-full">
-				<span className="text-sm text-gray-600 dark:text-gray-400">{t("loading")}</span>
-				<div className="w-12 h-6 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
+			<div className="flex w-full items-center justify-between">
+				<span className="text-gray-600 text-sm dark:text-gray-400">
+					{t("loading")}
+				</span>
+				<div className="h-6 w-12 animate-pulse rounded-full bg-gray-200 dark:bg-gray-700" />
 			</div>
 		);
 	}
@@ -129,25 +136,23 @@ export function FooterThemeToggle() {
 		<div className="space-y-3">
 			{themes.map(({ key, label, icon: Icon }) => (
 				<button
+					type="button"
 					key={key}
 					onClick={() => setTheme(key)}
-					className={`
-						w-full flex items-center justify-between p-3 rounded-lg transition-all duration-200
-						${theme === key 
-							? 'bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/50' 
-							: 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-						}
-					`}
+					className={`flex min-h-11 w-full touch-manipulation items-center justify-between rounded-lg p-3 transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${
+						theme === key
+							? "border border-red-200 bg-red-50 text-red-600 dark:border-red-800/50 dark:bg-red-950/30 dark:text-red-400"
+							: "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+					}`}
+					aria-pressed={theme === key}
 				>
 					<div className="flex items-center space-x-3">
-						<Icon className="w-4 h-4" />
-						<span className="text-sm font-medium">{label}</span>
+						<Icon className="h-4 w-4" />
+						<span className="font-medium text-sm">{label}</span>
 					</div>
-					{theme === key && (
-						<div className="w-2 h-2 bg-red-500 rounded-full" />
-					)}
+					{theme === key && <div className="h-2 w-2 rounded-full bg-red-500" />}
 				</button>
 			))}
 		</div>
 	);
-} 
+}
