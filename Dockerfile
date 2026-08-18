@@ -8,6 +8,9 @@ COPY package.json pnpm-lock.yaml ./
 FROM base AS deps
 RUN pnpm install --frozen-lockfile
 
+FROM base AS prod-deps
+RUN pnpm install --frozen-lockfile --prod
+
 FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
@@ -23,7 +26,7 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 RUN apk add --no-cache libc6-compat
 
-COPY --from=deps /app/node_modules ./node_modules
+COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/package.json ./package.json
