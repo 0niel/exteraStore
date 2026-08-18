@@ -40,7 +40,13 @@ import { Sheet, SheetContent, SheetTrigger } from "~/components/ui/sheet";
 import { cn } from "~/lib/utils";
 import { TelegramLoginButton } from "./auth/telegram-login";
 
-export function Navigation() {
+type NavigationProps = {
+	telegramBotUsername?: string;
+};
+
+export function Navigation({ telegramBotUsername }: NavigationProps) {
+	const resolvedBotUsername =
+		telegramBotUsername ?? process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 	const pathname = usePathname();
 	const { data: session } = useSession();
@@ -209,9 +215,7 @@ export function Navigation() {
 								</DropdownMenu>
 							</>
 						) : (
-							<TelegramLoginButton
-								botUsername={process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME}
-							/>
+							<TelegramLoginButton botUsername={resolvedBotUsername} />
 						)}
 
 						<Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
@@ -368,9 +372,7 @@ export function Navigation() {
 													избранное
 												</p>
 												<TelegramLoginButton
-													botUsername={
-														process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME
-													}
+													botUsername={resolvedBotUsername}
 												/>
 											</div>
 										)}

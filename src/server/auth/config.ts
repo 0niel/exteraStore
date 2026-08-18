@@ -53,7 +53,7 @@ declare module "next-auth" {
  * @see https:
  */
 export const authConfig = {
-	secret: process.env.NEXTAUTH_SECRET,
+	secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
 	trustHost: true,
 	providers: [
 		CredentialsProvider({

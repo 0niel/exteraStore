@@ -1,3 +1,5 @@
+"use client";
+
 import { ArrowRight, Star } from "lucide-react";
 import Link from "next/link";
 import { PluginCard } from "~/components/plugin-card";
