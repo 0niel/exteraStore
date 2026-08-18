@@ -93,6 +93,9 @@ export default async function RootLayout({
 	const session = await auth();
 	const messages = await getMessages();
 	const locale = await getServerLocale();
+	const telegramBotUsername =
+		process.env.TELEGRAM_BOT_USERNAME ??
+		process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
 
 	return (
 		<html lang={locale} className={inter.variable} suppressHydrationWarning>
@@ -117,7 +120,7 @@ export default async function RootLayout({
 							>
 								<TelegramWebAppAuth />
 								<div className="flex min-h-dvh flex-col overflow-x-hidden">
-									<Navigation />
+									<Navigation telegramBotUsername={telegramBotUsername} />
 									<main
 										id="main-content"
 										tabIndex={-1}
