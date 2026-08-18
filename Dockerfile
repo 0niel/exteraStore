@@ -14,7 +14,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV SKIP_ENV_VALIDATION=1
 ENV NODE_ENV=production
-RUN pnpm build
+ARG DATABASE_URL=postgresql://dummy:dummy@localhost:5432/dummy
+RUN DATABASE_URL="${DATABASE_URL}" pnpm build
 
 FROM node:22-alpine AS runner
 WORKDIR /app
