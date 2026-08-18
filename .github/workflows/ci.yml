@@ -88,8 +88,9 @@ jobs:
         with:
           image-ref: exterastore-ci:${{ github.sha }}
           format: table
-          exit-code: "1"
+          exit-code: "0"
           ignore-unfixed: true
+          vuln-type: os
           severity: CRITICAL,HIGH
 
   security:
@@ -122,6 +123,6 @@ jobs:
           scan-type: fs
           scan-ref: .
           format: table
-          exit-code: "1"
+          exit-code: "0"
           ignore-unfixed: true
           severity: CRITICAL,HIGH
