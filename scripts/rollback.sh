@@ -1,6 +1,8 @@
 #!/bin/sh
 set -eu
 
+. "$(dirname "$0")/docker-cmd.sh"
+
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 export DEPLOY_ROOT=$ROOT
@@ -14,15 +16,15 @@ test -n "$IMAGE_REF"
 printf '%s\n' "$IMAGE_REF" | grep -Eq '^ghcr\.io/[a-z0-9._/-]+@sha256:[a-f0-9]{64}$'
 
 export APP_IMAGE=$IMAGE_REF
-docker pull "$APP_IMAGE"
-docker compose config --quiet
-docker compose up -d --no-deps app
+docker_cmd pull "$APP_IMAGE"
+docker_cmd compose config --quiet
+docker_cmd compose up -d --no-deps app
 
 healthy=0
 for attempt in $(seq 1 60); do
-	CONTAINER_ID=$(docker compose ps -q app)
+	CONTAINER_ID=$(docker_cmd compose ps -q app)
 	if [ -n "$CONTAINER_ID" ]; then
-		STATUS=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$CONTAINER_ID")
+		STATUS=$(docker_cmd inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$CONTAINER_ID")
 		if [ "$STATUS" = "healthy" ]; then
 			healthy=1
 			break

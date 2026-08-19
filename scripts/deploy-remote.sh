@@ -1,6 +1,8 @@
 #!/bin/sh
 set -eu
 
+. "$(dirname "$0")/docker-cmd.sh"
+
 IMAGE_REF=${1:?Image digest reference is required}
 printf '%s\n' "$IMAGE_REF" | grep -Eq '^ghcr\.io/[a-z0-9._/-]+@sha256:[a-f0-9]{64}$'
 
@@ -22,14 +24,14 @@ test -f .env
 chmod 600 .env
 
 export APP_IMAGE=$IMAGE_REF
-docker compose config --quiet
-docker network inspect traefik-network >/dev/null 2>&1 || docker network create traefik-network >/dev/null
-docker pull "$APP_IMAGE"
-docker compose up -d postgres redis traefik
+docker_cmd compose config --quiet
+docker_cmd network inspect traefik-network >/dev/null 2>&1 || docker_cmd network create traefik-network >/dev/null
+docker_cmd pull "$APP_IMAGE"
+docker_cmd compose up -d postgres redis traefik
 
 ready=0
 for attempt in $(seq 1 30); do
-	if docker compose exec -T postgres sh -ec 'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"' >/dev/null 2>&1; then
+	if docker_cmd compose exec -T postgres sh -ec 'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"' >/dev/null 2>&1; then
 		ready=1
 		break
 	fi
@@ -43,7 +45,7 @@ fi
 
 ready=0
 for attempt in $(seq 1 30); do
-	if [ "$(docker compose exec -T redis sh -ec 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli ping' 2>/dev/null)" = "PONG" ]; then
+	if [ "$(docker_cmd compose exec -T redis sh -ec 'REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli ping' 2>/dev/null)" = "PONG" ]; then
 		ready=1
 		break
 	fi
@@ -56,7 +58,7 @@ if [ "$ready" -ne 1 ]; then
 fi
 
 ./scripts/backup-db.sh
-docker compose --profile deploy run --rm migrate
+docker_cmd compose --profile deploy run --rm migrate
 
 OLD_IMAGE=
 if [ -s .current-image ]; then
@@ -67,13 +69,13 @@ if [ -n "$OLD_IMAGE" ] && [ "$OLD_IMAGE" != "$APP_IMAGE" ]; then
 	printf '%s\n' "$OLD_IMAGE" > .previous-image
 fi
 
-docker compose up -d --no-deps app
+docker_cmd compose up -d --no-deps app
 
 healthy=0
 for attempt in $(seq 1 60); do
-	CONTAINER_ID=$(docker compose ps -q app)
+	CONTAINER_ID=$(docker_cmd compose ps -q app)
 	if [ -n "$CONTAINER_ID" ]; then
-		STATUS=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$CONTAINER_ID")
+		STATUS=$(docker_cmd inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$CONTAINER_ID")
 		if [ "$STATUS" = "healthy" ]; then
 			healthy=1
 			break
