@@ -7,8 +7,11 @@ ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 export DEPLOY_ROOT=$ROOT
 
-if [ -z "${APP_IMAGE:-}" ] && [ -s .current-image ]; then
-	APP_IMAGE=$(tr -d '\r\n' < .current-image)
+STATE_DIR="$ROOT/.deploy-state"
+CURRENT_IMAGE="$STATE_DIR/current-image"
+
+if [ -z "${APP_IMAGE:-}" ] && [ -s "$CURRENT_IMAGE" ] && [ -r "$CURRENT_IMAGE" ]; then
+	APP_IMAGE=$(tr -d '\r\n' < "$CURRENT_IMAGE")
 	export APP_IMAGE
 fi
 
