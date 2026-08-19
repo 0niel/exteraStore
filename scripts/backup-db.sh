@@ -1,6 +1,8 @@
 #!/bin/sh
 set -eu
 
+. "$(dirname "$0")/docker-cmd.sh"
+
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 export DEPLOY_ROOT=$ROOT
@@ -24,7 +26,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-docker compose exec -T postgres sh -ec 'PGPASSWORD="$POSTGRES_PASSWORD" pg_dump --format=custom --no-owner --no-acl -U "$POSTGRES_USER" -d "$POSTGRES_DB"' > "$TEMP"
+docker_cmd compose exec -T postgres sh -ec 'PGPASSWORD="$POSTGRES_PASSWORD" pg_dump --format=custom --no-owner --no-acl -U "$POSTGRES_USER" -d "$POSTGRES_DB"' > "$TEMP"
 test -s "$TEMP"
 mv "$TEMP" "$FINAL"
 chmod 600 "$FINAL"

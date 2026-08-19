@@ -117,6 +117,7 @@ jobs:
             traefik/traefik.yml \
             monitoring/prometheus.yml \
             scripts/deploy-remote.sh \
+            scripts/docker-cmd.sh \
             scripts/backup-db.sh \
             scripts/rollback.sh |
             ssh -p "$SERVER_PORT" -i ~/.ssh/deploy_key -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
