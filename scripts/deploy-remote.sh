@@ -33,6 +33,7 @@ chmod 600 .env 2>/dev/null || true
 export APP_IMAGE=$IMAGE_REF
 docker_cmd compose config --quiet
 docker_cmd network inspect traefik-network >/dev/null 2>&1 || docker_cmd network create traefik-network >/dev/null
+docker_cmd system prune -af --filter "until=72h" >/dev/null 2>&1 || true
 docker_cmd pull "$APP_IMAGE"
 docker_cmd compose up -d postgres redis traefik
 
