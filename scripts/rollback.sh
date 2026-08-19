@@ -7,9 +7,13 @@ ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 export DEPLOY_ROOT=$ROOT
 
+STATE_DIR="$ROOT/.deploy-state"
+CURRENT_IMAGE="$STATE_DIR/current-image"
+PREVIOUS_IMAGE="$STATE_DIR/previous-image"
+
 IMAGE_REF=${1:-}
-if [ -z "$IMAGE_REF" ] && [ -s .previous-image ]; then
-	IMAGE_REF=$(tr -d '\r\n' < .previous-image)
+if [ -z "$IMAGE_REF" ] && [ -s "$PREVIOUS_IMAGE" ] && [ -r "$PREVIOUS_IMAGE" ]; then
+	IMAGE_REF=$(tr -d '\r\n' < "$PREVIOUS_IMAGE")
 fi
 
 test -n "$IMAGE_REF"
@@ -41,5 +45,6 @@ if [ "$healthy" -ne 1 ]; then
 	exit 1
 fi
 
-printf '%s\n' "$APP_IMAGE" > .current-image
-chmod 600 .current-image
+mkdir -p "$STATE_DIR" 2>/dev/null || true
+printf '%s\n' "$APP_IMAGE" > "$CURRENT_IMAGE"
+chmod 600 "$CURRENT_IMAGE" 2>/dev/null || true

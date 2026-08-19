@@ -10,18 +10,25 @@ ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 cd "$ROOT"
 export DEPLOY_ROOT=$ROOT
 
-if ! mkdir .deploy-lock 2>/dev/null; then
+STATE_DIR="$ROOT/.deploy-state"
+mkdir -p "$STATE_DIR" 2>/dev/null || STATE_DIR="/tmp/exterastore-deploy-$$"
+mkdir -p "$STATE_DIR"
+CURRENT_IMAGE="$STATE_DIR/current-image"
+PREVIOUS_IMAGE="$STATE_DIR/previous-image"
+DEPLOY_LOCK="$STATE_DIR/.deploy-lock"
+
+if ! mkdir "$DEPLOY_LOCK" 2>/dev/null; then
 	echo "Another deployment is running" >&2
 	exit 1
 fi
 
 cleanup() {
-	rmdir .deploy-lock
+	rmdir "$DEPLOY_LOCK" 2>/dev/null || true
 }
 trap cleanup EXIT
 
 test -f .env
-chmod 600 .env
+chmod 600 .env 2>/dev/null || true
 
 export APP_IMAGE=$IMAGE_REF
 docker_cmd compose config --quiet
@@ -63,12 +70,13 @@ if ! docker_cmd compose --profile deploy run --rm migrate; then
 fi
 
 OLD_IMAGE=
-if [ -s .current-image ]; then
-	OLD_IMAGE=$(tr -d '\r\n' < .current-image)
+if [ -s "$CURRENT_IMAGE" ] && [ -r "$CURRENT_IMAGE" ]; then
+	OLD_IMAGE=$(tr -d '\r\n' < "$CURRENT_IMAGE")
 fi
 
 if [ -n "$OLD_IMAGE" ] && [ "$OLD_IMAGE" != "$APP_IMAGE" ]; then
-	printf '%s\n' "$OLD_IMAGE" > .previous-image
+	printf '%s\n' "$OLD_IMAGE" > "$PREVIOUS_IMAGE"
+	chmod 600 "$PREVIOUS_IMAGE" 2>/dev/null || true
 fi
 
 docker_cmd compose up -d --no-deps app
@@ -97,5 +105,5 @@ if [ "$healthy" -ne 1 ]; then
 	exit 1
 fi
 
-printf '%s\n' "$APP_IMAGE" > .current-image
-chmod 600 .current-image
+printf '%s\n' "$APP_IMAGE" > "$CURRENT_IMAGE"
+chmod 600 "$CURRENT_IMAGE" 2>/dev/null || true
