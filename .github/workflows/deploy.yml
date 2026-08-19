@@ -87,6 +87,7 @@ jobs:
     environment: production
     permissions:
       contents: read
+      packages: read
     steps:
       - name: Checkout tested commit
         uses: actions/checkout@v4
@@ -126,14 +127,18 @@ jobs:
         env:
           GHCR_READ_TOKEN: ${{ secrets.GHCR_READ_TOKEN }}
           GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_ACTOR: ${{ github.actor }}
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
           SERVER_PORT: ${{ secrets.SERVER_PORT }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
         run: |
           SERVER_PORT="${SERVER_PORT:-22}"
-          printf '%s' "$GHCR_READ_TOKEN" | \
+          TOKEN="${GHCR_READ_TOKEN:-$GITHUB_TOKEN}"
+          USER="${GHCR_USERNAME:-$GITHUB_ACTOR}"
+          printf '%s' "$TOKEN" | \
             ssh -p "$SERVER_PORT" -i ~/.ssh/deploy_key -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
-              "$SERVER_USER@$SERVER_HOST" "docker login ghcr.io --username '$GHCR_USERNAME' --password-stdin"
+              "$SERVER_USER@$SERVER_HOST" "docker login ghcr.io --username '$USER' --password-stdin"
 
       - name: Deploy pinned image
         id: deploy
