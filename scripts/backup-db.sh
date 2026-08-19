@@ -13,7 +13,14 @@ if [ -z "${APP_IMAGE:-}" ] && [ -s .current-image ]; then
 fi
 
 BACKUP_DIR=${BACKUP_DIR:-"$ROOT/backups"}
-mkdir -p "$BACKUP_DIR" 2>/dev/null || true
+if ! mkdir -p "$BACKUP_DIR" 2>/dev/null || [ ! -w "$BACKUP_DIR" ]; then
+	BACKUP_DIR="$ROOT/.backups"
+	mkdir -p "$BACKUP_DIR" 2>/dev/null || true
+fi
+if [ ! -w "$BACKUP_DIR" ]; then
+	echo "Warning: skipping postgres backup (no write access)" >&2
+	exit 0
+fi
 chmod 700 "$BACKUP_DIR" 2>/dev/null || true
 umask 077
 
