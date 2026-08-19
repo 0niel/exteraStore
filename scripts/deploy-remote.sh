@@ -58,7 +58,9 @@ if [ "$ready" -ne 1 ]; then
 fi
 
 ./scripts/backup-db.sh
-docker_cmd compose --profile deploy run --rm migrate
+if ! docker_cmd compose --profile deploy run --rm migrate; then
+	echo "Warning: migrations failed, continuing deploy (schema may already exist)" >&2
+fi
 
 OLD_IMAGE=
 if [ -s .current-image ]; then

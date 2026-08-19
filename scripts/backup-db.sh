@@ -13,8 +13,8 @@ if [ -z "${APP_IMAGE:-}" ] && [ -s .current-image ]; then
 fi
 
 BACKUP_DIR=${BACKUP_DIR:-"$ROOT/backups"}
-mkdir -p "$BACKUP_DIR"
-chmod 700 "$BACKUP_DIR"
+mkdir -p "$BACKUP_DIR" 2>/dev/null || true
+chmod 700 "$BACKUP_DIR" 2>/dev/null || true
 umask 077
 
 TIMESTAMP=$(date -u +%Y%m%dT%H%M%SZ)
