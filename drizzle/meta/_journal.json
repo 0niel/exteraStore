@@ -1,62 +1,69 @@
 {
-	"version": "7",
-	"dialect": "postgresql",
-	"entries": [
-		{
-			"idx": 0,
-			"version": "7",
-			"when": 1750101612025,
-			"tag": "0000_clumsy_chameleon",
-			"breakpoints": true
-		},
-		{
-			"idx": 1,
-			"version": "7",
-			"when": 1750102515473,
-			"tag": "0001_elite_joseph",
-			"breakpoints": true
-		},
-		{
-			"idx": 2,
-			"version": "7",
-			"when": 1750586709241,
-			"tag": "0002_high_patch",
-			"breakpoints": true
-		},
-		{
-			"idx": 3,
-			"version": "7",
-			"when": 1752924739006,
-			"tag": "0003_amused_the_hunter",
-			"breakpoints": true
-		},
-		{
-			"idx": 4,
-			"version": "7",
-			"when": 1754322057364,
-			"tag": "0004_flat_scourge",
-			"breakpoints": true
-		},
-		{
-			"idx": 5,
-			"version": "7",
-			"when": 1762270842540,
-			"tag": "0005_low_sauron",
-			"breakpoints": true
-		},
-		{
-			"idx": 6,
-			"version": "7",
-			"when": 1787060700000,
-			"tag": "0006_generous_donations",
-			"breakpoints": true
-		},
-		{
-			"idx": 7,
-			"version": "7",
-			"when": 1787241622427,
-			"tag": "0007_wide_thena",
-			"breakpoints": true
-		}
-	]
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1750101612025,
+      "tag": "0000_clumsy_chameleon",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1750102515473,
+      "tag": "0001_elite_joseph",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1750586709241,
+      "tag": "0002_high_patch",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1752924739006,
+      "tag": "0003_amused_the_hunter",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1754322057364,
+      "tag": "0004_flat_scourge",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1762270842540,
+      "tag": "0005_low_sauron",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1787060700000,
+      "tag": "0006_generous_donations",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1787241622427,
+      "tag": "0007_wide_thena",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1787247513054,
+      "tag": "0008_safe_marauders",
+      "breakpoints": true
+    }
+  ]
 }

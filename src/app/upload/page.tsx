@@ -11,6 +11,7 @@ import {
 	FileText,
 	Info,
 	Loader2,
+	Smartphone,
 	Tags,
 	UploadCloud,
 	X,
@@ -89,6 +90,19 @@ const buildFormSchema = (t: (key: string) => string) =>
 			.refine((val) => !val || val === "" || z.url().safeParse(val).success, {
 				message: t("error_docs_url"),
 			}),
+		minExteraVersion: z
+			.string()
+			.optional()
+			.refine(
+				(val) =>
+					!val ||
+					val.trim() === "" ||
+					(val.trim().length <= 20 && /^\d+(\.\d+)*$/.test(val.trim())),
+				{
+					message: t("error_min_extera_version"),
+				},
+			),
+		exteralessCompatible: z.enum(["unspecified", "yes", "no"]),
 	});
 
 type FormData = z.infer<ReturnType<typeof buildFormSchema>>;
@@ -121,6 +135,8 @@ export default function UploadPluginPage() {
 			changelog: "",
 			githubUrl: "",
 			documentationUrl: "",
+			minExteraVersion: "",
+			exteralessCompatible: "unspecified",
 		},
 	});
 
@@ -199,6 +215,11 @@ export default function UploadPluginPage() {
 			description: data.description || data.shortDescription,
 			githubUrl: data.githubUrl?.trim() || undefined,
 			documentationUrl: data.documentationUrl?.trim() || undefined,
+			minExteraVersion: data.minExteraVersion?.trim() || undefined,
+			exteralessCompatible:
+				data.exteralessCompatible === "unspecified"
+					? undefined
+					: data.exteralessCompatible === "yes",
 			screenshots: JSON.stringify(screenshots),
 			fileContent,
 			filename: fileName || undefined,
@@ -652,6 +673,86 @@ export default function UploadPluginPage() {
 															placeholder="https://docs.example.com/..."
 															{...field}
 														/>
+													</FormControl>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
+									</CardContent>
+								</Card>
+
+								<Card>
+									<CardHeader>
+										<CardTitle className="flex items-center gap-3 text-base sm:text-lg">
+											<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+												<Smartphone className="h-4 w-4" />
+											</span>
+											{t("compatibility_title")}
+											<span className="hidden font-normal text-muted-foreground text-sm sm:inline">
+												{t("links_optional")}
+											</span>
+										</CardTitle>
+									</CardHeader>
+									<CardContent className="space-y-3 sm:space-y-4">
+										<FormField
+											control={form.control}
+											name="minExteraVersion"
+											render={({ field }) => (
+												<FormItem>
+													<FormLabel>{t("min_extera_version_label")}</FormLabel>
+													<FormControl>
+														<Input
+															className="min-h-11 font-mono"
+															placeholder="11.9.0"
+															maxLength={20}
+															inputMode="decimal"
+															{...field}
+														/>
+													</FormControl>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
+
+										<FormField
+											control={form.control}
+											name="exteralessCompatible"
+											render={({ field }) => (
+												<FormItem>
+													<FormLabel>{t("exteraless_label")}</FormLabel>
+													<FormControl>
+														<div className="flex flex-wrap gap-2">
+															{(
+																[
+																	{
+																		value: "unspecified",
+																		label: t("exteraless_unspecified"),
+																	},
+																	{
+																		value: "yes",
+																		label: t("exteraless_yes"),
+																	},
+																	{
+																		value: "no",
+																		label: t("exteraless_no"),
+																	},
+																] as const
+															).map((option) => (
+																<button
+																	key={option.value}
+																	type="button"
+																	onClick={() => field.onChange(option.value)}
+																	aria-pressed={field.value === option.value}
+																	className={`press-scale min-h-9 rounded-full border px-3 font-medium text-xs transition-colors ${
+																		field.value === option.value
+																			? "border-primary bg-primary text-primary-foreground"
+																			: "border-border bg-background hover:border-primary/40 hover:bg-primary/5"
+																	}`}
+																>
+																	{option.label}
+																</button>
+															))}
+														</div>
 													</FormControl>
 													<FormMessage />
 												</FormItem>

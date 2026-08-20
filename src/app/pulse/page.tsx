@@ -421,7 +421,7 @@ export default function PulsePage() {
 										className={cn(
 											"press-scale inline-flex min-h-11 shrink-0 snap-start items-center gap-1.5 rounded-full border px-4 font-medium text-sm transition-colors",
 											tab === item.value
-												? "btn-glow border-primary bg-primary text-primary-foreground"
+												? "border-primary bg-primary text-primary-foreground"
 												: "bg-background/70 backdrop-blur hover:border-primary/40 hover:text-primary",
 										)}
 									>
@@ -470,13 +470,15 @@ export default function PulsePage() {
 							<div className="relative pl-2">
 								<div
 									aria-hidden="true"
-									className="absolute top-2 bottom-2 left-[1.55rem] w-px bg-gradient-to-b from-primary/50 via-border to-transparent"
+									className="absolute top-2 bottom-2 left-[2.06rem] w-px bg-gradient-to-b from-primary/50 via-border to-transparent"
 								/>
 								<AnimatePresence initial={false}>
 									{groups.map((group) => (
 										<div key={group.date.toDateString()} className="mb-2">
-											<div className="relative mb-3 flex items-center gap-4 py-2">
-												<span className="relative z-10 ml-[0.85rem] size-2.5 rounded-full border-2 border-background bg-primary/40" />
+											<div className="relative mb-3 flex items-center gap-4 px-2 py-2">
+												<span className="flex size-9 shrink-0 items-center justify-center">
+													<span className="relative z-10 size-2.5 rounded-full border-2 border-background bg-primary" />
+												</span>
 												<span className="eyebrow">{dayLabel(group.date)}</span>
 											</div>
 											<div className="space-y-1">

@@ -48,7 +48,8 @@
 		"downloads_tooltip": "Скачиваний",
 		"add_favorite": "Добавить в избранное",
 		"remove_favorite": "Убрать из избранного",
-		"recommendation": "Рекомендация"
+		"recommendation": "Рекомендация",
+		"exteraless": "exteraless"
 	},
 	"PluginManageVersions": {
 		"loading": "Загрузка версий...",
@@ -291,7 +292,10 @@
 		"no_reviews_description": "Станьте первым, кто поделится впечатлениями об этом плагине.",
 		"write_first_review": "Написать первый отзыв",
 		"sign_in_to_review": "Войдите в систему, чтобы оставить отзыв",
-		"download": "Скачать"
+		"download": "Скачать",
+		"min_extera_chip": "exteraGram ≥ {version}",
+		"exteraless_compatible": "Совместим с exteraless",
+		"exteraless_incompatible": "Не совместим с exteraless"
 	},
 	"TextImprovement": {
 		"improve_text": "Улучшить с ИИ",
@@ -996,7 +1000,8 @@
 		"pagination_label": "Страницы каталога",
 		"prev_page": "Назад",
 		"next_page": "Дальше",
-		"page_of": "{page} из {total}"
+		"page_of": "{page} из {total}",
+		"exteraless_only": "Только exteraless"
 	},
 	"AdminUsers": {
 		"title": "Управление пользователями",
@@ -1241,7 +1246,14 @@
 		"toast_update_error": "Ошибка при обновлении плагина: {error}",
 		"toast_deleted": "Плагин успешно удален.",
 		"toast_delete_error": "Ошибка при удалении плагина: {error}",
-		"badge": "Управление"
+		"badge": "Управление",
+		"compatibility_title": "Совместимость",
+		"compatibility_description": "Необязательно: минимальная версия exteraGram и поддержка exteraless",
+		"min_extera_version_label": "Минимальная версия exteraGram",
+		"exteraless_label": "Совместимость с exteraless",
+		"exteraless_unspecified": "Не указано",
+		"exteraless_yes": "Совместим",
+		"exteraless_no": "Не совместим"
 	},
 	"UploadPage": {
 		"login_required": "Требуется авторизация",
@@ -1304,7 +1316,14 @@
 		"error_docs_url": "Введите корректный URL документации",
 		"success_title": "Плагин отправлен!",
 		"success_description": "Переходим на страницу вашего плагина...",
-		"badge": "Новый плагин"
+		"badge": "Новый плагин",
+		"compatibility_title": "Совместимость",
+		"min_extera_version_label": "Минимальная версия exteraGram",
+		"error_min_extera_version": "Укажите версию в формате 11.9.0 (цифры и точки)",
+		"exteraless_label": "Совместимость с exteraless",
+		"exteraless_unspecified": "Не указано",
+		"exteraless_yes": "Совместим",
+		"exteraless_no": "Не совместим"
 	},
 	"PluginChangesPage": {
 		"copied": "Скопировано в буфер обмена",

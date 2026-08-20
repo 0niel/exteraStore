@@ -167,7 +167,7 @@ export default function AdminLayout({
 								className={cn(
 									"press-scale flex h-10 shrink-0 snap-start items-center gap-2 rounded-full px-4 font-medium text-sm transition-colors",
 									item.active
-										? "btn-glow bg-primary text-primary-foreground"
+										? "bg-primary text-primary-foreground"
 										: "text-muted-foreground hover:bg-primary/5 hover:text-foreground",
 								)}
 							>

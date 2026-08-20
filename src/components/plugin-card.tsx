@@ -38,6 +38,7 @@ interface Plugin {
 	price: number;
 	featured: boolean;
 	verified: boolean;
+	exteralessCompatible?: boolean | null;
 	screenshots: string | null;
 	createdAt: Date | number;
 	latestSecurityCheck?: {
@@ -297,6 +298,11 @@ export function PluginCard({
 									${plugin.price}
 								</span>
 							)}
+							{plugin.exteralessCompatible === true && (
+								<span className="rounded-full bg-success/10 px-2 py-0.5 font-medium text-success">
+									{t("exteraless")}
+								</span>
+							)}
 						</div>
 
 						{securityBlock && <div className="mt-2">{securityBlock}</div>}
@@ -424,7 +430,7 @@ export function PluginCard({
 							</div>
 						)}
 
-						<div className="mt-auto flex items-center justify-between border-t pt-3">
+						<div className="mt-auto flex items-center justify-between pt-3">
 							<div className="flex items-center gap-4 text-sm">
 								<Tooltip>
 									<TooltipTrigger asChild>
@@ -451,9 +457,16 @@ export function PluginCard({
 								</Tooltip>
 							</div>
 
-							<div className="hidden items-center gap-2 text-muted-foreground text-xs md:flex">
-								<Calendar className="h-3.5 w-3.5" />
-								<span>{formatDate(plugin.createdAt, locale)}</span>
+							<div className="flex items-center gap-2 text-xs">
+								{plugin.exteralessCompatible === true && (
+									<span className="rounded-full bg-success/10 px-2 py-0.5 font-medium text-success">
+										{t("exteraless")}
+									</span>
+								)}
+								<span className="hidden items-center gap-2 text-muted-foreground md:flex">
+									<Calendar className="h-3.5 w-3.5" />
+									<span>{formatDate(plugin.createdAt, locale)}</span>
+								</span>
 							</div>
 						</div>
 

@@ -492,6 +492,26 @@ export default function PluginDetailPage() {
 										<Tag className="h-3 w-3" />
 										<span>v{plugin.version}</span>
 									</div>
+									{plugin.minExteraVersion && (
+										<Badge variant="outline" className="font-mono text-xs">
+											{t("min_extera_chip", {
+												version: plugin.minExteraVersion,
+											})}
+										</Badge>
+									)}
+									{plugin.exteralessCompatible === true && (
+										<Badge className="border-transparent bg-success/10 text-success text-xs">
+											{t("exteraless_compatible")}
+										</Badge>
+									)}
+									{plugin.exteralessCompatible === false && (
+										<Badge
+											variant="outline"
+											className="text-muted-foreground text-xs"
+										>
+											{t("exteraless_incompatible")}
+										</Badge>
+									)}
 									{plugin.verified && (
 										<Badge className="border-transparent bg-contrast text-contrast-foreground text-xs">
 											<Shield className="mr-1 h-3 w-3" />
@@ -625,7 +645,7 @@ export default function PluginDetailPage() {
 									className={cn(
 										"press-scale tap-highlight-none min-h-11 shrink-0 snap-start whitespace-nowrap rounded-full border px-4 font-medium text-sm transition-all duration-200 ease-[var(--ease-spring)]",
 										activeTab === tab.id
-											? "btn-glow border-primary bg-primary text-primary-foreground"
+											? "border-primary bg-primary text-primary-foreground"
 											: "border-border bg-card text-muted-foreground hover:border-primary/40 hover:bg-primary/5 hover:text-foreground",
 									)}
 								>

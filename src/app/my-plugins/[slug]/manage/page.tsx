@@ -11,6 +11,7 @@ import {
 	Loader2,
 	Save,
 	Settings,
+	Smartphone,
 	Tags,
 	Trash2,
 } from "lucide-react";
@@ -58,12 +59,16 @@ import { UploadVersionDialog } from "~/components/upload-version-dialog";
 import { safeJsonParse } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
+type ExteralessChoice = "unspecified" | "yes" | "no";
+
 type FormData = {
 	name: string;
 	shortDescription: string;
 	description: string;
 	categorySlug: string;
 	tags: string[];
+	minExteraVersion: string;
+	exteralessCompatible: ExteralessChoice;
 };
 
 function ManageSkeleton() {
@@ -122,6 +127,8 @@ export default function PluginManagePage() {
 		description: "",
 		categorySlug: "",
 		tags: [],
+		minExteraVersion: "",
+		exteralessCompatible: "unspecified",
 	});
 	const [screenshots, setScreenshots] = useState<string[]>([]);
 
@@ -133,6 +140,13 @@ export default function PluginManagePage() {
 				description: plugin.description,
 				categorySlug: plugin.category,
 				tags: safeJsonParse<string[]>(plugin.tags ?? "", []),
+				minExteraVersion: plugin.minExteraVersion ?? "",
+				exteralessCompatible:
+					plugin.exteralessCompatible === true
+						? "yes"
+						: plugin.exteralessCompatible === false
+							? "no"
+							: "unspecified",
 			});
 			setScreenshots(safeJsonParse<string[]>(plugin.screenshots ?? "", []));
 		}
@@ -166,6 +180,11 @@ export default function PluginManagePage() {
 			...formData,
 			tags: JSON.stringify(formData.tags),
 			screenshots: JSON.stringify(screenshots),
+			minExteraVersion: formData.minExteraVersion.trim() || null,
+			exteralessCompatible:
+				formData.exteralessCompatible === "unspecified"
+					? null
+					: formData.exteralessCompatible === "yes",
 		});
 	};
 
@@ -366,6 +385,76 @@ export default function PluginManagePage() {
 												}
 												placeholder={t("tags_placeholder")}
 											/>
+										</div>
+									</CardContent>
+								</Card>
+								<Card>
+									<CardHeader>
+										<CardTitle className="flex items-center gap-3">
+											<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+												<Smartphone className="h-4 w-4" />
+											</span>
+											{t("compatibility_title")}
+										</CardTitle>
+										<CardDescription>
+											{t("compatibility_description")}
+										</CardDescription>
+									</CardHeader>
+									<CardContent className="space-y-4">
+										<div className="space-y-2">
+											<Label htmlFor="minExteraVersion">
+												{t("min_extera_version_label")}
+											</Label>
+											<Input
+												id="minExteraVersion"
+												className="min-h-11 font-mono"
+												value={formData.minExteraVersion}
+												onChange={(e) =>
+													setFormData((f) => ({
+														...f,
+														minExteraVersion: e.target.value,
+													}))
+												}
+												placeholder="11.9.0"
+												maxLength={20}
+												inputMode="decimal"
+											/>
+										</div>
+										<div className="space-y-2">
+											<Label>{t("exteraless_label")}</Label>
+											<div className="flex flex-wrap gap-2">
+												{(
+													[
+														{
+															value: "unspecified",
+															label: t("exteraless_unspecified"),
+														},
+														{ value: "yes", label: t("exteraless_yes") },
+														{ value: "no", label: t("exteraless_no") },
+													] as const
+												).map((option) => (
+													<button
+														key={option.value}
+														type="button"
+														onClick={() =>
+															setFormData((f) => ({
+																...f,
+																exteralessCompatible: option.value,
+															}))
+														}
+														aria-pressed={
+															formData.exteralessCompatible === option.value
+														}
+														className={`press-scale min-h-9 rounded-full border px-3 font-medium text-xs transition-colors ${
+															formData.exteralessCompatible === option.value
+																? "border-primary bg-primary text-primary-foreground"
+																: "border-border bg-background hover:border-primary/40 hover:bg-primary/5"
+														}`}
+													>
+														{option.label}
+													</button>
+												))}
+											</div>
 										</div>
 									</CardContent>
 								</Card>

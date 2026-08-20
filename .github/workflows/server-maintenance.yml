@@ -1,0 +1,103 @@
+name: Server Maintenance
+
+on:
+  workflow_dispatch:
+    inputs:
+      update_env:
+        description: Sync OPENROUTER_API_KEY / TELEGRAM_POLLING from secrets into server .env
+        type: boolean
+        default: false
+      restart_app:
+        description: Restart the app container after changes
+        type: boolean
+        default: false
+
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  maintain:
+    name: Inspect and maintain server
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+    steps:
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+
+      - name: Update server env from secrets
+        if: ${{ inputs.update_env }}
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          NEW_OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          SERVER_PORT="${SERVER_PORT:-22}"
+          ssh -p "$SERVER_PORT" -i ~/.ssh/deploy_key -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "$SERVER_USER@$SERVER_HOST" \
+            "NEW_KEY='$NEW_OPENROUTER_API_KEY' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd ~/exterastore
+          touch .env
+          update_var() {
+            local name="$1" value="$2"
+            [ -z "$value" ] && return 0
+            if grep -q "^${name}=" .env; then
+              sed -i "s|^${name}=.*|${name}=${value}|" .env
+            else
+              printf '%s=%s\n' "$name" "$value" >> .env
+            fi
+          }
+          update_var OPENROUTER_API_KEY "$NEW_KEY"
+          update_var OPENROUTER_MODEL "google/gemini-3.6-flash"
+          update_var TELEGRAM_POLLING "true"
+          update_var TELEGRAM_API_BASE_URL "https://tg-proxy.controlisanillusion08.workers.dev"
+          echo "env updated: $(grep -cE '^(OPENROUTER|TELEGRAM_POLLING|TELEGRAM_API_BASE_URL)' .env) managed vars present"
+          REMOTE
+
+      - name: Restart app
+        if: ${{ inputs.restart_app }}
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          SERVER_PORT="${SERVER_PORT:-22}"
+          ssh -p "$SERVER_PORT" -i ~/.ssh/deploy_key -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "$SERVER_USER@$SERVER_HOST" \
+            'cd ~/exterastore && ./scripts/docker-cmd.sh compose up -d --force-recreate app 2>/dev/null || sudo docker compose up -d --force-recreate app'
+
+      - name: Inspect server state
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          SERVER_PORT="${SERVER_PORT:-22}"
+          ssh -p "$SERVER_PORT" -i ~/.ssh/deploy_key -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "$SERVER_USER@$SERVER_HOST" 'bash -s' <<'REMOTE'
+          set -uo pipefail
+          cd ~/exterastore
+          echo "=== containers ==="
+          (./scripts/docker-cmd.sh ps 2>/dev/null || sudo docker ps) | head -20
+          echo "=== disk ==="
+          df -h / | tail -1
+          echo "=== app logs (tail) ==="
+          (./scripts/docker-cmd.sh compose logs app --tail 30 2>/dev/null || sudo docker compose logs app --tail 30) | tail -30
+          echo "=== local health ==="
+          curl -sf -m 10 http://localhost:3000/api/health || echo "local health check failed"
+          REMOTE
+
+      - name: Check public health
+        run: |
+          curl --fail --location --retry 6 --retry-delay 5 --retry-all-errors --connect-timeout 10 --max-time 20 https://exterastore.app/api/health
