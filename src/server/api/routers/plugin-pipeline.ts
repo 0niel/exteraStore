@@ -19,6 +19,7 @@ import {
 	userPluginSubscriptions,
 	users,
 } from "~/server/db/schema";
+import { isAdminSessionUser } from "~/server/lib/admin";
 import { sendTelegramMessage } from "~/server/lib/telegram-client";
 import { type AILocale, PluginAIChecker } from "./plugin-pipeline-ai";
 
@@ -295,7 +296,7 @@ export const pluginPipelineRouter = createTRPCRouter({
 			if (
 				!plugin[0] ||
 				(plugin[0].authorId !== ctx.session.user.id &&
-					ctx.session.user.role !== "admin")
+					!isAdminSessionUser(ctx.session.user))
 			) {
 				throw new Error("Unauthorized");
 			}
@@ -323,11 +324,12 @@ export const pluginPipelineRouter = createTRPCRouter({
 					and(
 						eq(pluginPipelineChecks.pluginId, input.pluginId),
 						like(pluginPipelineChecks.llmPrompt, versionTag),
+						eq(pluginPipelineChecks.status, "completed"),
 					),
 				)
 				.limit(1);
 
-			if (existingChecks.length > 0 && ctx.session.user.role !== "admin") {
+			if (existingChecks.length > 0 && !isAdminSessionUser(ctx.session.user)) {
 				throw new Error("Checks already performed for the latest version");
 			}
 
@@ -342,7 +344,7 @@ export const pluginPipelineRouter = createTRPCRouter({
 				)
 				.limit(1);
 
-			if (activeQueue.length > 0 && ctx.session.user.role !== "admin") {
+			if (activeQueue.length > 0 && !isAdminSessionUser(ctx.session.user)) {
 				throw new Error("Checks are already in progress for this plugin");
 			}
 
@@ -421,7 +423,7 @@ export const pluginPipelineRouter = createTRPCRouter({
 	processQueue: protectedProcedure
 		.input(z.object({ limit: z.number().default(5) }))
 		.mutation(async ({ ctx, input }) => {
-			if (ctx.session.user.role !== "admin") {
+			if (!isAdminSessionUser(ctx.session.user)) {
 				throw new Error("Unauthorized");
 			}
 
@@ -877,7 +879,7 @@ export const aiCollectionsRouter = createTRPCRouter({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			if (ctx.session.user.role !== "admin") {
+			if (!isAdminSessionUser(ctx.session.user)) {
 				throw new Error("Unauthorized");
 			}
 			return generateAndSaveAICollections(ctx.db, input.themes, input.locale);

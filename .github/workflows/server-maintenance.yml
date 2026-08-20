@@ -97,6 +97,12 @@ jobs:
           if [ -n "$APP_ID" ]; then sudo docker logs "$APP_ID" --tail 40 2>&1 | tail -40; else echo "app container not found"; fi
           echo "=== local health ==="
           curl -sf -m 10 http://localhost:3000/api/health || echo "local health check failed"
+          echo "=== outbound connectivity ==="
+          APP_ID=$(sudo docker ps -qf "name=app" | head -1)
+          for host in https://openrouter.ai/api/v1/models https://api.telegram.org https://smartcaptcha.yandexcloud.net; do
+            code=$(sudo docker exec "$APP_ID" node -e "fetch('$host',{signal:AbortSignal.timeout(8000)}).then(r=>console.log(r.status)).catch(e=>console.log('ERR '+e.cause?.code+' '+e.message))" 2>/dev/null || echo "exec-failed")
+            echo "$host -> $code"
+          done
           echo "=== public build vars ==="
           grep -E '^(NEXT_PUBLIC_[A-Z_]+|TELEGRAM_BOT_USERNAME|TELEGRAM_POLLING|OPENROUTER_MODEL|TELEGRAM_API_BASE_URL)=' .env || echo "none"
           REMOTE
