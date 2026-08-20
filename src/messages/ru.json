@@ -297,7 +297,8 @@
 		"download": "Скачать",
 		"min_extera_chip": "exteraGram ≥ {version}",
 		"exteraless_compatible": "Совместим с exteraless",
-		"exteraless_incompatible": "Не совместим с exteraless"
+		"exteraless_incompatible": "Не совместим с exteraless",
+		"exteraless_min_chip": "exteraless ≥ {version}"
 	},
 	"TextImprovement": {
 		"improve_text": "Улучшить с ИИ",
@@ -538,7 +539,11 @@
 		"enter_webhook_url": "Введите URL вебхука",
 		"webhook_url_label": "Webhook URL",
 		"webhook_url_placeholder": "https://example.com/api/telegram/webhook",
-		"eyebrow": "Telegram"
+		"eyebrow": "Telegram",
+		"broadcast_hint": "Отправится всем пользователям с включёнными Telegram-уведомлениями. Поддерживается HTML-разметка.",
+		"username_hint": "Telegram username без @.",
+		"chat_id_hint": "Числовой ID чата Telegram, например 123456789.",
+		"webhook_hint": "Публичный HTTPS-URL, на который будут приходить обновления бота."
 	},
 	"Developers": {
 		"badge": "Сообщество",
@@ -656,7 +661,11 @@
 		"donations": "Поддержка автора",
 		"remove_link": "Удалить ссылку",
 		"eyebrow_account": "Аккаунт",
-		"eyebrow_stats": "Статистика"
+		"eyebrow_stats": "Статистика",
+		"display_name_hint": "Отображается как имя автора у ваших плагинов.",
+		"website_hint": "Полный URL, включая https://.",
+		"bio_hint": "Пара предложений о себе — видна на вашей публичной странице разработчика.",
+		"links_hint": "Добавьте ссылки на Telegram, GitHub и другие профили."
 	},
 	"AdminPlugins": {
 		"title": "Администрирование плагинов",
@@ -748,7 +757,10 @@
 		"save": "Сохранить",
 		"create": "Создать",
 		"delete": "Удалить",
-		"eyebrow": "Каталог"
+		"eyebrow": "Каталог",
+		"name_help": "Отображаемое имя для пользователей; slug генерируется автоматически.",
+		"description_help": "Короткое описание — показывается на странице категории.",
+		"color_help": "Акцентный цвет в HEX, например #ef4444."
 	},
 	"AdminLayout": {
 		"admin_panel": "Панель администратора",
@@ -1209,7 +1221,8 @@
 		"type_ton": "TON",
 		"type_usdt_trc20": "USDT TRC20",
 		"type_btc": "BTC",
-		"type_custom": "Другая ссылка"
+		"type_custom": "Другая ссылка",
+		"fields_hint": "Тип, реквизит и необязательная подпись — она показывается на кнопке доната."
 	},
 	"FavoritesPage": {
 		"login_required": "Требуется авторизация",
@@ -1277,7 +1290,16 @@
 		"exteraless_label": "Совместимость с exteraless",
 		"exteraless_unspecified": "Не указано",
 		"exteraless_yes": "Совместим",
-		"exteraless_no": "Не совместим"
+		"exteraless_no": "Не совместим",
+		"name_hint": "Переименование также изменит URL плагина (slug).",
+		"short_description_hint": "Одно предложение — показывается в карточках и результатах поиска.",
+		"description_hint": "Полное описание с Markdown: возможности, установка, примеры использования.",
+		"category_hint": "Выберите ближайшую категорию, чтобы плагин находили в каталоге.",
+		"tags_hint": "3–6 тегов, Enter чтобы добавить.",
+		"min_extera_version_hint": "Минимальная версия exteraGram, на которой работает плагин. Пусто — любая.",
+		"exteraless_hint": "Работает ли плагин в exteraless (без специфичных API exteraGram)?",
+		"min_exteraless_version_label": "Минимальная версия exteraless",
+		"min_exteraless_version_hint": "Необязательно. Минимальная версия exteraless, которую поддерживает плагин."
 	},
 	"UploadPage": {
 		"login_required": "Требуется авторизация",
@@ -1347,7 +1369,21 @@
 		"exteraless_label": "Совместимость с exteraless",
 		"exteraless_unspecified": "Не указано",
 		"exteraless_yes": "Совместим",
-		"exteraless_no": "Не совместим"
+		"exteraless_no": "Не совместим",
+		"name_hint": "Короткое уникальное название — по нему пользователи найдут плагин.",
+		"short_description_hint": "Одно предложение — показывается в карточках и результатах поиска.",
+		"description_hint": "Полное описание с Markdown: возможности, установка, примеры использования.",
+		"version_hint": "Семантическая версия, например 1.0.0. Обновления можно публиковать позже.",
+		"changelog_hint": "Что изменилось в этой версии. Поддерживается Markdown.",
+		"category_hint": "Выберите ближайшую категорию, чтобы плагин находили в каталоге.",
+		"tags_hint": "3–6 тегов, Enter чтобы добавить.",
+		"github_url_hint": "Ссылка на репозиторий с исходниками — повышает доверие и включает синхронизацию.",
+		"docs_url_hint": "Ссылка на внешнюю документацию, если она есть.",
+		"min_extera_version_hint": "Минимальная версия exteraGram, на которой работает плагин. Пусто — любая.",
+		"exteraless_hint": "Работает ли плагин в exteraless (без специфичных API exteraGram)?",
+		"min_exteraless_version_label": "Минимальная версия exteraless",
+		"min_exteraless_version_hint": "Необязательно. Минимальная версия exteraless, которую поддерживает плагин.",
+		"error_min_exteraless_version": "Укажите версию вида 1.2.0 (только цифры и точки)"
 	},
 	"PluginChangesPage": {
 		"copied": "Скопировано в буфер обмена",

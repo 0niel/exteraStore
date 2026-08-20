@@ -1,0 +1,1 @@
+ALTER TABLE "extera_plugins_plugin" ADD COLUMN "min_exteraless_version" text;

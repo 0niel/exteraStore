@@ -145,6 +145,9 @@ export default function TelegramBotAdminPage() {
 									onChange={(e) => setBroadcastMessage(e.target.value)}
 									rows={4}
 								/>
+								<p className="text-muted-foreground text-xs">
+									{t("broadcast_hint")}
+								</p>
 							</div>
 							<Button
 								onClick={handleBroadcast}
@@ -175,10 +178,14 @@ export default function TelegramBotAdminPage() {
 								<Label htmlFor="personal-username">{t("username")}</Label>
 								<Input
 									id="personal-username"
+									className="min-h-11"
 									placeholder={t("username_placeholder")}
 									value={personalUsername}
 									onChange={(e) => setPersonalUsername(e.target.value)}
 								/>
+								<p className="text-muted-foreground text-xs">
+									{t("username_hint")}
+								</p>
 							</div>
 							<div className="space-y-2">
 								<Label htmlFor="personal-message">{t("message")}</Label>
@@ -219,10 +226,14 @@ export default function TelegramBotAdminPage() {
 								<Label htmlFor="test-chat-id">{t("chat_id")}</Label>
 								<Input
 									id="test-chat-id"
+									className="min-h-11 font-mono"
 									placeholder={t("chat_id_placeholder")}
 									value={testChatId}
 									onChange={(e) => setTestChatId(e.target.value)}
 								/>
+								<p className="text-muted-foreground text-xs">
+									{t("chat_id_hint")}
+								</p>
 							</div>
 							<div className="space-y-2">
 								<Label htmlFor="test-message">{t("message")}</Label>
@@ -263,10 +274,14 @@ export default function TelegramBotAdminPage() {
 								<Label htmlFor="webhook-url">{t("webhook_url_label")}</Label>
 								<Input
 									id="webhook-url"
+									className="min-h-11 font-mono"
 									placeholder={t("webhook_url_placeholder")}
 									value={webhookUrl}
 									onChange={(e) => setWebhookUrl(e.target.value)}
 								/>
+								<p className="text-muted-foreground text-xs">
+									{t("webhook_hint")}
+								</p>
 							</div>
 							<Button
 								onClick={handleSetWebhook}

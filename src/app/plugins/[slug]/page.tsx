@@ -500,8 +500,16 @@ export default function PluginDetailPage() {
 										</Badge>
 									)}
 									{plugin.exteralessCompatible === true && (
-										<Badge className="border-transparent bg-success/10 text-success text-xs">
-											{t("exteraless_compatible")}
+										<Badge
+											className={`border-transparent bg-success/10 text-success text-xs ${
+												plugin.minExteralessVersion ? "font-mono" : ""
+											}`}
+										>
+											{plugin.minExteralessVersion
+												? t("exteraless_min_chip", {
+														version: plugin.minExteralessVersion,
+													})
+												: t("exteraless_compatible")}
 										</Badge>
 									)}
 									{plugin.exteralessCompatible === false && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
 	AlertTriangle,
 	ArrowLeft,
@@ -69,6 +69,7 @@ type FormData = {
 	tags: string[];
 	minExteraVersion: string;
 	exteralessCompatible: ExteralessChoice;
+	minExteralessVersion: string;
 };
 
 function ManageSkeleton() {
@@ -129,6 +130,7 @@ export default function PluginManagePage() {
 		tags: [],
 		minExteraVersion: "",
 		exteralessCompatible: "unspecified",
+		minExteralessVersion: "",
 	});
 	const [screenshots, setScreenshots] = useState<string[]>([]);
 
@@ -147,6 +149,7 @@ export default function PluginManagePage() {
 						: plugin.exteralessCompatible === false
 							? "no"
 							: "unspecified",
+				minExteralessVersion: plugin.minExteralessVersion ?? "",
 			});
 			setScreenshots(safeJsonParse<string[]>(plugin.screenshots ?? "", []));
 		}
@@ -185,6 +188,10 @@ export default function PluginManagePage() {
 				formData.exteralessCompatible === "unspecified"
 					? null
 					: formData.exteralessCompatible === "yes",
+			minExteralessVersion:
+				formData.exteralessCompatible === "yes"
+					? formData.minExteralessVersion.trim() || null
+					: null,
 		});
 	};
 
@@ -303,6 +310,9 @@ export default function PluginManagePage() {
 												}
 												placeholder={t("name_placeholder")}
 											/>
+											<p className="text-muted-foreground text-xs">
+												{t("name_hint")}
+											</p>
 										</div>
 										<div className="space-y-2">
 											<Label htmlFor="shortDescription">
@@ -319,7 +329,16 @@ export default function PluginManagePage() {
 													}))
 												}
 												placeholder={t("short_description_placeholder")}
+												maxLength={500}
 											/>
+											<div className="flex items-start justify-between gap-2">
+												<p className="text-muted-foreground text-xs">
+													{t("short_description_hint")}
+												</p>
+												<span className="shrink-0 font-mono text-muted-foreground text-xs">
+													{formData.shortDescription.length}/500
+												</span>
+											</div>
 										</div>
 										<div className="space-y-2">
 											<Label>{t("description_label")}</Label>
@@ -332,6 +351,9 @@ export default function PluginManagePage() {
 												textType="description"
 												pluginName={formData.name}
 											/>
+											<p className="text-muted-foreground text-xs">
+												{t("description_hint")}
+											</p>
 										</div>
 									</CardContent>
 								</Card>
@@ -375,6 +397,9 @@ export default function PluginManagePage() {
 													))}
 												</SelectContent>
 											</Select>
+											<p className="text-muted-foreground text-xs">
+												{t("category_hint")}
+											</p>
 										</div>
 										<div className="space-y-2">
 											<Label>{t("tags_label")}</Label>
@@ -385,6 +410,9 @@ export default function PluginManagePage() {
 												}
 												placeholder={t("tags_placeholder")}
 											/>
+											<p className="text-muted-foreground text-xs">
+												{t("tags_hint")}
+											</p>
 										</div>
 									</CardContent>
 								</Card>
@@ -419,6 +447,9 @@ export default function PluginManagePage() {
 												maxLength={20}
 												inputMode="decimal"
 											/>
+											<p className="text-muted-foreground text-xs">
+												{t("min_extera_version_hint")}
+											</p>
 										</div>
 										<div className="space-y-2">
 											<Label>{t("exteraless_label")}</Label>
@@ -455,7 +486,56 @@ export default function PluginManagePage() {
 													</button>
 												))}
 											</div>
+											<p className="text-muted-foreground text-xs">
+												{t("exteraless_hint")}
+											</p>
 										</div>
+										<AnimatePresence initial={false}>
+											{formData.exteralessCompatible === "yes" && (
+												<motion.div
+													key="min-exteraless-version"
+													initial={
+														reduceMotion
+															? false
+															: { opacity: 0, height: 0, y: -6 }
+													}
+													animate={{ opacity: 1, height: "auto", y: 0 }}
+													exit={
+														reduceMotion
+															? undefined
+															: { opacity: 0, height: 0, y: -6 }
+													}
+													transition={{
+														duration: 0.25,
+														ease: [0.16, 1, 0.3, 1],
+													}}
+													className="overflow-hidden"
+												>
+													<div className="space-y-2">
+														<Label htmlFor="minExteralessVersion">
+															{t("min_exteraless_version_label")}
+														</Label>
+														<Input
+															id="minExteralessVersion"
+															className="min-h-11 font-mono"
+															value={formData.minExteralessVersion}
+															onChange={(e) =>
+																setFormData((f) => ({
+																	...f,
+																	minExteralessVersion: e.target.value,
+																}))
+															}
+															placeholder="1.2.0"
+															maxLength={20}
+															inputMode="decimal"
+														/>
+														<p className="text-muted-foreground text-xs">
+															{t("min_exteraless_version_hint")}
+														</p>
+													</div>
+												</motion.div>
+											)}
+										</AnimatePresence>
 									</CardContent>
 								</Card>
 								<Card>

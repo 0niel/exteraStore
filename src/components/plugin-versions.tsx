@@ -208,15 +208,15 @@ export function PluginVersions({ pluginSlug }: PluginVersionsProps) {
 				</Badge>
 			</div>
 
-			<div className="relative space-y-3 pl-7 md:pl-9">
+			<div className="relative space-y-3">
 				<div
-					className="absolute top-4 bottom-4 left-[7px] w-px bg-border md:left-[9px]"
+					className="absolute top-4 bottom-4 left-[17.5px] w-px bg-border"
 					aria-hidden="true"
 				/>
 				{versions.map((version: PluginVersion, index: number) => (
 					<motion.div
 						key={version.id}
-						className="relative"
+						className="relative flex gap-3 md:gap-4"
 						{...(reduceMotion
 							? {}
 							: {
@@ -230,20 +230,24 @@ export function PluginVersions({ pluginSlug }: PluginVersionsProps) {
 									},
 								})}
 					>
-						<span
-							className={`absolute top-8 -left-7 h-3.5 w-3.5 rounded-full ring-4 md:-left-9 ${
-								index === 0
-									? "bg-primary ring-primary/15"
-									: "bg-primary/40 ring-primary/10"
-							}`}
+						<div
+							className="flex w-9 shrink-0 justify-center"
 							aria-hidden="true"
-						/>
+						>
+							<span
+								className={`mt-8 h-3.5 w-3.5 rounded-full ring-4 ${
+									index === 0
+										? "bg-primary ring-primary/15"
+										: "bg-primary/40 ring-primary/10"
+								}`}
+							/>
+						</div>
 						<Card
-							className={
+							className={`min-w-0 flex-1 ${
 								index === 0
 									? "border-primary/25 bg-linear-to-br from-primary/5 to-transparent"
 									: ""
-							}
+							}`}
 						>
 							<CardContent className="pt-6">
 								<div className="flex items-start justify-between gap-4">
