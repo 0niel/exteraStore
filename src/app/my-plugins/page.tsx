@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { PageHeader } from "~/components/page-header";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
@@ -182,22 +183,20 @@ export default function MyPluginsPage() {
 	return (
 		<div className="bg-background py-6 sm:py-8">
 			<div className="container mx-auto max-w-6xl px-4">
-				<div className="mb-6 flex animate-fade-up flex-col gap-4 sm:mb-8 md:flex-row md:items-center md:justify-between">
-					<div>
-						<h1 className="mb-2 font-bold text-3xl sm:text-4xl">
-							{t("title")}
-						</h1>
-						<p className="text-lg text-muted-foreground sm:text-xl">
-							{t("subtitle")}
-						</p>
-					</div>
-					<Button asChild className="press-scale w-full md:w-auto">
+				<PageHeader
+					badge={t("badge")}
+					title={t("title")}
+					description={t("subtitle")}
+					icon={Package}
+					align="left"
+				>
+					<Button asChild size="lg" className="press-scale w-full sm:w-auto">
 						<Link href="/upload">
 							<Plus className="mr-2 h-4 w-4" />
 							{t("upload_new")}
 						</Link>
 					</Button>
-				</div>
+				</PageHeader>
 
 				{!isLoading && (
 					<div
@@ -207,10 +206,12 @@ export default function MyPluginsPage() {
 						{statChips.map((chip) => (
 							<div
 								key={chip.key}
-								className="flex min-h-11 items-center gap-2 rounded-full border bg-surface px-4 py-2"
+								className="flex min-h-11 items-center gap-2.5 rounded-full border border-primary/15 bg-primary/5 px-4 py-2"
 							>
 								<chip.icon className="h-4 w-4 text-primary" />
-								<span className="font-semibold text-sm">{chip.value}</span>
+								<span className="font-mono font-semibold text-sm">
+									{chip.value}
+								</span>
 								<span className="text-muted-foreground text-sm">
 									{t(chip.key)}
 								</span>
@@ -333,15 +334,15 @@ function PluginCard({ plugin }: { plugin: typeof Plugin.$inferSelect }) {
 			</CardHeader>
 			<CardContent className="space-y-4">
 				<div className="flex items-center justify-between text-muted-foreground text-sm">
-					<span className="flex items-center gap-1">
-						<GitBranch className="h-4 w-4" />v{plugin.version}
+					<span className="flex items-center gap-1 font-mono">
+						<GitBranch className="h-4 w-4 text-primary/70" />v{plugin.version}
 					</span>
-					<span className="flex items-center gap-1">
-						<Download className="h-4 w-4" />
+					<span className="flex items-center gap-1 font-mono">
+						<Download className="h-4 w-4 text-primary/70" />
 						{formatNumber(plugin.downloadCount)}
 					</span>
-					<span className="flex items-center gap-1">
-						<Star className="h-4 w-4" />
+					<span className="flex items-center gap-1 font-mono">
+						<Star className="h-4 w-4 text-primary/70" />
 						{plugin.rating.toFixed(1)}
 					</span>
 				</div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { motion, useReducedMotion } from "framer-motion";
 import {
 	Activity,
 	Grid3X3,
@@ -19,7 +20,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { TelegramIcon } from "~/components/icons/telegram-icon";
 import { LanguageSwitcher } from "~/components/language-switcher";
 import { SearchDialog } from "~/components/search-dialog";
@@ -43,13 +44,35 @@ type NavigationProps = {
 	telegramBotUsername?: string;
 };
 
+function LogoMark({ size = "size-9" }: { size?: string }) {
+	return (
+		<div
+			className={cn(
+				"flex shrink-0 items-center justify-center rounded-xl bg-linear-to-b from-primary to-[color-mix(in_oklch,var(--primary)_82%,black)] shadow-lg shadow-primary/30",
+				size,
+			)}
+		>
+			<span className="font-bold text-primary-foreground text-sm">eS</span>
+		</div>
+	);
+}
+
 export function Navigation({ telegramBotUsername }: NavigationProps) {
 	const resolvedBotUsername =
 		telegramBotUsername ?? process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+	const [scrolled, setScrolled] = useState(false);
 	const pathname = usePathname();
 	const { data: session } = useSession();
+	const reduceMotion = useReducedMotion();
 	const t = useTranslations("Navigation");
+
+	useEffect(() => {
+		const onScroll = () => setScrolled(window.scrollY > 8);
+		onScroll();
+		window.addEventListener("scroll", onScroll, { passive: true });
+		return () => window.removeEventListener("scroll", onScroll);
+	}, []);
 
 	const navigation = [
 		{ name: t("home"), href: "/", icon: Home },
@@ -60,12 +83,25 @@ export function Navigation({ telegramBotUsername }: NavigationProps) {
 		{ name: t("developers"), href: "/developers", icon: Users },
 	];
 
+	const accountLinks = [
+		{ name: t("profile"), href: "/profile", icon: User },
+		{ name: t("favorites"), href: "/favorites", icon: Heart },
+		{ name: t("my_plugins"), href: "/my-plugins", icon: Settings },
+	];
+
 	const handleSignOut = () => {
 		signOut({ callbackUrl: "/" });
 	};
 
 	return (
-		<header className="sticky top-0 z-50 w-full border-b bg-background/95 pt-[env(safe-area-inset-top)] backdrop-blur supports-[backdrop-filter]:bg-background/80">
+		<header
+			className={cn(
+				"sticky top-0 z-50 w-full border-b pt-[env(safe-area-inset-top)] transition-[background-color,border-color,box-shadow] duration-300",
+				scrolled
+					? "glass shadow-soft"
+					: "border-transparent bg-background/95 supports-[backdrop-filter]:bg-background/80",
+			)}
+		>
 			<div className="container mx-auto px-3 sm:px-4">
 				<div className="flex h-16 items-center justify-between gap-2">
 					<div className="flex min-w-0 items-center gap-6">
@@ -74,32 +110,43 @@ export function Navigation({ telegramBotUsername }: NavigationProps) {
 							className="flex min-h-11 shrink-0 items-center gap-2 rounded-lg focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
 							aria-label="exteraStore"
 						>
-							<div className="flex size-9 items-center justify-center rounded-xl bg-primary">
-								<span className="font-bold text-primary-foreground text-sm">
-									eS
-								</span>
-							</div>
-							<span className="hidden font-bold text-xl sm:block">
+							<LogoMark />
+							<span className="hidden font-bold text-xl tracking-tight sm:block">
 								exteraStore
 							</span>
 						</Link>
 
 						<nav className="hidden items-center gap-5 xl:flex">
-							{navigation.map((item) => (
-								<Link
-									key={item.name}
-									href={item.href}
-									aria-current={pathname === item.href ? "page" : undefined}
-									className={cn(
-										"flex min-h-11 items-center border-transparent border-b-2 font-medium text-sm transition-colors hover:text-primary",
-										pathname === item.href
-											? "border-primary text-primary"
-											: "text-muted-foreground",
-									)}
-								>
-									{item.name}
-								</Link>
-							))}
+							{navigation.map((item) => {
+								const active = pathname === item.href;
+								return (
+									<Link
+										key={item.name}
+										href={item.href}
+										aria-current={active ? "page" : undefined}
+										className={cn(
+											"relative flex min-h-11 items-center font-medium text-sm transition-colors hover:text-primary",
+											active ? "text-primary" : "text-muted-foreground",
+										)}
+									>
+										{item.name}
+										{active &&
+											(reduceMotion ? (
+												<span className="absolute inset-x-0 bottom-2 h-0.5 rounded-full bg-primary" />
+											) : (
+												<motion.span
+													layoutId="nav-underline"
+													className="absolute inset-x-0 bottom-2 h-0.5 rounded-full bg-primary shadow-[0_0_8px] shadow-primary/60"
+													transition={{
+														type: "spring",
+														stiffness: 500,
+														damping: 35,
+													}}
+												/>
+											))}
+									</Link>
+								);
+							})}
 						</nav>
 					</div>
 
@@ -171,31 +218,21 @@ export function Navigation({ telegramBotUsername }: NavigationProps) {
 													{session.user.email}
 												</p>
 												{session.user.telegramUsername && (
-													<p className="text-blue-600 text-xs leading-none">
+													<p className="text-primary text-xs leading-none">
 														@{session.user.telegramUsername}
 													</p>
 												)}
 											</div>
 										</DropdownMenuLabel>
 										<DropdownMenuSeparator />
-										<DropdownMenuItem asChild>
-											<Link href="/profile">
-												<User className="mr-2 h-4 w-4" />
-												<span>{t("profile")}</span>
-											</Link>
-										</DropdownMenuItem>
-										<DropdownMenuItem asChild>
-											<Link href="/favorites">
-												<Heart className="mr-2 h-4 w-4" />
-												<span>{t("favorites")}</span>
-											</Link>
-										</DropdownMenuItem>
-										<DropdownMenuItem asChild>
-											<Link href="/my-plugins">
-												<Settings className="mr-2 h-4 w-4" />
-												<span>{t("my_plugins")}</span>
-											</Link>
-										</DropdownMenuItem>
+										{accountLinks.map((item) => (
+											<DropdownMenuItem key={item.href} asChild>
+												<Link href={item.href}>
+													<item.icon className="mr-2 h-4 w-4" />
+													<span>{item.name}</span>
+												</Link>
+											</DropdownMenuItem>
+										))}
 										<DropdownMenuItem asChild className="sm:hidden">
 											<Link href="/upload">
 												<Plus className="mr-2 h-4 w-4" />
@@ -229,14 +266,13 @@ export function Navigation({ telegramBotUsername }: NavigationProps) {
 								side="right"
 								className="flex h-full w-[min(100%,24rem)] flex-col p-0 pb-[env(safe-area-inset-bottom)]"
 							>
-								<div className="flex min-h-16 items-center border-b px-4">
+								<div className="relative flex min-h-16 items-center overflow-hidden border-b px-4">
+									<div className="dot-grid absolute inset-0 -z-10" />
 									<div className="flex items-center gap-2">
-										<div className="flex size-9 items-center justify-center rounded-xl bg-primary">
-											<span className="font-bold text-primary-foreground text-sm">
-												eS
-											</span>
-										</div>
-										<span className="font-bold text-lg">exteraStore</span>
+										<LogoMark />
+										<span className="font-bold text-lg tracking-tight">
+											exteraStore
+										</span>
 									</div>
 								</div>
 
@@ -250,8 +286,9 @@ export function Navigation({ telegramBotUsername }: NavigationProps) {
 									</div>
 
 									<div className="flex-1 overflow-y-auto p-4">
+										<span className="eyebrow mb-3">{t("menu_section")}</span>
 										<nav className="space-y-1">
-											{navigation.map((item) => {
+											{navigation.map((item, index) => {
 												const IconComponent = item.icon;
 												const active = pathname === item.href;
 												return (
@@ -261,14 +298,33 @@ export function Navigation({ telegramBotUsername }: NavigationProps) {
 														onClick={() => setMobileMenuOpen(false)}
 														aria-current={active ? "page" : undefined}
 														className={cn(
-															"flex min-h-11 touch-manipulation items-center gap-3 rounded-lg px-3 py-2 font-medium text-sm transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+															"press-scale flex min-h-12 touch-manipulation items-center gap-3 rounded-xl px-2 py-1.5 font-medium text-sm transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
 															active
 																? "bg-primary/10 text-primary"
-																: "hover:bg-accent hover:text-accent-foreground",
+																: "hover:bg-primary/5 hover:text-foreground",
 														)}
 													>
-														<IconComponent className="h-4 w-4" />
-														{item.name}
+														<span
+															className={cn(
+																"flex size-10 items-center justify-center rounded-xl transition-colors",
+																active
+																	? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+																	: "bg-primary/10 text-primary",
+															)}
+														>
+															<IconComponent className="size-4" />
+														</span>
+														<span className="flex-1">{item.name}</span>
+														<span
+															className={cn(
+																"font-mono text-xs",
+																active
+																	? "text-primary"
+																	: "text-muted-foreground/50",
+															)}
+														>
+															{String(index + 1).padStart(2, "0")}
+														</span>
 													</Link>
 												);
 											})}
@@ -276,20 +332,22 @@ export function Navigation({ telegramBotUsername }: NavigationProps) {
 
 										{session?.user && (
 											<div className="mt-6 border-t pt-4">
-												<Link
-													href="/upload"
-													onClick={() => setMobileMenuOpen(false)}
-													className="flex min-h-11 items-center gap-3 rounded-lg bg-primary px-3 py-2 font-medium text-primary-foreground text-sm transition-colors hover:bg-primary/90"
-												>
-													<Plus className="h-4 w-4" />
-													{t("upload_plugin")}
-												</Link>
+												<Button asChild className="w-full">
+													<Link
+														href="/upload"
+														onClick={() => setMobileMenuOpen(false)}
+													>
+														<Plus className="h-4 w-4" />
+														{t("upload_plugin")}
+													</Link>
+												</Button>
 											</div>
 										)}
 									</div>
 
-									<div className="border-t bg-muted/30 p-4">
+									<div className="section-band border-b-0 p-4">
 										<div className="mb-4 flex items-center justify-between gap-3">
+											<span className="eyebrow">{t("account_section")}</span>
 											<div className="flex items-center gap-1">
 												<ThemeToggle />
 												<LanguageSwitcher />
@@ -297,7 +355,7 @@ export function Navigation({ telegramBotUsername }: NavigationProps) {
 										</div>
 										{session?.user ? (
 											<>
-												<div className="flex items-center gap-3 rounded-lg border bg-background p-3">
+												<div className="flex items-center gap-3 rounded-xl border bg-card p-3 shadow-soft">
 													<Avatar className="h-8 w-8">
 														<AvatarImage
 															src={session.user.image || undefined}
@@ -326,37 +384,28 @@ export function Navigation({ telegramBotUsername }: NavigationProps) {
 													)}
 												</div>
 
-												<div className="mt-3 space-y-2">
-													<Link
-														href="/profile"
-														onClick={() => setMobileMenuOpen(false)}
-														className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
-													>
-														<User className="h-4 w-4" />
-														<span>{t("profile")}</span>
-													</Link>
-													<Link
-														href="/favorites"
-														onClick={() => setMobileMenuOpen(false)}
-														className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
-													>
-														<Heart className="h-4 w-4" />
-														<span>{t("favorites")}</span>
-													</Link>
-													<Link
-														href="/my-plugins"
-														onClick={() => setMobileMenuOpen(false)}
-														className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
-													>
-														<Settings className="h-4 w-4" />
-														<span>{t("my_plugins")}</span>
-													</Link>
+												<div className="mt-3 space-y-1">
+													{accountLinks.map((item) => (
+														<Link
+															key={item.href}
+															href={item.href}
+															onClick={() => setMobileMenuOpen(false)}
+															className="flex min-h-11 items-center gap-3 rounded-xl px-2 py-1 text-sm transition-colors hover:bg-primary/5 hover:text-foreground"
+														>
+															<span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+																<item.icon className="size-4" />
+															</span>
+															<span>{item.name}</span>
+														</Link>
+													))}
 													<button
 														type="button"
 														onClick={handleSignOut}
-														className="flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+														className="flex min-h-11 w-full items-center gap-3 rounded-xl px-2 py-1 text-sm transition-colors hover:bg-destructive/5 hover:text-destructive focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
 													>
-														<LogOut className="h-4 w-4" />
+														<span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+															<LogOut className="size-4" />
+														</span>
 														<span>{t("sign_out")}</span>
 													</button>
 												</div>

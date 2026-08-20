@@ -47,12 +47,11 @@ export function FeaturedPlugins() {
 					className="mb-8 flex items-end justify-between gap-4"
 				>
 					<div>
-						<div className="mb-2 flex items-center gap-2 font-medium text-primary text-sm">
-							<span className="size-1.5 rounded-full bg-primary" />
-							<span className="font-mono text-muted-foreground text-xs">
+						<div className="mb-3 flex items-center gap-3">
+							<span className="eyebrow">{t("featured.eyebrow")}</span>
+							<span className="font-mono font-semibold text-primary text-xs">
 								01
 							</span>
-							{t("featured.eyebrow")}
 						</div>
 						<h2
 							id="featured-title"
@@ -81,7 +80,7 @@ export function FeaturedPlugins() {
 						{Array.from({ length: 3 }).map((_, i) => (
 							<Skeleton
 								key={i}
-								className="h-104 w-[75vw] shrink-0 snap-start rounded-xl sm:w-auto sm:shrink"
+								className="h-104 w-[75vw] shrink-0 snap-start rounded-2xl sm:w-auto sm:shrink"
 							/>
 						))}
 					</div>

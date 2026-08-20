@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Plus, Trash2 } from "lucide-react";
+import { HeartHandshake, Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type {
 	DonationMethod,
@@ -63,7 +63,12 @@ export function DonationRequisitesEditor({
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle>{t("title")}</CardTitle>
+				<CardTitle className="flex items-center gap-3">
+					<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+						<HeartHandshake className="h-4 w-4" />
+					</span>
+					{t("title")}
+				</CardTitle>
 			</CardHeader>
 			<CardContent className="space-y-4">
 				<div className="space-y-3">
@@ -143,7 +148,7 @@ export function DonationRequisitesEditor({
 					<Button
 						variant="outline"
 						onClick={addMethod}
-						className="min-h-11 w-full md:w-auto"
+						className="min-h-11 w-full border-primary/30 border-dashed text-primary hover:bg-primary/5 hover:text-primary md:w-auto"
 					>
 						<Plus className="mr-2 h-4 w-4" />
 						{t("add_method")}

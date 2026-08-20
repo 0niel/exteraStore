@@ -1,0 +1,68 @@
+{
+	"en": {
+		"Profile": {
+			"eyebrow_account": "Account",
+			"eyebrow_stats": "Statistics"
+		},
+		"FavoritesPage": {
+			"badge": "Favorites"
+		},
+		"MyPluginsPage": {
+			"badge": "Workspace"
+		},
+		"UploadPage": {
+			"badge": "New plugin"
+		},
+		"ManagePlugin": {
+			"badge": "Management"
+		},
+		"AdminPlugins": {
+			"eyebrow": "Moderation"
+		},
+		"AdminUsers": {
+			"eyebrow": "Community"
+		},
+		"AdminCategories": {
+			"eyebrow": "Catalog"
+		},
+		"BotAdmin": {
+			"eyebrow": "Telegram"
+		},
+		"PluginManageVersions": {
+			"no_versions_description": "Upload your first version and it will appear here."
+		}
+	},
+	"ru": {
+		"Profile": {
+			"eyebrow_account": "Аккаунт",
+			"eyebrow_stats": "Статистика"
+		},
+		"FavoritesPage": {
+			"badge": "Избранное"
+		},
+		"MyPluginsPage": {
+			"badge": "Мастерская"
+		},
+		"UploadPage": {
+			"badge": "Новый плагин"
+		},
+		"ManagePlugin": {
+			"badge": "Управление"
+		},
+		"AdminPlugins": {
+			"eyebrow": "Модерация"
+		},
+		"AdminUsers": {
+			"eyebrow": "Сообщество"
+		},
+		"AdminCategories": {
+			"eyebrow": "Каталог"
+		},
+		"BotAdmin": {
+			"eyebrow": "Telegram"
+		},
+		"PluginManageVersions": {
+			"no_versions_description": "Загрузите первую версию — она появится здесь."
+		}
+	}
+}

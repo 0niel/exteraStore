@@ -81,9 +81,13 @@ export default function PluginChangesPage() {
 	const renderDiff = () => {
 		if (!diffData?.oldContent || !diffData?.newContent) {
 			return (
-				<div className="py-12 text-center text-muted-foreground">
-					<FileText className="mx-auto mb-4 h-16 w-16 opacity-50" />
-					<h3 className="mb-2 font-medium text-lg">{t("no_changes_title")}</h3>
+				<div className="rounded-2xl border border-dashed bg-primary/5 py-12 text-center text-muted-foreground">
+					<div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-primary">
+						<FileText className="h-7 w-7" />
+					</div>
+					<h3 className="mb-2 font-medium text-foreground text-lg">
+						{t("no_changes_title")}
+					</h3>
 					<p>{t("no_changes_description")}</p>
 				</div>
 			);
@@ -253,11 +257,17 @@ export default function PluginChangesPage() {
 						</div>
 					</div>
 
-					<div className="space-y-2">
+					<div className="relative isolate space-y-2">
+						<div
+							className="pointer-events-none absolute -top-16 -left-12 -z-10 h-44 w-44 rounded-full bg-primary/15 blur-3xl"
+							aria-hidden="true"
+						/>
+						<span className="eyebrow">{t("breadcrumb")}</span>
 						<div className="flex flex-wrap items-center gap-3">
-							<Zap className="h-6 w-6 text-warning" />
-							<h1 className="font-bold text-2xl">{t("title")}</h1>
-							<Badge className="border-transparent bg-warning/15 text-warning">
+							<h1 className="font-bold text-2xl tracking-tight sm:text-3xl">
+								{t("title")}
+							</h1>
+							<Badge className="border-transparent bg-primary/10 text-primary">
 								<Clock className="mr-1 h-3 w-3" />
 								{t("fresh")}
 							</Badge>
@@ -276,10 +286,12 @@ export default function PluginChangesPage() {
 								className="absolute top-1.5 -left-7 h-3.5 w-3.5 rounded-full bg-primary ring-4 ring-primary/15 md:-left-9"
 								aria-hidden="true"
 							/>
-							<Card className="border-success/30">
+							<Card className="border-primary/25 bg-linear-to-br from-primary/5 to-transparent">
 								<CardHeader>
-									<CardTitle className="flex items-center gap-2 text-success">
-										<Zap className="h-5 w-5" />
+									<CardTitle className="flex items-center gap-2">
+										<span className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+											<Zap className="h-4 w-4" />
+										</span>
 										{t("current_version")}
 									</CardTitle>
 								</CardHeader>
@@ -310,7 +322,7 @@ export default function PluginChangesPage() {
 									{latestVersion?.changelog && (
 										<div className="text-sm">
 											<p className="mb-1 font-medium">{t("whats_new")}</p>
-											<p className="rounded bg-muted p-2 text-muted-foreground text-xs">
+											<p className="rounded-xl bg-primary/5 p-3 text-muted-foreground text-xs">
 												{latestVersion.changelog}
 											</p>
 										</div>
@@ -327,7 +339,9 @@ export default function PluginChangesPage() {
 							<Card>
 								<CardHeader>
 									<CardTitle className="flex items-center gap-2 text-muted-foreground">
-										<GitCommit className="h-5 w-5" />
+										<span className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+											<GitCommit className="h-4 w-4" />
+										</span>
 										{t("previous_version")}
 									</CardTitle>
 								</CardHeader>

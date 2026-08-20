@@ -91,17 +91,9 @@ export function HeroSection() {
 		<section className="relative isolate overflow-hidden border-b">
 			<div className="grid-fade absolute inset-x-0 top-0 -z-10 h-[38rem]" />
 			<div className="absolute -top-32 left-1/2 -z-10 h-96 w-96 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
+			<div className="absolute top-40 -right-24 -z-10 h-72 w-72 rounded-full bg-primary/5 blur-3xl" />
 			<div className="container mx-auto px-4 pt-14 pb-10 sm:pt-20 lg:pt-28">
 				<div className="mx-auto max-w-5xl text-center">
-					<motion.div
-						{...reveal}
-						transition={{ duration: 0.35 }}
-						className="mb-5 inline-flex min-h-9 items-center gap-2 rounded-full border bg-background/80 px-3 font-medium text-sm shadow-sm backdrop-blur"
-					>
-						<span className="size-2 animate-pulse-dot rounded-full bg-primary" />
-						{t("hero.badge")}
-					</motion.div>
-
 					<motion.h1
 						{...reveal}
 						transition={{ duration: 0.4, delay: reduceMotion ? 0 : 0.05 }}
@@ -171,7 +163,7 @@ export function HeroSection() {
 						{features.map(({ icon: Icon, title, text }) => (
 							<div
 								key={title}
-								className="flex min-h-24 items-center gap-3 rounded-2xl border bg-card/70 p-4"
+								className="flex min-h-24 items-center gap-3 rounded-2xl border bg-card/70 p-4 shadow-soft transition-colors hover:border-primary/30"
 							>
 								<div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
 									<Icon className="size-5" />

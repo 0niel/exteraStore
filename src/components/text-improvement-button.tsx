@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
+import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
 interface TextImprovementButtonProps {
@@ -74,7 +75,10 @@ export function TextImprovementButton({
 			size={size}
 			onClick={handleImproveText}
 			disabled={isDisabled}
-			className={`flex items-center gap-1.5 ${className || ""}`}
+			className={cn(
+				"flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 hover:text-primary",
+				className,
+			)}
 		>
 			{isImproving ? (
 				<Loader2 className="h-4 w-4 animate-spin" />

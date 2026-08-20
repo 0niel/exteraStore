@@ -21,6 +21,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { MarkdownEditor } from "~/components/markdown-editor";
+import { PageHeader } from "~/components/page-header";
 import { PluginManageVersions } from "~/components/plugin-manage-versions";
 import { ScreenshotUploader } from "~/components/screenshot-uploader";
 import { TagInput } from "~/components/tag-input";
@@ -214,7 +215,6 @@ export default function PluginManagePage() {
 					initial={reduceMotion ? false : { opacity: 0, y: 14 }}
 					animate={{ opacity: 1, y: 0 }}
 					transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-					className="mb-6 sm:mb-8"
 				>
 					<Button
 						variant="ghost"
@@ -225,28 +225,20 @@ export default function PluginManagePage() {
 						<ArrowLeft className="mr-2 h-4 w-4" />
 						{t("back")}
 					</Button>
-					<div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-						<div className="min-w-0">
-							<h1 className="mb-2 truncate font-bold text-3xl sm:text-4xl">
-								{plugin.name}
-							</h1>
-							<p className="text-lg text-muted-foreground sm:text-xl">
-								{t("subtitle")}
-							</p>
-						</div>
-						<div className="flex gap-2">
-							<Button
-								asChild
-								variant="outline"
-								className="press-scale w-full md:w-auto"
-							>
-								<Link href={`/plugins/${plugin.slug}`} target="_blank">
-									<Eye className="mr-2 h-4 w-4" />
-									{t("view_public")}
-								</Link>
-							</Button>
-						</div>
-					</div>
+					<PageHeader
+						badge={t("badge")}
+						title={plugin.name}
+						description={t("subtitle")}
+						icon={Settings}
+						align="left"
+					>
+						<Button asChild className="press-scale w-full sm:w-auto">
+							<Link href={`/plugins/${plugin.slug}`} target="_blank">
+								<Eye className="mr-2 h-4 w-4" />
+								{t("view_public")}
+							</Link>
+						</Button>
+					</PageHeader>
 				</motion.div>
 
 				<Tabs defaultValue="edit" className="space-y-6">
@@ -270,8 +262,10 @@ export default function PluginManagePage() {
 							<div className="space-y-6 lg:col-span-2">
 								<Card>
 									<CardHeader>
-										<CardTitle className="flex items-center gap-2">
-											<Info className="h-5 w-5" />
+										<CardTitle className="flex items-center gap-3">
+											<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+												<Info className="h-4 w-4" />
+											</span>
 											{t("basic_info_title")}
 										</CardTitle>
 										<CardDescription>
@@ -330,8 +324,10 @@ export default function PluginManagePage() {
 							<div className="space-y-6">
 								<Card>
 									<CardHeader>
-										<CardTitle className="flex items-center gap-2">
-											<Tags className="h-5 w-5" />
+										<CardTitle className="flex items-center gap-3">
+											<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+												<Tags className="h-4 w-4" />
+											</span>
 											{t("categorization_title")}
 										</CardTitle>
 										<CardDescription>
@@ -397,8 +393,11 @@ export default function PluginManagePage() {
 						<Card>
 							<CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 								<div>
+									<span className="eyebrow mb-2">{t("tab_versions")}</span>
 									<CardTitle>{t("versions_title")}</CardTitle>
-									<CardDescription>{t("versions_description")}</CardDescription>
+									<CardDescription className="mt-1.5">
+										{t("versions_description")}
+									</CardDescription>
 								</div>
 								<UploadVersionDialog
 									pluginId={plugin.id}
@@ -418,8 +417,10 @@ export default function PluginManagePage() {
 					<TabsContent value="settings">
 						<Card className="border-destructive/40 bg-destructive/5">
 							<CardHeader>
-								<CardTitle className="flex items-center gap-2 text-destructive">
-									<AlertTriangle className="h-5 w-5" />
+								<CardTitle className="flex items-center gap-3 text-destructive">
+									<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
+										<AlertTriangle className="h-4 w-4" />
+									</span>
 									{t("danger_zone_title")}
 								</CardTitle>
 								<CardDescription>

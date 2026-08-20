@@ -203,8 +203,10 @@ export function ScreenshotUploader({
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle className="flex items-center gap-2">
-					<ImageIcon className="h-5 w-5" />
+				<CardTitle className="flex items-center gap-3">
+					<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+						<ImageIcon className="h-4 w-4" />
+					</span>
 					{t("screenshots")}
 				</CardTitle>
 				<CardDescription>
@@ -215,24 +217,20 @@ export function ScreenshotUploader({
 				{screenshots.length < maxFiles && (
 					<div
 						{...getRootProps()}
-						className={`tap-highlight-none min-h-11 cursor-pointer rounded-lg border-2 border-dashed p-6 text-center transition-[border-color,background-color,transform] duration-200 sm:p-8 ${
+						className={`tap-highlight-none min-h-11 cursor-pointer rounded-xl border-2 border-dashed p-6 text-center transition-[border-color,background-color,transform] duration-200 sm:p-8 ${
 							isDragActive
-								? `border-primary bg-primary/5 ${reduceMotion ? "" : "scale-[1.01]"}`
-								: "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50"
+								? `border-primary bg-primary/10 ${reduceMotion ? "" : "scale-[1.01]"}`
+								: "border-primary/25 bg-primary/[0.03] hover:border-primary/50 hover:bg-primary/5"
 						} ${isUploading ? "cursor-not-allowed opacity-50" : ""}`}
 					>
 						<input {...getInputProps()} />
 						<div className="space-y-4">
 							<div
-								className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full transition-colors ${
-									isDragActive ? "bg-primary/10" : "bg-muted"
+								className={`mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary transition-transform ${
+									isDragActive && !reduceMotion ? "scale-110" : ""
 								}`}
 							>
-								<Upload
-									className={`h-6 w-6 ${
-										isDragActive ? "text-primary" : "text-muted-foreground"
-									}`}
-								/>
+								<Upload className="h-6 w-6" />
 							</div>
 							<div>
 								<p className="font-medium text-lg">
@@ -291,7 +289,10 @@ export function ScreenshotUploader({
 					<div className="space-y-3">
 						<div className="flex items-center justify-between">
 							<h4 className="font-medium">{t("uploaded_screenshots")}</h4>
-							<Badge variant="outline">
+							<Badge
+								variant="outline"
+								className="border-primary/20 bg-primary/5 font-mono text-primary"
+							>
 								{screenshots.length} / {maxFiles}
 							</Badge>
 						</div>
@@ -326,8 +327,11 @@ export function ScreenshotUploader({
 											<X className="h-3.5 w-3.5" />
 										</Button>
 										<div className="absolute bottom-2 left-2">
-											<Badge variant="secondary" className="text-xs">
-												{index + 1}
+											<Badge
+												variant="secondary"
+												className="border-transparent bg-contrast/80 font-mono text-contrast-foreground text-xs"
+											>
+												{String(index + 1).padStart(2, "0")}
 											</Badge>
 										</div>
 									</motion.div>

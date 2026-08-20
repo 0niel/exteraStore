@@ -28,6 +28,7 @@ import { z } from "zod";
 import { TagSuggest } from "~/components/ai/tag-suggest";
 import { SmartCaptcha } from "~/components/captcha/smart-captcha";
 import { MarkdownEditor } from "~/components/markdown-editor";
+import { PageHeader } from "~/components/page-header";
 import { ScreenshotUploader } from "~/components/screenshot-uploader";
 import { TagInput } from "~/components/tag-input";
 import { Button } from "~/components/ui/button";
@@ -285,16 +286,14 @@ export default function UploadPluginPage() {
 	];
 
 	return (
-		<section className="bg-muted/40 py-4 sm:py-8 md:py-12">
+		<section className="bg-background py-4 sm:py-8 md:py-12">
 			<div className="container mx-auto max-w-6xl px-3 sm:px-4">
-				<div className="mb-6 animate-fade-up text-center sm:mb-8">
-					<h1 className="mb-2 font-bold text-2xl sm:text-3xl md:text-4xl">
-						{t("title")}
-					</h1>
-					<p className="text-base text-muted-foreground sm:text-lg md:text-xl">
-						{t("subtitle")}
-					</p>
-				</div>
+				<PageHeader
+					badge={t("badge")}
+					title={t("title")}
+					description={t("subtitle")}
+					icon={UploadCloud}
+				/>
 
 				<div
 					className="mb-6 grid animate-fade-up grid-cols-3 gap-2 sm:mb-8 sm:gap-4"
@@ -303,17 +302,17 @@ export default function UploadPluginPage() {
 					{steps.map((step) => (
 						<div
 							key={step.num}
-							className={`flex flex-col items-center gap-2 rounded-xl border p-3 text-center transition-colors duration-300 sm:flex-row sm:gap-3 sm:p-4 sm:text-left ${
+							className={`flex flex-col items-center gap-2 rounded-2xl border p-3 text-center transition-colors duration-300 sm:flex-row sm:gap-3 sm:p-4 sm:text-left ${
 								step.done
-									? "border-primary/40 bg-primary/5"
-									: "border-border bg-card"
+									? "border-primary/40 bg-primary/5 shadow-primary/5 shadow-sm"
+									: "border-border bg-card shadow-soft"
 							}`}
 						>
 							<div
-								className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-mono font-semibold text-sm transition-colors duration-300 ${
+								className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-mono font-semibold text-sm transition-colors duration-300 ${
 									step.done
 										? "bg-primary text-primary-foreground"
-										: "bg-muted text-muted-foreground"
+										: "bg-primary/10 text-primary"
 								}`}
 							>
 								<AnimatePresence mode="wait" initial={false}>
@@ -363,8 +362,10 @@ export default function UploadPluginPage() {
 							<div className="space-y-4 sm:space-y-6 xl:col-span-2">
 								<Card>
 									<CardHeader>
-										<CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-											<Info className="h-4 w-4 sm:h-5 sm:w-5" />
+										<CardTitle className="flex items-center gap-3 text-base sm:text-lg">
+											<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+												<Info className="h-4 w-4" />
+											</span>
 											{t("basic_info")}
 										</CardTitle>
 									</CardHeader>
@@ -468,8 +469,10 @@ export default function UploadPluginPage() {
 
 								<Card>
 									<CardHeader>
-										<CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-											<FileText className="h-4 w-4 sm:h-5 sm:w-5" />
+										<CardTitle className="flex items-center gap-3 text-base sm:text-lg">
+											<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+												<FileText className="h-4 w-4" />
+											</span>
 											{t("version_changelog_title")}
 										</CardTitle>
 									</CardHeader>
@@ -520,8 +523,10 @@ export default function UploadPluginPage() {
 							<div className="space-y-4 sm:space-y-6 xl:col-span-1">
 								<Card>
 									<CardHeader>
-										<CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-											<Tags className="h-4 w-4 sm:h-5 sm:w-5" />
+										<CardTitle className="flex items-center gap-3 text-base sm:text-lg">
+											<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+												<Tags className="h-4 w-4" />
+											</span>
 											{t("organization_title")}
 										</CardTitle>
 									</CardHeader>
@@ -604,10 +609,12 @@ export default function UploadPluginPage() {
 
 								<Card>
 									<CardHeader>
-										<CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-											<ExternalLink className="h-4 w-4 sm:h-5 sm:w-5" />
+										<CardTitle className="flex items-center gap-3 text-base sm:text-lg">
+											<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+												<ExternalLink className="h-4 w-4" />
+											</span>
 											{t("links_title")}
-											<span className="hidden text-muted-foreground sm:inline">
+											<span className="hidden font-normal text-muted-foreground text-sm sm:inline">
 												{t("links_optional")}
 											</span>
 										</CardTitle>
@@ -655,8 +662,10 @@ export default function UploadPluginPage() {
 
 								<Card>
 									<CardHeader>
-										<CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-											<Code className="h-4 w-4 sm:h-5 sm:w-5" />
+										<CardTitle className="flex items-center gap-3 text-base sm:text-lg">
+											<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+												<Code className="h-4 w-4" />
+											</span>
 											{t("file_title")}
 										</CardTitle>
 										<CardDescription className="text-sm">
@@ -668,8 +677,8 @@ export default function UploadPluginPage() {
 											{...getRootProps()}
 											className={`tap-highlight-none relative min-h-11 cursor-pointer rounded-xl p-6 text-center transition-[background-color,transform] duration-200 ${
 												isDragActive
-													? `bg-primary/5 ${reduceMotion ? "" : "scale-[1.02]"}`
-													: "hover:bg-muted/50"
+													? `bg-primary/10 ${reduceMotion ? "" : "scale-[1.02]"}`
+													: "bg-primary/[0.03] hover:bg-primary/5"
 											}`}
 										>
 											<svg
@@ -692,7 +701,7 @@ export default function UploadPluginPage() {
 															? "stroke-primary"
 															: fileContent
 																? "stroke-primary/50"
-																: "stroke-border"
+																: "stroke-primary/25"
 													}
 													animate={
 														!reduceMotion && isDragActive
@@ -713,8 +722,8 @@ export default function UploadPluginPage() {
 											<input {...getInputProps()} />
 											{fileContent && fileName ? (
 												<div className="space-y-2">
-													<div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-primary/10">
-														<FileCode2 className="h-5 w-5 text-primary" />
+													<div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+														<FileCode2 className="h-5 w-5" />
 													</div>
 													<p className="break-all font-medium text-sm">
 														{fileName}
@@ -738,17 +747,11 @@ export default function UploadPluginPage() {
 											) : (
 												<div className="space-y-2">
 													<div
-														className={`mx-auto flex h-11 w-11 items-center justify-center rounded-full transition-colors ${
-															isDragActive ? "bg-primary/10" : "bg-muted"
+														className={`mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary transition-transform ${
+															isDragActive && !reduceMotion ? "scale-110" : ""
 														}`}
 													>
-														<UploadCloud
-															className={`h-5 w-5 ${
-																isDragActive
-																	? "text-primary"
-																	: "text-muted-foreground"
-															}`}
-														/>
+														<UploadCloud className="h-5 w-5" />
 													</div>
 													<p className="font-medium text-sm">
 														{isDragActive

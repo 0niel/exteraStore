@@ -1,0 +1,36 @@
+{
+	"en": {
+		"CategoriesPage": {
+			"section_all": "All categories"
+		},
+		"CollectionsPage": {
+			"section_collections": "Collections"
+		},
+		"Developers": {
+			"section_leaderboard": "Leaderboard"
+		},
+		"DeveloperProfile": {
+			"eyebrow_profile": "Developer profile"
+		},
+		"PulsePage": {
+			"section_feed": "Activity feed"
+		}
+	},
+	"ru": {
+		"CategoriesPage": {
+			"section_all": "Все категории"
+		},
+		"CollectionsPage": {
+			"section_collections": "Подборки"
+		},
+		"Developers": {
+			"section_leaderboard": "Рейтинг"
+		},
+		"DeveloperProfile": {
+			"eyebrow_profile": "Профиль разработчика"
+		},
+		"PulsePage": {
+			"section_feed": "Лента активности"
+		}
+	}
+}

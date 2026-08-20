@@ -17,7 +17,9 @@
 		"collections": "Подборки",
 		"skip_to_content": "Перейти к содержимому",
 		"sign_in_hint": "Войдите, чтобы загружать плагины и добавлять их в избранное",
-		"open_menu": "Открыть меню навигации"
+		"open_menu": "Открыть меню навигации",
+		"menu_section": "Меню",
+		"account_section": "Аккаунт"
 	},
 	"ThemeToggle": {
 		"toggle_theme": "Переключить тему",
@@ -68,7 +70,8 @@
 		"cancel": "Отмена",
 		"confirm_delete": "Удалить",
 		"toast_deleted": "Версия удалена",
-		"toast_delete_error": "Не удалось удалить версию"
+		"toast_delete_error": "Не удалось удалить версию",
+		"no_versions_description": "Загрузите первую версию — она появится здесь."
 	},
 	"PluginPipeline": {
 		"automated_checks": "Автоматические проверки",
@@ -222,7 +225,8 @@
 		"status_unknown": "Неизвестно",
 		"stat_total": "плагинов",
 		"stat_downloads": "загрузок",
-		"stat_rating": "средний рейтинг"
+		"stat_rating": "средний рейтинг",
+		"badge": "Мастерская"
 	},
 	"PluginDetailPage": {
 		"description": "Описание",
@@ -360,7 +364,10 @@
 		"retry": "Повторить",
 		"no_results_hint": "Попробуйте сократить запрос «{query}» или сбросить фильтры.",
 		"quick_start": "Быстрый старт",
-		"trending_now": "Популярно сейчас"
+		"trending_now": "Популярно сейчас",
+		"hint_navigate": "навигация",
+		"hint_open": "открыть",
+		"hint_close": "закрыть"
 	},
 	"TagInput": {
 		"add_tag": "Добавить тег",
@@ -524,7 +531,8 @@
 		"enter_message": "Введите сообщение",
 		"enter_webhook_url": "Введите URL вебхука",
 		"webhook_url_label": "Webhook URL",
-		"webhook_url_placeholder": "https://example.com/api/telegram/webhook"
+		"webhook_url_placeholder": "https://example.com/api/telegram/webhook",
+		"eyebrow": "Telegram"
 	},
 	"Developers": {
 		"badge": "Сообщество",
@@ -555,7 +563,8 @@
 		"progress_to": "Прогресс до {tier}",
 		"stats_plugins": "Плагинов",
 		"stats_downloads": "Скачиваний",
-		"stats_rating": "Рейтинг"
+		"stats_rating": "Рейтинг",
+		"section_leaderboard": "Рейтинг"
 	},
 	"DeveloperProfile": {
 		"not_found": "Разработчик не найден",
@@ -603,7 +612,8 @@
 		"tier_expert": "Expert",
 		"tier_master": "Master",
 		"tier_legend": "Legend",
-		"tier_developer": "Разработчик {tier}"
+		"tier_developer": "Разработчик {tier}",
+		"eyebrow_profile": "Профиль разработчика"
 	},
 	"Profile": {
 		"title": "Профиль",
@@ -637,7 +647,9 @@
 		"link_title_placeholder": "Название ссылки",
 		"add_link": "Добавить ссылку",
 		"donations": "Поддержка автора",
-		"remove_link": "Удалить ссылку"
+		"remove_link": "Удалить ссылку",
+		"eyebrow_account": "Аккаунт",
+		"eyebrow_stats": "Статистика"
 	},
 	"AdminPlugins": {
 		"title": "Администрирование плагинов",
@@ -666,13 +678,15 @@
 		"invalid_number": "Введите корректное число",
 		"delete_confirm_title": "Удалить плагин",
 		"delete_confirm_description": "Вы уверены, что хотите удалить плагин {name}? Это действие необратимо.",
-		"deleting": "Удаление..."
+		"deleting": "Удаление...",
+		"eyebrow": "Модерация"
 	},
 	"PluginVersionsPage": {
 		"back_to_plugin": "Назад к плагину",
 		"version_history_and_changes": "История версий и изменений",
 		"downloads": "загрузок",
-		"reviews": "отзывов"
+		"reviews": "отзывов",
+		"eyebrow": "История версий"
 	},
 	"AdminCategories": {
 		"title": "Управление категориями",
@@ -706,7 +720,8 @@
 		"cancel": "Отмена",
 		"save": "Сохранить",
 		"create": "Создать",
-		"delete": "Удалить"
+		"delete": "Удалить",
+		"eyebrow": "Каталог"
 	},
 	"AdminLayout": {
 		"admin_panel": "Панель администратора",
@@ -1018,7 +1033,8 @@
 		"toast_role_updated": "Роль обновлена",
 		"toast_reviews_deleted": "Отзывы удалены",
 		"toast_reviews_deleted_description": "Удалено отзывов: {count}",
-		"toast_error": "Ошибка"
+		"toast_error": "Ошибка",
+		"eyebrow": "Сообщество"
 	},
 	"CategoriesPage": {
 		"badge": "Категории",
@@ -1035,7 +1051,8 @@
 		"empty_category_title": "Пока нет плагинов",
 		"empty_category_description": "В этой категории пока что нет опубликованных плагинов.",
 		"upload_plugin": "Загрузить плагин",
-		"other_categories": "Другие категории"
+		"other_categories": "Другие категории",
+		"section_all": "Все категории"
 	},
 	"CollectionsPage": {
 		"badge": "ИИ-подборки",
@@ -1074,7 +1091,8 @@
 		"empty_plugins_title": "Плагины не найдены",
 		"empty_plugins_description": "В этой подборке пока нет плагинов",
 		"ai_generated_title": "Создано искусственным интеллектом",
-		"ai_generated_description": "Эта подборка была автоматически создана нашим ИИ на основе анализа рейтингов, отзывов пользователей и популярности плагинов. Подборки обновляются еженедельно, чтобы всегда предлагать самые актуальные и качественные решения."
+		"ai_generated_description": "Эта подборка была автоматически создана нашим ИИ на основе анализа рейтингов, отзывов пользователей и популярности плагинов. Подборки обновляются еженедельно, чтобы всегда предлагать самые актуальные и качественные решения.",
+		"section_collections": "Подборки"
 	},
 	"PulsePage": {
 		"badge": "Активность",
@@ -1110,7 +1128,8 @@
 		"no_comment": "Отзыв без комментария",
 		"unknown_user": "Аноним",
 		"prev_page": "Назад",
-		"next_page": "Вперед"
+		"next_page": "Вперед",
+		"section_feed": "Лента активности"
 	},
 	"MarkdownEditor": {
 		"write": "Редактор",
@@ -1158,7 +1177,8 @@
 		"browse_catalog": "Просмотреть каталог",
 		"prev_page": "Предыдущая",
 		"next_page": "Следующая",
-		"page_of": "Страница {page} из {total}"
+		"page_of": "Страница {page} из {total}",
+		"badge": "Избранное"
 	},
 	"ManagePlugin": {
 		"not_found_title": "Плагин не найден",
@@ -1201,7 +1221,8 @@
 		"toast_updated": "Плагин успешно обновлен!",
 		"toast_update_error": "Ошибка при обновлении плагина: {error}",
 		"toast_deleted": "Плагин успешно удален.",
-		"toast_delete_error": "Ошибка при удалении плагина: {error}"
+		"toast_delete_error": "Ошибка при удалении плагина: {error}",
+		"badge": "Управление"
 	},
 	"UploadPage": {
 		"login_required": "Требуется авторизация",
@@ -1263,7 +1284,8 @@
 		"error_github_url": "Введите корректный URL GitHub репозитория",
 		"error_docs_url": "Введите корректный URL документации",
 		"success_title": "Плагин отправлен!",
-		"success_description": "Переходим на страницу вашего плагина..."
+		"success_description": "Переходим на страницу вашего плагина...",
+		"badge": "Новый плагин"
 	},
 	"PluginChangesPage": {
 		"copied": "Скопировано в буфер обмена",

@@ -55,7 +55,7 @@ export function PluginVersionsList({ pluginId }: PluginVersionsListProps) {
 			<div className="space-y-2">
 				<span className="sr-only">{t("loading")}</span>
 				{[0, 1, 2].map((i) => (
-					<div key={i} className="skeleton-shimmer h-11 w-full rounded-md" />
+					<div key={i} className="skeleton-shimmer h-11 w-full rounded-xl" />
 				))}
 			</div>
 		);
@@ -66,7 +66,7 @@ export function PluginVersionsList({ pluginId }: PluginVersionsListProps) {
 	}
 
 	return (
-		<div className="scrollbar-hide overflow-x-auto rounded-md border">
+		<div className="scrollbar-hide overflow-x-auto rounded-2xl border shadow-soft">
 			<Table>
 				<TableHeader>
 					<TableRow>
@@ -81,7 +81,10 @@ export function PluginVersionsList({ pluginId }: PluginVersionsListProps) {
 					{versions.map((version: PluginVersionRow) => (
 						<TableRow key={version.id}>
 							<TableCell>
-								<Badge variant={version.isStable ? "default" : "outline"}>
+								<Badge
+									variant={version.isStable ? "default" : "outline"}
+									className="font-mono"
+								>
 									v{version.version}
 								</Badge>
 							</TableCell>

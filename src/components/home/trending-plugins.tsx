@@ -35,10 +35,7 @@ export function TrendingPlugins() {
 	};
 
 	return (
-		<section
-			className="border-y bg-muted/25 py-16 sm:py-24"
-			aria-labelledby="trending-title"
-		>
+		<section className="py-16 sm:py-24" aria-labelledby="trending-title">
 			<div className="container mx-auto px-4">
 				<motion.div
 					initial={reduceMotion ? false : { opacity: 0, y: 16 }}
@@ -48,12 +45,11 @@ export function TrendingPlugins() {
 					className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"
 				>
 					<div>
-						<div className="mb-2 inline-flex items-center gap-2 font-medium text-primary text-sm">
-							<span className="size-1.5 rounded-full bg-primary" />
-							<span className="font-mono text-muted-foreground text-xs">
-								02
+						<div className="mb-3 flex items-center gap-3">
+							<span className="eyebrow">{t("trending.eyebrow")}</span>
+							<span className="font-mono font-semibold text-primary text-xs">
+								03
 							</span>
-							{t("trending.eyebrow")}
 						</div>
 						<h2
 							id="trending-title"
@@ -65,7 +61,11 @@ export function TrendingPlugins() {
 							{t("trending.description")}
 						</p>
 					</div>
-					<Button asChild variant="outline" className="group">
+					<Button
+						asChild
+						variant="ghost"
+						className="group self-start sm:self-auto"
+					>
 						<Link href="/plugins?sort=popular">
 							{t("trending.viewAll")}
 							<ArrowRight className="transition-transform group-hover:translate-x-1" />
@@ -78,7 +78,7 @@ export function TrendingPlugins() {
 						{Array.from({ length: 4 }).map((_, i) => (
 							<Skeleton
 								key={i}
-								className="h-28 w-[75vw] shrink-0 snap-start rounded-xl md:w-full md:shrink"
+								className="h-28 w-[75vw] shrink-0 snap-start rounded-2xl md:w-full md:shrink"
 							/>
 						))}
 					</div>

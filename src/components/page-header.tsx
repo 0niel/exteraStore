@@ -5,6 +5,8 @@ interface PageHeaderProps {
 	title: string;
 	description: string;
 	icon?: React.ComponentType<{ className?: string }>;
+	align?: "center" | "left";
+	children?: React.ReactNode;
 }
 
 export function PageHeader({
@@ -12,19 +14,45 @@ export function PageHeader({
 	title,
 	description,
 	icon: Icon = Grid,
+	align = "center",
+	children,
 }: PageHeaderProps) {
+	const centered = align === "center";
+
 	return (
-		<div className="mb-6 animate-fade-up text-center sm:mb-8 md:mb-12">
-			<div className="mb-3 inline-flex min-h-8 items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 font-medium text-primary text-xs sm:mb-4 sm:gap-2 sm:px-4 sm:py-2 sm:text-sm">
-				<Icon className="h-3 w-3 sm:h-4 sm:w-4" />
-				{badge}
+		<div
+			className={`relative isolate mb-8 animate-fade-up sm:mb-10 md:mb-14 ${
+				centered ? "text-center" : "text-left"
+			}`}
+		>
+			<div className="dot-grid absolute -inset-x-8 -top-10 -z-10 h-56" />
+			<div
+				className={`mb-4 flex items-center gap-2 ${centered ? "justify-center" : ""}`}
+			>
+				<span className="inline-flex min-h-9 items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-1.5 font-medium text-primary text-sm shadow-primary/5 shadow-sm">
+					<Icon className="h-4 w-4" />
+					{badge}
+				</span>
 			</div>
-			<h1 className="mb-3 text-balance font-bold text-2xl tracking-tight sm:mb-4 sm:text-3xl md:text-4xl lg:text-5xl">
+			<h1 className="mb-3 text-balance font-bold text-3xl tracking-tighter sm:mb-4 sm:text-4xl md:text-5xl">
 				{title}
 			</h1>
-			<p className="mx-auto max-w-2xl text-balance text-base text-muted-foreground sm:text-lg md:text-xl">
+			<p
+				className={`max-w-2xl text-balance text-base text-muted-foreground leading-relaxed sm:text-lg ${
+					centered ? "mx-auto" : ""
+				}`}
+			>
 				{description}
 			</p>
+			{children ? (
+				<div
+					className={`mt-6 flex flex-wrap items-center gap-3 ${
+						centered ? "justify-center" : ""
+					}`}
+				>
+					{children}
+				</div>
+			) : null}
 		</div>
 	);
 }

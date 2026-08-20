@@ -146,7 +146,10 @@ export function UploadVersionDialog({
 			</DialogTrigger>
 			<DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto sm:max-h-[85vh]">
 				<DialogHeader>
-					<DialogTitle className="text-lg sm:text-xl">
+					<DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
+						<span className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+							<Upload className="h-4 w-4" />
+						</span>
 						{t("upload_new_version")}
 					</DialogTitle>
 					<DialogDescription className="text-sm">

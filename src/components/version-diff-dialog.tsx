@@ -80,7 +80,7 @@ export function VersionDiffDialog({
 		);
 
 		return (
-			<div className="scrollbar-hide max-h-96 overflow-auto rounded-lg bg-muted/30 p-4 font-mono text-sm">
+			<div className="scrollbar-hide max-h-96 overflow-auto rounded-xl border bg-muted/30 p-4 font-mono text-sm">
 				{changes.map((change, index) => {
 					const lines = change.value.split("\n").filter((line) => line !== "");
 
@@ -122,7 +122,12 @@ export function VersionDiffDialog({
 			</DialogTrigger>
 			<DialogContent className="flex max-h-[80vh] max-w-4xl flex-col overflow-hidden">
 				<DialogHeader>
-					<DialogTitle>{t("version_comparison")}</DialogTitle>
+					<DialogTitle className="flex items-center gap-2">
+						<span className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+							<FileText className="h-4 w-4" />
+						</span>
+						{t("version_comparison")}
+					</DialogTitle>
 					<DialogDescription>
 						{t("select_versions_to_compare")}
 					</DialogDescription>

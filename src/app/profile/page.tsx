@@ -256,11 +256,48 @@ export default function ProfilePage() {
 					animate="show"
 					variants={stagger}
 				>
-					<motion.div variants={fadeUp} className="mb-6 sm:mb-8">
-						<h1 className="mb-2 font-bold text-2xl sm:text-3xl">
-							{t("title")}
-						</h1>
-						<p className="text-muted-foreground">{t("description")}</p>
+					<motion.div
+						variants={fadeUp}
+						className="relative mb-6 overflow-hidden rounded-2xl border bg-card shadow-soft sm:mb-8"
+					>
+						<div className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-primary via-primary/50 to-transparent" />
+						<div className="dot-grid absolute inset-0" aria-hidden="true" />
+						<div
+							className="pointer-events-none absolute -top-24 -right-24 h-56 w-56 rounded-full bg-primary/10 blur-3xl"
+							aria-hidden="true"
+						/>
+						<div className="relative flex flex-col items-center gap-4 p-6 text-center sm:flex-row sm:gap-6 sm:p-8 sm:text-left">
+							<Avatar className="h-20 w-20 shrink-0 ring-2 ring-primary/40 ring-offset-4 ring-offset-card sm:h-24 sm:w-24">
+								<AvatarImage
+									src={session.user.image || undefined}
+									alt={session.user.name || ""}
+								/>
+								<AvatarFallback className="bg-primary/10 font-semibold text-lg text-primary">
+									{session.user.name?.slice(0, 2).toUpperCase() || "??"}
+								</AvatarFallback>
+							</Avatar>
+							<div className="min-w-0">
+								<span className="eyebrow mb-2 justify-center sm:justify-start">
+									{t("title")}
+								</span>
+								<h1 className="mb-1 truncate font-bold text-2xl tracking-tight sm:text-3xl">
+									{session.user.name || t("anonymous")}
+								</h1>
+								<p className="break-all text-muted-foreground text-sm">
+									{session.user.email}
+								</p>
+								<div className="mt-2 flex flex-wrap items-center justify-center gap-2 sm:justify-start">
+									{session.user.telegramUsername && (
+										<span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 font-medium font-mono text-primary text-xs">
+											@{session.user.telegramUsername}
+										</span>
+									)}
+									{userProfile?.isVerified && (
+										<Badge variant="secondary">{t("verified")}</Badge>
+									)}
+								</div>
+							</div>
+						</div>
 					</motion.div>
 
 					<motion.div variants={fadeUp}>
@@ -279,8 +316,11 @@ export default function ProfilePage() {
 									<CardHeader>
 										<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 											<div>
+												<span className="eyebrow mb-2">
+													{t("eyebrow_account")}
+												</span>
 												<CardTitle>{t("profile_info")}</CardTitle>
-												<CardDescription>
+												<CardDescription className="mt-1.5">
 													{t("profile_info_description")}
 												</CardDescription>
 											</div>
@@ -316,36 +356,6 @@ export default function ProfilePage() {
 									</CardHeader>
 
 									<CardContent className="space-y-6">
-										<div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:gap-6 sm:text-left">
-											<Avatar className="h-20 w-20">
-												<AvatarImage
-													src={session.user.image || undefined}
-													alt={session.user.name || ""}
-												/>
-												<AvatarFallback className="text-lg">
-													{session.user.name?.slice(0, 2).toUpperCase() || "??"}
-												</AvatarFallback>
-											</Avatar>
-											<div className="space-y-1">
-												<h3 className="font-semibold text-lg">
-													{session.user.name || t("anonymous")}
-												</h3>
-												<p className="break-all text-muted-foreground text-sm">
-													{session.user.email}
-												</p>
-												{session.user.telegramUsername && (
-													<p className="text-primary text-sm">
-														@{session.user.telegramUsername}
-													</p>
-												)}
-												{userProfile?.isVerified && (
-													<Badge variant="secondary">{t("verified")}</Badge>
-												)}
-											</div>
-										</div>
-
-										<Separator />
-
 										<div className="space-y-6">
 											<div className="grid grid-cols-1 gap-6 md:grid-cols-2">
 												<div>
@@ -530,23 +540,35 @@ export default function ProfilePage() {
 							</TabsContent>
 
 							<TabsContent value="stats">
+								<span className="eyebrow mb-4">{t("eyebrow_stats")}</span>
 								<motion.div
 									initial={reduceMotion ? false : "hidden"}
 									animate="show"
 									variants={stagger}
 									className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3"
 								>
-									{stats.map((stat) => (
+									{stats.map((stat, index) => (
 										<motion.div key={stat.key} variants={fadeUp}>
-											<Card className="card-lift h-full">
-												<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-													<CardTitle className="font-medium text-sm">
-														{t(stat.key)}
-													</CardTitle>
-													<stat.icon className="h-4 w-4 text-muted-foreground" />
-												</CardHeader>
-												<CardContent>
-													<div className="font-bold text-2xl">{stat.value}</div>
+											<Card className="card-lift relative h-full overflow-hidden">
+												<div
+													className="dot-grid absolute inset-0"
+													aria-hidden="true"
+												/>
+												<CardContent className="relative flex items-start justify-between gap-4">
+													<div>
+														<div className="font-mono font-semibold text-muted-foreground text-xs tracking-widest">
+															{String(index + 1).padStart(2, "0")}
+														</div>
+														<div className="mt-2 font-bold font-mono text-3xl tracking-tight">
+															{stat.value}
+														</div>
+														<div className="mt-1 text-muted-foreground text-sm">
+															{t(stat.key)}
+														</div>
+													</div>
+													<div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+														<stat.icon className="h-5 w-5" />
+													</div>
 												</CardContent>
 											</Card>
 										</motion.div>

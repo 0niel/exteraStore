@@ -94,14 +94,12 @@ export function PluginSubscription({
 
 	if (!session) {
 		return (
-			<Card>
-				<CardContent className="pt-6">
-					<div className="py-4 text-center">
-						<Bell className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
-						<p className="text-muted-foreground text-sm">{t("sign_in")}</p>
-					</div>
-				</CardContent>
-			</Card>
+			<div className="rounded-2xl border border-dashed bg-primary/5 p-6 text-center">
+				<div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+					<Bell className="h-6 w-6" />
+				</div>
+				<p className="text-muted-foreground text-sm">{t("sign_in")}</p>
+			</div>
 		);
 	}
 
@@ -109,7 +107,9 @@ export function PluginSubscription({
 		<Card>
 			<CardHeader>
 				<CardTitle className="flex items-center gap-2">
-					<Bell className="h-5 w-5" />
+					<span className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+						<Bell className="h-4 w-4" />
+					</span>
 					{t("notifications")}
 				</CardTitle>
 				<CardDescription>
@@ -120,7 +120,9 @@ export function PluginSubscription({
 				<div className="flex items-center justify-between">
 					<div className="space-y-1">
 						<div className="flex items-center gap-2">
-							<RefreshCw className="h-4 w-4 text-primary" />
+							<span className="flex size-7 items-center justify-center rounded-xl bg-primary/10 text-primary">
+								<RefreshCw className="h-3.5 w-3.5" />
+							</span>
 							<span className="font-medium">{t("updates")}</span>
 						</div>
 						<p className="text-muted-foreground text-sm">{t("new_versions")}</p>
@@ -139,7 +141,9 @@ export function PluginSubscription({
 				<div className="flex items-center justify-between">
 					<div className="space-y-1">
 						<div className="flex items-center gap-2">
-							<MessageSquare className="h-4 w-4 text-success" />
+							<span className="flex size-7 items-center justify-center rounded-xl bg-primary/10 text-primary">
+								<MessageSquare className="h-3.5 w-3.5" />
+							</span>
 							<span className="font-medium">{t("new_reviews")}</span>
 						</div>
 						<p className="text-muted-foreground text-sm">
@@ -160,7 +164,9 @@ export function PluginSubscription({
 				<div className="flex items-center justify-between">
 					<div className="space-y-1">
 						<div className="flex items-center gap-2">
-							<Shield className="h-4 w-4 text-destructive" />
+							<span className="flex size-7 items-center justify-center rounded-xl bg-primary/10 text-primary">
+								<Shield className="h-3.5 w-3.5" />
+							</span>
 							<span className="font-medium">{t("security")}</span>
 							<Badge variant="outline" className="text-xs">
 								{t("important")}

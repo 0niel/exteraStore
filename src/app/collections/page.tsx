@@ -12,24 +12,25 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { EmptyState } from "~/components/ui/empty-state";
 import { Skeleton } from "~/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { cn, createValidDate } from "~/lib/utils";
 import { api, type RouterOutputs } from "~/trpc/react";
 
 type AICollection = RouterOutputs["aiCollections"]["getAICollections"][number];
 type CollectionPlugin = AICollection["plugins"][number];
+type CollectionTab = "all" | "recent" | "popular";
 
 const coverTreatments = [
-	{
-		cover: "bg-contrast text-contrast-foreground",
-		chip: "bg-primary text-primary-foreground",
-	},
 	{
 		cover: "bg-primary text-primary-foreground",
 		chip: "bg-contrast text-contrast-foreground",
 	},
 	{
-		cover: "border-b-2 border-primary bg-primary/10 text-foreground",
+		cover: "bg-primary/10 text-foreground",
+		chip: "bg-primary text-primary-foreground",
+	},
+	{
+		cover:
+			"border-primary border-b-2 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent text-foreground",
 		chip: "bg-primary text-primary-foreground",
 	},
 ] as const;
@@ -81,7 +82,7 @@ function CollectionCard({
 					{initial}
 				</span>
 				<div className="flex items-start justify-between">
-					<span className="font-bold text-2xl tabular-nums opacity-60">
+					<span className="font-bold font-mono text-2xl tabular-nums opacity-50">
 						{String(index + 1).padStart(2, "0")}
 					</span>
 					<span
@@ -104,8 +105,8 @@ function CollectionCard({
 					{collection.description}
 				</p>
 				<div className="mb-3 flex items-center justify-between text-muted-foreground text-sm">
-					<div className="flex items-center gap-1">
-						<Calendar className="h-3 w-3" />
+					<div className="flex items-center gap-1.5">
+						<Calendar className="h-3 w-3 text-primary" />
 						<span>
 							{format.dateTime(createValidDate(collection.createdAt), {
 								day: "numeric",
@@ -114,7 +115,9 @@ function CollectionCard({
 							})}
 						</span>
 					</div>
-					<span>{t("plugin_count", { count: pluginData.length })}</span>
+					<span className="font-mono text-xs uppercase tracking-wider">
+						{t("plugin_count", { count: pluginData.length })}
+					</span>
 				</div>
 
 				<div className="space-y-2">
@@ -122,11 +125,11 @@ function CollectionCard({
 						<Link
 							key={plugin.id}
 							href={`/plugins/${plugin.slug}`}
-							className="block min-h-11 rounded-lg border bg-muted/30 p-3 transition-colors hover:border-primary/40 hover:bg-muted/50"
+							className="block min-h-11 rounded-xl border border-transparent bg-primary/5 p-3 transition-colors hover:border-primary/30 hover:bg-primary/10"
 						>
 							<div className="flex items-center gap-3">
-								<div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10">
-									<Zap className="h-4 w-4 text-primary" />
+								<div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+									<Zap className="h-4 w-4" />
 								</div>
 								<div className="min-w-0 flex-1">
 									<p className="truncate font-medium text-sm">{plugin.name}</p>
@@ -134,7 +137,7 @@ function CollectionCard({
 										{plugin.shortDescription || plugin.description}
 									</p>
 								</div>
-								<div className="flex items-center gap-1 text-muted-foreground text-xs">
+								<div className="flex items-center gap-1 font-mono text-muted-foreground text-xs tabular-nums">
 									<Star className="h-3 w-3 fill-warning text-warning" />
 									<span>{plugin.rating.toFixed(1)}</span>
 								</div>
@@ -148,7 +151,7 @@ function CollectionCard({
 						<Button
 							variant="ghost"
 							size="sm"
-							className="min-h-11 w-full"
+							className="min-h-11 w-full hover:bg-primary/10 hover:text-primary"
 							asChild
 						>
 							<Link href={`/collections/${collection.id}`}>
@@ -168,7 +171,7 @@ function CollectionCard({
 export default function CollectionsPage() {
 	const t = useTranslations("CollectionsPage");
 	const reduceMotion = useReducedMotion();
-	const [activeTab, setActiveTab] = useState("all");
+	const [activeTab, setActiveTab] = useState<CollectionTab>("all");
 
 	const { data: collections, isLoading } =
 		api.aiCollections.getAICollections.useQuery({ limit: 20 });
@@ -186,55 +189,63 @@ export default function CollectionsPage() {
 			return true;
 		}) || [];
 
-	const renderGrid = (
-		skeletonCount: number,
-		emptyIcon: string,
-		emptyTitle: string,
-		emptyDescription: string,
-	) => {
-		if (isLoading) {
-			return (
-				<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-					{Array.from({ length: skeletonCount }).map((_, i) => (
-						<CollectionSkeleton key={i} />
-					))}
-				</div>
-			);
-		}
-		if (filteredCollections.length === 0) {
-			return (
-				<EmptyState
-					icon={emptyIcon}
-					title={emptyTitle}
-					description={emptyDescription}
-				/>
-			);
-		}
-		return (
-			<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-				{filteredCollections.map((collection, index) => (
-					<motion.div
-						key={collection.id}
-						initial={reduceMotion ? false : { opacity: 0, y: 24 }}
-						whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
-						viewport={{ once: true, margin: "-80px" }}
-						transition={{
-							duration: 0.5,
-							delay: (index % 3) * 0.06,
-							ease: [0.16, 1, 0.3, 1],
-						}}
-						className="h-full"
-					>
-						<CollectionCard collection={collection} index={index} />
-					</motion.div>
-				))}
-			</div>
-		);
+	const tabItems: Array<{ value: CollectionTab; label: string }> = [
+		{ value: "all", label: t("tab_all") },
+		{ value: "recent", label: t("tab_recent") },
+		{ value: "popular", label: t("tab_popular") },
+	];
+
+	const emptyByTab: Record<
+		CollectionTab,
+		{ icon: string; title: string; description: string }
+	> = {
+		all: {
+			icon: "AI",
+			title: t("empty_all_title"),
+			description: t("empty_all_description"),
+		},
+		recent: {
+			icon: "7d",
+			title: t("empty_recent_title"),
+			description: t("empty_recent_description"),
+		},
+		popular: {
+			icon: "5+",
+			title: t("empty_popular_title"),
+			description: t("empty_popular_description"),
+		},
 	};
+
+	const stats = [
+		{
+			icon: Sparkles,
+			value: String(collections?.length || 0),
+			label: t("stats_active"),
+			mono: true,
+		},
+		{
+			icon: Zap,
+			value: String(
+				collections?.reduce((acc, c) => acc + (c.plugins?.length || 0), 0) || 0,
+			),
+			label: t("stats_plugins"),
+			mono: true,
+		},
+		{
+			icon: Calendar,
+			value: t("stats_weekly"),
+			label: t("stats_weekly_label"),
+			mono: false,
+		},
+	];
 
 	return (
 		<div className="bg-background">
-			<div className="container mx-auto px-4 py-8">
+			<div className="container relative isolate mx-auto px-4 py-8">
+				<div
+					aria-hidden="true"
+					className="pointer-events-none absolute -top-24 left-1/2 -z-10 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl"
+				/>
 				<PageHeader
 					badge={t("badge")}
 					title={t("title")}
@@ -243,106 +254,101 @@ export default function CollectionsPage() {
 				/>
 
 				<div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-					<Card className="border bg-card">
-						<CardContent className="flex items-center gap-3 p-4">
-							<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-								<Sparkles className="h-5 w-5 text-primary" />
-							</div>
-							<div>
-								<p className="font-bold text-lg tabular-nums">
-									{collections?.length || 0}
-								</p>
-								<p className="text-muted-foreground text-sm">
-									{t("stats_active")}
-								</p>
-							</div>
-						</CardContent>
-					</Card>
-
-					<Card className="border bg-card">
-						<CardContent className="flex items-center gap-3 p-4">
-							<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-contrast text-contrast-foreground">
-								<Zap className="h-5 w-5" />
-							</div>
-							<div>
-								<p className="font-bold text-lg tabular-nums">
-									{collections?.reduce(
-										(acc, c) => acc + (c.plugins?.length || 0),
-										0,
-									) || 0}
-								</p>
-								<p className="text-muted-foreground text-sm">
-									{t("stats_plugins")}
-								</p>
-							</div>
-						</CardContent>
-					</Card>
-
-					<Card className="border bg-card">
-						<CardContent className="flex items-center gap-3 p-4">
-							<div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-								<Calendar className="h-5 w-5 text-primary" />
-							</div>
-							<div>
-								<p className="font-bold text-lg">{t("stats_weekly")}</p>
-								<p className="text-muted-foreground text-sm">
-									{t("stats_weekly_label")}
-								</p>
-							</div>
-						</CardContent>
-					</Card>
+					{stats.map((stat) => (
+						<Card key={stat.label} className="border bg-card">
+							<CardContent className="flex items-center gap-3 p-4">
+								<div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+									<stat.icon className="h-5 w-5" />
+								</div>
+								<div>
+									<p
+										className={cn(
+											"font-bold text-2xl leading-tight",
+											stat.mono && "font-mono tabular-nums",
+										)}
+									>
+										{stat.value}
+									</p>
+									<p className="text-muted-foreground text-sm">{stat.label}</p>
+								</div>
+							</CardContent>
+						</Card>
+					))}
 				</div>
 
-				<Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
-					<div className="rounded-lg border bg-card p-2 sm:p-4">
-						<TabsList className="grid w-full grid-cols-3">
-							<TabsTrigger value="all" className="min-h-9">
-								{t("tab_all")}
-							</TabsTrigger>
-							<TabsTrigger value="recent" className="min-h-9">
-								{t("tab_recent")}
-							</TabsTrigger>
-							<TabsTrigger value="popular" className="min-h-9">
-								{t("tab_popular")}
-							</TabsTrigger>
-						</TabsList>
+				<div className="mb-4 flex min-h-6 items-center justify-between gap-3">
+					<span className="eyebrow">{t("section_collections")}</span>
+					{!isLoading && filteredCollections.length > 0 && (
+						<span className="font-mono text-muted-foreground text-xs tabular-nums">
+							{String(filteredCollections.length).padStart(2, "0")}
+						</span>
+					)}
+				</div>
+
+				<div className="scrollbar-hide -mx-4 mb-6 flex snap-x gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+					{tabItems.map((item) => (
+						<button
+							key={item.value}
+							type="button"
+							onClick={() => setActiveTab(item.value)}
+							aria-pressed={activeTab === item.value}
+							className={cn(
+								"press-scale min-h-11 shrink-0 snap-start rounded-full border px-4 font-medium text-sm transition-colors",
+								activeTab === item.value
+									? "border-primary bg-primary text-primary-foreground"
+									: "bg-background/70 backdrop-blur hover:border-primary/40 hover:text-primary",
+							)}
+						>
+							{item.label}
+						</button>
+					))}
+				</div>
+
+				{isLoading ? (
+					<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+						{Array.from({ length: 6 }).map((_, i) => (
+							<CollectionSkeleton key={i} />
+						))}
 					</div>
+				) : filteredCollections.length === 0 ? (
+					<EmptyState
+						icon={emptyByTab[activeTab].icon}
+						title={emptyByTab[activeTab].title}
+						description={emptyByTab[activeTab].description}
+					/>
+				) : (
+					<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+						{filteredCollections.map((collection, index) => (
+							<motion.div
+								key={collection.id}
+								initial={reduceMotion ? false : { opacity: 0, y: 24 }}
+								whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+								viewport={{ once: true, margin: "-80px" }}
+								transition={{
+									duration: 0.5,
+									delay: (index % 3) * 0.06,
+									ease: [0.16, 1, 0.3, 1],
+								}}
+								className="h-full"
+							>
+								<CollectionCard collection={collection} index={index} />
+							</motion.div>
+						))}
+					</div>
+				)}
 
-					<TabsContent value="all" className="mt-6">
-						{renderGrid(
-							6,
-							"AI",
-							t("empty_all_title"),
-							t("empty_all_description"),
-						)}
-					</TabsContent>
-
-					<TabsContent value="recent" className="mt-6">
-						{renderGrid(
-							3,
-							"7d",
-							t("empty_recent_title"),
-							t("empty_recent_description"),
-						)}
-					</TabsContent>
-
-					<TabsContent value="popular" className="mt-6">
-						{renderGrid(
-							3,
-							"5+",
-							t("empty_popular_title"),
-							t("empty_popular_description"),
-						)}
-					</TabsContent>
-				</Tabs>
-
-				<Card className="mt-12 overflow-hidden border">
+				<Card className="relative mt-12 overflow-hidden border">
+					<div
+						aria-hidden="true"
+						className="pointer-events-none absolute -top-20 -right-20 h-56 w-56 rounded-full bg-primary/10 blur-3xl"
+					/>
 					<CardContent className="p-6">
 						<div className="flex flex-col items-start gap-4 sm:flex-row">
-							<div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-contrast text-contrast-foreground">
+							<div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
 								<Sparkles className="h-6 w-6" />
 							</div>
 							<div>
+								<span className="eyebrow mb-2">{t("ai_curated")}</span>
 								<h3 className="mb-2 font-bold text-lg">{t("how_title")}</h3>
 								<p className="mb-4 text-muted-foreground">
 									{t("how_description")}

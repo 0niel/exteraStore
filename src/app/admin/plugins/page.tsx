@@ -5,6 +5,7 @@ import {
 	Download,
 	Edit,
 	Loader2,
+	Search,
 	Star,
 	Trash2,
 	User,
@@ -176,14 +177,29 @@ export default function AdminPluginsPage() {
 	return (
 		<div className="py-8">
 			<div className="container mx-auto max-w-6xl px-4">
-				<h1 className="mb-6 font-bold text-3xl md:text-4xl">{t("title")}</h1>
+				<div className="mb-6 animate-fade-up">
+					<span className="eyebrow mb-2">{t("eyebrow")}</span>
+					<div className="flex flex-wrap items-center gap-3">
+						<h1 className="font-bold text-3xl tracking-tight md:text-4xl">
+							{t("title")}
+						</h1>
+						{data ? (
+							<span className="inline-flex h-8 items-center rounded-full border border-primary/15 bg-primary/5 px-3 font-mono font-semibold text-primary text-sm">
+								{data.plugins.length}
+							</span>
+						) : null}
+					</div>
+				</div>
 
-				<Input
-					placeholder={t("search_placeholder")}
-					value={search}
-					onChange={(e) => setSearch(e.target.value)}
-					className="mb-6"
-				/>
+				<div className="relative mb-6 max-w-md">
+					<Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+					<Input
+						placeholder={t("search_placeholder")}
+						value={search}
+						onChange={(e) => setSearch(e.target.value)}
+						className="min-h-11 pl-10"
+					/>
+				</div>
 
 				<Tabs
 					defaultValue="pending"
@@ -210,7 +226,10 @@ export default function AdminPluginsPage() {
 							) : (
 								<div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
 									{data?.plugins.map((plugin: AdminPlugin) => (
-										<Card key={plugin.id} className="group animate-fade-in">
+										<Card
+											key={plugin.id}
+											className="group card-lift animate-fade-in"
+										>
 											<CardHeader>
 												<CardTitle className="line-clamp-1">
 													{plugin.name}
@@ -222,19 +241,33 @@ export default function AdminPluginsPage() {
 											<CardContent className="space-y-4">
 												<div className="flex items-center justify-between text-muted-foreground text-sm">
 													<span className="flex items-center gap-1">
-														<User className="h-4 w-4" />
+														<User className="h-4 w-4 text-primary/70" />
 														{plugin.author}
 													</span>
-													<span className="flex items-center gap-1">
-														<Download className="h-4 w-4" />
+													<span className="flex items-center gap-1 font-mono">
+														<Download className="h-4 w-4 text-primary/70" />
 														{plugin.downloadCount}
 													</span>
-													<span className="flex items-center gap-1">
-														<Star className="h-4 w-4" />
+													<span className="flex items-center gap-1 font-mono">
+														<Star className="h-4 w-4 text-primary/70" />
 														{plugin.rating.toFixed(1)}
 													</span>
 												</div>
-												<Badge variant="outline">
+												<Badge
+													className={
+														(
+															{
+																approved:
+																	"border-transparent bg-success/15 text-success",
+																pending:
+																	"border-transparent bg-warning/15 text-warning",
+																rejected:
+																	"border-transparent bg-destructive/15 text-destructive",
+															} as Record<string, string>
+														)[plugin.status] ??
+														"border-transparent bg-muted text-muted-foreground"
+													}
+												>
 													{t(
 														plugin.status as
 															| "pending"

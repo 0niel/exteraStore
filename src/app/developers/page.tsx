@@ -19,13 +19,13 @@ import {
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import { PageHeader } from "~/components/page-header";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { EmptyState } from "~/components/ui/empty-state";
 import { Input } from "~/components/ui/input";
-import { Progress } from "~/components/ui/progress";
 import { Skeleton } from "~/components/ui/skeleton";
 import { cn, formatNumber } from "~/lib/utils";
 import { api, type RouterOutputs } from "~/trpc/react";
@@ -94,22 +94,18 @@ export default function DevelopersPage() {
 
 	return (
 		<div className="bg-background">
-			<div className="container mx-auto px-4 py-8">
-				<div className="mb-8 text-center">
-					<div className="mb-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 font-medium text-primary text-sm">
-						<Users className="h-4 w-4" />
-						{t("badge")}
-					</div>
-					<h1 className="mb-4 font-bold text-3xl tracking-tight sm:text-4xl">
-						{t("title")}
-					</h1>
-					<p className="mx-auto max-w-2xl text-balance text-muted-foreground">
-						{t("description")}
-					</p>
-				</div>
-
-				<div className="mb-6">
-					<div className="relative mx-auto max-w-md">
+			<div className="container relative isolate mx-auto px-4 py-8">
+				<div
+					aria-hidden="true"
+					className="pointer-events-none absolute -top-24 left-1/2 -z-10 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl"
+				/>
+				<PageHeader
+					badge={t("badge")}
+					title={t("title")}
+					description={t("description")}
+					icon={Users}
+				>
+					<div className="relative w-full max-w-md">
 						<Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 						<Input
 							placeholder={t("search_placeholder")}
@@ -118,6 +114,15 @@ export default function DevelopersPage() {
 							className="min-h-11 pl-10"
 						/>
 					</div>
+				</PageHeader>
+
+				<div className="mb-5 flex min-h-6 items-center justify-between gap-3">
+					<span className="eyebrow">{t("section_leaderboard")}</span>
+					{!isLoading && (
+						<span className="font-mono text-muted-foreground text-xs tabular-nums">
+							{String(filteredDevelopers.length).padStart(2, "0")}
+						</span>
+					)}
 				</div>
 
 				{isLoading ? (
@@ -196,32 +201,40 @@ export default function DevelopersPage() {
 											className="group card-lift relative h-full cursor-pointer overflow-hidden bg-card"
 											onClick={() => router.push(`/developers/${developer.id}`)}
 										>
-											<div className="absolute inset-x-0 top-0 h-0.5 bg-primary opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+											<div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-primary to-primary/20 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
 											{hasMedal && (
 												<div
 													className={cn(
-														"absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full font-bold text-sm shadow-md",
+														"absolute top-3 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-xl font-bold font-mono text-sm tabular-nums",
 														rank === 1
-															? "bg-primary text-primary-foreground"
-															: "bg-contrast text-contrast-foreground",
+															? "btn-glow bg-primary text-primary-foreground"
+															: "bg-primary/10 text-primary",
 													)}
 												>
 													<span className="sr-only">{t("rank", { rank })}</span>
 													<span aria-hidden="true">{rank}</span>
 												</div>
 											)}
+											{showMedals && !hasMedal && (
+												<span
+													aria-hidden="true"
+													className="absolute top-3 right-4 z-10 font-bold font-mono text-muted-foreground/30 text-sm tabular-nums"
+												>
+													{String(rank).padStart(2, "0")}
+												</span>
+											)}
 
 											<CardContent className="relative flex h-full flex-col p-6">
 												<div className="mb-4 flex items-start gap-4">
 													<div className="relative">
-														<Avatar className="h-14 w-14 border-2 border-border">
+														<Avatar className="h-14 w-14 border-2 border-border transition-colors duration-300 group-hover:border-primary/50">
 															<AvatarImage
 																src={developer.image || undefined}
 																alt={developer.name || ""}
 																className="object-cover"
 															/>
-															<AvatarFallback className="bg-muted font-medium text-foreground text-sm">
+															<AvatarFallback className="bg-primary/10 font-medium text-primary text-sm">
 																{(developer.name || "??")
 																	.slice(0, 2)
 																	.toUpperCase()}
@@ -237,7 +250,7 @@ export default function DevelopersPage() {
 															{developer.name || t("anonymous")}
 														</h3>
 														<div className="mt-2">
-															<Badge className="border-0 bg-contrast px-3 py-1 text-contrast-foreground text-xs">
+															<Badge className="border border-primary/20 bg-primary/10 px-3 py-1 text-primary text-xs">
 																<TierIcon className="mr-1.5 h-3 w-3" />
 																{t("tier_developer", {
 																	tier: t(`tier_${tier.key}`),
@@ -261,22 +274,30 @@ export default function DevelopersPage() {
 																	tier: t(`tier_${progress.nextTier.key}`),
 																})}
 															</span>
-															<span className="font-medium text-primary tabular-nums">
+															<span className="font-medium font-mono text-primary tabular-nums">
 																{Math.round(progress.progress)}%
 															</span>
 														</div>
-														<Progress
-															value={progress.progress}
-															className="h-1.5"
-														/>
+														<div
+															role="progressbar"
+															aria-valuenow={Math.round(progress.progress)}
+															aria-valuemin={0}
+															aria-valuemax={100}
+															className="h-1.5 w-full overflow-hidden rounded-full bg-primary/10"
+														>
+															<div
+																className="h-full rounded-full bg-gradient-to-r from-primary/60 to-primary"
+																style={{ width: `${progress.progress}%` }}
+															/>
+														</div>
 													</div>
 												)}
 
 												<div className="mb-4 grid grid-cols-3 gap-2 text-center">
-													<div className="rounded-lg bg-muted/40 p-2">
+													<div className="rounded-xl bg-primary/5 p-2">
 														<div className="flex items-center justify-center gap-1">
-															<Package className="h-3 w-3 text-muted-foreground" />
-															<span className="font-medium text-sm tabular-nums">
+															<Package className="h-3 w-3 text-primary" />
+															<span className="font-bold font-mono text-sm tabular-nums">
 																{developer.pluginCount || 0}
 															</span>
 														</div>
@@ -285,10 +306,10 @@ export default function DevelopersPage() {
 														</div>
 													</div>
 
-													<div className="rounded-lg bg-muted/40 p-2">
+													<div className="rounded-xl bg-primary/5 p-2">
 														<div className="flex items-center justify-center gap-1">
-															<Download className="h-3 w-3 text-muted-foreground" />
-															<span className="font-medium text-sm tabular-nums">
+															<Download className="h-3 w-3 text-primary" />
+															<span className="font-bold font-mono text-sm tabular-nums">
 																{formatNumber(developer.totalDownloads || 0)}
 															</span>
 														</div>
@@ -297,10 +318,10 @@ export default function DevelopersPage() {
 														</div>
 													</div>
 
-													<div className="rounded-lg bg-muted/40 p-2">
+													<div className="rounded-xl bg-primary/5 p-2">
 														<div className="flex items-center justify-center gap-1">
-															<Star className="h-3 w-3 text-muted-foreground" />
-															<span className="font-medium text-sm tabular-nums">
+															<Star className="h-3 w-3 text-primary" />
+															<span className="font-bold font-mono text-sm tabular-nums">
 																{developer.averageRating?.toFixed(1) || "0.0"}
 															</span>
 														</div>

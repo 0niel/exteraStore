@@ -172,20 +172,30 @@ export default function AdminUsersPage() {
 	return (
 		<div className="py-8">
 			<div className="container mx-auto max-w-6xl px-4">
-				<div className="mb-6 flex items-center justify-between">
-					<h1 className="font-bold text-3xl md:text-4xl">{t("title")}</h1>
+				<div className="mb-6 animate-fade-up">
+					<span className="eyebrow mb-2">{t("eyebrow")}</span>
+					<div className="flex flex-wrap items-center gap-3">
+						<h1 className="font-bold text-3xl tracking-tight md:text-4xl">
+							{t("title")}
+						</h1>
+						{data ? (
+							<span className="inline-flex h-8 items-center rounded-full border border-primary/15 bg-primary/5 px-3 font-mono font-semibold text-primary text-sm">
+								{data.users.length}
+							</span>
+						) : null}
+					</div>
 				</div>
 
 				<div className="mb-6 flex gap-4">
-					<div className="relative flex-1">
-						<Search className="absolute top-3.5 left-3 h-4 w-4 text-muted-foreground" />
+					<div className="relative max-w-md flex-1">
+						<Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 						<Input
 							placeholder={t("search_placeholder")}
 							value={search}
 							onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
 								setSearch(e.target.value)
 							}
-							className="pl-10"
+							className="min-h-11 pl-10"
 						/>
 					</div>
 				</div>
@@ -215,7 +225,10 @@ export default function AdminUsersPage() {
 							) : (
 								<div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
 									{data?.users.map((user) => (
-										<Card key={user.id} className="group animate-fade-in">
+										<Card
+											key={user.id}
+											className="group card-lift animate-fade-in"
+										>
 											<CardHeader>
 												<div className="flex items-start justify-between gap-2">
 													<div className="min-w-0 flex-1">
@@ -255,17 +268,17 @@ export default function AdminUsersPage() {
 														</div>
 													)}
 													<div className="flex items-center gap-2">
-														<Shield className="h-4 w-4" />
+														<Shield className="h-4 w-4 text-primary/70" />
 														<span>{t("role", { role: user.role })}</span>
 													</div>
 													<div className="flex items-center gap-2">
-														<Download className="h-4 w-4" />
+														<Download className="h-4 w-4 text-primary/70" />
 														<span>
 															{t("plugins_count", { count: user.pluginCount })}
 														</span>
 													</div>
 													<div className="flex items-center gap-2">
-														<MessageSquare className="h-4 w-4" />
+														<MessageSquare className="h-4 w-4 text-primary/70" />
 														<span>
 															{t("reviews_count", {
 																count: user.reviewCount || 0,
