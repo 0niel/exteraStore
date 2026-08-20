@@ -7,6 +7,7 @@ const FIRST_RUN_DELAY_MS = 60_000;
 const TICK_INTERVAL_MS = 600_000;
 const STUCK_PROCESSING_SECONDS = 1_800;
 const MAX_FAILURE_AGE_SECONDS = 7 * 86_400;
+const EXHAUSTED_COOLDOWN_SECONDS = 6 * 3_600;
 
 const globalState = globalThis as typeof globalThis & {
 	__pipelineRetryStarted?: boolean;
@@ -31,6 +32,20 @@ async function retryTick() {
 			),
 		)
 		.returning({ id: pluginPipelineQueue.id });
+
+	await db
+		.update(pluginPipelineQueue)
+		.set({
+			retryCount: sql`greatest(${pluginPipelineQueue.maxRetries} - 1, 0)`,
+		})
+		.where(
+			and(
+				eq(pluginPipelineQueue.status, "failed"),
+				sql`${pluginPipelineQueue.retryCount} >= ${pluginPipelineQueue.maxRetries}`,
+				sql`coalesce(${pluginPipelineQueue.completedAt}, ${pluginPipelineQueue.createdAt}) < ${now - EXHAUSTED_COOLDOWN_SECONDS}`,
+				sql`coalesce(${pluginPipelineQueue.completedAt}, ${pluginPipelineQueue.createdAt}) >= ${now - MAX_FAILURE_AGE_SECONDS}`,
+			),
+		);
 
 	const retryable = await db
 		.select({ id: pluginPipelineQueue.id })
