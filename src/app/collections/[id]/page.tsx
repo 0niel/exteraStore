@@ -20,15 +20,16 @@ type CollectionPlugin = AICollection["plugins"][number];
 
 const coverTreatments = [
 	{
-		cover: "bg-contrast text-contrast-foreground",
-		chip: "bg-primary text-primary-foreground",
-	},
-	{
 		cover: "bg-primary text-primary-foreground",
 		chip: "bg-contrast text-contrast-foreground",
 	},
 	{
-		cover: "border-2 border-primary bg-primary/10 text-foreground",
+		cover: "bg-primary/10 text-foreground",
+		chip: "bg-primary text-primary-foreground",
+	},
+	{
+		cover:
+			"border-primary border-b-2 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent text-foreground",
 		chip: "bg-primary text-primary-foreground",
 	},
 ] as const;
@@ -94,7 +95,7 @@ export default function CollectionDetailPage() {
 		return (
 			<div className="flex min-h-[60dvh] items-center justify-center bg-background">
 				<div className="animate-fade-up px-4 text-center">
-					<div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-contrast text-contrast-foreground">
+					<div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10 text-primary">
 						<Sparkles className="h-10 w-10" />
 					</div>
 					<h1 className="mb-2 font-bold text-2xl">{t("not_found_title")}</h1>
@@ -175,19 +176,23 @@ export default function CollectionDetailPage() {
 						</div>
 					</div>
 
-					<div className="grid animate-fade-up grid-cols-3 gap-4 rounded-xl border bg-card p-4">
-						<div className="text-center">
-							<div className="flex items-center justify-center gap-1 font-bold text-lg text-primary tabular-nums">
+					<div className="grid animate-fade-up grid-cols-3 gap-3">
+						<div className="rounded-2xl border bg-card p-4 text-center shadow-soft">
+							<div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
 								<Sparkles className="h-4 w-4" />
+							</div>
+							<div className="font-bold font-mono text-xl tabular-nums">
 								{plugins.length}
 							</div>
 							<div className="text-muted-foreground text-xs">
 								{t("stat_plugins")}
 							</div>
 						</div>
-						<div className="text-center">
-							<div className="flex items-center justify-center gap-1 font-bold text-lg text-primary tabular-nums">
-								<Star className="h-4 w-4 fill-warning text-warning" />
+						<div className="rounded-2xl border bg-card p-4 text-center shadow-soft">
+							<div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+								<Star className="h-4 w-4" />
+							</div>
+							<div className="font-bold font-mono text-xl tabular-nums">
 								{plugins.length > 0
 									? (
 											plugins.reduce(
@@ -201,9 +206,11 @@ export default function CollectionDetailPage() {
 								{t("avg_rating")}
 							</div>
 						</div>
-						<div className="text-center">
-							<div className="flex items-center justify-center gap-1 font-bold text-lg text-primary tabular-nums">
+						<div className="rounded-2xl border bg-card p-4 text-center shadow-soft">
+							<div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
 								<Calendar className="h-4 w-4" />
+							</div>
+							<div className="font-bold font-mono text-xl tabular-nums">
 								{format.dateTime(createValidDate(collection.generatedAt), {
 									day: "numeric",
 									month: "short",
@@ -217,16 +224,18 @@ export default function CollectionDetailPage() {
 				</div>
 
 				<div className="space-y-6">
-					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-3">
-							<span className="h-6 w-1 rounded-full bg-primary" />
-							<h2 className="font-bold text-2xl">
+					<div className="flex items-end justify-between gap-3">
+						<div>
+							<span className="eyebrow">
+								{t("plugin_count", { count: plugins.length })}
+							</span>
+							<h2 className="mt-2 font-bold text-2xl">
 								{t("plugins_in_collection")}
 							</h2>
 						</div>
-						<Badge variant="outline" className="text-sm">
-							{t("plugin_count", { count: plugins.length })}
-						</Badge>
+						<span className="font-mono text-muted-foreground text-sm tabular-nums">
+							{String(plugins.length).padStart(2, "0")}
+						</span>
 					</div>
 
 					{plugins.length === 0 ? (
@@ -257,13 +266,18 @@ export default function CollectionDetailPage() {
 					)}
 				</div>
 
-				<Card className="mt-12 overflow-hidden border">
+				<Card className="relative mt-12 overflow-hidden border">
+					<div
+						aria-hidden="true"
+						className="pointer-events-none absolute -top-20 -right-20 h-56 w-56 rounded-full bg-primary/10 blur-3xl"
+					/>
 					<CardContent className="p-6">
 						<div className="flex flex-col items-start gap-4 sm:flex-row">
-							<div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-contrast text-contrast-foreground">
+							<div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
 								<Sparkles className="h-6 w-6" />
 							</div>
 							<div>
+								<span className="eyebrow mb-2">{t("ai_curated")}</span>
 								<h3 className="mb-2 font-bold text-lg">
 									{t("ai_generated_title")}
 								</h3>

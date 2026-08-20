@@ -183,19 +183,13 @@ export function PluginVersions({ pluginSlug }: PluginVersionsProps) {
 
 	if (!versions || versions.length === 0) {
 		return (
-			<Card>
-				<CardContent className="pt-6">
-					<div className="py-8 text-center">
-						<GitBranch className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-						<h3 className="mb-2 font-medium text-lg">
-							{t("no_versions_found")}
-						</h3>
-						<p className="text-muted-foreground">
-							{t("no_versions_description")}
-						</p>
-					</div>
-				</CardContent>
-			</Card>
+			<div className="rounded-2xl border border-dashed bg-primary/5 p-8 text-center">
+				<div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-primary">
+					<GitBranch className="h-7 w-7" />
+				</div>
+				<h3 className="mb-2 font-medium text-lg">{t("no_versions_found")}</h3>
+				<p className="text-muted-foreground">{t("no_versions_description")}</p>
+			</div>
 		);
 	}
 
@@ -203,18 +197,26 @@ export function PluginVersions({ pluginSlug }: PluginVersionsProps) {
 		<div className="space-y-4">
 			<div className="flex items-center justify-between">
 				<div>
-					<h3 className="font-semibold text-lg">{t("version_history")}</h3>
+					<span className="eyebrow mb-2">{t("version_history")}</span>
 					<p className="text-muted-foreground text-sm">{t("all_versions")}</p>
 				</div>
-				<Badge variant="outline">
+				<Badge
+					variant="outline"
+					className="border-primary/30 bg-primary/5 font-mono text-primary"
+				>
 					{versions.length} {t(versions.length === 1 ? "version" : "versions")}
 				</Badge>
 			</div>
 
-			<div className="space-y-3">
+			<div className="relative space-y-3 pl-7 md:pl-9">
+				<div
+					className="absolute top-4 bottom-4 left-[7px] w-px bg-border md:left-[9px]"
+					aria-hidden="true"
+				/>
 				{versions.map((version: PluginVersion, index: number) => (
 					<motion.div
 						key={version.id}
+						className="relative"
 						{...(reduceMotion
 							? {}
 							: {
@@ -228,12 +230,29 @@ export function PluginVersions({ pluginSlug }: PluginVersionsProps) {
 									},
 								})}
 					>
-						<Card className={index === 0 ? "border-primary" : ""}>
+						<span
+							className={`absolute top-8 -left-7 h-3.5 w-3.5 rounded-full ring-4 md:-left-9 ${
+								index === 0
+									? "bg-primary ring-primary/15"
+									: "bg-primary/40 ring-primary/10"
+							}`}
+							aria-hidden="true"
+						/>
+						<Card
+							className={
+								index === 0
+									? "border-primary/25 bg-linear-to-br from-primary/5 to-transparent"
+									: ""
+							}
+						>
 							<CardContent className="pt-6">
 								<div className="flex items-start justify-between gap-4">
 									<div className="min-w-0 flex-1">
 										<div className="mb-2 flex items-center gap-2">
-											<h4 className="font-semibold text-lg">
+											<span className="font-mono text-muted-foreground text-xs">
+												{String(versions.length - index).padStart(2, "0")}
+											</span>
+											<h4 className="font-mono font-semibold text-lg">
 												v{version.version}
 											</h4>
 											{index === 0 && (
@@ -309,7 +328,7 @@ export function PluginVersions({ pluginSlug }: PluginVersionsProps) {
 													<FileText className="h-4 w-4" />
 													{t("changelog")}
 												</h5>
-												<div className="prose prose-sm prose-neutral dark:prose-invert max-w-none rounded bg-muted p-3">
+												<div className="prose prose-sm prose-neutral dark:prose-invert max-w-none rounded-xl bg-primary/5 p-3">
 													<ReactMarkdown>{version.changelog}</ReactMarkdown>
 												</div>
 											</div>
@@ -402,7 +421,7 @@ export function PluginVersions({ pluginSlug }: PluginVersionsProps) {
 														<div className="font-medium text-sm">
 															{t("sha256_hash")}
 														</div>
-														<p className="rounded bg-muted p-2 font-mono text-muted-foreground text-xs">
+														<p className="rounded-xl bg-muted p-2 font-mono text-muted-foreground text-xs">
 															{version.fileHash}
 														</p>
 													</div>
@@ -448,7 +467,7 @@ export function PluginVersions({ pluginSlug }: PluginVersionsProps) {
 															<div className="font-medium text-sm">
 																{t("changelog")}
 															</div>
-															<div className="prose prose-sm prose-neutral dark:prose-invert mt-2 max-w-none rounded bg-muted p-3">
+															<div className="prose prose-sm prose-neutral dark:prose-invert mt-2 max-w-none rounded-xl bg-primary/5 p-3">
 																<ReactMarkdown>
 																	{version.changelog}
 																</ReactMarkdown>

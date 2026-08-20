@@ -65,7 +65,7 @@ export function AskAi({ pluginId, pluginName }: AskAiProps) {
 			<DialogTrigger asChild>
 				<Button
 					variant="outline"
-					className="press-scale min-h-11 gap-2 border-primary/30"
+					className="press-scale min-h-11 gap-2 border-primary/30 bg-primary/5 hover:bg-primary/10"
 				>
 					<Sparkles className="h-4 w-4 text-primary" />
 					{t("ask_button")}
@@ -74,7 +74,9 @@ export function AskAi({ pluginId, pluginName }: AskAiProps) {
 			<DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-lg">
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-2">
-						<Sparkles className="h-5 w-5 text-primary" />
+						<span className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+							<Sparkles className="h-4 w-4" />
+						</span>
 						{t("ask_title", { name: pluginName })}
 					</DialogTitle>
 					<DialogDescription>{t("ask_description")}</DialogDescription>
@@ -146,7 +148,7 @@ export function AskAi({ pluginId, pluginName }: AskAiProps) {
 					)}
 
 					{answer && (
-						<div className="prose prose-neutral dark:prose-invert max-w-none rounded-lg border bg-card p-4 text-sm">
+						<div className="prose prose-neutral dark:prose-invert max-w-none rounded-xl border border-primary/20 bg-linear-to-br from-primary/5 to-transparent p-4 text-sm">
 							<ReactMarkdown>{answer}</ReactMarkdown>
 						</div>
 					)}

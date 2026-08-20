@@ -52,7 +52,7 @@ export function TagSuggest({
 			<Button
 				type="button"
 				variant="ghost"
-				className="min-h-11 gap-2 text-primary hover:text-primary"
+				className="min-h-11 gap-2 rounded-full border border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 hover:text-primary"
 				disabled={!canSuggest || suggestMutation.isPending}
 				onClick={() =>
 					suggestMutation.mutate({
@@ -105,7 +105,7 @@ export function TagSuggest({
 						type="button"
 						variant="outline"
 						size="sm"
-						className="min-h-11 gap-1.5 md:min-h-8"
+						className="min-h-11 gap-1.5 rounded-full border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 hover:text-primary md:min-h-8"
 						onClick={() => {
 							onApplyCategory(suggestedCategory);
 							setSuggestedCategory(null);

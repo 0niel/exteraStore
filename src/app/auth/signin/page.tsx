@@ -25,11 +25,12 @@ export default async function SignInPage() {
 	return (
 		<div className="relative isolate flex min-h-[70dvh] items-center justify-center overflow-hidden px-4 py-12">
 			<div className="grid-fade absolute inset-0 -z-10" />
+			<div className="dot-grid absolute inset-x-0 top-0 -z-10 h-72" />
 			<div className="absolute -top-24 left-1/2 -z-10 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/15 blur-3xl" />
 			<div className="w-full max-w-md">
 				<div className="animate-fade-up rounded-3xl border bg-card p-6 shadow-black/5 shadow-xl sm:p-8">
 					<div className="mb-6 flex flex-col items-center text-center">
-						<div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/25">
+						<div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-linear-to-b from-primary to-[color-mix(in_oklch,var(--primary)_82%,black)] shadow-lg shadow-primary/25">
 							<span className="font-bold text-lg text-primary-foreground">
 								eS
 							</span>
@@ -45,7 +46,7 @@ export default async function SignInPage() {
 					<ul className="mb-6 space-y-3">
 						{benefits.map(({ icon: Icon, text }) => (
 							<li key={text} className="flex items-center gap-3 text-sm">
-								<span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+								<span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
 									<Icon className="size-4" />
 								</span>
 								{text}

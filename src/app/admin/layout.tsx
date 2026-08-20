@@ -100,7 +100,7 @@ export default function AdminLayout({
 			<div className="flex min-h-[60vh] items-center justify-center px-4 py-8">
 				<Card className="w-full max-w-md animate-fade-up text-center">
 					<CardHeader>
-						<div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+						<div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-destructive/10">
 							<Lock className="h-6 w-6 text-destructive" />
 						</div>
 						<CardTitle>{t("access_denied_title")}</CardTitle>
@@ -150,30 +150,29 @@ export default function AdminLayout({
 		<div className="bg-background">
 			<div className="glass sticky top-0 z-40 border-b">
 				<div className="container mx-auto flex h-14 items-center gap-3 px-4">
-					<div className="flex shrink-0 items-center gap-2">
-						<Settings className="h-5 w-5" />
+					<div className="flex shrink-0 items-center gap-2.5">
+						<span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+							<Settings className="h-4 w-4" />
+						</span>
 						<span className="hidden font-semibold sm:inline">
 							{t("admin_panel")}
 						</span>
 					</div>
-					<nav className="scrollbar-hide flex flex-1 snap-x items-center gap-1 overflow-x-auto">
+					<nav className="scrollbar-hide flex flex-1 snap-x items-center gap-1.5 overflow-x-auto">
 						{navItems.map((item) => (
 							<Link
 								key={item.href}
 								href={item.href}
 								aria-current={item.active ? "page" : undefined}
 								className={cn(
-									"relative flex h-11 shrink-0 snap-start items-center gap-2 rounded-lg px-3 font-medium text-sm transition-colors",
+									"press-scale flex h-10 shrink-0 snap-start items-center gap-2 rounded-full px-4 font-medium text-sm transition-colors",
 									item.active
-										? "bg-primary/10 text-primary"
-										: "text-muted-foreground hover:bg-muted hover:text-foreground",
+										? "btn-glow bg-primary text-primary-foreground"
+										: "text-muted-foreground hover:bg-primary/5 hover:text-foreground",
 								)}
 							>
 								{item.icon}
 								{item.label}
-								{item.active && (
-									<span className="absolute inset-x-3 bottom-1 h-0.5 rounded-full bg-primary" />
-								)}
 							</Link>
 						))}
 					</nav>

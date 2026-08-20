@@ -1,21 +1,21 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
+	ArrowRight,
 	Clock3,
+	CornerDownLeft,
 	Download,
-	Filter,
 	Search,
 	Star,
 	TrendingUp,
 	X,
 } from "lucide-react";
-import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDebounce } from "use-debounce";
-import { Button } from "~/components/ui/button";
 import {
 	Dialog,
 	DialogContent,
@@ -23,9 +23,6 @@ import {
 	DialogTitle,
 	DialogTrigger,
 } from "~/components/ui/dialog";
-import { EmptyState } from "~/components/ui/empty-state";
-import { Input } from "~/components/ui/input";
-import { Skeleton } from "~/components/ui/skeleton";
 import { cn, formatNumber, safeJsonParse } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
@@ -36,33 +33,7 @@ interface SearchDialogProps {
 	isMobile?: boolean;
 }
 
-type SortOption = "relevance" | "newest" | "popular" | "rating" | "downloads";
-
-interface SearchFilters {
-	category: string;
-	minRating: number | null;
-	sortBy: SortOption;
-}
-
-interface SearchResult {
-	id: number;
-	name: string;
-	slug: string;
-	shortDescription: string | null;
-	author: string;
-	category: string;
-	rating: number;
-	downloadCount: number;
-	featured: boolean;
-}
-
-interface PopularPlugin {
-	id: number;
-	name: string;
-	slug: string;
-	rating: number;
-	downloadCount: number;
-}
+const RECENT_KEY = "recent-searches";
 
 function Highlight({ text, query }: { text: string; query: string }) {
 	const normalizedQuery = query.trim().toLocaleLowerCase();
@@ -74,11 +45,37 @@ function Highlight({ text, query }: { text: string; query: string }) {
 	return (
 		<>
 			{text.slice(0, index)}
-			<mark className="rounded-sm bg-primary/10 font-medium text-primary">
+			<span className="text-primary underline decoration-2 decoration-primary/40 underline-offset-2">
 				{text.slice(index, index + normalizedQuery.length)}
-			</mark>
+			</span>
 			{text.slice(index + normalizedQuery.length)}
 		</>
+	);
+}
+
+function PluginTile({
+	name,
+	screenshots,
+}: {
+	name: string;
+	screenshots?: string | null;
+}) {
+	const shots = screenshots ? safeJsonParse<unknown>(screenshots, []) : [];
+	const shot =
+		Array.isArray(shots) && typeof shots[0] === "string" ? shots[0] : null;
+
+	if (shot) {
+		return (
+			<span className="relative size-10 shrink-0 overflow-hidden rounded-xl border">
+				<Image src={shot} alt="" fill sizes="40px" className="object-cover" />
+			</span>
+		);
+	}
+
+	return (
+		<span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 font-bold text-primary">
+			{name.slice(0, 1).toUpperCase()}
+		</span>
 	);
 }
 
@@ -88,523 +85,435 @@ export function SearchDialog({
 	className,
 }: SearchDialogProps) {
 	const t = useTranslations("SearchDialog");
-	const prefersReducedMotion = useReducedMotion();
+	const reduceMotion = useReducedMotion();
 	const router = useRouter();
 	const inputRef = useRef<HTMLInputElement>(null);
+	const listRef = useRef<HTMLDivElement>(null);
 	const [open, setOpen] = useState(false);
 	const [query, setQuery] = useState("");
+	const [activeIndex, setActiveIndex] = useState(0);
 	const [recentSearches, setRecentSearches] = useState<string[]>([]);
-	const [showFilters, setShowFilters] = useState(false);
-	const [filters, setFilters] = useState<SearchFilters>({
-		category: "",
-		minRating: null,
-		sortBy: "relevance",
-	});
 	const [debouncedQuery] = useDebounce(query.trim(), 180);
+	const hasQuery = debouncedQuery.length > 0;
 
 	const {
 		data: searchResults,
-		isLoading: isSearching,
+		isFetching: isSearching,
 		isError,
 		refetch,
 	} = api.plugins.advancedSearch.useQuery(
 		{
 			query: debouncedQuery,
-			limit: 12,
-			categories: filters.category ? [filters.category] : undefined,
-			minRating: filters.minRating || undefined,
-			sortBy: filters.sortBy,
+			limit: 8,
+			sortBy: "relevance",
 			includeContent: false,
 		},
-		{ enabled: open && debouncedQuery.length > 0 },
+		{ enabled: open && hasQuery, placeholderData: (prev) => prev },
 	);
-	const { data: popularPlugins, isLoading: isLoadingPopular } =
-		api.plugins.getTrending.useQuery(
-			{ limit: 5 },
-			{ enabled: open && query.trim().length === 0 },
-		);
-	const { data: categories } = api.categories.getAll.useQuery(undefined, {
-		enabled: open,
-	});
+
+	const { data: trending } = api.plugins.getTrending.useQuery(
+		{ limit: 5 },
+		{ enabled: open && !hasQuery },
+	);
+
+	const results = useMemo(
+		() => (hasQuery ? (searchResults?.plugins ?? []) : []),
+		[hasQuery, searchResults],
+	);
+
+	const rowCount = hasQuery ? results.length + (results.length > 0 ? 1 : 0) : 0;
 
 	useEffect(() => {
+		setActiveIndex(0);
+	}, []);
+
+	useEffect(() => {
+		if (!open) return;
 		try {
-			const saved = localStorage.getItem("recent-searches");
+			const saved = localStorage.getItem(RECENT_KEY);
 			const parsed = saved ? safeJsonParse<unknown>(saved, []) : [];
 			if (Array.isArray(parsed)) {
 				setRecentSearches(
 					parsed
 						.filter((item): item is string => typeof item === "string")
-						.slice(0, 6),
+						.slice(0, 5),
 				);
 			}
 		} catch {
 			setRecentSearches([]);
 		}
-	}, []);
-
-	useEffect(() => {
-		const handleShortcut = (event: KeyboardEvent) => {
-			if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-				event.preventDefault();
-				setOpen(true);
-			}
-		};
-		window.addEventListener("keydown", handleShortcut);
-		return () => window.removeEventListener("keydown", handleShortcut);
-	}, []);
-
-	useEffect(() => {
-		if (open) {
-			window.setTimeout(() => inputRef.current?.focus(), 50);
-		}
 	}, [open]);
 
-	const hasActiveFilters =
-		Boolean(filters.category) ||
-		filters.minRating !== null ||
-		filters.sortBy !== "relevance";
-
-	const saveSearch = useCallback(
-		(value: string) => {
-			const normalized = value.trim();
-			if (!normalized) return;
-			const updated = [
-				normalized,
-				...recentSearches.filter(
-					(item) => item.toLocaleLowerCase() !== normalized.toLocaleLowerCase(),
-				),
-			].slice(0, 6);
-			setRecentSearches(updated);
-			try {
-				localStorage.setItem("recent-searches", JSON.stringify(updated));
-			} catch {}
-		},
-		[recentSearches],
-	);
-
-	const buildCatalogUrl = useCallback(
-		(value: string) => {
-			const params = new URLSearchParams();
-			if (value.trim()) params.set("search", value.trim());
-			if (filters.category) params.set("category", filters.category);
-			if (filters.sortBy !== "relevance") {
-				params.set("sort", filters.sortBy);
+	useEffect(() => {
+		const down = (e: KeyboardEvent) => {
+			if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+				e.preventDefault();
+				setOpen((prev) => !prev);
 			}
-			return `/plugins${params.size ? `?${params.toString()}` : ""}`;
-		},
-		[filters],
-	);
+		};
+		document.addEventListener("keydown", down);
+		return () => document.removeEventListener("keydown", down);
+	}, []);
 
-	const submitSearch = useCallback(
-		(value = query) => {
-			const normalized = value.trim();
-			if (!normalized) return;
-			saveSearch(normalized);
-			setOpen(false);
-			router.push(buildCatalogUrl(normalized));
-		},
-		[buildCatalogUrl, query, router, saveSearch],
-	);
-
-	const clearRecent = () => {
-		setRecentSearches([]);
+	const saveRecent = useCallback((term: string) => {
+		if (!term) return;
 		try {
-			localStorage.removeItem("recent-searches");
+			const saved = localStorage.getItem(RECENT_KEY);
+			const parsed = saved ? safeJsonParse<string[]>(saved, []) : [];
+			const next = [term, ...parsed.filter((item) => item !== term)].slice(
+				0,
+				5,
+			);
+			localStorage.setItem(RECENT_KEY, JSON.stringify(next));
 		} catch {}
-	};
+	}, []);
 
-	const resetFilters = () =>
-		setFilters({ category: "", minRating: null, sortBy: "relevance" });
+	const close = useCallback(() => {
+		setOpen(false);
+		setQuery("");
+		setActiveIndex(0);
+	}, []);
 
-	const defaultTrigger = (
-		<Button
-			variant="outline"
-			className={cn("justify-start text-muted-foreground", className)}
-		>
-			<Search />
-			<span className="truncate">{placeholder || t("search_plugins")}</span>
-		</Button>
+	const openPlugin = useCallback(
+		(slug: string) => {
+			saveRecent(query.trim());
+			close();
+			router.push(`/plugins/${slug}`);
+		},
+		[close, query, router, saveRecent],
 	);
 
-	const sortOptions: Array<{ value: SortOption; label: string }> = [
-		{ value: "relevance", label: t("relevance") },
-		{ value: "newest", label: t("newest") },
-		{ value: "popular", label: t("popular") },
-		{ value: "rating", label: t("rating") },
-		{ value: "downloads", label: t("downloads_sort") },
-	];
+	const openAllResults = useCallback(() => {
+		saveRecent(query.trim());
+		close();
+		router.push(`/plugins?search=${encodeURIComponent(debouncedQuery)}`);
+	}, [close, debouncedQuery, query, saveRecent, router]);
 
-	const resultCount = searchResults?.plugins.length || 0;
-	const statusText = useMemo(() => {
-		if (!debouncedQuery) return "";
-		if (isSearching) return t("searching");
-		if (isError) return t("search_failed");
-		return t("results_found", { count: resultCount });
-	}, [debouncedQuery, isError, isSearching, resultCount, t]);
+	const handleKeyDown = useCallback(
+		(e: React.KeyboardEvent) => {
+			if (rowCount === 0) {
+				if (e.key === "Enter" && debouncedQuery) {
+					e.preventDefault();
+					openAllResults();
+				}
+				return;
+			}
+			if (e.key === "ArrowDown") {
+				e.preventDefault();
+				setActiveIndex((prev) => (prev + 1) % rowCount);
+			} else if (e.key === "ArrowUp") {
+				e.preventDefault();
+				setActiveIndex((prev) => (prev - 1 + rowCount) % rowCount);
+			} else if (e.key === "Enter") {
+				e.preventDefault();
+				if (activeIndex < results.length) {
+					const plugin = results[activeIndex];
+					if (plugin) openPlugin(plugin.slug);
+				} else {
+					openAllResults();
+				}
+			}
+		},
+		[
+			activeIndex,
+			debouncedQuery,
+			openAllResults,
+			openPlugin,
+			results,
+			rowCount,
+		],
+	);
+
+	useEffect(() => {
+		const activeEl = listRef.current?.querySelector('[data-active="true"]');
+		activeEl?.scrollIntoView({ block: "nearest" });
+	}, []);
+
+	const motionProps = reduceMotion
+		? {}
+		: {
+				initial: { opacity: 0, y: 4 },
+				animate: { opacity: 1, y: 0 },
+				exit: { opacity: 0 },
+				transition: { duration: 0.15 },
+			};
 
 	return (
-		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger asChild>{trigger || defaultTrigger}</DialogTrigger>
+		<Dialog
+			open={open}
+			onOpenChange={(next) => {
+				setOpen(next);
+				if (!next) close();
+			}}
+		>
+			<DialogTrigger asChild>
+				{trigger || (
+					<button
+						type="button"
+						className={cn(
+							"flex min-h-11 items-center gap-2 rounded-xl border bg-muted/50 px-3 text-muted-foreground text-sm transition-colors hover:border-primary/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+							className,
+						)}
+					>
+						<Search className="size-4 shrink-0" />
+						<span className="min-w-0 flex-1 truncate text-left">
+							{placeholder || t("search_plugins")}
+						</span>
+						<kbd className="pointer-events-none hidden rounded-md border bg-background px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground lg:block">
+							⌘K
+						</kbd>
+					</button>
+				)}
+			</DialogTrigger>
 			<DialogContent
 				showCloseButton={false}
-				className="top-0 left-0 grid h-dvh w-screen max-w-none translate-x-0 translate-y-0 grid-rows-[auto_auto_1fr] gap-0 rounded-none border-0 p-0 sm:top-1/2 sm:left-1/2 sm:h-[min(80vh,48rem)] sm:max-w-3xl sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border"
+				className="top-0 h-dvh w-full max-w-full translate-y-0 gap-0 overflow-hidden rounded-none border-0 p-0 sm:top-[8rem] sm:h-auto sm:max-w-2xl sm:rounded-2xl sm:border"
 			>
-				<div className="flex min-h-16 items-center gap-3 border-b px-4 pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))] sm:px-5">
-					<div className="min-w-0 flex-1">
-						<DialogTitle>{t("title")}</DialogTitle>
-						<DialogDescription className="truncate">
-							{t("subtitle")}
-						</DialogDescription>
-					</div>
-					<Button
-						variant="ghost"
-						size="icon"
-						className="press-scale size-11"
-						onClick={() => setOpen(false)}
-						aria-label={t("close")}
-					>
-						<X />
-					</Button>
-				</div>
+				<DialogTitle className="sr-only">{t("title")}</DialogTitle>
+				<DialogDescription className="sr-only">
+					{t("subtitle")}
+				</DialogDescription>
 
-				<div className="border-b p-3 sm:p-4">
-					<form
-						onSubmit={(event) => {
-							event.preventDefault();
-							submitSearch();
-						}}
-						className="flex gap-2"
-					>
-						<div className="relative min-w-0 flex-1">
-							<Search className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted-foreground" />
-							<Input
-								ref={inputRef}
-								value={query}
-								onChange={(event) => setQuery(event.target.value)}
-								placeholder={placeholder || t("search_plugins")}
-								className="h-12 rounded-xl pr-12 pl-12 text-base"
-								autoComplete="off"
-								aria-label={t("query_label")}
-							/>
-							{query && (
-								<button
-									type="button"
-									onClick={() => setQuery("")}
-									className="press-scale absolute top-1/2 right-1 flex size-11 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-									aria-label={t("clear_query")}
-								>
-									<X className="size-4" />
-								</button>
-							)}
-						</div>
-						<Button
+				<div className="flex items-center gap-3 border-b px-4 sm:px-5">
+					<Search
+						className={cn(
+							"size-5 shrink-0",
+							isSearching
+								? "animate-pulse-dot text-primary"
+								: "text-muted-foreground",
+						)}
+					/>
+					<input
+						ref={inputRef}
+						value={query}
+						onChange={(e) => setQuery(e.target.value)}
+						onKeyDown={handleKeyDown}
+						placeholder={placeholder || t("search_plugins")}
+						aria-label={t("query_label")}
+						className="h-16 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground sm:text-lg"
+					/>
+					{query && (
+						<button
 							type="button"
-							variant={hasActiveFilters ? "default" : "outline"}
-							size="icon"
-							className="press-scale size-11"
-							onClick={() => setShowFilters((value) => !value)}
-							aria-label={t("filters")}
-							aria-expanded={showFilters}
+							onClick={() => {
+								setQuery("");
+								inputRef.current?.focus();
+							}}
+							aria-label={t("clear_query")}
+							className="flex size-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
 						>
-							<Filter />
-						</Button>
-					</form>
-
-					{showFilters && (
-						<div className="mt-3 space-y-3 rounded-xl bg-muted/50 p-3">
-							<div>
-								<div className="mb-2 font-medium text-sm">{t("sort_by")}</div>
-								<div className="scrollbar-hide -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-									{sortOptions.map((option) => (
-										<button
-											key={option.value}
-											type="button"
-											onClick={() =>
-												setFilters((current) => ({
-													...current,
-													sortBy: option.value,
-												}))
-											}
-											className={cn(
-												"min-h-11 shrink-0 rounded-full border px-4 font-medium text-sm transition-colors",
-												filters.sortBy === option.value
-													? "border-primary bg-primary text-primary-foreground"
-													: "bg-background hover:border-primary/50",
-											)}
-											aria-pressed={filters.sortBy === option.value}
-										>
-											{option.label}
-										</button>
-									))}
-								</div>
-							</div>
-							<div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-								<label className="grid gap-1 font-medium text-sm">
-									{t("category")}
-									<select
-										value={filters.category}
-										onChange={(event) =>
-											setFilters((current) => ({
-												...current,
-												category: event.target.value,
-											}))
-										}
-										className="h-11 rounded-lg border bg-background px-3 font-normal"
-									>
-										<option value="">{t("all_categories")}</option>
-										{categories?.map((category) => (
-											<option key={category.id} value={category.slug}>
-												{category.name}
-											</option>
-										))}
-									</select>
-								</label>
-								<div>
-									<div className="mb-1 font-medium text-sm">{t("rating")}</div>
-									<div className="flex gap-2">
-										{[4, 3].map((rating) => (
-											<button
-												key={rating}
-												type="button"
-												onClick={() =>
-													setFilters((current) => ({
-														...current,
-														minRating:
-															current.minRating === rating ? null : rating,
-													}))
-												}
-												className={cn(
-													"min-h-11 rounded-lg border px-3 text-sm",
-													filters.minRating === rating &&
-														"border-primary bg-primary text-primary-foreground",
-												)}
-												aria-pressed={filters.minRating === rating}
-											>
-												{rating}+ ★
-											</button>
-										))}
-									</div>
-								</div>
-							</div>
-							{hasActiveFilters && (
-								<Button
-									variant="ghost"
-									className="min-h-11"
-									onClick={resetFilters}
-								>
-									{t("clear_filters")}
-								</Button>
-							)}
-						</div>
+							<X className="size-4" />
+						</button>
 					)}
+					<button
+						type="button"
+						onClick={close}
+						aria-label={t("close")}
+						className="flex size-9 shrink-0 items-center justify-center rounded-lg border text-muted-foreground text-xs transition-colors hover:bg-muted hover:text-foreground sm:hidden"
+					>
+						<X className="size-4" />
+					</button>
+					<kbd className="pointer-events-none hidden rounded-md border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground sm:block">
+						esc
+					</kbd>
 				</div>
 
 				<div
-					className="min-h-0 overflow-y-auto px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:px-5"
-					aria-busy={isSearching}
+					ref={listRef}
+					className="h-[calc(100dvh-8.5rem)] overflow-y-auto overscroll-contain p-2 sm:h-auto sm:max-h-[24rem] sm:min-h-[16rem]"
 				>
-					<p className="sr-only" aria-live="polite">
-						{statusText}
-					</p>
-					{query.trim() ? (
-						isSearching ? (
-							<div className="space-y-2">
-								{Array.from({ length: 5 }).map((_, index) => (
-									<div key={index} className="flex items-center gap-3 p-3">
-										<Skeleton className="size-11 rounded-xl" />
-										<div className="flex-1 space-y-2">
-											<Skeleton className="h-4 w-1/2" />
-											<Skeleton className="h-3 w-4/5" />
+					<AnimatePresence mode="popLayout" initial={false}>
+						{!hasQuery && (
+							<motion.div key="idle" {...motionProps}>
+								{recentSearches.length > 0 && (
+									<div className="px-3 pt-3 pb-1">
+										<p className="mb-2 font-medium text-muted-foreground text-xs uppercase tracking-wider">
+											{t("recent_searches")}
+										</p>
+										<div className="flex flex-wrap gap-2">
+											{recentSearches.map((term) => (
+												<button
+													key={term}
+													type="button"
+													onClick={() => setQuery(term)}
+													className="flex min-h-9 items-center gap-1.5 rounded-full border bg-muted/40 px-3 text-sm transition-colors hover:border-primary/40 hover:text-primary"
+												>
+													<Clock3 className="size-3.5 text-muted-foreground" />
+													{term}
+												</button>
+											))}
+										</div>
+									</div>
+								)}
+
+								<div className="px-3 pt-4 pb-1">
+									<p className="mb-1 flex items-center gap-1.5 font-medium text-muted-foreground text-xs uppercase tracking-wider">
+										<TrendingUp className="size-3.5 text-primary" />
+										{t("trending_now")}
+									</p>
+								</div>
+								{(trending ?? []).map((plugin, index) => (
+									<button
+										key={plugin.id}
+										type="button"
+										onClick={() => openPlugin(plugin.slug)}
+										className="flex min-h-13 w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors hover:bg-accent"
+									>
+										<span className="w-6 shrink-0 font-bold font-mono text-muted-foreground/60 text-sm">
+											{String(index + 1).padStart(2, "0")}
+										</span>
+										<span className="min-w-0 flex-1 truncate font-medium">
+											{plugin.name}
+										</span>
+										<span className="flex shrink-0 items-center gap-1 text-muted-foreground text-xs">
+											<Star className="size-3.5 fill-warning text-warning" />
+											{plugin.rating.toFixed(1)}
+										</span>
+										<span className="hidden shrink-0 items-center gap-1 text-muted-foreground text-xs sm:flex">
+											<Download className="size-3.5" />
+											{formatNumber(plugin.downloadCount)}
+										</span>
+									</button>
+								))}
+							</motion.div>
+						)}
+
+						{hasQuery && isError && (
+							<motion.div
+								key="error"
+								{...motionProps}
+								className="flex flex-col items-center gap-3 px-4 py-12 text-center"
+							>
+								<p className="font-medium">{t("search_error_title")}</p>
+								<p className="text-muted-foreground text-sm">
+									{t("search_error_description")}
+								</p>
+								<button
+									type="button"
+									onClick={() => refetch()}
+									className="mt-1 flex min-h-10 items-center rounded-xl bg-primary px-4 font-medium text-primary-foreground text-sm"
+								>
+									{t("retry")}
+								</button>
+							</motion.div>
+						)}
+
+						{hasQuery && !isError && results.length === 0 && !isSearching && (
+							<motion.div
+								key="empty"
+								{...motionProps}
+								className="flex flex-col items-center gap-2 px-4 py-12 text-center"
+							>
+								<span className="flex size-12 items-center justify-center rounded-2xl bg-primary/10">
+									<Search className="size-5 text-primary" />
+								</span>
+								<p className="font-medium">{t("no_results")}</p>
+								<p className="max-w-sm text-muted-foreground text-sm">
+									{t("no_results_hint", { query: debouncedQuery })}
+								</p>
+							</motion.div>
+						)}
+
+						{hasQuery && !isError && results.length === 0 && isSearching && (
+							<motion.div
+								key="loading"
+								{...motionProps}
+								className="space-y-1 p-1"
+							>
+								{[0, 1, 2, 3].map((i) => (
+									<div
+										key={i}
+										className="flex items-center gap-3 rounded-xl px-3 py-2.5"
+									>
+										<div className="skeleton-shimmer size-10 rounded-xl" />
+										<div className="flex-1 space-y-1.5">
+											<div className="skeleton-shimmer h-3.5 w-1/3 rounded" />
+											<div className="skeleton-shimmer h-3 w-2/3 rounded" />
 										</div>
 									</div>
 								))}
-							</div>
-						) : isError ? (
-							<EmptyState
-								icon="↻"
-								title={t("search_error_title")}
-								description={t("search_error_description")}
-								actionLabel={t("retry")}
-								onAction={() => void refetch()}
-							/>
-						) : resultCount === 0 ? (
-							<EmptyState
-								icon="⌕"
-								title={t("no_results")}
-								description={t("no_results_hint", { query: query.trim() })}
-								actionLabel={hasActiveFilters ? t("clear_filters") : undefined}
-								onAction={hasActiveFilters ? resetFilters : undefined}
-							/>
-						) : (
-							<div className="space-y-2">
-								<div className="mb-2 flex items-center justify-between gap-3">
-									<h3 className="font-medium text-muted-foreground text-sm">
-										{t("results_found", { count: resultCount })}
-									</h3>
-									<Button
-										variant="ghost"
-										size="sm"
-										onClick={() => submitSearch()}
+							</motion.div>
+						)}
+
+						{hasQuery && !isError && results.length > 0 && (
+							<motion.div key="results" {...motionProps}>
+								{results.map((plugin, index) => (
+									<button
+										key={plugin.id}
+										type="button"
+										data-active={activeIndex === index}
+										onClick={() => openPlugin(plugin.slug)}
+										onMouseMove={() => setActiveIndex(index)}
+										className={cn(
+											"flex min-h-14 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors",
+											activeIndex === index ? "bg-accent" : "",
+										)}
 									>
-										{t("show_all")}
-									</Button>
-								</div>
-								{searchResults?.plugins.map(
-									(plugin: SearchResult, index: number) => (
-										<motion.div
-											key={plugin.id}
-											initial={
-												prefersReducedMotion ? false : { opacity: 0, y: 8 }
-											}
-											animate={{ opacity: 1, y: 0 }}
-											transition={{
-												duration: 0.3,
-												ease: [0.16, 1, 0.3, 1],
-												delay: Math.min(index * 0.03, 0.24),
-											}}
-										>
-											<Link
-												href={`/plugins/${plugin.slug}`}
-												onClick={() => {
-													saveSearch(query);
-													setOpen(false);
-												}}
-												className="flex min-h-19 items-center gap-3 rounded-xl border border-transparent p-3 transition-colors hover:border-border hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-											>
-												<div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-													{plugin.featured ? (
-														<Star className="size-5 fill-current" />
-													) : (
-														<Search className="size-5" />
-													)}
-												</div>
-												<div className="min-w-0 flex-1">
-													<div className="truncate font-semibold">
-														<Highlight text={plugin.name} query={query} />
-													</div>
-													<div className="line-clamp-1 text-muted-foreground text-sm">
-														<Highlight
-															text={plugin.shortDescription || plugin.author}
-															query={query}
-														/>
-													</div>
-												</div>
-												<div className="hidden shrink-0 text-right text-muted-foreground text-xs sm:block">
-													<div className="flex items-center justify-end gap-1">
-														<Star className="size-3.5" />
-														{plugin.rating.toFixed(1)}
-													</div>
-													<div className="mt-1 flex items-center gap-1">
-														<Download className="size-3.5" />
-														{formatNumber(plugin.downloadCount)}
-													</div>
-												</div>
-											</Link>
-										</motion.div>
-									),
-								)}
-							</div>
-						)
-					) : (
-						<div className="space-y-7">
-							<section aria-labelledby="quick-discovery">
-								<h3 id="quick-discovery" className="mb-3 font-semibold">
-									{t("quick_start")}
-								</h3>
-								<div className="grid grid-cols-3 gap-2">
-									{["Python", "Xposed", "Limitless"].map((item) => (
-										<button
-											key={item}
-											type="button"
-											onClick={() => {
-												setQuery(item);
-												inputRef.current?.focus();
-											}}
-											className="press-scale min-h-12 rounded-xl border bg-primary/5 px-2 font-medium text-sm transition-colors hover:border-primary/40 hover:bg-primary/10"
-										>
-											{item}
-										</button>
-									))}
-								</div>
-							</section>
-
-							{recentSearches.length > 0 && (
-								<section aria-labelledby="recent-searches">
-									<div className="mb-3 flex items-center justify-between">
-										<h3
-											id="recent-searches"
-											className="flex items-center gap-2 font-semibold"
-										>
-											<Clock3 className="size-4 text-primary" />
-											{t("recent_searches")}
-										</h3>
-										<Button variant="ghost" size="sm" onClick={clearRecent}>
-											{t("clear")}
-										</Button>
-									</div>
-									<div className="flex flex-wrap gap-2">
-										{recentSearches.map((item) => (
-											<button
-												key={item}
-												type="button"
-												onClick={() => {
-													setQuery(item);
-													inputRef.current?.focus();
-												}}
-												className="press-scale min-h-11 rounded-full border bg-background px-4 text-sm transition-colors hover:border-primary/40 hover:bg-primary/5"
-											>
-												{item}
-											</button>
-										))}
-									</div>
-								</section>
-							)}
-
-							<section aria-labelledby="popular-searches">
-								<h3
-									id="popular-searches"
-									className="mb-3 flex items-center gap-2 font-semibold"
-								>
-									<TrendingUp className="size-4 text-primary" />
-									{t("trending_now")}
-								</h3>
-								{isLoadingPopular ? (
-									<div className="grid gap-2 sm:grid-cols-2">
-										{Array.from({ length: 4 }).map((_, index) => (
-											<Skeleton key={index} className="h-16 rounded-xl" />
-										))}
-									</div>
-								) : (
-									<div className="grid gap-2 sm:grid-cols-2">
-										{popularPlugins?.map((plugin: PopularPlugin) => (
-											<Link
-												key={plugin.id}
-												href={`/plugins/${plugin.slug}`}
-												onClick={() => setOpen(false)}
-												className="flex min-h-16 items-center gap-3 rounded-xl border p-3 transition-colors hover:border-primary/30 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-											>
-												<div className="min-w-0 flex-1">
-													<div className="truncate font-medium">
-														{plugin.name}
-													</div>
-													<div className="text-muted-foreground text-xs">
-														{t("downloads", {
-															count: formatNumber(plugin.downloadCount),
-														})}
-													</div>
-												</div>
-												<span className="flex items-center gap-1 text-sm">
-													<Star className="size-3.5 fill-warning text-warning" />
-													{plugin.rating.toFixed(1)}
+										<PluginTile
+											name={plugin.name}
+											screenshots={plugin.screenshots}
+										/>
+										<span className="min-w-0 flex-1">
+											<span className="block truncate font-medium">
+												<Highlight text={plugin.name} query={debouncedQuery} />
+											</span>
+											{plugin.shortDescription && (
+												<span className="block truncate text-muted-foreground text-sm">
+													<Highlight
+														text={plugin.shortDescription}
+														query={debouncedQuery}
+													/>
 												</span>
-											</Link>
-										))}
-									</div>
-								)}
-							</section>
-						</div>
-					)}
+											)}
+										</span>
+										<span className="hidden shrink-0 rounded-full border bg-background/70 px-2 py-0.5 text-muted-foreground text-xs sm:block">
+											{plugin.category}
+										</span>
+										<span className="flex shrink-0 items-center gap-1 text-muted-foreground text-xs">
+											<Star className="size-3.5 fill-warning text-warning" />
+											{plugin.rating.toFixed(1)}
+										</span>
+									</button>
+								))}
+								<button
+									type="button"
+									data-active={activeIndex === results.length}
+									onClick={openAllResults}
+									onMouseMove={() => setActiveIndex(results.length)}
+									className={cn(
+										"mt-1 flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border border-dashed px-4 text-left font-medium text-sm transition-colors",
+										activeIndex === results.length
+											? "border-primary/40 bg-accent text-primary"
+											: "text-muted-foreground",
+									)}
+								>
+									{t("show_all")}
+									<ArrowRight className="size-4" />
+								</button>
+							</motion.div>
+						)}
+					</AnimatePresence>
+				</div>
+
+				<div className="hidden items-center gap-4 border-t bg-surface px-5 py-2.5 text-muted-foreground text-xs sm:flex">
+					<span className="flex items-center gap-1.5">
+						<kbd className="rounded border bg-background px-1.5 py-0.5 font-mono text-[10px]">
+							↑↓
+						</kbd>
+						{t("hint_navigate")}
+					</span>
+					<span className="flex items-center gap-1.5">
+						<kbd className="rounded border bg-background px-1 py-0.5 font-mono text-[10px]">
+							<CornerDownLeft className="size-3" />
+						</kbd>
+						{t("hint_open")}
+					</span>
+					<span className="ml-auto flex items-center gap-1.5">
+						<kbd className="rounded border bg-background px-1.5 py-0.5 font-mono text-[10px]">
+							esc
+						</kbd>
+						{t("hint_close")}
+					</span>
 				</div>
 			</DialogContent>
 		</Dialog>

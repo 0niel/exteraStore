@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { Calendar, Code, Download, Heart, Shield, Star } from "lucide-react";
+import { Calendar, Download, Heart, Shield, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -250,8 +250,8 @@ export function PluginCard({
 				</Link>
 				<div className="pointer-events-none relative z-10 flex min-h-11 items-center gap-3 p-3 sm:gap-4 sm:p-4">
 					<div className="relative shrink-0">
-						<div className="flex size-12 items-center justify-center rounded-xl border bg-muted">
-							<Code className="size-6 text-muted-foreground" />
+						<div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 font-bold text-lg text-primary">
+							{plugin.name.slice(0, 1).toUpperCase()}
 						</div>
 						{plugin.verified && (
 							<div className="absolute -top-1 -right-1">
@@ -272,7 +272,7 @@ export function PluginCard({
 								</p>
 							</div>
 							<div className="hidden shrink-0 items-center gap-2 sm:flex">
-								<span className="flex items-center gap-1">
+								<span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5">
 									<Star className="size-3.5 fill-warning text-warning" />
 									<span className="font-medium text-sm">
 										{plugin.rating.toFixed(1)}
@@ -343,8 +343,10 @@ export function PluginCard({
 									priority={false}
 								/>
 							) : (
-								<div className="flex h-full w-full items-center justify-center bg-linear-to-br from-muted/40 to-muted">
-									<Code className="h-8 w-8 text-muted-foreground" />
+								<div className="dot-grid relative flex h-full w-full items-center justify-center bg-linear-to-br from-primary/10 via-primary/5 to-transparent">
+									<span className="font-bold text-6xl text-primary/25 tracking-tighter transition-transform duration-300 group-hover:scale-110">
+										{plugin.name.slice(0, 1).toUpperCase()}
+									</span>
 								</div>
 							)}
 							{plugin.verified && (
@@ -389,8 +391,8 @@ export function PluginCard({
 
 						{showAuthor && (
 							<div className="mt-3 flex items-center gap-3">
-								<Avatar className="h-8 w-8">
-									<AvatarFallback className="bg-primary/10 text-xs">
+								<Avatar className="h-8 w-8 rounded-xl">
+									<AvatarFallback className="rounded-xl bg-primary/10 font-medium text-primary text-xs">
 										{authorName.slice(0, 2).toUpperCase()}
 									</AvatarFallback>
 								</Avatar>
@@ -426,7 +428,7 @@ export function PluginCard({
 							<div className="flex items-center gap-4 text-sm">
 								<Tooltip>
 									<TooltipTrigger asChild>
-										<div className="flex cursor-default items-center gap-1">
+										<div className="flex cursor-default items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5">
 											<Star className="h-4 w-4 fill-warning text-warning" />
 											<span className="font-medium">
 												{plugin.rating.toFixed(1)}

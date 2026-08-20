@@ -1,0 +1,12 @@
+{
+	"en": {
+		"PluginVersionsPage": {
+			"eyebrow": "Version history"
+		}
+	},
+	"ru": {
+		"PluginVersionsPage": {
+			"eyebrow": "История версий"
+		}
+	}
+}

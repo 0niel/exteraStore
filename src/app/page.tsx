@@ -9,8 +9,8 @@ export default function Home() {
 		<div className="w-full max-w-full overflow-x-hidden bg-background">
 			<HeroSection />
 			<FeaturedPlugins />
-			<TrendingPlugins />
 			<AiCollections />
+			<TrendingPlugins />
 			<DeveloperCTA />
 		</div>
 	);

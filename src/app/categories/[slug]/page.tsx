@@ -20,7 +20,6 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { PluginCard } from "~/components/plugin-card";
-import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -114,7 +113,7 @@ export default function CategoryPage() {
 		return (
 			<div className="flex min-h-[60dvh] items-center justify-center bg-background">
 				<div className="animate-fade-up px-4 text-center">
-					<div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-contrast text-contrast-foreground">
+					<div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10 text-primary">
 						<Code className="h-10 w-10" />
 					</div>
 					<h1 className="mb-2 font-bold text-2xl text-foreground">
@@ -138,7 +137,12 @@ export default function CategoryPage() {
 
 	return (
 		<div className="bg-background">
-			<section className="border-b bg-surface py-12 md:py-16">
+			<section className="relative isolate overflow-hidden border-b bg-surface py-12 md:py-16">
+				<div
+					aria-hidden="true"
+					className="pointer-events-none absolute -top-24 right-[8%] -z-10 h-72 w-72 rounded-full bg-primary/10 blur-3xl"
+				/>
+				<div className="dot-grid absolute inset-x-0 top-0 -z-10 h-56" />
 				<div className="container mx-auto px-4">
 					<div className="mb-6 flex items-center gap-2">
 						<Link href="/categories">
@@ -149,20 +153,19 @@ export default function CategoryPage() {
 						</Link>
 					</div>
 
-					<div className="mb-6 flex animate-fade-up items-center gap-5 md:gap-6">
-						<div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-contrast text-contrast-foreground">
+					<span className="eyebrow mb-4 animate-fade-up">{t("badge")}</span>
+
+					<div className="mt-4 mb-6 flex animate-fade-up items-center gap-5 md:gap-6">
+						<div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
 							<IconComponent className="h-8 w-8" />
 						</div>
 						<div>
 							<h1 className="mb-2 font-bold text-4xl text-foreground tracking-tight md:text-5xl">
 								{category.name}
 							</h1>
-							<Badge
-								variant="outline"
-								className="border-primary/40 text-primary text-sm"
-							>
+							<span className="inline-flex min-h-6 items-center rounded-full bg-primary/10 px-3 py-1 font-medium font-mono text-primary text-xs uppercase tracking-wider">
 								{t("plugin_count", { count: category.plugins.length })}
-							</Badge>
+							</span>
 						</div>
 					</div>
 
@@ -178,11 +181,15 @@ export default function CategoryPage() {
 				<div className="container mx-auto px-4">
 					{category.plugins.length > 0 ? (
 						<>
-							<div className="mb-8 flex items-center gap-3">
-								<span className="h-6 w-1 rounded-full bg-primary" />
-								<h2 className="font-bold text-2xl text-foreground">
-									{t("plugins_in_category")}
-								</h2>
+							<div className="mb-8 flex items-end justify-between gap-3">
+								<div>
+									<span className="eyebrow">
+										{t("plugin_count", { count: category.plugins.length })}
+									</span>
+									<h2 className="mt-2 font-bold text-2xl text-foreground">
+										{t("plugins_in_category")}
+									</h2>
+								</div>
 							</div>
 
 							<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -210,7 +217,7 @@ export default function CategoryPage() {
 						</>
 					) : (
 						<div className="animate-fade-up py-12 text-center md:py-16">
-							<div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl border-2 border-dashed bg-muted text-muted-foreground">
+							<div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10 text-primary">
 								<IconComponent className="h-10 w-10" />
 							</div>
 							<h3 className="mb-2 font-semibold text-foreground text-xl">

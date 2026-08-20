@@ -93,9 +93,9 @@ export function MarkdownEditor({
 	];
 
 	return (
-		<div className="w-full rounded-md border">
+		<div className="w-full overflow-hidden rounded-xl border shadow-soft">
 			<Tabs defaultValue="write" className="w-full">
-				<div className="border-b">
+				<div className="border-b bg-surface">
 					<div className="flex items-center justify-between px-2 py-1.5 sm:px-3 sm:py-2">
 						<TabsList className="h-9 sm:h-8">
 							<TabsTrigger value="write" className="px-3 text-xs sm:text-sm">

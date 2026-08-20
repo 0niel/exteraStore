@@ -74,7 +74,7 @@ export function TelegramBotIntegration({
 			<Card className="border-primary/25 bg-linear-to-br from-primary/10 to-primary/5 transition-colors hover:border-primary/40">
 				<CardHeader className="pb-3">
 					<div className="flex items-center gap-2">
-						<div className="rounded-lg bg-primary/10 p-2">
+						<div className="rounded-xl bg-primary/10 p-2 text-primary">
 							<Bot className="h-5 w-5 animate-pulse-dot text-primary" />
 						</div>
 						<div>
@@ -96,7 +96,7 @@ export function TelegramBotIntegration({
 					<Button
 						onClick={handleTelegramDownload}
 						disabled={isDownloading}
-						className="press-scale min-h-11 w-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90"
+						className="press-scale min-h-11 w-full"
 						size="lg"
 					>
 						{isDownloading ? (
@@ -128,10 +128,10 @@ export function TelegramBotIntegration({
 						<DialogDescription>{t("follow_instructions")}</DialogDescription>
 					</DialogHeader>
 					<div className="space-y-4">
-						<div className="space-y-3 rounded-lg bg-muted/50 p-4">
+						<div className="space-y-3 rounded-xl bg-primary/5 p-4">
 							<div className="flex items-start gap-3">
-								<div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary font-medium text-primary-foreground text-sm">
-									1
+								<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary/10 font-medium font-mono text-primary text-xs">
+									01
 								</div>
 								<div>
 									<p className="font-medium">{t("open_bot")}</p>
@@ -142,8 +142,8 @@ export function TelegramBotIntegration({
 							</div>
 
 							<div className="flex items-start gap-3">
-								<div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary font-medium text-primary-foreground text-sm">
-									2
+								<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary/10 font-medium font-mono text-primary text-xs">
+									02
 								</div>
 								<div>
 									<p className="font-medium">{t("press_start")}</p>
@@ -154,8 +154,8 @@ export function TelegramBotIntegration({
 							</div>
 
 							<div className="flex items-start gap-3">
-								<div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary font-medium text-primary-foreground text-sm">
-									3
+								<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary/10 font-medium font-mono text-primary text-xs">
+									03
 								</div>
 								<div>
 									<p className="font-medium">{t("follow_bot_instructions")}</p>
@@ -229,8 +229,8 @@ export function BotIntegrationPromo() {
 		<Card className="border-primary/25 bg-linear-to-br from-primary/10 to-primary/5 transition-colors hover:border-primary/40">
 			<CardContent className="pt-6">
 				<div className="space-y-4 text-center">
-					<div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-						<Bot className="h-8 w-8 animate-pulse-dot text-primary" />
+					<div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+						<Bot className="h-8 w-8 animate-pulse-dot" />
 					</div>
 					<div>
 						<h3 className="mb-2 font-semibold text-lg">{t("title")}</h3>

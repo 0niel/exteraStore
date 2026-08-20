@@ -9,7 +9,7 @@ export default function Loading() {
 			aria-busy="true"
 		>
 			<div className="flex flex-col items-center gap-4">
-				<div className="flex h-14 w-14 animate-pulse-dot items-center justify-center rounded-2xl bg-primary shadow-lg">
+				<div className="flex h-14 w-14 animate-pulse-dot items-center justify-center rounded-2xl bg-linear-to-b from-primary to-[color-mix(in_oklch,var(--primary)_82%,black)] shadow-lg shadow-primary/30">
 					<span className="font-bold text-lg text-primary-foreground">eS</span>
 				</div>
 				<div className="flex items-center gap-1.5">

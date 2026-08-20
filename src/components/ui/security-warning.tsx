@@ -101,7 +101,7 @@ export function SecurityWarning({
 		return (
 			<div
 				className={cn(
-					"flex items-center gap-2 rounded-md border px-2 py-1.5 text-sm",
+					"flex items-center gap-2 rounded-xl border px-2 py-1.5 text-sm",
 					colors.border,
 					colors.bg,
 					className,
@@ -119,7 +119,7 @@ export function SecurityWarning({
 		return (
 			<div
 				className={cn(
-					"rounded-lg border p-3",
+					"rounded-xl border p-3",
 					colors.border,
 					colors.bg,
 					className,
@@ -164,7 +164,7 @@ export function SecurityWarning({
 	return (
 		<div
 			className={cn(
-				"rounded-lg border p-4",
+				"rounded-xl border p-4",
 				colors.border,
 				colors.bg,
 				className,
@@ -207,7 +207,7 @@ export function SecurityWarning({
 									{securityResult.issues.map((issue, index) => (
 										<div
 											key={index}
-											className="rounded-md border border-border/50 bg-background/50 p-3"
+											className="rounded-xl border border-border/50 bg-background/50 p-3"
 										>
 											<div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
 												<Badge

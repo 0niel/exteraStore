@@ -36,7 +36,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "~/components/ui/card";
-import { Progress } from "~/components/ui/progress";
+import { EmptyState } from "~/components/ui/empty-state";
 import { Skeleton } from "~/components/ui/skeleton";
 import { formatNumber } from "~/lib/utils";
 import { api, type RouterOutputs } from "~/trpc/react";
@@ -176,7 +176,7 @@ export default function DeveloperProfilePage() {
 			<div className="flex min-h-[60dvh] items-center justify-center bg-background">
 				<Card className="w-full max-w-md animate-fade-up text-center">
 					<CardContent className="p-8">
-						<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-contrast font-bold text-2xl text-contrast-foreground">
+						<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 font-bold text-2xl text-primary">
 							?
 						</div>
 						<CardTitle className="mb-2 text-2xl">{t("not_found")}</CardTitle>
@@ -214,8 +214,13 @@ export default function DeveloperProfilePage() {
 		<div className="bg-background">
 			<div className="container mx-auto max-w-6xl px-4 py-8">
 				<div className="space-y-8">
-					<div className="relative animate-fade-up overflow-hidden rounded-3xl border bg-card">
-						<div className="absolute inset-x-0 top-0 h-1 bg-primary" />
+					<div className="relative isolate animate-fade-up overflow-hidden rounded-3xl border bg-card shadow-soft">
+						<div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-primary/70 to-primary/10" />
+						<div
+							aria-hidden="true"
+							className="pointer-events-none absolute -top-24 -right-24 -z-10 h-72 w-72 rounded-full bg-primary/10 blur-3xl"
+						/>
+						<div className="dot-grid absolute inset-x-0 top-0 -z-10 h-48" />
 						<div className="relative p-6 md:p-12">
 							<div className="mb-6 flex items-center justify-between">
 								<Button
@@ -260,7 +265,7 @@ export default function DeveloperProfilePage() {
 											alt={developer.name || ""}
 											className="object-cover"
 										/>
-										<AvatarFallback className="bg-muted font-bold text-4xl text-foreground">
+										<AvatarFallback className="bg-primary/10 font-bold text-4xl text-primary">
 											{(developer.name || "??").slice(0, 2).toUpperCase()}
 										</AvatarFallback>
 									</Avatar>
@@ -271,6 +276,9 @@ export default function DeveloperProfilePage() {
 
 								<div className="flex-1 text-center md:text-left">
 									<div className="mb-4">
+										<div className="mb-3 flex justify-center md:justify-start">
+											<span className="eyebrow">{t("eyebrow_profile")}</span>
+										</div>
 										<h1 className="mb-2 font-bold text-4xl tracking-tight md:text-5xl">
 											{developer.name || t("anonymous")}
 										</h1>
@@ -282,7 +290,7 @@ export default function DeveloperProfilePage() {
 									</div>
 
 									<div className="mb-6 flex flex-wrap items-center justify-center gap-3 md:justify-start">
-										<Badge className="border-0 bg-contrast px-4 py-2 text-contrast-foreground text-sm">
+										<Badge className="border border-primary/20 bg-primary/10 px-4 py-2 text-primary text-sm">
 											<TierIcon className="mr-2 h-4 w-4" />
 											{t("tier_developer", { tier: tierName })}
 										</Badge>
@@ -294,25 +302,25 @@ export default function DeveloperProfilePage() {
 										</p>
 									)}
 
-									<div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-										<div className="text-center">
-											<div className="mb-1 font-bold text-3xl text-primary tabular-nums">
+									<div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+										<div className="rounded-xl bg-primary/5 p-3 text-center">
+											<div className="mb-1 font-bold font-mono text-3xl text-primary tabular-nums">
 												{stats?.totalPlugins || 0}
 											</div>
 											<div className="text-muted-foreground text-sm">
 												{t("plugins_label")}
 											</div>
 										</div>
-										<div className="text-center">
-											<div className="mb-1 font-bold text-3xl text-primary tabular-nums">
+										<div className="rounded-xl bg-primary/5 p-3 text-center">
+											<div className="mb-1 font-bold font-mono text-3xl text-primary tabular-nums">
 												{formatNumber(stats?.totalDownloads || 0)}
 											</div>
 											<div className="text-muted-foreground text-sm">
 												{t("downloads_label")}
 											</div>
 										</div>
-										<div className="text-center">
-											<div className="mb-1 flex items-center justify-center gap-1 font-bold text-3xl text-primary tabular-nums">
+										<div className="rounded-xl bg-primary/5 p-3 text-center">
+											<div className="mb-1 flex items-center justify-center gap-1 font-bold font-mono text-3xl text-primary tabular-nums">
 												<Star className="h-6 w-6 fill-warning text-warning" />
 												{stats?.averageRating?.toFixed(1) || "0.0"}
 											</div>
@@ -320,8 +328,8 @@ export default function DeveloperProfilePage() {
 												{t("rating_label")}
 											</div>
 										</div>
-										<div className="text-center">
-											<div className="mb-1 font-bold text-3xl text-primary tabular-nums">
+										<div className="rounded-xl bg-primary/5 p-3 text-center">
+											<div className="mb-1 font-bold font-mono text-3xl text-primary tabular-nums">
 												{Math.round(tierProgress.progress)}%
 											</div>
 											<div className="text-muted-foreground text-sm">
@@ -342,11 +350,22 @@ export default function DeveloperProfilePage() {
 															})
 														: t("progress")}
 												</span>
-												<span className="font-medium tabular-nums">
+												<span className="font-medium font-mono text-primary tabular-nums">
 													{Math.round(tierProgress.progress)}%
 												</span>
 											</div>
-											<Progress value={tierProgress.progress} className="h-3" />
+											<div
+												role="progressbar"
+												aria-valuenow={Math.round(tierProgress.progress)}
+												aria-valuemin={0}
+												aria-valuemax={100}
+												className="h-3 w-full overflow-hidden rounded-full bg-primary/10"
+											>
+												<div
+													className="h-full rounded-full bg-gradient-to-r from-primary/60 to-primary"
+													style={{ width: `${tierProgress.progress}%` }}
+												/>
+											</div>
 											{tierProgress.nextTier && (
 												<div className="mt-2 text-center">
 													<div className="text-muted-foreground text-xs">
@@ -379,15 +398,15 @@ export default function DeveloperProfilePage() {
 							<div className="space-y-8">
 								<div className="flex flex-wrap items-center justify-between gap-3">
 									<div>
-										<h2 className="font-bold text-3xl">{t("portfolio")}</h2>
-										<p className="text-muted-foreground">
+										<span className="eyebrow mb-2">
 											{t("plugins_count", { count: plugins.length })}
-										</p>
+										</span>
+										<h2 className="font-bold text-3xl">{t("portfolio")}</h2>
 									</div>
 									{stats?.totalDownloads && stats.totalDownloads > 0 && (
 										<div className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-primary">
 											<TrendingUp className="h-4 w-4" />
-											<span className="font-medium text-sm tabular-nums">
+											<span className="font-medium font-mono text-sm tabular-nums">
 												{t("downloads_badge", {
 													count: formatNumber(stats.totalDownloads),
 												})}
@@ -397,17 +416,13 @@ export default function DeveloperProfilePage() {
 								</div>
 
 								{plugins.length === 0 ? (
-									<Card className="border-2 border-dashed">
-										<CardContent className="flex flex-col items-center justify-center py-16">
-											<div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
-												<Package className="h-8 w-8" />
-											</div>
-											<h3 className="mb-2 font-semibold text-xl">
-												{t("no_plugins")}
-											</h3>
-											<p className="max-w-md text-center text-muted-foreground">
-												{t("no_plugins_description")}
-											</p>
+									<Card className="border bg-card">
+										<CardContent>
+											<EmptyState
+												icon="+"
+												title={t("no_plugins")}
+												description={t("no_plugins_description")}
+											/>
 										</CardContent>
 									</Card>
 								) : (
@@ -449,8 +464,10 @@ export default function DeveloperProfilePage() {
 							)}
 							<Card>
 								<CardHeader>
-									<CardTitle className="flex items-center gap-2">
-										<ExternalLink className="h-5 w-5 text-primary" />
+									<CardTitle className="flex items-center gap-2.5">
+										<span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+											<ExternalLink className="h-4 w-4" />
+										</span>
 										{t("quick_actions")}
 									</CardTitle>
 								</CardHeader>
@@ -508,8 +525,10 @@ export default function DeveloperProfilePage() {
 
 							<Card>
 								<CardHeader>
-									<CardTitle className="flex items-center gap-2">
-										<TrendingUp className="h-5 w-5 text-primary" />
+									<CardTitle className="flex items-center gap-2.5">
+										<span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+											<TrendingUp className="h-4 w-4" />
+										</span>
 										{t("stats")}
 									</CardTitle>
 								</CardHeader>
@@ -520,7 +539,7 @@ export default function DeveloperProfilePage() {
 												<Package className="h-4 w-4 text-muted-foreground" />
 												<span className="text-sm">{t("total_plugins")}</span>
 											</div>
-											<span className="font-semibold tabular-nums">
+											<span className="font-bold font-mono tabular-nums">
 												{stats?.totalPlugins || 0}
 											</span>
 										</div>
@@ -529,7 +548,7 @@ export default function DeveloperProfilePage() {
 												<Download className="h-4 w-4 text-muted-foreground" />
 												<span className="text-sm">{t("total_downloads")}</span>
 											</div>
-											<span className="font-semibold tabular-nums">
+											<span className="font-bold font-mono tabular-nums">
 												{formatNumber(stats?.totalDownloads || 0)}
 											</span>
 										</div>
@@ -538,7 +557,7 @@ export default function DeveloperProfilePage() {
 												<Star className="h-4 w-4 text-muted-foreground" />
 												<span className="text-sm">{t("average_rating")}</span>
 											</div>
-											<span className="font-semibold tabular-nums">
+											<span className="font-bold font-mono tabular-nums">
 												{stats?.averageRating?.toFixed(1) || "0.0"}
 											</span>
 										</div>

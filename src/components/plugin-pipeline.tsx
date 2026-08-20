@@ -180,7 +180,9 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 			<div className="flex items-start justify-between">
 				<div>
 					<h3 className="flex items-center gap-2 font-semibold text-foreground text-lg">
-						<Shield className="h-5 w-5 text-primary" />
+						<span className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+							<Shield className="h-4 w-4" />
+						</span>
 						{t("security_checks")}
 					</h3>
 					<p className="mt-1 text-muted-foreground text-sm leading-relaxed">
@@ -437,9 +439,9 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 			)}
 
 			{latestChecks.length === 0 && !isRunning && (
-				<div className="rounded-lg border-2 border-border border-dashed bg-muted/30 p-8 text-center transition-all duration-200 hover:bg-muted/50">
-					<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-linear-to-br from-primary/10 to-primary/20 shadow-sm">
-						<Shield className="h-7 w-7 text-primary" />
+				<div className="rounded-2xl border border-dashed bg-primary/5 p-8 text-center transition-all duration-200 hover:bg-primary/10">
+					<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+						<Shield className="h-7 w-7" />
 					</div>
 					<h3 className="mb-2 font-semibold text-foreground text-lg">
 						{t("no_checks_run")}
@@ -468,11 +470,11 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 			)}
 
 			{(isRunning || runChecksMutation.isPending) && (
-				<div className="rounded-lg border border-primary/20 bg-linear-to-r from-primary/5 to-primary/10 p-6 shadow-sm">
+				<div className="rounded-2xl border border-primary/20 bg-linear-to-r from-primary/5 to-primary/10 p-6 shadow-soft">
 					<div className="flex items-center gap-4">
 						<div className="flex-shrink-0">
-							<div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-primary/10 to-primary/20 shadow-sm">
-								<RefreshCw className="h-5 w-5 animate-spin text-primary" />
+							<div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+								<RefreshCw className="h-5 w-5 animate-spin" />
 							</div>
 						</div>
 						<div className="flex-1">
@@ -486,7 +488,7 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 					</div>
 
 					<div className="mt-6 space-y-3">
-						<div className="flex items-center gap-4 rounded-md bg-background/50 p-3 text-sm">
+						<div className="flex items-center gap-4 rounded-xl bg-background/50 p-3 text-sm">
 							<div className="h-2 w-2 animate-pulse rounded-full bg-warning"></div>
 							<Shield className="h-4 w-4 text-primary" />
 							<span className="font-medium text-foreground">
@@ -496,7 +498,7 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 								{t("in_progress")}
 							</span>
 						</div>
-						<div className="flex items-center gap-4 rounded-md bg-background/50 p-3 text-sm">
+						<div className="flex items-center gap-4 rounded-xl bg-background/50 p-3 text-sm">
 							<div
 								className="h-2 w-2 animate-pulse rounded-full bg-warning"
 								style={{ animationDelay: "0.3s" }}

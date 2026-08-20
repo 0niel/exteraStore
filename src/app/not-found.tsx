@@ -11,7 +11,8 @@ export default function NotFound() {
 	return (
 		<div className="relative isolate flex min-h-[60dvh] items-center justify-center overflow-hidden px-4 py-12">
 			<div className="grid-fade absolute inset-x-0 top-0 -z-10 h-full" />
-			<div className="mx-auto max-w-xl text-center">
+			<div className="absolute -top-24 left-1/2 -z-10 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
+			<div className="mx-auto max-w-xl animate-fade-up text-center">
 				<p className="font-bold text-[clamp(6rem,28vw,12rem)] text-gradient-red leading-none tracking-tighter">
 					404
 				</p>

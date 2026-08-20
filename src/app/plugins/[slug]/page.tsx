@@ -3,7 +3,6 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
 	ChevronLeft,
-	Code,
 	Download,
 	Edit,
 	ExternalLink,
@@ -420,10 +419,21 @@ export default function PluginDetailPage() {
 				</div>
 
 				<div className="space-y-6">
-					<motion.section className="space-y-4" {...sectionMotion(0)}>
+					<motion.section
+						className="relative isolate space-y-4"
+						{...sectionMotion(0)}
+					>
+						<div
+							className="pointer-events-none absolute -top-24 -left-16 -z-10 h-56 w-56 rounded-full bg-primary/15 blur-3xl"
+							aria-hidden="true"
+						/>
+						<div
+							className="h-1 w-16 rounded-full bg-linear-to-r from-primary to-primary/30"
+							aria-hidden="true"
+						/>
 						<div className="flex items-start gap-4">
-							<div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-primary to-primary/60 shadow-lg">
-								<Code className="h-8 w-8 text-primary-foreground" />
+							<div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary/10 font-bold text-2xl text-primary shadow-soft">
+								{plugin.name.slice(0, 1).toUpperCase()}
 							</div>
 							<div className="min-w-0 flex-1">
 								<div className="flex items-start justify-between gap-4">
@@ -507,29 +517,29 @@ export default function PluginDetailPage() {
 							</div>
 						</div>
 
-						<div className="grid grid-cols-3 gap-2 rounded-xl bg-muted/50 p-4 sm:gap-4">
-							<div className="min-w-0 text-center">
-								<div className="flex items-center justify-center gap-1 font-bold text-lg text-primary">
+						<div className="grid grid-cols-3 gap-2 sm:gap-3">
+							<div className="min-w-0 rounded-2xl border border-primary/10 bg-primary/5 p-3 text-center sm:p-4">
+								<div className="flex items-center justify-center gap-1 font-bold font-mono text-xl sm:text-2xl">
 									<Star className="h-4 w-4 shrink-0 fill-warning text-warning" />
 									{plugin.rating.toFixed(1)}
 								</div>
-								<div className="truncate text-muted-foreground text-xs">
+								<div className="mt-1 truncate text-muted-foreground text-xs">
 									{plugin.ratingCount} · {t("stats_reviews")}
 								</div>
 							</div>
-							<div className="min-w-0 text-center">
-								<div className="font-bold text-lg text-primary">
+							<div className="min-w-0 rounded-2xl border border-primary/10 bg-primary/5 p-3 text-center sm:p-4">
+								<div className="font-bold font-mono text-xl sm:text-2xl">
 									{formatNumber(plugin.downloadCount)}
 								</div>
-								<div className="truncate text-muted-foreground text-xs">
+								<div className="mt-1 truncate text-muted-foreground text-xs">
 									{t("stats_downloads")}
 								</div>
 							</div>
-							<div className="min-w-0 text-center">
-								<div className="font-bold text-lg text-primary">
+							<div className="min-w-0 rounded-2xl border border-primary/10 bg-primary/5 p-3 text-center sm:p-4">
+								<div className="font-bold font-mono text-xl sm:text-2xl">
 									{versions?.length || 1}
 								</div>
-								<div className="truncate text-muted-foreground text-xs">
+								<div className="mt-1 truncate text-muted-foreground text-xs">
 									{t("versions_label", { count: versions?.length || 1 })}
 								</div>
 							</div>
@@ -589,7 +599,7 @@ export default function PluginDetailPage() {
 
 					{screenshots.length > 0 && (
 						<motion.section className="space-y-4" {...sectionMotion(1)}>
-							<h2 className="font-semibold text-xl">{t("screenshots")}</h2>
+							<span className="eyebrow">{t("screenshots")}</span>
 							<ImageGallery
 								images={screenshots}
 								alt={t("screenshots_alt", { name: plugin.name })}
@@ -613,10 +623,10 @@ export default function PluginDetailPage() {
 									aria-selected={activeTab === tab.id}
 									onClick={() => setActiveTab(tab.id)}
 									className={cn(
-										"press-scale tap-highlight-none min-h-11 shrink-0 snap-start whitespace-nowrap rounded-full border px-4 font-medium text-sm transition-colors",
+										"press-scale tap-highlight-none min-h-11 shrink-0 snap-start whitespace-nowrap rounded-full border px-4 font-medium text-sm transition-all duration-200 ease-[var(--ease-spring)]",
 										activeTab === tab.id
-											? "border-transparent bg-contrast text-contrast-foreground"
-											: "border-border bg-card text-muted-foreground hover:text-foreground",
+											? "btn-glow border-primary bg-primary text-primary-foreground"
+											: "border-border bg-card text-muted-foreground hover:border-primary/40 hover:bg-primary/5 hover:text-foreground",
 									)}
 								>
 									{tab.label}
@@ -654,11 +664,11 @@ export default function PluginDetailPage() {
 														href={`/developers/${plugin.authorId}`}
 														className="group flex items-start gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 													>
-														<Avatar className="h-12 w-12">
+														<Avatar className="h-12 w-12 rounded-xl">
 															<AvatarImage
 																src={authorData?.image || undefined}
 															/>
-															<AvatarFallback className="text-sm">
+															<AvatarFallback className="rounded-xl bg-primary/10 font-medium text-primary text-sm">
 																{(authorData?.name || plugin.author)
 																	.slice(0, 2)
 																	.toUpperCase()}
@@ -862,15 +872,15 @@ export default function PluginDetailPage() {
 									<div className="space-y-6">
 										<ReviewSummary pluginId={plugin.id} />
 										{session && (
-											<Card className="border-primary/20">
+											<Card className="border-primary/20 bg-linear-to-br from-primary/5 to-transparent">
 												<CardContent className="p-4">
 													<div className="space-y-4">
 														<div className="flex items-center gap-3">
-															<Avatar className="h-8 w-8">
+															<Avatar className="h-8 w-8 rounded-xl">
 																<AvatarImage
 																	src={session.user?.image || undefined}
 																/>
-																<AvatarFallback>
+																<AvatarFallback className="rounded-xl bg-primary/10 font-medium text-primary">
 																	{session.user?.name
 																		?.slice(0, 2)
 																		.toUpperCase() || "??"}
@@ -938,8 +948,10 @@ export default function PluginDetailPage() {
 										)}
 
 										{reviewsData && reviewsData.reviews.length === 0 ? (
-											<div className="rounded-xl border border-dashed p-8 text-center">
-												<MessageSquare className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+											<div className="rounded-2xl border border-dashed bg-primary/5 p-8 text-center">
+												<div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-primary">
+													<MessageSquare className="h-7 w-7" />
+												</div>
 												<h4 className="mb-2 font-medium">
 													{t("no_reviews_title")}
 												</h4>
@@ -960,11 +972,11 @@ export default function PluginDetailPage() {
 													<Card key={review.id} className="w-full">
 														<CardContent className="p-4">
 															<div className="flex items-start gap-3">
-																<Avatar className="h-8 w-8">
+																<Avatar className="h-8 w-8 rounded-xl">
 																	<AvatarImage
 																		src={review.user?.image || undefined}
 																	/>
-																	<AvatarFallback>
+																	<AvatarFallback className="rounded-xl bg-primary/10 font-medium text-primary">
 																		{review.user?.name
 																			?.slice(0, 2)
 																			.toUpperCase() || "??"}
@@ -1120,8 +1132,10 @@ export default function PluginDetailPage() {
 												<ReactMarkdown>{latestChangelog}</ReactMarkdown>
 											</div>
 										) : (
-											<div className="rounded-lg border border-dashed p-8 text-center">
-												<FileText className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+											<div className="rounded-2xl border border-dashed bg-primary/5 p-8 text-center">
+												<div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-primary">
+													<FileText className="h-7 w-7" />
+												</div>
 												<h4 className="mb-2 font-medium">
 													{t("no_changelog_title")}
 												</h4>

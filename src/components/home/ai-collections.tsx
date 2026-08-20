@@ -40,31 +40,28 @@ function CollectionPreview({
 	const t = useTranslations("Home");
 	const locale = useLocale();
 	const Icon = collectionIcons[index % collectionIcons.length] ?? Sparkles;
-	const contrastAccent = index % 2 === 1;
 
 	return (
 		<Card className="group card-lift h-full overflow-hidden border bg-card">
-			<div className="relative h-24 border-b">
-				<div className="flex h-full flex-col justify-between p-4">
+			<div className="relative h-24 border-b bg-primary/5">
+				<div className="dot-grid absolute inset-0" />
+				<div className="relative flex h-full flex-col justify-between p-4">
 					<div className="flex items-start justify-between">
-						<Badge variant="secondary" className="font-medium text-xs">
+						<Badge
+							variant="secondary"
+							className="border-primary/15 bg-primary/10 font-medium text-primary text-xs"
+						>
 							<Sparkles className="mr-1 h-3 w-3" />
 							{t("collections.aiBadge")}
 						</Badge>
-						<div className="flex items-center gap-1 text-muted-foreground text-xs">
+						<div className="flex items-center gap-1 font-mono text-muted-foreground text-xs">
 							<Calendar className="h-3 w-3" />
 							<span>{formatDate(collection.generatedAt, locale)}</span>
 						</div>
 					</div>
 
 					<div className="flex items-center gap-3">
-						<div
-							className={`flex h-8 w-8 items-center justify-center rounded-lg ${
-								contrastAccent
-									? "bg-contrast text-contrast-foreground"
-									: "bg-primary/10 text-primary"
-							}`}
-						>
+						<div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
 							<Icon className="h-4 w-4" />
 						</div>
 						<div className="min-w-0 flex-1">
@@ -91,11 +88,11 @@ function CollectionPreview({
 						<Link
 							key={plugin.id}
 							href={`/plugins/${plugin.slug}`}
-							className="block rounded-lg border bg-muted/30 p-3 transition-colors hover:bg-muted/50"
+							className="block rounded-xl border bg-surface p-3 transition-colors hover:border-primary/30 hover:bg-primary/5"
 						>
 							<div className="flex items-center gap-3">
-								<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded bg-primary/10">
-									<Sparkles className="h-3 w-3 text-primary" />
+								<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+									<Sparkles className="h-3 w-3" />
 								</div>
 								<div className="min-w-0 flex-1">
 									<p className="truncate font-medium text-sm">{plugin.name}</p>
@@ -151,8 +148,12 @@ export function AiCollections() {
 	};
 
 	return (
-		<section className="py-16 sm:py-24" aria-labelledby="collections-title">
-			<div className="container mx-auto px-4">
+		<section
+			className="section-band relative overflow-hidden py-16 sm:py-24"
+			aria-labelledby="collections-title"
+		>
+			<div className="absolute -top-32 right-0 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
+			<div className="container relative mx-auto px-4">
 				<motion.div
 					initial={reduceMotion ? false : { opacity: 0, y: 16 }}
 					whileInView={{ opacity: 1, y: 0 }}
@@ -161,12 +162,11 @@ export function AiCollections() {
 					className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"
 				>
 					<div>
-						<div className="mb-2 inline-flex items-center gap-2 font-medium text-primary text-sm">
-							<span className="size-1.5 rounded-full bg-primary" />
-							<span className="font-mono text-muted-foreground text-xs">
-								03
+						<div className="mb-3 flex items-center gap-3">
+							<span className="eyebrow">{t("collections.eyebrow")}</span>
+							<span className="font-mono font-semibold text-primary text-xs">
+								02
 							</span>
-							{t("collections.eyebrow")}
 						</div>
 						<h2
 							id="collections-title"
@@ -178,7 +178,7 @@ export function AiCollections() {
 							{t("collections.description")}
 						</p>
 					</div>
-					<Button variant="outline" asChild className="group">
+					<Button variant="ghost" asChild className="group">
 						<Link href="/collections">
 							{t("collections.viewAll")}
 							<ArrowRight className="transition-transform group-hover:translate-x-1" />

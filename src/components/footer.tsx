@@ -7,22 +7,23 @@ import { TelegramIcon } from "~/components/icons/telegram-icon";
 import { CompactLanguageSwitcher } from "~/components/language-switcher";
 import { CompactThemeToggle } from "~/components/theme-toggle";
 
-function ExternalFooterLink({
+function FooterLink({
 	href,
 	children,
+	external = false,
 }: {
 	href: string;
 	children: React.ReactNode;
+	external?: boolean;
 }) {
 	return (
 		<Link
 			href={href}
-			target="_blank"
-			rel="noopener noreferrer"
+			{...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
 			className="inline-flex items-center gap-1 text-muted-foreground text-sm transition-colors hover:text-primary"
 		>
 			{children}
-			<ExternalLink className="h-3 w-3" />
+			{external && <ExternalLink className="h-3 w-3" />}
 		</Link>
 	);
 }
@@ -42,170 +43,122 @@ function GithubIcon({ className }: { className?: string }) {
 export function Footer() {
 	const t = useTranslations("Footer");
 
-	return (
-		<footer className="relative border-t bg-background pb-[env(safe-area-inset-bottom)] [&_a]:inline-flex [&_a]:min-h-11 [&_a]:items-center">
-			<div className="absolute inset-0 bg-linear-to-t from-primary/5 via-transparent to-transparent" />
+	const quickLinks = [
+		{ href: "/plugins", label: t("browse_plugins") },
+		{ href: "/categories", label: t("categories") },
+		{ href: "/developers", label: t("developers") },
+		{ href: "/upload", label: t("upload_plugin") },
+	];
 
-			<div className="container relative mx-auto px-4 py-8 lg:py-10">
-				<div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-					<div className="space-y-3 lg:col-span-4">
+	const resources = [
+		{ href: "https://plugins.exteragram.app", label: t("documentation") },
+		{
+			href: "https://github.com/0niel/exteraStore/issues",
+			label: t("report_issue"),
+		},
+		{ href: "https://t.me/exteraForum", label: t("community") },
+	];
+
+	const legal = [
+		{ href: "/privacy", label: t("privacy_policy") },
+		{ href: "/terms", label: t("terms_of_service") },
+		{ href: "/cookies", label: t("cookie_policy") },
+		{ href: "/license", label: t("license") },
+	];
+
+	return (
+		<footer className="section-band relative overflow-hidden border-b-0 pb-[env(safe-area-inset-bottom)] [&_a]:inline-flex [&_a]:min-h-11 [&_a]:items-center">
+			<div className="dot-grid absolute inset-x-0 bottom-0 h-64 opacity-60" />
+			<div className="absolute -bottom-32 left-1/4 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
+
+			<div className="container relative mx-auto px-4 py-12 lg:py-16">
+				<div className="grid grid-cols-1 gap-10 lg:grid-cols-12">
+					<div className="space-y-4 lg:col-span-4">
 						<div className="flex items-center gap-3">
-							<div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-sm">
+							<div className="flex size-10 items-center justify-center rounded-xl bg-linear-to-b from-primary to-[color-mix(in_oklch,var(--primary)_82%,black)] shadow-lg shadow-primary/25">
 								<span className="font-bold text-primary-foreground text-sm">
 									eS
 								</span>
 							</div>
-							<div className="font-bold text-xl">exteraStore</div>
+							<div className="font-bold text-xl tracking-tight">
+								exteraStore
+							</div>
 						</div>
 
 						<p className="max-w-sm text-muted-foreground text-sm leading-relaxed">
 							{t("description")}
 						</p>
 
-						<div className="flex items-center gap-3">
+						<div className="flex items-center gap-2">
 							<Link
 								href="https://t.me/i_am_oniel"
 								target="_blank"
 								rel="noopener noreferrer"
-								className="group"
+								className="press-scale flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
 								aria-label={t("contact_developer")}
 							>
-								<div className="flex h-9 w-9 items-center justify-center rounded-lg bg-contrast text-contrast-foreground transition-transform duration-200 group-hover:scale-105">
-									<TelegramIcon className="h-5 w-5" />
-								</div>
+								<TelegramIcon className="h-5 w-5" />
 							</Link>
 							<Link
 								href="https://github.com/0niel/exteraStore"
 								target="_blank"
 								rel="noopener noreferrer"
-								className="group"
+								className="press-scale flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
 								aria-label={t("view_source")}
 							>
-								<div className="flex h-9 w-9 items-center justify-center rounded-lg bg-contrast text-contrast-foreground transition-transform duration-200 group-hover:scale-105">
-									<GithubIcon className="h-5 w-5" />
-								</div>
+								<GithubIcon className="h-5 w-5" />
 							</Link>
 						</div>
 					</div>
 
-					<div className="grid grid-cols-2 gap-x-6 gap-y-8 lg:col-span-8 lg:grid-cols-4">
-						<div className="space-y-3">
-							<h3 className="font-semibold text-sm tracking-wide">
-								{t("quick_links")}
-							</h3>
+					<div className="grid grid-cols-2 gap-x-6 gap-y-10 lg:col-span-8 lg:grid-cols-4">
+						<div className="space-y-4">
+							<h3 className="eyebrow">{t("quick_links")}</h3>
 							<ul className="space-y-2">
-								<li>
-									<Link
-										href="/plugins"
-										className="text-muted-foreground text-sm transition-colors hover:text-primary"
-									>
-										{t("browse_plugins")}
-									</Link>
-								</li>
-								<li>
-									<Link
-										href="/categories"
-										className="text-muted-foreground text-sm transition-colors hover:text-primary"
-									>
-										{t("categories")}
-									</Link>
-								</li>
-								<li>
-									<Link
-										href="/developers"
-										className="text-muted-foreground text-sm transition-colors hover:text-primary"
-									>
-										{t("developers")}
-									</Link>
-								</li>
-								<li>
-									<Link
-										href="/upload"
-										className="text-muted-foreground text-sm transition-colors hover:text-primary"
-									>
-										{t("upload_plugin")}
-									</Link>
-								</li>
+								{quickLinks.map((link) => (
+									<li key={link.href}>
+										<FooterLink href={link.href}>{link.label}</FooterLink>
+									</li>
+								))}
 							</ul>
 						</div>
 
-						<div className="space-y-3">
-							<h3 className="font-semibold text-sm tracking-wide">
-								{t("resources")}
-							</h3>
+						<div className="space-y-4">
+							<h3 className="eyebrow">{t("resources")}</h3>
 							<ul className="space-y-2">
-								<li>
-									<ExternalFooterLink href="https://plugins.exteragram.app">
-										{t("documentation")}
-									</ExternalFooterLink>
-								</li>
-								<li>
-									<ExternalFooterLink href="https://github.com/0niel/exteraStore/issues">
-										{t("report_issue")}
-									</ExternalFooterLink>
-								</li>
-								<li>
-									<ExternalFooterLink href="https://t.me/exteraForum">
-										{t("community")}
-									</ExternalFooterLink>
-								</li>
+								{resources.map((link) => (
+									<li key={link.href}>
+										<FooterLink href={link.href} external>
+											{link.label}
+										</FooterLink>
+									</li>
+								))}
 							</ul>
 						</div>
 
-						<div className="space-y-3">
-							<h3 className="font-semibold text-sm tracking-wide">
-								{t("legal")}
-							</h3>
+						<div className="space-y-4">
+							<h3 className="eyebrow">{t("legal")}</h3>
 							<ul className="space-y-2">
-								<li>
-									<Link
-										href="/privacy"
-										className="text-muted-foreground text-sm transition-colors hover:text-primary"
-									>
-										{t("privacy_policy")}
-									</Link>
-								</li>
-								<li>
-									<Link
-										href="/terms"
-										className="text-muted-foreground text-sm transition-colors hover:text-primary"
-									>
-										{t("terms_of_service")}
-									</Link>
-								</li>
-								<li>
-									<Link
-										href="/cookies"
-										className="text-muted-foreground text-sm transition-colors hover:text-primary"
-									>
-										{t("cookie_policy")}
-									</Link>
-								</li>
-								<li>
-									<Link
-										href="/license"
-										className="text-muted-foreground text-sm transition-colors hover:text-primary"
-									>
-										{t("license")}
-									</Link>
-								</li>
+								{legal.map((link) => (
+									<li key={link.href}>
+										<FooterLink href={link.href}>{link.label}</FooterLink>
+									</li>
+								))}
 							</ul>
 						</div>
 
-						<div className="space-y-3">
-							<h3 className="font-semibold text-sm tracking-wide">
-								{t("settings")}
-							</h3>
+						<div className="space-y-4">
+							<h3 className="eyebrow">{t("settings")}</h3>
 							<div className="space-y-3">
 								<div>
-									<div className="mb-1 text-muted-foreground text-xs uppercase tracking-wide">
+									<div className="mb-1 font-mono text-[0.65rem] text-muted-foreground uppercase tracking-wider">
 										{t("appearance")}
 									</div>
 									<CompactThemeToggle />
 								</div>
 
 								<div>
-									<div className="mb-1 text-muted-foreground text-xs uppercase tracking-wide">
+									<div className="mb-1 font-mono text-[0.65rem] text-muted-foreground uppercase tracking-wider">
 										{t("language_setting")}
 									</div>
 									<CompactLanguageSwitcher />
@@ -215,14 +168,14 @@ export function Footer() {
 					</div>
 				</div>
 
-				<div className="mt-6 border-t pt-4">
+				<div className="mt-10 border-t pt-6">
 					<div className="flex flex-col items-center justify-between gap-3 md:flex-row">
-						<div className="text-muted-foreground text-sm">
+						<div className="font-mono text-muted-foreground text-xs">
 							© {new Date().getFullYear()} exteraStore. {t("rights_reserved")}
 						</div>
 						<div className="flex items-center gap-2 text-muted-foreground text-sm">
 							<span>{t("made_with")}</span>
-							<Heart className="h-4 w-4 fill-current text-primary" />
+							<Heart className="h-4 w-4 animate-pulse-dot fill-current text-primary" />
 							<span>{t("for_telegram_community")}</span>
 						</div>
 					</div>

@@ -22,6 +22,7 @@ export function DeveloperCTA() {
 				>
 					<div className="relative overflow-hidden rounded-3xl bg-contrast p-6 text-contrast-foreground shadow-xl sm:p-10 md:p-12">
 						<div className="absolute -top-24 right-0 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
+						<div className="absolute -bottom-32 -left-16 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
 						<div className="relative mx-auto max-w-3xl text-center">
 							<div className="mb-5 inline-flex min-h-9 items-center gap-2 rounded-full border border-contrast-foreground/15 px-4 text-sm">
 								<span className="size-2 animate-pulse-dot rounded-full bg-primary" />

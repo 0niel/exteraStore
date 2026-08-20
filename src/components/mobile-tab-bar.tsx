@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Activity, Home, Package, Sparkles, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -12,6 +12,7 @@ import { cn } from "~/lib/utils";
 export function MobileTabBar() {
 	const pathname = usePathname();
 	const { data: session } = useSession();
+	const reduceMotion = useReducedMotion();
 	const t = useTranslations("Navigation");
 
 	if (
@@ -66,19 +67,29 @@ export function MobileTabBar() {
 							{active && (
 								<motion.span
 									layoutId="mobile-tab-indicator"
-									className="absolute top-0 h-0.5 w-8 rounded-full bg-primary"
-									transition={{ type: "spring", stiffness: 500, damping: 35 }}
+									className="absolute bottom-1 size-1 rounded-full bg-primary shadow-[0_0_8px_2px] shadow-primary/50"
+									transition={
+										reduceMotion
+											? { duration: 0 }
+											: { type: "spring", stiffness: 500, damping: 35 }
+									}
 								/>
 							)}
 							<motion.span
-								whileTap={{ scale: 0.85 }}
+								whileTap={reduceMotion ? undefined : { scale: 0.85 }}
+								animate={
+									reduceMotion ? undefined : { scale: active ? 1.08 : 1 }
+								}
+								transition={{ type: "spring", stiffness: 400, damping: 25 }}
 								className="flex flex-col items-center gap-0.5"
 							>
 								{isProfile ? (
 									<Avatar
 										className={cn(
 											"size-6 border",
-											active ? "border-primary" : "border-transparent",
+											active
+												? "border-primary shadow-[0_0_8px] shadow-primary/40"
+												: "border-transparent",
 										)}
 									>
 										<AvatarImage
@@ -91,7 +102,10 @@ export function MobileTabBar() {
 									</Avatar>
 								) : (
 									<Icon
-										className={cn("size-5", active && "fill-primary/15")}
+										className={cn(
+											"transition-[width,height]",
+											active ? "size-[22px] fill-primary/15" : "size-5",
+										)}
 										strokeWidth={active ? 2.4 : 2}
 									/>
 								)}

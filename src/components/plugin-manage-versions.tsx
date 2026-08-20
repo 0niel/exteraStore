@@ -33,6 +33,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
+import { EmptyState } from "~/components/ui/empty-state";
 import { formatBytes, formatDate } from "~/lib/utils";
 import type { RouterOutputs } from "~/trpc/react";
 import { api } from "~/trpc/react";
@@ -75,32 +76,57 @@ export function PluginManageVersions({
 
 	if (isLoading) {
 		return (
-			<div className="flex items-center justify-center py-8">
-				<Loader2 className="h-6 w-6 animate-spin" />
-				<span className="ml-2">{t("loading")}</span>
+			<div className="space-y-4" aria-hidden="true">
+				{[0, 1, 2].map((i) => (
+					<div key={i} className="space-y-3 rounded-2xl border bg-card p-5">
+						<div className="flex items-center gap-3">
+							<div className="skeleton-shimmer h-9 w-9 shrink-0 rounded-xl" />
+							<div className="skeleton-shimmer h-5 w-24 rounded-md" />
+							<div className="skeleton-shimmer h-5 w-16 rounded-full" />
+						</div>
+						<div className="skeleton-shimmer h-4 w-2/3 rounded-md" />
+						<div className="skeleton-shimmer h-4 w-1/2 rounded-md" />
+					</div>
+				))}
 			</div>
 		);
 	}
 
 	if (!versions || versions.length === 0) {
 		return (
-			<Card>
-				<CardContent className="py-8 text-center">
-					<p className="text-muted-foreground">{t("no_versions")}</p>
-				</CardContent>
-			</Card>
+			<EmptyState
+				icon="🗂️"
+				title={t("no_versions")}
+				description={t("no_versions_description")}
+			/>
 		);
 	}
 
 	return (
 		<div className="space-y-4">
 			{versions.map((version: PluginVersion, index: number) => (
-				<Card key={version.id} className={index === 0 ? "border-primary" : ""}>
+				<Card
+					key={version.id}
+					className={
+						index === 0 ? "border-primary/40 bg-primary/[0.03]" : undefined
+					}
+				>
 					<CardContent className="pt-6">
 						<div className="flex items-start justify-between gap-4">
 							<div className="min-w-0 flex-1">
-								<div className="mb-2 flex items-center gap-2">
-									<h4 className="font-semibold text-lg">v{version.version}</h4>
+								<div className="mb-2 flex flex-wrap items-center gap-2">
+									<span
+										className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl font-mono font-semibold text-xs ${
+											index === 0
+												? "bg-primary text-primary-foreground"
+												: "bg-primary/10 text-primary"
+										}`}
+									>
+										{String(index + 1).padStart(2, "0")}
+									</span>
+									<h4 className="font-mono font-semibold text-lg tracking-tight">
+										v{version.version}
+									</h4>
 									{index === 0 && (
 										<Badge className="border-transparent bg-success/15 text-success">
 											{t("current")}
@@ -165,8 +191,8 @@ export function PluginManageVersions({
 
 								{version.changelog && (
 									<div className="mt-3">
-										<h5 className="mb-2 font-medium">{t("changelog")}</h5>
-										<div className="rounded bg-muted p-3 text-muted-foreground text-sm">
+										<h5 className="eyebrow mb-2">{t("changelog")}</h5>
+										<div className="rounded-lg border bg-surface p-3 text-muted-foreground text-sm">
 											<div className="whitespace-pre-wrap">
 												{version.changelog}
 											</div>

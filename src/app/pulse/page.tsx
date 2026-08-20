@@ -12,7 +12,7 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { EmptyState } from "~/components/ui/empty-state";
 import { Skeleton } from "~/components/ui/skeleton";
-import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { cn } from "~/lib/utils";
 import { api, type RouterOutputs } from "~/trpc/react";
 
 type PulseItem = RouterOutputs["pulse"]["get"]["items"][number];
@@ -21,7 +21,7 @@ type PulseTab = "all" | "plugin.created" | "version.released" | "review.added";
 
 const defaultBubble = {
 	icon: Star,
-	className: "border border-warning/40 bg-warning/15 text-warning",
+	className: "bg-warning/15 text-warning",
 };
 
 const eventBubbles: Record<
@@ -30,11 +30,11 @@ const eventBubbles: Record<
 > = {
 	"plugin.created": {
 		icon: Package,
-		className: "bg-primary text-primary-foreground",
+		className: "bg-primary/10 text-primary",
 	},
 	"version.released": {
 		icon: Tag,
-		className: "bg-contrast text-contrast-foreground",
+		className: "bg-success/15 text-success",
 	},
 	"review.added": defaultBubble,
 };
@@ -89,12 +89,23 @@ export default function PulsePage() {
 		const BubbleIcon = bubble.icon;
 		return (
 			<div
-				className={`mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full ${bubble.className}`}
+				className={`mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl ${bubble.className}`}
 			>
 				<BubbleIcon className="h-4 w-4" />
 			</div>
 		);
 	};
+
+	const tabItems: Array<{
+		value: PulseTab;
+		label: string;
+		icon: typeof Package | null;
+	}> = [
+		{ value: "all", label: t("tab_all"), icon: null },
+		{ value: "plugin.created", label: t("tab_plugins"), icon: Package },
+		{ value: "version.released", label: t("tab_releases"), icon: Tag },
+		{ value: "review.added", label: t("tab_reviews"), icon: Star },
+	];
 
 	const countLabel =
 		tab === "all"
@@ -107,7 +118,11 @@ export default function PulsePage() {
 
 	return (
 		<div className="bg-background">
-			<div className="container mx-auto px-4 py-8">
+			<div className="container relative isolate mx-auto px-4 py-8">
+				<div
+					aria-hidden="true"
+					className="pointer-events-none absolute -top-24 left-1/2 -z-10 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl"
+				/>
 				<PageHeader
 					badge={t("badge")}
 					title={t("title")}
@@ -115,72 +130,52 @@ export default function PulsePage() {
 					icon={Activity}
 				/>
 
-				<Card className="mb-6 overflow-hidden">
-					<CardContent className="p-3 sm:p-4">
-						<div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-							<Tabs
-								value={tab}
-								onValueChange={(v) => {
-									setTab(v as PulseTab);
+				<div className="mb-4 flex min-h-6 items-center justify-between gap-3">
+					<span className="eyebrow">{t("section_feed")}</span>
+					{isLoading ? (
+						<span className="text-muted-foreground text-xs">
+							{t("loading")}
+						</span>
+					) : (
+						<span className="font-mono text-muted-foreground text-xs tabular-nums">
+							{countLabel}
+						</span>
+					)}
+				</div>
+
+				<div className="scrollbar-hide -mx-4 mb-6 flex snap-x gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+					{tabItems.map((item) => {
+						const ItemIcon = item.icon;
+						return (
+							<button
+								key={item.value}
+								type="button"
+								onClick={() => {
+									setTab(item.value);
 									setPage(1);
 								}}
-								className="w-full sm:w-auto"
+								aria-pressed={tab === item.value}
+								className={cn(
+									"press-scale inline-flex min-h-11 shrink-0 snap-start items-center gap-1.5 rounded-full border px-4 font-medium text-sm transition-colors",
+									tab === item.value
+										? "border-primary bg-primary text-primary-foreground"
+										: "bg-background/70 backdrop-blur hover:border-primary/40 hover:text-primary",
+								)}
 							>
-								<TabsList className="grid w-full grid-cols-4">
-									<TabsTrigger
-										value="all"
-										className="min-h-9 text-xs sm:text-sm"
-									>
-										{t("tab_all")}
-									</TabsTrigger>
-									<TabsTrigger
-										value="plugin.created"
-										className="min-h-9 text-xs sm:text-sm"
-									>
-										<Package className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
-										<span className="hidden sm:inline">{t("tab_plugins")}</span>
-									</TabsTrigger>
-									<TabsTrigger
-										value="version.released"
-										className="min-h-9 text-xs sm:text-sm"
-									>
-										<Tag className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
-										<span className="hidden sm:inline">
-											{t("tab_releases")}
-										</span>
-									</TabsTrigger>
-									<TabsTrigger
-										value="review.added"
-										className="min-h-9 text-xs sm:text-sm"
-									>
-										<Star className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
-										<span className="hidden sm:inline">{t("tab_reviews")}</span>
-									</TabsTrigger>
-								</TabsList>
-							</Tabs>
-							<div className="flex items-center gap-2">
-								{!isLoading && (
-									<Badge variant="secondary" className="text-xs tabular-nums">
-										{countLabel}
-									</Badge>
-								)}
-								{isLoading && (
-									<span className="text-muted-foreground text-xs">
-										{t("loading")}
-									</span>
-								)}
-							</div>
-						</div>
-					</CardContent>
-				</Card>
+								{ItemIcon && <ItemIcon className="h-4 w-4" />}
+								{item.label}
+							</button>
+						);
+					})}
+				</div>
 
 				{isLoading ? (
-					<div className="space-y-3">
+					<div className="space-y-4">
 						{Array.from({ length: 6 }).map((_, i) => (
 							<Card key={i}>
 								<CardContent className="p-0">
-									<div className="flex items-start gap-3 p-3 sm:p-4">
-										<Skeleton className="skeleton-shimmer h-8 w-8 shrink-0 rounded-full" />
+									<div className="flex items-start gap-3 p-4 sm:p-5">
+										<Skeleton className="skeleton-shimmer h-10 w-10 shrink-0 rounded-xl" />
 										<div className="min-w-0 flex-1 space-y-2">
 											<div className="flex items-center justify-between gap-2">
 												<div className="flex items-center gap-2">
@@ -233,13 +228,13 @@ export default function PulsePage() {
 				) : (
 					<div className="relative">
 						{groups.map((group) => (
-							<div key={group.date.toDateString()} className="mb-8">
-								<div className="glass sticky top-16 z-20 mb-3 flex justify-center rounded-full py-1">
-									<span className="font-medium text-muted-foreground text-xs uppercase tracking-wider">
+							<div key={group.date.toDateString()} className="mb-10">
+								<div className="sticky top-[calc(4rem+env(safe-area-inset-top))] z-20 mb-4 flex justify-center">
+									<span className="eyebrow glass rounded-full border px-4 py-2 shadow-soft">
 										{dayLabel(group.date)}
 									</span>
 								</div>
-								<div className="space-y-3">
+								<div className="space-y-4">
 									{group.items.map((it, idx) => (
 										<motion.div
 											key={it.id}
@@ -256,7 +251,7 @@ export default function PulsePage() {
 										>
 											<Card className="group overflow-hidden transition-colors hover:border-primary/35">
 												<CardContent className="p-0">
-													<div className="flex items-start gap-3 p-3 sm:p-4">
+													<div className="flex items-start gap-3 p-4 sm:p-5">
 														{renderBubble(it.type)}
 
 														<div className="min-w-0 flex-1 space-y-2">
@@ -266,7 +261,7 @@ export default function PulsePage() {
 																		<AvatarImage
 																			src={it.actor?.image ?? undefined}
 																		/>
-																		<AvatarFallback className="text-xs">
+																		<AvatarFallback className="bg-primary/10 text-primary text-xs">
 																			{(it.actor?.name ?? "??")
 																				.slice(0, 2)
 																				.toUpperCase()}
@@ -362,7 +357,7 @@ export default function PulsePage() {
 																		{it.message &&
 																			it.message !==
 																				`v${it.version?.version}` && (
-																				<div className="rounded-md border-primary border-l-2 bg-muted/50 py-1.5 pr-2 pl-3 text-sm">
+																				<div className="rounded-md border-primary border-l-2 bg-primary/5 py-1.5 pr-2 pl-3 text-sm">
 																					<p className="line-clamp-2">
 																						{it.message}
 																					</p>
@@ -392,7 +387,7 @@ export default function PulsePage() {
 																				displayRating !== null &&
 																				displayRating !== undefined && (
 																					<div className="flex items-center gap-2">
-																						<div className="flex items-center gap-1 rounded-lg bg-muted/50 px-2.5 py-1.5">
+																						<div className="flex items-center gap-1 rounded-lg bg-warning/10 px-2.5 py-1.5">
 																							{Array.from({ length: 5 }).map(
 																								(_, i) => (
 																									<Star
@@ -430,7 +425,7 @@ export default function PulsePage() {
 																		)}
 
 																		{it.review?.comment && (
-																			<div className="rounded-lg border bg-muted/30 p-3 text-sm">
+																			<div className="rounded-lg border border-primary/10 bg-primary/5 p-3 text-sm">
 																				<div className="mb-1 flex items-center gap-1.5 text-muted-foreground text-xs">
 																					<MessageSquare className="h-3.5 w-3.5" />
 																					<span>{t("comment_label")}</span>

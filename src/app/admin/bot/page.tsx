@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Send } from "lucide-react";
+import { FlaskConical, Loader2, Megaphone, Send, Webhook } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -118,12 +118,22 @@ export default function TelegramBotAdminPage() {
 	return (
 		<div className="py-8">
 			<div className="container mx-auto max-w-6xl space-y-6 px-4">
-				<h1 className="font-bold text-3xl">{t("title")}</h1>
+				<div className="animate-fade-up">
+					<span className="eyebrow mb-2">{t("eyebrow")}</span>
+					<h1 className="font-bold text-3xl tracking-tight md:text-4xl">
+						{t("title")}
+					</h1>
+				</div>
 
 				<div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
 					<Card className="animate-fade-in">
 						<CardHeader>
-							<CardTitle>{t("mass_broadcast")}</CardTitle>
+							<CardTitle className="flex items-center gap-3">
+								<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+									<Megaphone className="h-4 w-4" />
+								</span>
+								{t("mass_broadcast")}
+							</CardTitle>
 						</CardHeader>
 						<CardContent className="space-y-4">
 							<div className="space-y-2">
@@ -153,7 +163,12 @@ export default function TelegramBotAdminPage() {
 
 					<Card className="animate-fade-in">
 						<CardHeader>
-							<CardTitle>{t("send_to_user")}</CardTitle>
+							<CardTitle className="flex items-center gap-3">
+								<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+									<Send className="h-4 w-4" />
+								</span>
+								{t("send_to_user")}
+							</CardTitle>
 						</CardHeader>
 						<CardContent className="space-y-4">
 							<div className="space-y-2">
@@ -192,7 +207,12 @@ export default function TelegramBotAdminPage() {
 
 					<Card className="animate-fade-in">
 						<CardHeader>
-							<CardTitle>{t("bot_testing")}</CardTitle>
+							<CardTitle className="flex items-center gap-3">
+								<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+									<FlaskConical className="h-4 w-4" />
+								</span>
+								{t("bot_testing")}
+							</CardTitle>
 						</CardHeader>
 						<CardContent className="space-y-4">
 							<div className="space-y-2">
@@ -231,7 +251,12 @@ export default function TelegramBotAdminPage() {
 
 					<Card className="animate-fade-in">
 						<CardHeader>
-							<CardTitle>{t("webhook_settings")}</CardTitle>
+							<CardTitle className="flex items-center gap-3">
+								<span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+									<Webhook className="h-4 w-4" />
+								</span>
+								{t("webhook_settings")}
+							</CardTitle>
 						</CardHeader>
 						<CardContent className="space-y-4">
 							<div className="space-y-2">

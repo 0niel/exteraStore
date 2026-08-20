@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { PageHeader } from "~/components/page-header";
 import { PluginCard } from "~/components/plugin-card";
 import { Button } from "~/components/ui/button";
 import {
@@ -111,15 +112,24 @@ export default function FavoritesPage() {
 	return (
 		<div className="bg-background py-6 sm:py-8">
 			<div className="container mx-auto max-w-6xl px-4">
-				<div className="mb-6 animate-fade-up sm:mb-8">
-					<h1 className="mb-2 flex items-center gap-3 font-bold text-3xl sm:text-4xl">
-						<Heart className="h-7 w-7 fill-primary text-primary sm:h-8 sm:w-8" />
-						{t("title")}
-					</h1>
-					<p className="text-lg text-muted-foreground sm:text-xl">
-						{t("subtitle")}
-					</p>
-				</div>
+				<PageHeader
+					badge={t("badge")}
+					title={t("title")}
+					description={t("subtitle")}
+					icon={Heart}
+					align="left"
+				>
+					{!isLoading && (
+						<span className="inline-flex min-h-9 items-center gap-2 rounded-full border border-primary/15 bg-primary/5 px-4 py-1.5 text-sm">
+							<Heart className="h-4 w-4 fill-primary text-primary" />
+							<span className="font-mono font-semibold">
+								{favoritesData?.pagination?.total ??
+									favoritesData?.favorites.length ??
+									0}
+							</span>
+						</span>
+					)}
+				</PageHeader>
 
 				<div
 					className="mb-6 animate-fade-up"

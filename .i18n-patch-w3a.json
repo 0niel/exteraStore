@@ -1,0 +1,14 @@
+{
+	"en": {
+		"Navigation": {
+			"menu_section": "Menu",
+			"account_section": "Account"
+		}
+	},
+	"ru": {
+		"Navigation": {
+			"menu_section": "Меню",
+			"account_section": "Аккаунт"
+		}
+	}
+}

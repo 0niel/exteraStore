@@ -134,10 +134,18 @@ export function DonationWidget({
 	};
 
 	return (
-		<Card className={cn("border-primary/20", className)}>
+		<Card
+			className={cn(
+				"border-primary/20 bg-linear-to-br from-primary/5 to-transparent",
+				className,
+			)}
+		>
 			<CardHeader>
 				<CardTitle className="flex items-center gap-2">
-					<HandCoins className="h-5 w-5" /> {t("support_author")}
+					<span className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+						<HandCoins className="h-4 w-4" />
+					</span>
+					{t("support_author")}
 				</CardTitle>
 			</CardHeader>
 			<CardContent className="space-y-4">

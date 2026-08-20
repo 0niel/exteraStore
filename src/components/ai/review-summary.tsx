@@ -27,7 +27,7 @@ export function ReviewSummary({ pluginId }: ReviewSummaryProps) {
 
 	if (isLoading) {
 		return (
-			<Card className="border-primary/20">
+			<Card className="border-primary/25 bg-linear-to-br from-primary/10 via-card to-card">
 				<CardContent className="space-y-3 p-4">
 					<div className="skeleton-shimmer h-6 w-32 rounded-full" />
 					<div className="skeleton-shimmer h-4 w-full rounded-md" />
@@ -52,7 +52,7 @@ export function ReviewSummary({ pluginId }: ReviewSummaryProps) {
 	};
 
 	return (
-		<Card className="animate-fade-up border-primary/20">
+		<Card className="animate-fade-up border-primary/25 bg-linear-to-br from-primary/10 via-card to-card">
 			<CardContent className="space-y-4 p-4">
 				<div className="flex flex-wrap items-center justify-between gap-2">
 					<span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 font-medium text-primary text-xs">
@@ -74,7 +74,7 @@ export function ReviewSummary({ pluginId }: ReviewSummaryProps) {
 				<div className="grid gap-4 sm:grid-cols-2">
 					{data.pros.length > 0 && (
 						<div className="space-y-2">
-							<h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+							<h4 className="font-medium font-mono text-muted-foreground text-xs uppercase tracking-wide">
 								{t("pros")}
 							</h4>
 							<ul className="space-y-1.5">
@@ -89,7 +89,7 @@ export function ReviewSummary({ pluginId }: ReviewSummaryProps) {
 					)}
 					{data.cons.length > 0 && (
 						<div className="space-y-2">
-							<h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
+							<h4 className="font-medium font-mono text-muted-foreground text-xs uppercase tracking-wide">
 								{t("cons")}
 							</h4>
 							<ul className="space-y-1.5">

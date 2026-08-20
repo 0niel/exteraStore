@@ -43,7 +43,7 @@ export function DiffExplain({ pluginId, fromHash, toHash }: DiffExplainProps) {
 			{!data && (
 				<Button
 					variant="outline"
-					className="press-scale min-h-11 gap-2"
+					className="press-scale min-h-11 gap-2 border-primary/30 bg-primary/5 hover:bg-primary/10"
 					onClick={() => setRequested(true)}
 					disabled={isFetching}
 				>
@@ -69,7 +69,7 @@ export function DiffExplain({ pluginId, fromHash, toHash }: DiffExplainProps) {
 						transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
 						className="overflow-hidden"
 					>
-						<Card className="border-primary/20">
+						<Card className="border-primary/25 bg-linear-to-br from-primary/10 via-card to-card">
 							<CardContent className="space-y-4 p-4">
 								<span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 font-medium text-primary text-xs">
 									<Sparkles className="h-3.5 w-3.5" />

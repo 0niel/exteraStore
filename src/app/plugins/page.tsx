@@ -7,13 +7,13 @@ import {
 	Grid2X2,
 	List,
 	Search,
-	SlidersHorizontal,
 	X,
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Suspense, useEffect, useState } from "react";
 import { useDebounce } from "use-debounce";
+import { PageHeader } from "~/components/page-header";
 import { PluginCard } from "~/components/plugin-card";
 import { Button } from "~/components/ui/button";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -134,21 +134,25 @@ function PluginsContent() {
 
 	return (
 		<div className="min-h-[60dvh]">
-			<header className="border-b bg-muted/20">
-				<div className="container mx-auto animate-fade-up px-4 py-8 sm:py-12">
-					<p className="font-medium text-primary text-sm">{t("badge")}</p>
-					<h1 className="mt-2 text-balance font-bold text-3xl tracking-tight sm:text-5xl">
-						{t("title")}
-					</h1>
-					<p className="mt-3 max-w-2xl text-muted-foreground sm:text-lg">
-						{t("subtitle")}
-					</p>
+			<header className="section-band relative overflow-hidden border-t-0">
+				<div
+					className="pointer-events-none absolute -top-28 left-1/4 h-64 w-64 rounded-full bg-primary/15 blur-3xl"
+					aria-hidden="true"
+				/>
+				<div className="container mx-auto px-4 pt-8 sm:pt-12">
+					<PageHeader
+						align="left"
+						badge={t("badge")}
+						title={t("title")}
+						description={t("subtitle")}
+						icon={Grid2X2}
+					/>
 				</div>
 			</header>
 
 			<div className="container mx-auto px-4 py-6 sm:py-8">
 				<div className="glass sticky top-[calc(4rem+env(safe-area-inset-top))] z-20 -mx-4 mb-7 border-b px-4 py-3 sm:mx-0 sm:rounded-2xl sm:border sm:p-4">
-					<div className="grid gap-3 lg:grid-cols-[minmax(16rem,1fr)_13rem_13rem_auto]">
+					<div className="grid gap-3 lg:grid-cols-[minmax(16rem,1fr)_13rem_auto]">
 						<label className="relative block">
 							<span className="sr-only">{t("search_label")}</span>
 							<Search className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-muted-foreground" />
@@ -159,7 +163,7 @@ function PluginsContent() {
 									setPage(1);
 								}}
 								placeholder={t("search_placeholder")}
-								className="h-11 pr-11 pl-10"
+								className="h-11 rounded-2xl bg-background/80 pr-11 pl-10"
 							/>
 							{search && (
 								<button
@@ -177,28 +181,6 @@ function PluginsContent() {
 						</label>
 
 						<Select
-							value={category || "all"}
-							onValueChange={(value) =>
-								selectCategory(value === "all" ? "" : value)
-							}
-						>
-							<SelectTrigger
-								className="hidden h-11 w-full md:flex"
-								aria-label={t("category_label")}
-							>
-								<SelectValue placeholder={t("all_categories")} />
-							</SelectTrigger>
-							<SelectContent>
-								<SelectItem value="all">{t("all_categories")}</SelectItem>
-								{categories?.map((item: PluginCategory) => (
-									<SelectItem key={item.id} value={item.slug}>
-										{item.name}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-
-						<Select
 							value={sortBy}
 							onValueChange={(value) => {
 								setSortBy(value as SortOption);
@@ -206,7 +188,7 @@ function PluginsContent() {
 							}}
 						>
 							<SelectTrigger
-								className="h-11 w-full"
+								className="h-11 w-full rounded-2xl bg-background/80"
 								aria-label={t("sort_label")}
 							>
 								<SelectValue />
@@ -232,20 +214,25 @@ function PluginsContent() {
 						)}
 					</div>
 
-					<fieldset className="scrollbar-hide -mx-4 mt-3 flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 md:hidden">
+					<fieldset className="scrollbar-hide -mx-4 mt-3 flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
 						<legend className="sr-only">{t("category_label")}</legend>
 						<button
 							type="button"
 							onClick={() => selectCategory("")}
 							className={cn(
-								"press-scale min-h-11 shrink-0 snap-start rounded-full border px-4 font-medium text-sm transition-colors",
+								"press-scale min-h-11 shrink-0 snap-start rounded-full border px-4 font-medium text-sm transition-all duration-200 ease-[var(--ease-spring)]",
 								category === ""
-									? "border-contrast bg-contrast text-contrast-foreground"
-									: "bg-background/70 backdrop-blur hover:border-primary/40",
+									? "btn-glow border-primary bg-primary text-primary-foreground"
+									: "border-border bg-background/70 backdrop-blur hover:border-primary/40 hover:bg-primary/5",
 							)}
 							aria-pressed={category === ""}
 						>
 							{t("all_categories")}
+							{category === "" && pluginsData && (
+								<span className="ml-2 rounded-full bg-primary-foreground/20 px-1.5 py-0.5 font-mono text-xs">
+									{pluginsData.totalCount}
+								</span>
+							)}
 						</button>
 						{categories?.map((item: PluginCategory) => (
 							<button
@@ -253,23 +240,27 @@ function PluginsContent() {
 								type="button"
 								onClick={() => selectCategory(item.slug)}
 								className={cn(
-									"press-scale min-h-11 shrink-0 snap-start rounded-full border px-4 font-medium text-sm transition-colors",
+									"press-scale min-h-11 shrink-0 snap-start rounded-full border px-4 font-medium text-sm transition-all duration-200 ease-[var(--ease-spring)]",
 									category === item.slug
-										? "border-contrast bg-contrast text-contrast-foreground"
-										: "bg-background/70 backdrop-blur hover:border-primary/40",
+										? "btn-glow border-primary bg-primary text-primary-foreground"
+										: "border-border bg-background/70 backdrop-blur hover:border-primary/40 hover:bg-primary/5",
 								)}
 								aria-pressed={category === item.slug}
 							>
 								{item.name}
+								{category === item.slug && pluginsData && (
+									<span className="ml-2 rounded-full bg-primary-foreground/20 px-1.5 py-0.5 font-mono text-xs">
+										{pluginsData.totalCount}
+									</span>
+								)}
 							</button>
 						))}
 					</fieldset>
 				</div>
 
 				<div className="mb-5 flex min-h-11 items-center justify-between gap-3">
-					<div className="flex min-w-0 items-center gap-2 text-muted-foreground text-sm">
-						<SlidersHorizontal className="size-4 shrink-0" />
-						<span className="truncate" aria-live="polite">
+					<div className="flex min-w-0 items-center gap-2">
+						<span className="eyebrow truncate" aria-live="polite">
 							{isLoading
 								? t("loading")
 								: t("results_count", { count: pluginsData?.totalCount ?? 0 })}
@@ -278,13 +269,13 @@ function PluginsContent() {
 							<span className="size-2 animate-pulse-dot rounded-full bg-primary" />
 						)}
 					</div>
-					<fieldset className="flex rounded-xl border p-1">
+					<fieldset className="flex rounded-2xl border bg-card p-1 shadow-soft">
 						<legend className="sr-only">{t("view_label")}</legend>
 						<button
 							type="button"
 							onClick={() => setViewMode("grid")}
 							className={cn(
-								"press-scale flex min-h-11 min-w-11 items-center justify-center rounded-lg transition-colors",
+								"press-scale flex min-h-11 min-w-11 items-center justify-center rounded-xl transition-colors",
 								viewMode === "grid"
 									? "bg-primary text-primary-foreground"
 									: "hover:bg-muted",
@@ -298,7 +289,7 @@ function PluginsContent() {
 							type="button"
 							onClick={() => setViewMode("list")}
 							className={cn(
-								"press-scale flex min-h-11 min-w-11 items-center justify-center rounded-lg transition-colors",
+								"press-scale flex min-h-11 min-w-11 items-center justify-center rounded-xl transition-colors",
 								viewMode === "list"
 									? "bg-primary text-primary-foreground"
 									: "hover:bg-muted",
@@ -334,7 +325,7 @@ function PluginsContent() {
 						layout={!prefersReducedMotion}
 						className={cn(
 							viewMode === "grid"
-								? "grid gap-5 sm:grid-cols-2 xl:grid-cols-3"
+								? "grid gap-5 sm:grid-cols-2 sm:gap-6 xl:grid-cols-3"
 								: "space-y-3",
 						)}
 					>
@@ -385,7 +376,7 @@ function PluginsContent() {
 							<ChevronLeft />
 							<span className="hidden sm:inline">{t("prev_page")}</span>
 						</Button>
-						<span className="text-center text-muted-foreground text-sm">
+						<span className="text-center font-mono text-muted-foreground text-sm">
 							{t("page_of", { page, total: pluginsData.totalPages })}
 						</span>
 						<Button

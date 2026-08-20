@@ -1,6 +1,6 @@
 "use client";
 
-import { Edit, Loader2, Plus, Trash2 } from "lucide-react";
+import { Edit, Layers, Loader2, Plus, Trash2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -208,9 +208,24 @@ export default function AdminCategoriesPage() {
 	return (
 		<div className="py-8">
 			<div className="container mx-auto max-w-6xl px-4">
-				<div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-					<h1 className="font-bold text-3xl">{t("title")}</h1>
-					<Button onClick={() => handleOpenDialog()}>
+				<div className="mb-6 flex animate-fade-up flex-col gap-4 md:flex-row md:items-end md:justify-between">
+					<div>
+						<span className="eyebrow mb-2">{t("eyebrow")}</span>
+						<div className="flex flex-wrap items-center gap-3">
+							<h1 className="font-bold text-3xl tracking-tight md:text-4xl">
+								{t("title")}
+							</h1>
+							{categories ? (
+								<span className="inline-flex h-8 items-center rounded-full border border-primary/15 bg-primary/5 px-3 font-mono font-semibold text-primary text-sm">
+									{categories.length}
+								</span>
+							) : null}
+						</div>
+					</div>
+					<Button
+						onClick={() => handleOpenDialog()}
+						className="press-scale w-full md:w-auto"
+					>
 						<Plus className="mr-2 h-4 w-4" />
 						{t("add_category")}
 					</Button>
@@ -229,19 +244,25 @@ export default function AdminCategoriesPage() {
 				) : (
 					<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 						{categories.map((category: Category) => (
-							<Card key={category.id} className="animate-fade-in">
+							<Card key={category.id} className="card-lift animate-fade-in">
 								<CardHeader className="pb-2">
-									<div className="flex items-start justify-between">
-										<div className="min-w-0">
-											<CardTitle className="flex items-center gap-2">
-												{category.icon && <span>{category.icon}</span>}
-												<span className="truncate">{category.name}</span>
-											</CardTitle>
-											<CardDescription>{category.slug}</CardDescription>
+									<div className="flex items-start justify-between gap-3">
+										<div className="flex min-w-0 items-center gap-3">
+											<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-lg text-primary">
+												{category.icon || <Layers className="h-5 w-5" />}
+											</span>
+											<div className="min-w-0">
+												<CardTitle className="truncate">
+													{category.name}
+												</CardTitle>
+												<CardDescription className="mt-1 truncate font-mono text-xs">
+													/{category.slug}
+												</CardDescription>
+											</div>
 										</div>
 										{category.color && (
 											<div
-												className="h-4 w-4 shrink-0 rounded-full"
+												className="h-4 w-4 shrink-0 rounded-full ring-2 ring-border"
 												style={{ backgroundColor: category.color }}
 											/>
 										)}
@@ -252,7 +273,10 @@ export default function AdminCategoriesPage() {
 										{category.description || t("no_description")}
 									</p>
 									<div className="flex items-center justify-between">
-										<Badge variant="outline">
+										<Badge
+											variant="outline"
+											className="border-primary/20 bg-primary/5 font-mono text-primary"
+										>
 											{category.pluginCount || 0} {t("plugins")}
 										</Badge>
 										<div className="flex gap-2">

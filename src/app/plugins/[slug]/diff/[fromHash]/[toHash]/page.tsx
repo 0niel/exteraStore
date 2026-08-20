@@ -72,9 +72,13 @@ export default function PluginDiffPage() {
 	const renderDiff = () => {
 		if (!diffData?.oldContent || !diffData?.newContent) {
 			return (
-				<div className="py-12 text-center text-muted-foreground">
-					<FileText className="mx-auto mb-4 h-16 w-16 opacity-50" />
-					<h3 className="mb-2 font-medium text-lg">{t("no_changes_title")}</h3>
+				<div className="rounded-2xl border border-dashed bg-primary/5 py-12 text-center text-muted-foreground">
+					<div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-primary">
+						<FileText className="h-7 w-7" />
+					</div>
+					<h3 className="mb-2 font-medium text-foreground text-lg">
+						{t("no_changes_title")}
+					</h3>
 					<p>{t("no_changes_description")}</p>
 				</div>
 			);
@@ -239,10 +243,19 @@ export default function PluginDiffPage() {
 						</div>
 					</div>
 
-					<motion.div className="space-y-2" {...sectionMotion}>
-						<div className="flex items-center gap-3">
-							<GitCommit className="h-6 w-6 text-muted-foreground" />
-							<h1 className="font-bold text-2xl">{t("title")}</h1>
+					<motion.div className="relative isolate space-y-2" {...sectionMotion}>
+						<div
+							className="pointer-events-none absolute -top-16 -left-12 -z-10 h-44 w-44 rounded-full bg-primary/15 blur-3xl"
+							aria-hidden="true"
+						/>
+						<span className="eyebrow">diff</span>
+						<div className="flex flex-wrap items-center gap-3">
+							<h1 className="font-bold text-2xl tracking-tight sm:text-3xl">
+								{t("title")}
+							</h1>
+							<span className="rounded-full bg-primary/10 px-3 py-1 font-mono text-primary text-xs">
+								{fromHash} → {toHash}
+							</span>
 						</div>
 						<p className="text-muted-foreground">{t("subtitle")}</p>
 					</motion.div>
@@ -252,7 +265,9 @@ export default function PluginDiffPage() {
 							<Card className="h-full border-destructive/30">
 								<CardHeader>
 									<CardTitle className="flex items-center gap-2 text-destructive">
-										<Minus className="h-5 w-5" />
+										<span className="flex size-8 items-center justify-center rounded-xl bg-destructive/10">
+											<Minus className="h-4 w-4" />
+										</span>
 										{t("source_version")}
 									</CardTitle>
 								</CardHeader>
@@ -285,7 +300,7 @@ export default function PluginDiffPage() {
 									{diffData.fromVersion.changelog && (
 										<div className="text-sm">
 											<p className="mb-1 font-medium">{t("changes_label")}</p>
-											<p className="rounded bg-muted p-2 text-muted-foreground text-xs">
+											<p className="rounded-xl bg-primary/5 p-3 text-muted-foreground text-xs">
 												{diffData.fromVersion.changelog}
 											</p>
 										</div>
@@ -298,7 +313,9 @@ export default function PluginDiffPage() {
 							<Card className="h-full border-success/30">
 								<CardHeader>
 									<CardTitle className="flex items-center gap-2 text-success">
-										<Plus className="h-5 w-5" />
+										<span className="flex size-8 items-center justify-center rounded-xl bg-success/10">
+											<Plus className="h-4 w-4" />
+										</span>
 										{t("new_version")}
 									</CardTitle>
 								</CardHeader>
@@ -329,7 +346,7 @@ export default function PluginDiffPage() {
 									{diffData.toVersion.changelog && (
 										<div className="text-sm">
 											<p className="mb-1 font-medium">{t("changes_label")}</p>
-											<p className="rounded bg-muted p-2 text-muted-foreground text-xs">
+											<p className="rounded-xl bg-primary/5 p-3 text-muted-foreground text-xs">
 												{diffData.toVersion.changelog}
 											</p>
 										</div>
