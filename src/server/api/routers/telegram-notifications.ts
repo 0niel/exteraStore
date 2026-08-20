@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { env } from "~/env";
+import { notifyPluginUpdateSubscribers } from "~/lib/telegram-notifications";
 import { escapeHtml } from "~/lib/utils";
 import {
 	createTRPCRouter,
@@ -12,7 +13,6 @@ import {
 	pluginDownloads,
 	plugins,
 	pluginVersions,
-	userPluginSubscriptions,
 	users,
 } from "~/server/db/schema";
 import { checkDownloadRateLimit, hashIp } from "~/server/lib/rate-limiter";
@@ -211,78 +211,11 @@ export const telegramNotificationsRouter = createTRPCRouter({
 				throw new Error("Недостаточно прав");
 			}
 
-			const subscribers = await ctx.db
-				.select({
-					userId: userPluginSubscriptions.userId,
-					telegramChatId: userPluginSubscriptions.telegramChatId,
-					user: {
-						telegramId: users.telegramId,
-						name: users.name,
-					},
-				})
-				.from(userPluginSubscriptions)
-				.leftJoin(users, eq(userPluginSubscriptions.userId, users.id))
-				.where(
-					and(
-						eq(userPluginSubscriptions.pluginId, input.pluginId),
-						eq(userPluginSubscriptions.subscriptionType, "updates"),
-						eq(userPluginSubscriptions.isActive, true),
-					),
-				);
-
-			const results = [];
-
-			for (const subscriber of subscribers) {
-				try {
-					const chatId =
-						subscriber.telegramChatId ?? subscriber.user?.telegramId;
-					if (chatId) {
-						const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-						const pluginUrl = `${baseUrl}/plugins/${plugin[0].slug}`;
-						const message = `🎉 Обновление плагина!\n\n🔌 *${plugin[0].name}* v${input.newVersion} теперь доступен.\n\nНажмите, чтобы посмотреть детали.`;
-
-						await sendTelegramMessage(chatId, message, {
-							parse_mode: "Markdown",
-							reply_markup: {
-								inline_keyboard: [
-									[
-										{
-											text: "👀 Посмотреть",
-											url: pluginUrl,
-										},
-									],
-								],
-							},
-						});
-						results.push({
-							subscriber: subscriber.user?.name ?? "Unknown",
-							status: "sent",
-						});
-					} else {
-						results.push({
-							subscriber: subscriber.user?.name ?? "Unknown",
-							status: "failed",
-							reason: "No chat ID",
-						});
-					}
-				} catch (error) {
-					console.error(
-						`Failed to send notification to ${subscriber.user?.name}:`,
-						error,
-					);
-					results.push({
-						subscriber: subscriber.user?.name ?? "Unknown",
-						status: "failed",
-						reason: error instanceof Error ? error.message : "Unknown error",
-					});
-				}
-			}
-
-			return {
-				notified: results.filter((r) => r.status === "sent").length,
-				failed: results.filter((r) => r.status === "failed").length,
-				results,
-			};
+			return notifyPluginUpdateSubscribers(
+				ctx.db,
+				input.pluginId,
+				input.newVersion,
+			);
 		}),
 
 	getNotifications: protectedProcedure

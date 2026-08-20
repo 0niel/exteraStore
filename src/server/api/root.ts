@@ -1,4 +1,5 @@
 import { adminPluginsRouter } from "~/server/api/routers/admin-plugins";
+import { adminStatsRouter } from "~/server/api/routers/admin-stats";
 import { adminUsersRouter } from "~/server/api/routers/admin-users";
 import { aiRouter } from "~/server/api/routers/ai";
 import { categoriesRouter } from "~/server/api/routers/categories";
@@ -31,6 +32,7 @@ export const appRouter = createTRPCRouter({
 	developers: developersRouter,
 	users: usersRouter,
 	adminPlugins: adminPluginsRouter,
+	adminStats: adminStatsRouter,
 	adminUsers: adminUsersRouter,
 	aiCollections: aiCollectionsRouter,
 	ai: aiRouter,

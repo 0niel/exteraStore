@@ -2,6 +2,7 @@
 
 import {
 	Bot,
+	Gauge,
 	Layers,
 	LayoutGrid,
 	Lock,
@@ -120,6 +121,12 @@ export default function AdminLayout({
 	}
 
 	const navItems = [
+		{
+			href: "/admin",
+			label: t("dashboard"),
+			icon: <Gauge className="h-4 w-4" />,
+			active: pathname === "/admin",
+		},
 		{
 			href: "/admin/plugins",
 			label: t("plugins"),

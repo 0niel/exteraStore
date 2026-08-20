@@ -1,6 +1,7 @@
 import { and, asc, count, desc, eq, inArray, like, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { notifyReviewSubscribers } from "~/lib/telegram-notifications";
 import { generateSlug } from "~/lib/utils";
 import {
 	createTRPCRouter,
@@ -381,6 +382,17 @@ export const pluginsRouter = createTRPCRouter({
 					message: input.title ?? null,
 				});
 			} catch {}
+
+			try {
+				await notifyReviewSubscribers(ctx.db, {
+					pluginId: input.pluginId,
+					reviewAuthorId: ctx.session.user.id,
+					reviewerName: ctx.session.user.name ?? "Unknown",
+					rating: input.rating,
+				});
+			} catch (error) {
+				console.error("Failed to send review notifications:", error);
+			}
 
 			return review;
 		}),

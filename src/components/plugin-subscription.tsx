@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "~/components/ui/badge";
 import {
@@ -44,6 +44,18 @@ export function PluginSubscription({
 		api.pluginPipeline.getNotificationSettings.useQuery(undefined, {
 			enabled: !!session,
 		});
+
+	const { data: currentSubscriptions } =
+		api.pluginPipeline.getSubscriptions.useQuery(
+			{ pluginId },
+			{ enabled: !!session },
+		);
+
+	useEffect(() => {
+		if (currentSubscriptions) {
+			setSubscriptions(currentSubscriptions);
+		}
+	}, [currentSubscriptions]);
 
 	const subscribeMutation = api.pluginPipeline.subscribe.useMutation({
 		onSuccess: () => {

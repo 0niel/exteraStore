@@ -2,19 +2,23 @@
 
 import {
 	CheckCircle,
+	ChevronDown,
 	Download,
 	Edit,
 	Loader2,
 	Search,
+	Shield,
+	Sparkles,
 	Star,
 	Trash2,
 	User,
 	XCircle,
+	Zap,
 } from "lucide-react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
 	AlertDialog,
@@ -47,6 +51,7 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { env } from "~/env";
+import { cn, safeJsonParse } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
 const ADMINS = (env.NEXT_PUBLIC_INITIAL_ADMINS ?? "i_am_oniel")
@@ -55,6 +60,24 @@ const ADMINS = (env.NEXT_PUBLIC_INITIAL_ADMINS ?? "i_am_oniel")
 	.filter(Boolean);
 
 const SKELETON_KEYS = ["sk-1", "sk-2", "sk-3", "sk-4", "sk-5", "sk-6"];
+
+interface AiCheck {
+	id: number;
+	checkType: string;
+	status: string;
+	score: number | null;
+	details: string | null;
+	classification: string | null;
+	shortDescription: string | null;
+	createdAt: number;
+	completedAt: number | null;
+}
+
+interface AiIssue {
+	severity: "low" | "medium" | "high" | "critical";
+	description: string;
+	recommendation?: string;
+}
 
 interface AdminPlugin {
 	id: number;
@@ -66,6 +89,156 @@ interface AdminPlugin {
 	downloadCount: number;
 	rating: number;
 	status: string;
+	latestChecks: {
+		security: AiCheck | null;
+		performance: AiCheck | null;
+	};
+	checksInProgress: boolean;
+}
+
+const CLASSIFICATION_STYLES: Record<string, string> = {
+	safe: "border-transparent bg-success/15 text-success",
+	potentially_unsafe: "border-transparent bg-warning/15 text-warning",
+	unsafe: "border-transparent bg-destructive/15 text-destructive",
+	critical: "border-transparent bg-destructive/15 text-destructive",
+};
+
+const SEVERITY_STYLES: Record<string, string> = {
+	low: "bg-muted text-muted-foreground",
+	medium: "bg-warning/15 text-warning",
+	high: "bg-destructive/15 text-destructive",
+	critical: "bg-destructive/15 text-destructive",
+};
+
+const CHECK_TYPE_META = [
+	{ type: "security" as const, icon: Shield },
+	{ type: "performance" as const, icon: Zap },
+];
+
+function parseIssues(check: AiCheck | null): AiIssue[] {
+	if (!check?.details) return [];
+	const parsed = safeJsonParse<{ issues?: AiIssue[] }>(check.details, {});
+	return Array.isArray(parsed.issues) ? parsed.issues : [];
+}
+
+function AiCheckRow({
+	label,
+	icon: Icon,
+	check,
+	inProgress,
+	t,
+}: {
+	label: string;
+	icon: typeof Shield;
+	check: AiCheck | null;
+	inProgress: boolean;
+	t: ReturnType<typeof useTranslations<"AdminPlugins">>;
+}) {
+	const [expanded, setExpanded] = useState(false);
+	const issues = parseIssues(check);
+	const isRunning =
+		inProgress || check?.status === "running" || check?.status === "pending";
+
+	const classification = check?.classification ?? null;
+	const badgeClass = isRunning
+		? "animate-pulse border-transparent bg-muted text-muted-foreground"
+		: check?.status === "error"
+			? "border-transparent bg-destructive/15 text-destructive"
+			: ((classification && CLASSIFICATION_STYLES[classification]) ??
+				"border-transparent bg-muted text-muted-foreground");
+
+	const badgeLabel = isRunning
+		? t("ai_running")
+		: check?.status === "error"
+			? t("ai_error")
+			: classification
+				? t(
+						`class_${classification}` as
+							| "class_safe"
+							| "class_potentially_unsafe"
+							| "class_unsafe"
+							| "class_critical",
+					)
+				: t("ai_no_checks");
+
+	return (
+		<div className="rounded-xl border border-border/60 bg-muted/30 p-3">
+			<div className="flex flex-wrap items-center gap-2">
+				<span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+					<Icon className="h-3.5 w-3.5" />
+				</span>
+				<span className="font-medium text-sm">{label}</span>
+				<Badge className={badgeClass}>{badgeLabel}</Badge>
+				{!isRunning && check?.score != null ? (
+					<span className="ml-auto font-mono font-semibold text-sm">
+						{Math.round(check.score)}
+						<span className="text-muted-foreground">/100</span>
+					</span>
+				) : null}
+			</div>
+			{!isRunning && check?.shortDescription ? (
+				<p className="mt-2 line-clamp-3 text-muted-foreground text-xs">
+					{check.shortDescription}
+				</p>
+			) : null}
+			{!isRunning && issues.length > 0 ? (
+				<div className="mt-2">
+					<button
+						type="button"
+						onClick={() => setExpanded((v) => !v)}
+						className="flex min-h-8 items-center gap-1 rounded-md font-medium text-primary text-xs transition-colors hover:text-primary/80"
+					>
+						<ChevronDown
+							className={cn(
+								"h-3.5 w-3.5 transition-transform",
+								expanded && "rotate-180",
+							)}
+						/>
+						{expanded
+							? t("ai_hide_issues")
+							: t("ai_show_issues", { count: issues.length })}
+					</button>
+					{expanded ? (
+						<ul className="mt-2 space-y-2">
+							{issues.map((issue, index) => (
+								<li
+									key={`${issue.severity}-${index}-${issue.description.slice(0, 24)}`}
+									className="rounded-lg border border-border/60 bg-background p-2.5"
+								>
+									<span
+										className={cn(
+											"inline-flex items-center rounded-full px-2 py-0.5 font-medium text-[11px]",
+											SEVERITY_STYLES[issue.severity] ??
+												"bg-muted text-muted-foreground",
+										)}
+									>
+										{t(
+											`severity_${issue.severity}` as
+												| "severity_low"
+												| "severity_medium"
+												| "severity_high"
+												| "severity_critical",
+										)}
+									</span>
+									<p className="mt-1.5 text-foreground text-xs">
+										{issue.description}
+									</p>
+									{issue.recommendation ? (
+										<p className="mt-1 text-muted-foreground text-xs">
+											<span className="font-medium text-foreground">
+												{t("ai_recommendation")}:
+											</span>{" "}
+											{issue.recommendation}
+										</p>
+									) : null}
+								</li>
+							))}
+						</ul>
+					) : null}
+				</div>
+			) : null}
+		</div>
+	);
 }
 
 function PluginsSkeleton() {
@@ -103,6 +276,8 @@ export default function AdminPluginsPage() {
 		(session?.user?.telegramUsername &&
 			ADMINS.includes(session.user.telegramUsername.toLowerCase()));
 
+	const [pendingCheckIds, setPendingCheckIds] = useState<number[]>([]);
+
 	const { data, refetch, isFetching } = api.adminPlugins.getPlugins.useQuery(
 		{
 			page: 1,
@@ -110,8 +285,42 @@ export default function AdminPluginsPage() {
 			status,
 			search,
 		},
-		{ enabled: Boolean(session && isAdmin) },
+		{
+			enabled: Boolean(session && isAdmin),
+			refetchInterval: (query) =>
+				query.state.data?.plugins.some(
+					(p: { checksInProgress: boolean }) => p.checksInProgress,
+				) || pendingCheckIds.length > 0
+					? 4000
+					: false,
+		},
 	);
+
+	const runChecks = api.pluginPipeline.runChecks.useMutation({
+		onSuccess: (_result, variables) => {
+			toast.success(t("toast_checks_started"));
+			setPendingCheckIds((ids) =>
+				ids.includes(variables.pluginId) ? ids : [...ids, variables.pluginId],
+			);
+			refetch();
+		},
+		onError: (error) => {
+			toast.error(t("toast_checks_error"), { description: error.message });
+		},
+	});
+
+	useEffect(() => {
+		if (!data || pendingCheckIds.length === 0) return;
+		const stillRunning = pendingCheckIds.filter((id) =>
+			data.plugins.some(
+				(p: { id: number; checksInProgress: boolean }) =>
+					p.id === id && p.checksInProgress,
+			),
+		);
+		if (stillRunning.length !== pendingCheckIds.length) {
+			setPendingCheckIds(stillRunning);
+		}
+	}, [data, pendingCheckIds]);
 
 	const approve = api.adminPlugins.approve.useMutation({
 		onSuccess: () => refetch(),
@@ -275,6 +484,56 @@ export default function AdminPluginsPage() {
 															| "rejected",
 													)}
 												</Badge>
+												<div className="space-y-2">
+													<div className="flex items-center justify-between">
+														<span className="eyebrow">{t("ai_checks")}</span>
+														<Button
+															variant="outline"
+															size="sm"
+															onClick={() =>
+																runChecks.mutate({ pluginId: plugin.id })
+															}
+															disabled={
+																plugin.checksInProgress ||
+																pendingCheckIds.includes(plugin.id) ||
+																(runChecks.isPending &&
+																	runChecks.variables?.pluginId === plugin.id)
+															}
+														>
+															{plugin.checksInProgress ||
+															pendingCheckIds.includes(plugin.id) ||
+															(runChecks.isPending &&
+																runChecks.variables?.pluginId === plugin.id) ? (
+																<>
+																	<Loader2 className="mr-1 h-4 w-4 animate-spin" />
+																	{t("ai_running")}
+																</>
+															) : (
+																<>
+																	<Sparkles className="mr-1 h-4 w-4" />
+																	{t("ai_run")}
+																</>
+															)}
+														</Button>
+													</div>
+													{CHECK_TYPE_META.map(({ type, icon }) => (
+														<AiCheckRow
+															key={type}
+															label={t(
+																type === "security"
+																	? "ai_security"
+																	: "ai_performance",
+															)}
+															icon={icon}
+															check={plugin.latestChecks[type]}
+															inProgress={
+																plugin.checksInProgress ||
+																pendingCheckIds.includes(plugin.id)
+															}
+															t={t}
+														/>
+													))}
+												</div>
 												<div className="flex flex-wrap gap-2">
 													{tab !== "approved" && (
 														<Button

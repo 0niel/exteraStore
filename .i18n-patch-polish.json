@@ -1,0 +1,42 @@
+{
+	"en": {
+		"Developers": {
+			"page_of": "Page {page} of {total}"
+		},
+		"NotificationSettings": {
+			"eyebrow": "Notifications",
+			"title": "Notification settings",
+			"description": "Choose which Telegram notifications you want to receive.",
+			"telegram_label": "Telegram notifications",
+			"telegram_description": "Master switch for all notifications sent via Telegram.",
+			"updates_label": "Plugin updates",
+			"updates_description": "Get notified when plugins you use publish a new version.",
+			"security_label": "Security alerts",
+			"security_description": "Important alerts about vulnerable or removed plugins.",
+			"reviews_label": "Review replies",
+			"reviews_description": "Get notified when someone replies to your reviews.",
+			"saved": "Notification settings saved",
+			"save_error": "Failed to save settings: {error}"
+		}
+	},
+	"ru": {
+		"Developers": {
+			"page_of": "Страница {page} из {total}"
+		},
+		"NotificationSettings": {
+			"eyebrow": "Уведомления",
+			"title": "Настройки уведомлений",
+			"description": "Выберите, какие уведомления получать в Telegram.",
+			"telegram_label": "Уведомления в Telegram",
+			"telegram_description": "Главный переключатель всех уведомлений в Telegram.",
+			"updates_label": "Обновления плагинов",
+			"updates_description": "Сообщать о новых версиях плагинов, которые вы используете.",
+			"security_label": "Оповещения безопасности",
+			"security_description": "Важные оповещения об уязвимых или удалённых плагинах.",
+			"reviews_label": "Ответы на отзывы",
+			"reviews_description": "Сообщать, когда кто-то отвечает на ваши отзывы.",
+			"saved": "Настройки уведомлений сохранены",
+			"save_error": "Не удалось сохранить настройки: {error}"
+		}
+	}
+}

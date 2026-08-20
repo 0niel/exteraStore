@@ -1,4 +1,14 @@
-import { and, asc, count, desc, eq, not, type SQL, sql } from "drizzle-orm";
+import {
+	and,
+	asc,
+	count,
+	desc,
+	eq,
+	inArray,
+	not,
+	type SQL,
+	sql,
+} from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { env } from "~/env";
@@ -10,6 +20,8 @@ import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import {
 	pluginActivities,
 	pluginCategories,
+	pluginPipelineChecks,
+	pluginPipelineQueue,
 	plugins,
 	users,
 } from "~/server/db/schema";
@@ -58,8 +70,62 @@ export const adminPluginsRouter = createTRPCRouter({
 				totalQuery,
 			]);
 			const total = totalRes[0]?.count ?? 0;
+			const pluginIds = pluginsList.map(
+				(p: typeof plugins.$inferSelect) => p.id,
+			);
+			const [checkRows, queueRows] = pluginIds.length
+				? await Promise.all([
+						ctx.db
+							.select({
+								id: pluginPipelineChecks.id,
+								pluginId: pluginPipelineChecks.pluginId,
+								checkType: pluginPipelineChecks.checkType,
+								status: pluginPipelineChecks.status,
+								score: pluginPipelineChecks.score,
+								details: pluginPipelineChecks.details,
+								classification: pluginPipelineChecks.classification,
+								shortDescription: pluginPipelineChecks.shortDescription,
+								createdAt: pluginPipelineChecks.createdAt,
+								completedAt: pluginPipelineChecks.completedAt,
+							})
+							.from(pluginPipelineChecks)
+							.where(inArray(pluginPipelineChecks.pluginId, pluginIds))
+							.orderBy(desc(pluginPipelineChecks.createdAt)),
+						ctx.db
+							.select({
+								pluginId: pluginPipelineQueue.pluginId,
+								status: pluginPipelineQueue.status,
+							})
+							.from(pluginPipelineQueue)
+							.where(
+								and(
+									inArray(pluginPipelineQueue.pluginId, pluginIds),
+									inArray(pluginPipelineQueue.status, ["queued", "processing"]),
+								),
+							),
+					])
+				: [[], []];
+			type CheckRow = (typeof checkRows)[number];
+			const latestByPlugin = new Map<number, Record<string, CheckRow>>();
+			for (const row of checkRows) {
+				const bucket = latestByPlugin.get(row.pluginId) ?? {};
+				if (!bucket[row.checkType]) {
+					bucket[row.checkType] = row;
+					latestByPlugin.set(row.pluginId, bucket);
+				}
+			}
+			const queuedPluginIds = new Set(
+				queueRows.map((r: (typeof queueRows)[number]) => r.pluginId),
+			);
 			return {
-				plugins: pluginsList,
+				plugins: pluginsList.map((plugin: typeof plugins.$inferSelect) => ({
+					...plugin,
+					latestChecks: {
+						security: latestByPlugin.get(plugin.id)?.security ?? null,
+						performance: latestByPlugin.get(plugin.id)?.performance ?? null,
+					},
+					checksInProgress: queuedPluginIds.has(plugin.id),
+				})),
 				pagination: {
 					page: input.page,
 					limit: input.limit,

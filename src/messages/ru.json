@@ -19,7 +19,9 @@
 		"sign_in_hint": "Войдите, чтобы загружать плагины и добавлять их в избранное",
 		"open_menu": "Открыть меню навигации",
 		"menu_section": "Меню",
-		"account_section": "Аккаунт"
+		"account_section": "Аккаунт",
+		"notifications": "Уведомления",
+		"notifications_empty": "Уведомлений пока нет"
 	},
 	"ThemeToggle": {
 		"toggle_theme": "Переключить тему",
@@ -568,7 +570,8 @@
 		"stats_plugins": "Плагинов",
 		"stats_downloads": "Скачиваний",
 		"stats_rating": "Рейтинг",
-		"section_leaderboard": "Рейтинг"
+		"section_leaderboard": "Рейтинг",
+		"page_of": "Страница {page} из {total}"
 	},
 	"DeveloperProfile": {
 		"not_found": "Разработчик не найден",
@@ -683,7 +686,27 @@
 		"delete_confirm_title": "Удалить плагин",
 		"delete_confirm_description": "Вы уверены, что хотите удалить плагин {name}? Это действие необратимо.",
 		"deleting": "Удаление...",
-		"eyebrow": "Модерация"
+		"eyebrow": "Модерация",
+		"ai_checks": "AI-проверки",
+		"ai_security": "Безопасность",
+		"ai_performance": "Производительность",
+		"ai_run": "Запустить AI-проверки",
+		"ai_running": "Выполняется",
+		"ai_error": "Ошибка",
+		"ai_no_checks": "Не проверялся",
+		"ai_show_issues": "Показать проблемы ({count})",
+		"ai_hide_issues": "Скрыть проблемы",
+		"ai_recommendation": "Рекомендация",
+		"class_safe": "Безопасен",
+		"class_potentially_unsafe": "Потенциально небезопасен",
+		"class_unsafe": "Небезопасен",
+		"class_critical": "Критично",
+		"severity_low": "Низкая",
+		"severity_medium": "Средняя",
+		"severity_high": "Высокая",
+		"severity_critical": "Критическая",
+		"toast_checks_started": "AI-проверки запущены",
+		"toast_checks_error": "Не удалось запустить AI-проверки"
 	},
 	"PluginVersionsPage": {
 		"back_to_plugin": "Назад к плагину",
@@ -736,7 +759,8 @@
 		"users": "Пользователи",
 		"access_denied_title": "Доступ запрещён",
 		"access_denied_description": "У вас нет прав для просмотра панели администратора.",
-		"go_home": "На главную"
+		"go_home": "На главную",
+		"dashboard": "Дашборд"
 	},
 	"Footer": {
 		"description": "Революционный магазин плагинов для exteraGram. Открывайте, создавайте и делитесь плагинами для улучшения вашего Telegram.",
@@ -1101,7 +1125,7 @@
 	},
 	"PulsePage": {
 		"badge": "Активность",
-		"title": "Пульс exteraStore",
+		"title": "Пульс экстератора",
 		"description": "Живая лента событий: публикации плагинов, релизы версий и отзывы",
 		"tab_all": "Все",
 		"tab_plugins": "Плагины",
@@ -1418,5 +1442,44 @@
 		"suggest_error": "Не удалось подобрать теги. Попробуйте позже.",
 		"suggest_category_label": "Предложенная категория:",
 		"suggest_category_applied": "Категория применена"
+	},
+	"AdminDashboard": {
+		"eyebrow": "Админка",
+		"title": "Дашборд",
+		"subtitle": "Обзор каталога, модерации и AI-пайплайна",
+		"stat_plugins": "Плагины",
+		"stat_pending": "На модерации",
+		"stat_users": "Пользователи",
+		"stat_downloads": "Загрузки",
+		"stat_reviews": "Отзывы",
+		"activity_title": "Активность за 7 дней",
+		"queue_title": "Очередь модерации",
+		"queue_empty": "Нет плагинов, ожидающих модерации",
+		"review": "Проверить",
+		"view_all": "Все",
+		"class_safe": "Безопасен",
+		"class_potentially_unsafe": "Потенциально небезопасен",
+		"class_unsafe": "Небезопасен",
+		"class_critical": "Критично",
+		"class_unchecked": "Не проверялся",
+		"failures_title": "Недавние сбои пайплайна",
+		"failures_empty": "Сбоев пайплайна нет — все проверки в порядке",
+		"failures_unknown": "Неизвестная ошибка",
+		"failures_attempts": "{count}/{max} попыток"
+	},
+	"NotificationSettings": {
+		"eyebrow": "Уведомления",
+		"title": "Настройки уведомлений",
+		"description": "Выберите, какие уведомления получать в Telegram.",
+		"telegram_label": "Уведомления в Telegram",
+		"telegram_description": "Главный переключатель всех уведомлений в Telegram.",
+		"updates_label": "Обновления плагинов",
+		"updates_description": "Сообщать о новых версиях плагинов, которые вы используете.",
+		"security_label": "Оповещения безопасности",
+		"security_description": "Важные оповещения об уязвимых или удалённых плагинах.",
+		"reviews_label": "Ответы на отзывы",
+		"reviews_description": "Сообщать, когда кто-то отвечает на ваши отзывы.",
+		"saved": "Настройки уведомлений сохранены",
+		"save_error": "Не удалось сохранить настройки: {error}"
 	}
 }

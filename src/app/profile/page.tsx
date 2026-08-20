@@ -1,9 +1,10 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
 	Download,
 	ExternalLink,
+	Loader2,
 	Package,
 	Plus,
 	Save,
@@ -19,6 +20,7 @@ import { toast } from "sonner";
 import { DonationRequisitesEditor } from "~/components/donations/donation-requisites-editor";
 import type { DonationMethod } from "~/components/donations/donation-widget";
 import { DonationWidget } from "~/components/donations/donation-widget";
+import { NotificationSettings } from "~/components/notification-settings";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -40,6 +42,35 @@ import { api } from "~/trpc/react";
 interface CustomLink {
 	title: string;
 	url: string;
+}
+
+interface ProfileFormData {
+	name: string;
+	bio: string;
+	website: string;
+	links: CustomLink[];
+	donationRequisites: DonationMethod[];
+}
+
+interface ProfileSource {
+	name?: string | null;
+	bio?: string | null;
+	website?: string | null;
+	links?: string | null;
+	donationRequisites?: string | null;
+}
+
+function buildFormData(profile: ProfileSource | undefined): ProfileFormData {
+	return {
+		name: profile?.name || "",
+		bio: profile?.bio || "",
+		website: profile?.website || "",
+		links: safeJsonParse<CustomLink[]>(profile?.links ?? "", []),
+		donationRequisites: safeJsonParse<DonationMethod[]>(
+			profile?.donationRequisites ?? "",
+			[],
+		),
+	};
 }
 
 const fadeUp = {
@@ -104,13 +135,9 @@ export default function ProfilePage() {
 	const reduceMotion = useReducedMotion();
 
 	const [isEditing, setIsEditing] = useState(false);
-	const [formData, setFormData] = useState({
-		name: "",
-		bio: "",
-		website: "",
-		links: [] as CustomLink[],
-		donationRequisites: [] as DonationMethod[],
-	});
+	const [formData, setFormData] = useState<ProfileFormData>(() =>
+		buildFormData(undefined),
+	);
 
 	const { data: userProfile, isLoading } = api.users.getProfile.useQuery(
 		undefined,
@@ -131,18 +158,13 @@ export default function ProfilePage() {
 
 	useEffect(() => {
 		if (userProfile) {
-			setFormData({
-				name: userProfile.name || "",
-				bio: userProfile.bio || "",
-				website: userProfile.website || "",
-				links: safeJsonParse<CustomLink[]>(userProfile.links ?? "", []),
-				donationRequisites: safeJsonParse<DonationMethod[]>(
-					userProfile.donationRequisites ?? "",
-					[],
-				),
-			});
+			setFormData(buildFormData(userProfile));
 		}
 	}, [userProfile]);
+
+	const isDirty = userProfile
+		? JSON.stringify(formData) !== JSON.stringify(buildFormData(userProfile))
+		: false;
 
 	if (!session) {
 		return (
@@ -166,27 +188,19 @@ export default function ProfilePage() {
 	}
 
 	const handleSave = () => {
+		const cleanLinks = formData.links.filter(
+			(link) => link.title.trim() !== "" || link.url.trim() !== "",
+		);
 		const dataToSend = {
 			...formData,
-			links: JSON.stringify(formData.links),
+			links: JSON.stringify(cleanLinks),
 			donationRequisites: JSON.stringify(formData.donationRequisites),
 		};
 		updateProfileMutation.mutate(dataToSend);
 	};
 
 	const handleCancel = () => {
-		if (userProfile) {
-			setFormData({
-				name: userProfile.name || "",
-				bio: userProfile.bio || "",
-				website: userProfile.website || "",
-				links: safeJsonParse<CustomLink[]>(userProfile.links ?? "", []),
-				donationRequisites: safeJsonParse<DonationMethod[]>(
-					userProfile.donationRequisites ?? "",
-					[],
-				),
-			});
-		}
+		setFormData(buildFormData(userProfile));
 		setIsEditing(false);
 	};
 
@@ -311,7 +325,7 @@ export default function ProfilePage() {
 								</TabsTrigger>
 							</TabsList>
 
-							<TabsContent value="profile">
+							<TabsContent value="profile" className="space-y-6">
 								<Card>
 									<CardHeader>
 										<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -328,7 +342,7 @@ export default function ProfilePage() {
 												<Button
 													onClick={() => setIsEditing(true)}
 													variant="outline"
-													className="press-scale w-full sm:w-auto"
+													className="press-scale min-h-11 w-full sm:w-auto"
 												>
 													<Settings className="mr-2 h-4 w-4" />
 													{t("edit")}
@@ -338,16 +352,23 @@ export default function ProfilePage() {
 													<Button
 														onClick={handleCancel}
 														variant="outline"
-														className="w-full sm:w-auto"
+														disabled={updateProfileMutation.isPending}
+														className="min-h-11 w-full sm:w-auto"
 													>
 														{t("cancel")}
 													</Button>
 													<Button
 														onClick={handleSave}
-														disabled={updateProfileMutation.isPending}
-														className="press-scale w-full sm:w-auto"
+														disabled={
+															updateProfileMutation.isPending || !isDirty
+														}
+														className="press-scale min-h-11 w-full sm:w-auto"
 													>
-														<Save className="mr-2 h-4 w-4" />
+														{updateProfileMutation.isPending ? (
+															<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+														) : (
+															<Save className="mr-2 h-4 w-4" />
+														)}
 														{t("save")}
 													</Button>
 												</div>
@@ -437,46 +458,77 @@ export default function ProfilePage() {
 												<Label>{t("custom_links")}</Label>
 												{isEditing ? (
 													<div className="mt-2 space-y-3">
-														{formData.links.map((link, index) => (
-															<div
-																key={index}
-																className="flex flex-col gap-2 sm:flex-row"
-															>
-																<Input
-																	placeholder={t("link_title_placeholder")}
-																	value={link.title}
-																	onChange={(e) =>
-																		updateLink(index, "title", e.target.value)
+														<AnimatePresence initial={false}>
+															{formData.links.map((link, index) => (
+																<motion.div
+																	key={index}
+																	initial={
+																		reduceMotion
+																			? false
+																			: { opacity: 0, y: -6, height: 0 }
 																	}
-																	className="min-h-11 flex-1"
-																/>
-																<div className="flex gap-2">
-																	<Input
-																		placeholder="https://example.com"
-																		type="url"
-																		value={link.url}
-																		onChange={(e) =>
-																			updateLink(index, "url", e.target.value)
-																		}
-																		className="min-h-11 flex-1"
-																	/>
-																	<Button
-																		variant="outline"
-																		size="icon"
-																		className="shrink-0"
-																		onClick={() => removeLink(index)}
-																		aria-label={t("remove_link")}
-																	>
-																		<Trash2 className="h-4 w-4" />
-																	</Button>
-																</div>
-															</div>
-														))}
+																	animate={{
+																		opacity: 1,
+																		y: 0,
+																		height: "auto",
+																	}}
+																	exit={
+																		reduceMotion
+																			? undefined
+																			: { opacity: 0, y: -6, height: 0 }
+																	}
+																	transition={{
+																		duration: 0.25,
+																		ease: [0.16, 1, 0.3, 1],
+																	}}
+																	className="overflow-hidden"
+																>
+																	<div className="flex min-h-11 flex-col gap-2 sm:flex-row">
+																		<Input
+																			placeholder={t("link_title_placeholder")}
+																			value={link.title}
+																			onChange={(e) =>
+																				updateLink(
+																					index,
+																					"title",
+																					e.target.value,
+																				)
+																			}
+																			className="min-h-11 flex-1"
+																		/>
+																		<div className="flex gap-2">
+																			<Input
+																				placeholder="https://example.com"
+																				type="url"
+																				value={link.url}
+																				onChange={(e) =>
+																					updateLink(
+																						index,
+																						"url",
+																						e.target.value,
+																					)
+																				}
+																				className="min-h-11 flex-1"
+																			/>
+																			<Button
+																				variant="outline"
+																				size="icon"
+																				className="h-11 w-11 shrink-0 text-muted-foreground hover:text-destructive"
+																				onClick={() => removeLink(index)}
+																				aria-label={t("remove_link")}
+																			>
+																				<Trash2 className="h-4 w-4" />
+																			</Button>
+																		</div>
+																	</div>
+																</motion.div>
+															))}
+														</AnimatePresence>
 														<Button
 															variant="outline"
 															size="sm"
 															onClick={addLink}
-															className="w-full"
+															className="min-h-11 w-full border-dashed"
 														>
 															<Plus className="mr-2 h-4 w-4" />
 															{t("add_link")}
@@ -489,6 +541,7 @@ export default function ProfilePage() {
 																key={index}
 																variant="outline"
 																size="sm"
+																className="min-h-11"
 																asChild
 															>
 																<a
@@ -537,6 +590,8 @@ export default function ProfilePage() {
 										</div>
 									</CardContent>
 								</Card>
+
+								<NotificationSettings />
 							</TabsContent>
 
 							<TabsContent value="stats">

@@ -12,33 +12,11 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { EmptyState } from "~/components/ui/empty-state";
 import { Skeleton } from "~/components/ui/skeleton";
-import { cn, createValidDate } from "~/lib/utils";
+import { createValidDate } from "~/lib/utils";
 import { api, type RouterOutputs } from "~/trpc/react";
 
 type AICollection = RouterOutputs["aiCollections"]["getAICollections"][number];
 type CollectionPlugin = AICollection["plugins"][number];
-
-const coverTreatments = [
-	{
-		cover: "bg-primary text-primary-foreground",
-		chip: "bg-contrast text-contrast-foreground",
-	},
-	{
-		cover: "bg-primary/10 text-foreground",
-		chip: "bg-primary text-primary-foreground",
-	},
-	{
-		cover:
-			"border-primary border-b-2 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent text-foreground",
-		chip: "bg-primary text-primary-foreground",
-	},
-] as const;
-
-function getTreatment(id: number) {
-	return (
-		coverTreatments[Math.abs(id) % coverTreatments.length] ?? coverTreatments[0]
-	);
-}
 
 function CollectionSkeleton() {
 	return (
@@ -78,7 +56,6 @@ export default function CollectionDetailPage() {
 	const collection = collections?.find((c) => c.id === collectionId);
 	const plugins = collection?.plugins || [];
 
-	const treatment = getTreatment(collection?.id ?? 0);
 	const initial = (collection?.name || "?").trim().charAt(0).toUpperCase();
 
 	if (isLoading) {
@@ -143,25 +120,24 @@ export default function CollectionDetailPage() {
 				</div>
 
 				<div className="mb-8 space-y-6">
-					<div
-						className={cn(
-							"relative animate-fade-up overflow-hidden rounded-2xl p-6 lg:p-8",
-							treatment.cover,
-						)}
-					>
+					<div className="relative animate-fade-up overflow-hidden rounded-2xl border bg-card p-6 shadow-soft lg:p-8">
+						<div
+							aria-hidden="true"
+							className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-primary/50 to-transparent"
+						/>
+						<div aria-hidden="true" className="dot-grid absolute inset-0" />
+						<div
+							aria-hidden="true"
+							className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full bg-primary/10 blur-3xl"
+						/>
 						<span
 							aria-hidden="true"
-							className="pointer-events-none absolute -right-6 -bottom-16 select-none font-bold text-[14rem] leading-none opacity-15"
+							className="pointer-events-none absolute top-1/2 -right-4 hidden -translate-y-1/2 select-none font-black font-mono text-[11rem] text-primary leading-none opacity-10 sm:block"
 						>
 							{initial}
 						</span>
 						<div className="relative flex min-h-40 flex-col justify-between gap-6">
-							<span
-								className={cn(
-									"inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1.5 font-medium text-xs",
-									treatment.chip,
-								)}
-							>
+							<span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 font-medium text-primary text-xs">
 								<Sparkles className="h-3.5 w-3.5" />
 								{t("ai_curated")}
 							</span>
@@ -169,7 +145,7 @@ export default function CollectionDetailPage() {
 								<h1 className="mb-2 font-bold text-3xl leading-tight tracking-tight lg:text-4xl">
 									{collection.name}
 								</h1>
-								<p className="max-w-2xl text-lg opacity-80 lg:text-xl">
+								<p className="max-w-2xl text-lg text-muted-foreground lg:text-xl">
 									{collection.description}
 								</p>
 							</div>

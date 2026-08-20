@@ -3,6 +3,7 @@
 import { motion, useReducedMotion } from "framer-motion";
 import {
 	Activity,
+	Bell,
 	Grid3X3,
 	Heart,
 	Home,
@@ -19,7 +20,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { TelegramIcon } from "~/components/icons/telegram-icon";
 import { LanguageSwitcher } from "~/components/language-switcher";
@@ -37,7 +38,8 @@ import {
 	DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "~/components/ui/sheet";
-import { cn } from "~/lib/utils";
+import { cn, createValidDate } from "~/lib/utils";
+import { api } from "~/trpc/react";
 import { TelegramLoginButton } from "./auth/telegram-login";
 
 type NavigationProps = {
@@ -53,6 +55,130 @@ function LogoMark({ size = "size-9" }: { size?: string }) {
 			)}
 		>
 			<span className="font-bold text-primary-foreground text-sm">eS</span>
+		</div>
+	);
+}
+
+function NotificationsBell() {
+	const t = useTranslations("Navigation");
+	const format = useFormatter();
+	const utils = api.useUtils();
+
+	const { data: notifications } =
+		api.telegramNotifications.getNotifications.useQuery({
+			page: 1,
+			limit: 10,
+			unreadOnly: false,
+		});
+
+	const markAsRead = api.telegramNotifications.markAsRead.useMutation({
+		onSuccess: () => {
+			void utils.telegramNotifications.getNotifications.invalidate();
+		},
+	});
+
+	const unreadIds = (notifications ?? [])
+		.filter((notification) => !notification.isRead)
+		.map((notification) => notification.id);
+
+	const handleOpenChange = (open: boolean) => {
+		if (open && unreadIds.length > 0 && !markAsRead.isPending) {
+			markAsRead.mutate({ notificationIds: unreadIds });
+		}
+	};
+
+	return (
+		<DropdownMenu onOpenChange={handleOpenChange}>
+			<DropdownMenuTrigger asChild>
+				<Button
+					variant="ghost"
+					size="icon"
+					className="relative min-h-11 min-w-11"
+					aria-label={t("notifications")}
+				>
+					<Bell className="h-4 w-4" />
+					{unreadIds.length > 0 && (
+						<span className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 font-medium text-[10px] text-primary-foreground">
+							{unreadIds.length > 9 ? "9+" : unreadIds.length}
+						</span>
+					)}
+				</Button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent className="w-80" align="end">
+				<DropdownMenuLabel>{t("notifications")}</DropdownMenuLabel>
+				<DropdownMenuSeparator />
+				{!notifications || notifications.length === 0 ? (
+					<div className="flex flex-col items-center gap-2 px-4 py-6 text-center">
+						<span className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+							<Bell className="size-4" />
+						</span>
+						<p className="text-muted-foreground text-sm">
+							{t("notifications_empty")}
+						</p>
+					</div>
+				) : (
+					<div className="max-h-80 overflow-y-auto">
+						{notifications.map((notification) =>
+							notification.plugin?.slug ? (
+								<DropdownMenuItem key={notification.id} asChild>
+									<Link
+										href={`/plugins/${notification.plugin.slug}`}
+										className="flex flex-col items-start gap-1 py-2"
+									>
+										<NotificationRow
+											title={notification.title}
+											message={notification.message}
+											time={format.relativeTime(
+												createValidDate(notification.createdAt),
+											)}
+											isRead={notification.isRead}
+										/>
+									</Link>
+								</DropdownMenuItem>
+							) : (
+								<DropdownMenuItem
+									key={notification.id}
+									className="flex flex-col items-start gap-1 py-2"
+								>
+									<NotificationRow
+										title={notification.title}
+										message={notification.message}
+										time={format.relativeTime(
+											createValidDate(notification.createdAt),
+										)}
+										isRead={notification.isRead}
+									/>
+								</DropdownMenuItem>
+							),
+						)}
+					</div>
+				)}
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
+}
+
+function NotificationRow({
+	title,
+	message,
+	time,
+	isRead,
+}: {
+	title: string;
+	message: string;
+	time: string;
+	isRead: boolean;
+}) {
+	return (
+		<div className="flex w-full items-start gap-2">
+			{!isRead && (
+				<span className="mt-1.5 size-2 shrink-0 rounded-full bg-primary" />
+			)}
+			<div className="min-w-0 flex-1">
+				<p className="truncate font-medium text-sm">{title}</p>
+				<p className="line-clamp-2 text-muted-foreground text-xs">{message}</p>
+				<p className="mt-0.5 text-muted-foreground/70 text-xs">{time}</p>
+			</div>
 		</div>
 	);
 }
@@ -180,6 +306,8 @@ export function Navigation({ telegramBotUsername }: NavigationProps) {
 										<span>{t("upload_plugin")}</span>
 									</Link>
 								</Button>
+
+								<NotificationsBell />
 
 								<DropdownMenu>
 									<DropdownMenuTrigger asChild>
@@ -349,6 +477,7 @@ export function Navigation({ telegramBotUsername }: NavigationProps) {
 										<div className="mb-4 flex items-center justify-between gap-3">
 											<span className="eyebrow">{t("account_section")}</span>
 											<div className="flex items-center gap-1">
+												{session?.user && <NotificationsBell />}
 												<ThemeToggle />
 												<LanguageSwitcher />
 											</div>

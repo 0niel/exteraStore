@@ -22,10 +22,12 @@ import {
 	DialogTitle,
 } from "~/components/ui/dialog";
 import { env } from "~/env";
+import { api } from "~/trpc/react";
 
 interface TelegramBotIntegrationProps {
 	pluginId: number;
 	pluginName: string;
+	pluginSlug?: string;
 	telegramBotDeeplink?: string | null;
 	price: number;
 	onDownload?: () => void;
@@ -34,6 +36,7 @@ interface TelegramBotIntegrationProps {
 export function TelegramBotIntegration({
 	pluginId,
 	pluginName,
+	pluginSlug,
 	telegramBotDeeplink,
 	price: _price,
 	onDownload,
@@ -41,6 +44,24 @@ export function TelegramBotIntegration({
 	const t = useTranslations("TelegramBotIntegration");
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
 	const [isDownloading, setIsDownloading] = useState(false);
+
+	const { data: serverDeepLink } =
+		api.telegramNotifications.createDeepLink.useQuery(
+			{ pluginSlug: pluginSlug ?? "" },
+			{ enabled: !!pluginSlug, retry: false },
+		);
+
+	const resolveBotLink = () => {
+		if (serverDeepLink?.deepLink) {
+			return serverDeepLink.deepLink;
+		}
+		if (telegramBotDeeplink) {
+			return telegramBotDeeplink;
+		}
+		const botUsername =
+			env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "exterastore_bot";
+		return `https://t.me/${botUsername}?start=plugin_${pluginSlug ?? pluginId}`;
+	};
 
 	const handleTelegramDownload = async () => {
 		setIsDownloading(true);
@@ -53,14 +74,7 @@ export function TelegramBotIntegration({
 			setIsDialogOpen(true);
 
 			setTimeout(() => {
-				if (telegramBotDeeplink) {
-					window.open(telegramBotDeeplink, "_blank");
-				} else {
-					const botUsername =
-						env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "exterastore_bot";
-					const fallbackLink = `https://t.me/${botUsername}?start=plugin_${pluginId}`;
-					window.open(fallbackLink, "_blank");
-				}
+				window.open(resolveBotLink(), "_blank");
 			}, 500);
 		} catch (_error) {
 			toast.error(t("bot_open_error"));
@@ -181,12 +195,7 @@ export function TelegramBotIntegration({
 							</Button>
 							<Button
 								onClick={() => {
-									const botUsername =
-										env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "exterastore_bot";
-									const botLink =
-										telegramBotDeeplink ||
-										`https://t.me/${botUsername}?start=plugin_${pluginId}`;
-									window.open(botLink, "_blank");
+									window.open(resolveBotLink(), "_blank");
 								}}
 								className="min-h-11 flex-1"
 							>
