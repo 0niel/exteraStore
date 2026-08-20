@@ -12,7 +12,7 @@ import { Textarea } from "~/components/ui/textarea";
 import { api } from "~/trpc/react";
 
 export default function TelegramBotAdminPage() {
-	const t = useTranslations("TelegramBot");
+	const t = useTranslations("BotAdmin");
 	const [broadcastMessage, setBroadcastMessage] = useState("");
 	const [personalUsername, setPersonalUsername] = useState("");
 	const [personalMessage, setPersonalMessage] = useState("");
@@ -23,57 +23,55 @@ export default function TelegramBotAdminPage() {
 	const broadcastMutation = api.telegramNotifications.broadcast.useMutation({
 		onSuccess: (data: { sent: number; failed: number }) => {
 			toast.success(
-				t("broadcastSuccess", { sent: data.sent, failed: data.failed }),
+				t("broadcast_success", { sent: data.sent, failed: data.failed }),
 			);
 			setBroadcastMessage("");
 		},
 		onError: (error) => {
-			toast.error(t("broadcastError"));
-			console.error("Broadcast error:", error);
+			toast.error(t("broadcast_error"), { description: error.message });
 		},
 	});
 
 	const personalMessageMutation =
 		api.telegramNotifications.sendPersonalMessage.useMutation({
 			onSuccess: () => {
-				toast.success(t("personalMessageSuccess"));
+				toast.success(t("personal_message_sent"));
 				setPersonalUsername("");
 				setPersonalMessage("");
 			},
 			onError: (error) => {
-				toast.error(t("personalMessageError"));
-				console.error("Personal message error:", error);
+				toast.error(t("personal_message_error"), {
+					description: error.message,
+				});
 			},
 		});
 
 	const testMessageMutation = api.telegramNotifications.testMessage.useMutation(
 		{
 			onSuccess: () => {
-				toast.success(t("testMessageSuccess"));
+				toast.success(t("test_message_sent"));
 				setTestChatId("");
 				setTestMessage("");
 			},
 			onError: (error) => {
-				toast.error(t("testMessageError"));
-				console.error("Test message error:", error);
+				toast.error(t("message_send_error"), { description: error.message });
 			},
 		},
 	);
 
 	const setWebhookMutation = api.telegramNotifications.setWebhook.useMutation({
 		onSuccess: () => {
-			toast.success(t("webhookSuccess"));
+			toast.success(t("webhook_set"));
 			setWebhookUrl("");
 		},
 		onError: (error) => {
-			toast.error(t("webhookError"));
-			console.error("Webhook error:", error);
+			toast.error(t("webhook_set_error"), { description: error.message });
 		},
 	});
 
-	const handleBroadcast = async () => {
+	const handleBroadcast = () => {
 		if (!broadcastMessage.trim()) {
-			toast.error(t("enterMessage"));
+			toast.error(t("enter_message"));
 			return;
 		}
 
@@ -82,9 +80,9 @@ export default function TelegramBotAdminPage() {
 		});
 	};
 
-	const handlePersonalMessage = async () => {
+	const handlePersonalMessage = () => {
 		if (!personalUsername.trim() || !personalMessage.trim()) {
-			toast.error(t("enterUsernameAndMessage"));
+			toast.error(t("fill_all_fields"));
 			return;
 		}
 
@@ -94,9 +92,9 @@ export default function TelegramBotAdminPage() {
 		});
 	};
 
-	const handleTestMessage = async () => {
+	const handleTestMessage = () => {
 		if (!testChatId.trim() || !testMessage.trim()) {
-			toast.error(t("enterChatIdAndMessage"));
+			toast.error(t("fill_all_fields"));
 			return;
 		}
 
@@ -106,9 +104,9 @@ export default function TelegramBotAdminPage() {
 		});
 	};
 
-	const handleSetWebhook = async () => {
+	const handleSetWebhook = () => {
 		if (!webhookUrl.trim()) {
-			toast.error(t("enterWebhookUrl"));
+			toast.error(t("enter_webhook_url"));
 			return;
 		}
 
@@ -118,146 +116,148 @@ export default function TelegramBotAdminPage() {
 	};
 
 	return (
-		<div className="container mx-auto space-y-6 p-6">
-			<h1 className="font-bold text-3xl">{t("title")}</h1>
+		<div className="py-8">
+			<div className="container mx-auto max-w-6xl space-y-6 px-4">
+				<h1 className="font-bold text-3xl">{t("title")}</h1>
 
-			<div className="grid gap-6 md:grid-cols-2">
-				<Card>
-					<CardHeader>
-						<CardTitle>{t("broadcast")}</CardTitle>
-					</CardHeader>
-					<CardContent className="space-y-4">
-						<div>
-							<Label htmlFor="broadcast-message">{t("message")}</Label>
-							<Textarea
-								id="broadcast-message"
-								placeholder={t("enterMessage")}
-								value={broadcastMessage}
-								onChange={(e) => setBroadcastMessage(e.target.value)}
-								rows={4}
-							/>
-						</div>
-						<Button
-							onClick={handleBroadcast}
-							disabled={broadcastMutation.isPending}
-							className="w-full"
-						>
-							{broadcastMutation.isPending ? (
-								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-							) : (
-								<Send className="mr-2 h-4 w-4" />
-							)}
-							{t("sendBroadcast")}
-						</Button>
-					</CardContent>
-				</Card>
+				<div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
+					<Card className="animate-fade-in">
+						<CardHeader>
+							<CardTitle>{t("mass_broadcast")}</CardTitle>
+						</CardHeader>
+						<CardContent className="space-y-4">
+							<div className="space-y-2">
+								<Label htmlFor="broadcast-message">{t("message")}</Label>
+								<Textarea
+									id="broadcast-message"
+									placeholder={t("broadcast_message_placeholder")}
+									value={broadcastMessage}
+									onChange={(e) => setBroadcastMessage(e.target.value)}
+									rows={4}
+								/>
+							</div>
+							<Button
+								onClick={handleBroadcast}
+								disabled={broadcastMutation.isPending}
+								className="w-full"
+							>
+								{broadcastMutation.isPending ? (
+									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+								) : (
+									<Send className="mr-2 h-4 w-4" />
+								)}
+								{t("send_broadcast")}
+							</Button>
+						</CardContent>
+					</Card>
 
-				<Card>
-					<CardHeader>
-						<CardTitle>{t("personalMessage")}</CardTitle>
-					</CardHeader>
-					<CardContent className="space-y-4">
-						<div>
-							<Label htmlFor="personal-username">{t("username")}</Label>
-							<Input
-								id="personal-username"
-								placeholder={t("enterUsername")}
-								value={personalUsername}
-								onChange={(e) => setPersonalUsername(e.target.value)}
-							/>
-						</div>
-						<div>
-							<Label htmlFor="personal-message">{t("message")}</Label>
-							<Textarea
-								id="personal-message"
-								placeholder={t("enterMessage")}
-								value={personalMessage}
-								onChange={(e) => setPersonalMessage(e.target.value)}
-								rows={3}
-							/>
-						</div>
-						<Button
-							onClick={handlePersonalMessage}
-							disabled={personalMessageMutation.isPending}
-							className="w-full"
-						>
-							{personalMessageMutation.isPending ? (
-								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-							) : (
-								<Send className="mr-2 h-4 w-4" />
-							)}
-							{t("sendPersonalMessage")}
-						</Button>
-					</CardContent>
-				</Card>
+					<Card className="animate-fade-in">
+						<CardHeader>
+							<CardTitle>{t("send_to_user")}</CardTitle>
+						</CardHeader>
+						<CardContent className="space-y-4">
+							<div className="space-y-2">
+								<Label htmlFor="personal-username">{t("username")}</Label>
+								<Input
+									id="personal-username"
+									placeholder={t("username_placeholder")}
+									value={personalUsername}
+									onChange={(e) => setPersonalUsername(e.target.value)}
+								/>
+							</div>
+							<div className="space-y-2">
+								<Label htmlFor="personal-message">{t("message")}</Label>
+								<Textarea
+									id="personal-message"
+									placeholder={t("personal_message_placeholder")}
+									value={personalMessage}
+									onChange={(e) => setPersonalMessage(e.target.value)}
+									rows={3}
+								/>
+							</div>
+							<Button
+								onClick={handlePersonalMessage}
+								disabled={personalMessageMutation.isPending}
+								className="w-full"
+							>
+								{personalMessageMutation.isPending ? (
+									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+								) : (
+									<Send className="mr-2 h-4 w-4" />
+								)}
+								{t("send_personal_message")}
+							</Button>
+						</CardContent>
+					</Card>
 
-				<Card>
-					<CardHeader>
-						<CardTitle>{t("testMessage")}</CardTitle>
-					</CardHeader>
-					<CardContent className="space-y-4">
-						<div>
-							<Label htmlFor="test-chat-id">{t("chatId")}</Label>
-							<Input
-								id="test-chat-id"
-								placeholder={t("enterChatId")}
-								value={testChatId}
-								onChange={(e) => setTestChatId(e.target.value)}
-							/>
-						</div>
-						<div>
-							<Label htmlFor="test-message">{t("message")}</Label>
-							<Textarea
-								id="test-message"
-								placeholder={t("enterMessage")}
-								value={testMessage}
-								onChange={(e) => setTestMessage(e.target.value)}
-								rows={3}
-							/>
-						</div>
-						<Button
-							onClick={handleTestMessage}
-							disabled={testMessageMutation.isPending}
-							className="w-full"
-						>
-							{testMessageMutation.isPending ? (
-								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-							) : (
-								<Send className="mr-2 h-4 w-4" />
-							)}
-							{t("sendTestMessage")}
-						</Button>
-					</CardContent>
-				</Card>
+					<Card className="animate-fade-in">
+						<CardHeader>
+							<CardTitle>{t("bot_testing")}</CardTitle>
+						</CardHeader>
+						<CardContent className="space-y-4">
+							<div className="space-y-2">
+								<Label htmlFor="test-chat-id">{t("chat_id")}</Label>
+								<Input
+									id="test-chat-id"
+									placeholder={t("chat_id_placeholder")}
+									value={testChatId}
+									onChange={(e) => setTestChatId(e.target.value)}
+								/>
+							</div>
+							<div className="space-y-2">
+								<Label htmlFor="test-message">{t("message")}</Label>
+								<Textarea
+									id="test-message"
+									placeholder={t("message_placeholder")}
+									value={testMessage}
+									onChange={(e) => setTestMessage(e.target.value)}
+									rows={3}
+								/>
+							</div>
+							<Button
+								onClick={handleTestMessage}
+								disabled={testMessageMutation.isPending}
+								className="w-full"
+							>
+								{testMessageMutation.isPending ? (
+									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+								) : (
+									<Send className="mr-2 h-4 w-4" />
+								)}
+								{t("send_test_message")}
+							</Button>
+						</CardContent>
+					</Card>
 
-				<Card>
-					<CardHeader>
-						<CardTitle>{t("webhook")}</CardTitle>
-					</CardHeader>
-					<CardContent className="space-y-4">
-						<div>
-							<Label htmlFor="webhook-url">{t("webhookUrl")}</Label>
-							<Input
-								id="webhook-url"
-								placeholder={t("enterWebhookUrl")}
-								value={webhookUrl}
-								onChange={(e) => setWebhookUrl(e.target.value)}
-							/>
-						</div>
-						<Button
-							onClick={handleSetWebhook}
-							disabled={setWebhookMutation.isPending}
-							className="w-full"
-						>
-							{setWebhookMutation.isPending ? (
-								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-							) : (
-								<Send className="mr-2 h-4 w-4" />
-							)}
-							{t("setWebhook")}
-						</Button>
-					</CardContent>
-				</Card>
+					<Card className="animate-fade-in">
+						<CardHeader>
+							<CardTitle>{t("webhook_settings")}</CardTitle>
+						</CardHeader>
+						<CardContent className="space-y-4">
+							<div className="space-y-2">
+								<Label htmlFor="webhook-url">{t("webhook_url_label")}</Label>
+								<Input
+									id="webhook-url"
+									placeholder={t("webhook_url_placeholder")}
+									value={webhookUrl}
+									onChange={(e) => setWebhookUrl(e.target.value)}
+								/>
+							</div>
+							<Button
+								onClick={handleSetWebhook}
+								disabled={setWebhookMutation.isPending}
+								className="w-full"
+							>
+								{setWebhookMutation.isPending ? (
+									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+								) : (
+									<Send className="mr-2 h-4 w-4" />
+								)}
+								{t("set_webhook")}
+							</Button>
+						</CardContent>
+					</Card>
+				</div>
 			</div>
 		</div>
 	);

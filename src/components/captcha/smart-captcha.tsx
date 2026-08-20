@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { env } from "~/env";
 
@@ -28,6 +29,7 @@ declare global {
 }
 
 export function SmartCaptcha({ onSuccess, onError }: SmartCaptchaProps) {
+	const t = useTranslations("Auth");
 	const containerRef = useRef<HTMLDivElement>(null);
 	const widgetIdRef = useRef<number | null>(null);
 	const onSuccessRef = useRef(onSuccess);
@@ -175,13 +177,10 @@ export function SmartCaptcha({ onSuccess, onError }: SmartCaptchaProps) {
 						reduceMotion
 							? ""
 							: "fade-in-0 slide-in-from-top-1 animate-in duration-300"
-					} inline-flex items-center gap-2 rounded-md border border-green-200/50 bg-green-50 px-2.5 py-1 font-medium text-green-700 text-xs shadow-sm dark:border-green-900/40 dark:bg-green-950/30 dark:text-green-300`}
+					} inline-flex items-center gap-2 rounded-md border border-success/30 bg-success/10 px-2.5 py-1 font-medium text-success text-xs shadow-sm`}
 				>
-					<CheckCircle2
-						className="h-4 w-4 text-green-600 dark:text-green-400"
-						aria-hidden="true"
-					/>
-					<span>Проверка пройдена</span>
+					<CheckCircle2 className="h-4 w-4 text-success" aria-hidden="true" />
+					<span>{t("captcha_passed")}</span>
 				</output>
 			)}
 		</div>

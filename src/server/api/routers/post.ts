@@ -1,3 +1,4 @@
+import { desc } from "drizzle-orm";
 import { z } from "zod";
 
 import {
@@ -27,10 +28,7 @@ export const postRouter = createTRPCRouter({
 
 	getLatest: protectedProcedure.query(async ({ ctx }) => {
 		const post = await ctx.db.query.posts.findFirst({
-			orderBy: (
-				posts: typeof import("~/server/db/schema").posts,
-				{ desc }: { desc: any },
-			) => [desc(posts.createdAt)],
+			orderBy: [desc(posts.createdAt)],
 		});
 
 		return post ?? null;

@@ -1,21 +1,19 @@
 import { and, asc, count, desc, eq, inArray, like, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import { generateSlug, generateUniqueSlug } from "~/lib/utils";
+import { generateSlug } from "~/lib/utils";
 import {
 	createTRPCRouter,
 	protectedProcedure,
 	publicProcedure,
 } from "~/server/api/trpc";
 import {
-	notifications,
 	pluginActivities,
 	pluginCategories,
 	pluginDownloads,
 	pluginPipelineChecks,
 	pluginReviews,
 	plugins,
-	userPluginSubscriptions,
 	users,
 } from "~/server/db/schema";
 import { verifyCaptcha } from "~/server/lib/captcha";
@@ -72,7 +70,7 @@ export const pluginsRouter = createTRPCRouter({
 					.select({ count: count() })
 					.from(plugins)
 					.where(whereConditions)
-					.then((result: any) => result[0]?.count ?? 0),
+					.then((result: { count: number }[]) => result[0]?.count ?? 0),
 			]);
 
 			const pluginsWithSecurity = await Promise.all(
@@ -171,7 +169,7 @@ export const pluginsRouter = createTRPCRouter({
 					.select({ count: count() })
 					.from(pluginReviews)
 					.where(eq(pluginReviews.pluginId, input.pluginId))
-					.then((result: any) => result[0]?.count ?? 0),
+					.then((result: { count: number }[]) => result[0]?.count ?? 0),
 			]);
 
 			return {
@@ -239,7 +237,6 @@ export const pluginsRouter = createTRPCRouter({
 				})
 				.where(eq(plugins.id, existing[0].pluginId));
 
-			// Log activity (non-blocking)
 			try {
 				await ctx.db.insert(pluginActivities).values({
 					type: "review.updated",
@@ -362,7 +359,6 @@ export const pluginsRouter = createTRPCRouter({
 					.where(eq(plugins.id, input.pluginId));
 			}
 
-			// Записываем активность: добавлен отзыв (неблокирующе)
 			try {
 				await ctx.db.insert(pluginActivities).values({
 					type: "review.added",
@@ -494,7 +490,6 @@ export const pluginsRouter = createTRPCRouter({
 				(Date.now() - input.months * 30 * 24 * 60 * 60 * 1000) / 1000,
 			);
 
-			// Сначала получаем статистику скачиваний за период
 			const recentDownloads = await ctx.db
 				.select({
 					pluginId: pluginDownloads.pluginId,
@@ -508,15 +503,15 @@ export const pluginsRouter = createTRPCRouter({
 				return [];
 			}
 
-			// Создаем мапу для быстрого доступа к статистике
 			const downloadsMap = new Map(
-				recentDownloads.map((item: any) => [
-					item.pluginId,
-					Number(item.downloadCount),
-				]),
+				recentDownloads.map(
+					(item: { pluginId: number; downloadCount: number }) => [
+						item.pluginId,
+						Number(item.downloadCount),
+					],
+				),
 			);
 
-			// Получаем плагины и вычисляем popularity score
 			const allPlugins = await ctx.db
 				.select()
 				.from(plugins)
@@ -525,35 +520,40 @@ export const pluginsRouter = createTRPCRouter({
 						eq(plugins.status, "approved"),
 						inArray(
 							plugins.id,
-							recentDownloads.map((d: any) => d.pluginId),
+							recentDownloads.map(
+								(d: { pluginId: number; downloadCount: number }) => d.pluginId,
+							),
 						),
 					),
 				);
 
-			// Вычисляем popularity score и сортируем
-			const pluginsWithScore = allPlugins.map((plugin: any) => {
-				const recentDownloadCount = downloadsMap.get(plugin.id) || 0;
-				const daysSinceCreation = Math.floor(
-					(Date.now() - plugin.createdAt * 1000) / (1000 * 60 * 60 * 24),
-				);
+			const pluginsWithScore = allPlugins.map(
+				(plugin: typeof plugins.$inferSelect) => {
+					const recentDownloadCount = downloadsMap.get(plugin.id) || 0;
+					const daysSinceCreation = Math.floor(
+						(Date.now() - plugin.createdAt * 1000) / (1000 * 60 * 60 * 24),
+					);
 
-				const popularityScore =
-					// Скачивания за период (70% веса)
-					Number(recentDownloadCount) * 0.7 +
-					// Рейтинг с учетом количества отзывов (20% веса)
-					plugin.rating * Math.min(plugin.ratingCount / 10.0, 1.0) * 20 * 0.2 +
-					// Свежесть плагина - бонус для новых плагинов (10% веса)
-					Math.max(0, 30 - daysSinceCreation) * 0.1;
+					const popularityScore =
+						Number(recentDownloadCount) * 0.7 +
+						plugin.rating *
+							Math.min(plugin.ratingCount / 10.0, 1.0) *
+							20 *
+							0.2 +
+						Math.max(0, 30 - daysSinceCreation) * 0.1;
 
-				return {
-					...plugin,
-					popularityScore,
-				};
-			});
+					return {
+						...plugin,
+						popularityScore,
+					};
+				},
+			);
 
-			// Сортируем по popularity score и возвращаем топ
 			return pluginsWithScore
-				.sort((a: any, b: any) => b.popularityScore - a.popularityScore)
+				.sort(
+					(a: { popularityScore: number }, b: { popularityScore: number }) =>
+						b.popularityScore - a.popularityScore,
+				)
 				.slice(0, input.limit);
 		}),
 
@@ -614,28 +614,36 @@ export const pluginsRouter = createTRPCRouter({
 				.groupBy(pluginDownloads.pluginId);
 
 			const lastWeekMap = new Map(
-				lastWeekDownloads.map((item: any) => [
-					item.pluginId,
-					Number(item.downloadCount),
-				]),
+				lastWeekDownloads.map(
+					(item: { pluginId: number; downloadCount: number }) => [
+						item.pluginId,
+						Number(item.downloadCount),
+					],
+				),
 			);
 			const prevWeekMap = new Map(
-				prevWeekDownloads.map((item: any) => [
-					item.pluginId,
-					Number(item.downloadCount),
-				]),
+				prevWeekDownloads.map(
+					(item: { pluginId: number; downloadCount: number }) => [
+						item.pluginId,
+						Number(item.downloadCount),
+					],
+				),
 			);
 			const thirdWeekMap = new Map(
-				thirdWeekDownloads.map((item: any) => [
-					item.pluginId,
-					Number(item.downloadCount),
-				]),
+				thirdWeekDownloads.map(
+					(item: { pluginId: number; downloadCount: number }) => [
+						item.pluginId,
+						Number(item.downloadCount),
+					],
+				),
 			);
 			const fourthWeekMap = new Map(
-				fourthWeekDownloads.map((item: any) => [
-					item.pluginId,
-					Number(item.downloadCount),
-				]),
+				fourthWeekDownloads.map(
+					(item: { pluginId: number; downloadCount: number }) => [
+						item.pluginId,
+						Number(item.downloadCount),
+					],
+				),
 			);
 
 			const allPluginIds = new Set([
@@ -658,72 +666,77 @@ export const pluginsRouter = createTRPCRouter({
 					and(eq(plugins.status, "approved"), inArray(plugins.id, pluginIds)),
 				);
 
-			const pluginsWithTrendScore = allPlugins.map((plugin: any) => {
-				const week1 = Number(lastWeekMap.get(plugin.id) || 0);
-				const week2 = Number(prevWeekMap.get(plugin.id) || 0);
-				const week3 = Number(thirdWeekMap.get(plugin.id) || 0);
-				const week4 = Number(fourthWeekMap.get(plugin.id) || 0);
+			const pluginsWithTrendScore = allPlugins.map(
+				(plugin: typeof plugins.$inferSelect) => {
+					const week1 = Number(lastWeekMap.get(plugin.id) || 0);
+					const week2 = Number(prevWeekMap.get(plugin.id) || 0);
+					const week3 = Number(thirdWeekMap.get(plugin.id) || 0);
+					const week4 = Number(fourthWeekMap.get(plugin.id) || 0);
 
-				const daysSinceCreation = Math.floor(
-					(now - plugin.createdAt * 1000) / oneDayMs,
-				);
+					const daysSinceCreation = Math.floor(
+						(now - plugin.createdAt * 1000) / oneDayMs,
+					);
 
-				const avgPrevious = (week2 + week3 + week4) / 3 || 1;
-				const velocityScore = week1 / avgPrevious;
+					const avgPrevious = (week2 + week3 + week4) / 3 || 1;
+					const velocityScore = week1 / avgPrevious;
 
-				const growthWeek2 = week2 > 0 ? (week1 - week2) / week2 : week1;
-				const growthWeek3 = week3 > 0 ? (week2 - week3) / week3 : week2;
-				const accelerationScore =
-					growthWeek3 > 0 ? growthWeek2 / growthWeek3 : growthWeek2;
+					const growthWeek2 = week2 > 0 ? (week1 - week2) / week2 : week1;
+					const growthWeek3 = week3 > 0 ? (week2 - week3) / week3 : week2;
+					const accelerationScore =
+						growthWeek3 > 0 ? growthWeek2 / growthWeek3 : growthWeek2;
 
-				const consistencyScore =
-					week1 > 0 && week2 > 0 && week3 > 0
-						? 1.5
-						: week1 > 0 && week2 > 0
-							? 1.2
-							: 1.0;
+					const consistencyScore =
+						week1 > 0 && week2 > 0 && week3 > 0
+							? 1.5
+							: week1 > 0 && week2 > 0
+								? 1.2
+								: 1.0;
 
-				const freshBonus =
-					daysSinceCreation <= 7
-						? 3.0
-						: daysSinceCreation <= 14
-							? 2.5
-							: daysSinceCreation <= 30
-								? 2.0
-								: daysSinceCreation <= 60
-									? 1.5
-									: 1.0;
+					const freshBonus =
+						daysSinceCreation <= 7
+							? 3.0
+							: daysSinceCreation <= 14
+								? 2.5
+								: daysSinceCreation <= 30
+									? 2.0
+									: daysSinceCreation <= 60
+										? 1.5
+										: 1.0;
 
-				const minDownloads = 5;
-				if (week1 < minDownloads) {
+					const minDownloads = 5;
+					if (week1 < minDownloads) {
+						return {
+							...plugin,
+							trendingScore: 0,
+							week1,
+							velocityScore: 0,
+						};
+					}
+
+					const trendingScore =
+						velocityScore * 40 +
+						Math.max(0, Math.min(accelerationScore, 5)) * 20 +
+						week1 * 2 +
+						consistencyScore * 10 +
+						freshBonus * 8;
+
 					return {
 						...plugin,
-						trendingScore: 0,
+						trendingScore,
 						week1,
-						velocityScore: 0,
+						week2,
+						week3,
+						velocityScore,
+						accelerationScore,
 					};
-				}
-
-				const trendingScore =
-					velocityScore * 40 +
-					Math.max(0, Math.min(accelerationScore, 5)) * 20 +
-					week1 * 2 +
-					consistencyScore * 10 +
-					freshBonus * 8;
-
-				return {
-					...plugin,
-					trendingScore,
-					week1,
-					week2,
-					week3,
-					velocityScore,
-					accelerationScore,
-				};
-			});
+				},
+			);
 
 			return pluginsWithTrendScore
-				.sort((a: any, b: any) => b.trendingScore - a.trendingScore)
+				.sort(
+					(a: { trendingScore: number }, b: { trendingScore: number }) =>
+						b.trendingScore - a.trendingScore,
+				)
 				.slice(0, input.limit);
 		}),
 
@@ -833,12 +846,10 @@ export const pluginsRouter = createTRPCRouter({
 				return { plugins: [], suggestions: [] };
 			}
 
-			// Создаем более гибкие паттерны поиска
 			const queryLower = input.query.toLowerCase().trim();
 			const likePattern = `%${queryLower}%`;
 
-			// Создаем паттерны для каждого слова
-			const wordPatterns = searchTerms.map((term) => `%${term}%`);
+			const _wordPatterns = searchTerms.map((term) => `%${term}%`);
 
 			const whereConditions = [eq(plugins.status, "approved")];
 
@@ -853,7 +864,7 @@ export const pluginsRouter = createTRPCRouter({
 			}
 
 			const relevanceScore = sql<number>`
-				CASE 
+				CASE
 					-- Точное совпадение названия (высший приоритет)
 					WHEN LOWER(${plugins.name}) = ${queryLower} THEN 1000
 					-- Название начинается с запроса
@@ -862,35 +873,35 @@ export const pluginsRouter = createTRPCRouter({
 					WHEN LOWER(${plugins.name}) LIKE ${likePattern} THEN 800
 					ELSE 0
 				END +
-				CASE 
+				CASE
 					-- Автор точно совпадает
 					WHEN LOWER(${plugins.author}) = ${queryLower} THEN 700
 					-- Автор содержит запрос
 					WHEN LOWER(${plugins.author}) LIKE ${likePattern} THEN 600
 					ELSE 0
 				END +
-				CASE 
+				CASE
 					-- Краткое описание содержит запрос
 					WHEN LOWER(${plugins.shortDescription}) LIKE ${likePattern} THEN 500
 					ELSE 0
 				END +
-				CASE 
+				CASE
 					-- Полное описание содержит запрос
 					WHEN LOWER(${plugins.description}) LIKE ${likePattern} THEN 400
 					ELSE 0
 				END +
-				CASE 
+				CASE
 					-- Теги содержат запрос
 					WHEN LOWER(${plugins.tags}) LIKE ${likePattern} THEN 300
 					ELSE 0
 				END +
-				CASE 
+				CASE
 					-- Категория содержит запрос
 					WHEN LOWER(${plugins.category}) LIKE ${likePattern} THEN 200
 					ELSE 0
 				END +
 				-- Бонусы за качество плагина
-				CASE 
+				CASE
 					WHEN ${plugins.featured} = true THEN 100
 					ELSE 0
 				END +
@@ -904,7 +915,6 @@ export const pluginsRouter = createTRPCRouter({
 				LEAST(${plugins.downloadCount} / 1000, 25)
 			`;
 
-			// Более гибкое условие поиска - ищем в любом из полей
 			const searchCondition = sql`(
 				LOWER(${plugins.name}) LIKE ${likePattern} OR
 				LOWER(${plugins.author}) LIKE ${likePattern} OR
@@ -914,7 +924,6 @@ export const pluginsRouter = createTRPCRouter({
 				LOWER(${plugins.category}) LIKE ${likePattern}
 			)`;
 
-			// Дополнительное условие для поиска по отдельным словам
 			const wordsCondition =
 				searchTerms.length > 1
 					? sql`OR (${sql.join(
@@ -977,7 +986,6 @@ export const pluginsRouter = createTRPCRouter({
 				.orderBy(...orderBy)
 				.limit(input.limit);
 
-			// Улучшенная статистика по категориям
 			const suggestionQuery = ctx.db
 				.select({
 					category: plugins.category,

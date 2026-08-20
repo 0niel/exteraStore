@@ -1,8 +1,7 @@
 "use client";
 
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
-	AlertTriangle,
-	Calendar,
 	ChevronLeft,
 	Code,
 	Download,
@@ -17,62 +16,38 @@ import {
 	Shield,
 	Star,
 	Tag,
-	ThumbsUp,
 	Trash2,
-	User,
-	Zap,
 } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useTranslations } from "next-intl";
-import React, { useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import React, { useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
-
 import { toast } from "sonner";
-import { DonationWidget } from "@/components/donations/donation-widget";
 import { SmartCaptcha } from "~/components/captcha/smart-captcha";
+import { DonationWidget } from "~/components/donations/donation-widget";
 import { ImageGallery } from "~/components/image-gallery";
 import { PluginPipeline } from "~/components/plugin-pipeline";
 import { PluginSubscription } from "~/components/plugin-subscription";
 import { PluginVersions } from "~/components/plugin-versions";
-import {
-	BotIntegrationStatus,
-	TelegramBotIntegration,
-} from "~/components/telegram-bot-integration";
+import { TelegramBotIntegration } from "~/components/telegram-bot-integration";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "~/components/ui/card";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-	DialogTrigger,
-} from "~/components/ui/dialog";
-import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
+import { Card, CardContent } from "~/components/ui/card";
 import { SecurityWarning } from "~/components/ui/security-warning";
-import { Separator } from "~/components/ui/separator";
-import { Skeleton } from "~/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Textarea } from "~/components/ui/textarea";
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
 } from "~/components/ui/tooltip";
-import { cn, formatDate, formatNumber } from "~/lib/utils";
+import { env } from "~/env";
+import { cn, formatDate, formatNumber, safeJsonParse } from "~/lib/utils";
 import { api } from "~/trpc/react";
+
+type TabId = "description" | "versions" | "reviews" | "changelog" | "pipeline";
 
 export default function PluginDetailPage() {
 	const params = useParams();
@@ -80,8 +55,10 @@ export default function PluginDetailPage() {
 	const slug = params.slug as string;
 	const { data: session } = useSession();
 	const t = useTranslations("PluginDetailPage");
+	const locale = useLocale();
+	const reduceMotion = useReducedMotion();
 
-	const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+	const [activeTab, setActiveTab] = useState<TabId>("description");
 	const [reviewRating, setReviewRating] = useState(5);
 	const [reviewComment, setReviewComment] = useState("");
 	const [reviewCaptchaToken, setReviewCaptchaToken] = useState("");
@@ -89,6 +66,8 @@ export default function PluginDetailPage() {
 	const [editingReviewId, setEditingReviewId] = useState<number | null>(null);
 	const [editingRating, setEditingRating] = useState<number>(5);
 	const [editingComment, setEditingComment] = useState("");
+	const [downloadPulse, setDownloadPulse] = useState(0);
+	const reviewTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
 	const { data: plugin, isLoading } = api.plugins.getBySlug.useQuery({ slug });
 	const { data: reviewsData, refetch: refetchReviews } =
@@ -112,32 +91,34 @@ export default function PluginDetailPage() {
 
 	const downloadMutation = api.plugins.download.useMutation({
 		onSuccess: (data) => {
+			setDownloadPulse((value) => value + 1);
 			if (
 				data.securityCheck &&
 				data.securityCheck.status !== "passed" &&
 				data.securityCheck.details
 			) {
-				const details = JSON.parse(data.securityCheck.details);
+				const details = safeJsonParse<Record<string, unknown>>(
+					data.securityCheck.details,
+					{},
+				);
 				if (
 					details.classification === "critical" ||
 					details.classification === "unsafe"
 				) {
-					toast.error("🛡️ Плагин не прошел проверку безопасности", {
-						description:
-							"Обнаружены критические проблемы. Используйте на свой страх и риск.",
+					toast.error(t("security_failed_title"), {
+						description: t("security_failed_description"),
 						duration: 6000,
 					});
 				} else if (details.classification === "potentially_unsafe") {
-					toast.warning("⚠️ Потенциальные проблемы безопасности", {
-						description:
-							"В плагине обнаружены потенциальные проблемы. Будьте осторожны.",
+					toast.warning(t("security_warning_title"), {
+						description: t("security_warning_description"),
 						duration: 4000,
 					});
 				}
 			}
 		},
 		onError: (error) => {
-			toast.error("❌ Ошибка при скачивании", {
+			toast.error(t("download_error_title"), {
 				description: error.message,
 				duration: 4000,
 			});
@@ -146,35 +127,34 @@ export default function PluginDetailPage() {
 
 	const addReviewMutation = api.plugins.addReview.useMutation({
 		onSuccess: () => {
-			toast.success("Отзыв добавлен!");
-			setReviewDialogOpen(false);
+			toast.success(t("review_added"));
 			setReviewComment("");
 			setReviewRating(5);
 			refetchReviews();
 		},
 		onError: (error) => {
-			toast.error(`Ошибка при добавлении отзыва: ${error.message}`);
+			toast.error(t("review_add_error", { error: error.message }));
 		},
 	});
 
 	const updateReviewMutation = api.plugins.updateReview.useMutation({
 		onSuccess: () => {
-			toast.success("Отзыв обновлен");
+			toast.success(t("review_updated"));
 			setEditingReviewId(null);
 			refetchReviews();
 		},
 		onError: (error) => {
-			toast.error(`Ошибка при обновлении: ${error.message}`);
+			toast.error(t("review_update_error", { error: error.message }));
 		},
 	});
 
 	const deleteReviewMutation = api.plugins.deleteReview.useMutation({
 		onSuccess: () => {
-			toast.success("Отзыв удален");
+			toast.success(t("review_deleted"));
 			refetchReviews();
 		},
 		onError: (error) => {
-			toast.error(`Ошибка при удалении: ${error.message}`);
+			toast.error(t("review_delete_error", { error: error.message }));
 		},
 	});
 
@@ -182,11 +162,11 @@ export default function PluginDetailPage() {
 		onSuccess: (data) => {
 			setIsFavorited(data.isFavorited);
 			toast.success(
-				data.isFavorited ? "Добавлено в избранное" : "Удалено из избранного",
+				data.isFavorited ? t("favorite_added") : t("favorite_removed"),
 			);
 		},
 		onError: (error) => {
-			toast.error(`Ошибка: ${error.message}`);
+			toast.error(t("favorite_error", { error: error.message }));
 		},
 	});
 
@@ -199,11 +179,22 @@ export default function PluginDetailPage() {
 		});
 	};
 
+	const handleMobileDownload = () => {
+		if (!plugin) return;
+		handleDownload();
+		const botUsername =
+			env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "exterastore_bot";
+		const botLink =
+			plugin.telegramBotDeeplink ||
+			`https://t.me/${botUsername}?start=plugin_${plugin.id}`;
+		window.open(botLink, "_blank");
+	};
+
 	const handleAddReview = () => {
 		if (!plugin) return;
 
 		if (!reviewCaptchaToken) {
-			toast.error("Пожалуйста, пройдите проверку капчи.");
+			toast.error(t("captcha_required"));
 			return;
 		}
 
@@ -217,7 +208,7 @@ export default function PluginDetailPage() {
 
 	const handleToggleFavorite = () => {
 		if (!session) {
-			toast.error("Войдите в систему, чтобы добавить в избранное");
+			toast.error(t("sign_in_to_favorite"));
 			return;
 		}
 
@@ -232,51 +223,104 @@ export default function PluginDetailPage() {
 		}
 	}, [favoriteData]);
 
-	const handleShare = async () => {
-		const url = window.location.href;
-		const title = `${plugin?.name} - Плагин для exteraGram`;
-		const text = `Посмотрите на этот потрясающий плагин: ${plugin?.shortDescription || plugin?.description}`;
-
-		if (navigator.share) {
-			try {
-				await navigator.share({
-					title,
-					text,
-					url,
-				});
-				toast.success("Ссылка поделена!");
-			} catch (error) {
-				if ((error as Error).name !== "AbortError") {
-					fallbackShare(url, title);
-				}
-			}
-		} else {
-			fallbackShare(url, title);
-		}
-	};
-
-	const fallbackShare = (url: string, title: string) => {
+	const fallbackShare = (url: string) => {
 		navigator.clipboard
 			.writeText(url)
 			.then(() => {
-				toast.success("Ссылка скопирована в буфер обмена!");
+				toast.success(t("link_copied"));
 			})
 			.catch(() => {
-				toast.error("Не удалось скопировать ссылку");
+				toast.error(t("copy_error"));
 			});
 	};
+
+	const handleShare = async () => {
+		const url = window.location.href;
+		const title = t("share_title", { name: plugin?.name ?? "" });
+		const text = t("share_text", {
+			description: plugin?.shortDescription || plugin?.description || "",
+		});
+
+		if (navigator.share) {
+			try {
+				await navigator.share({ title, text, url });
+				toast.success(t("share_success"));
+			} catch (error) {
+				if ((error as Error).name !== "AbortError") {
+					fallbackShare(url);
+				}
+			}
+		} else {
+			fallbackShare(url);
+		}
+	};
+
+	const handleWriteFirstReview = () => {
+		if (!session) {
+			toast.error(t("sign_in_to_review"));
+			return;
+		}
+		reviewTextareaRef.current?.scrollIntoView({
+			behavior: reduceMotion ? "auto" : "smooth",
+			block: "center",
+		});
+		reviewTextareaRef.current?.focus({ preventScroll: true });
+	};
+
+	const sectionMotion = (index: number) =>
+		reduceMotion
+			? {}
+			: {
+					initial: { opacity: 0, y: 16 },
+					whileInView: { opacity: 1, y: 0 },
+					viewport: { once: true, margin: "-40px" },
+					transition: {
+						duration: 0.5,
+						ease: [0.16, 1, 0.3, 1] as const,
+						delay: index * 0.06,
+					},
+				};
 
 	if (isLoading) {
 		return (
 			<div className="bg-background">
-				<div className="container mx-auto max-w-4xl px-4 py-4">
+				<div className="container mx-auto max-w-4xl px-4 py-4 lg:py-8">
 					<div className="space-y-6">
-						<Skeleton className="h-10 w-full" />
-						<Skeleton className="aspect-video w-full" />
-						<div className="space-y-4">
-							<Skeleton className="h-8 w-3/4" />
-							<Skeleton className="h-4 w-1/2" />
-							<Skeleton className="h-20 w-full" />
+						<div className="skeleton-shimmer hidden h-9 w-40 rounded-md lg:block" />
+						<div className="flex items-start gap-4">
+							<div className="skeleton-shimmer h-16 w-16 shrink-0 rounded-2xl" />
+							<div className="min-w-0 flex-1 space-y-3">
+								<div className="skeleton-shimmer h-7 w-2/3 rounded-md" />
+								<div className="skeleton-shimmer h-4 w-1/2 rounded-md" />
+								<div className="flex flex-wrap gap-2">
+									<div className="skeleton-shimmer h-5 w-24 rounded-full" />
+									<div className="skeleton-shimmer h-5 w-16 rounded-full" />
+									<div className="skeleton-shimmer h-5 w-14 rounded-full" />
+								</div>
+							</div>
+						</div>
+						<div className="grid grid-cols-3 gap-4 rounded-xl bg-muted/50 p-4">
+							{[0, 1, 2].map((i) => (
+								<div key={i} className="space-y-2">
+									<div className="skeleton-shimmer mx-auto h-6 w-12 rounded-md" />
+									<div className="skeleton-shimmer mx-auto h-3 w-16 rounded-md" />
+								</div>
+							))}
+						</div>
+						<div className="skeleton-shimmer h-40 w-full rounded-xl" />
+						<div className="flex gap-2 overflow-hidden">
+							{[0, 1, 2, 3, 4].map((i) => (
+								<div
+									key={i}
+									className="skeleton-shimmer h-11 w-28 shrink-0 rounded-full"
+								/>
+							))}
+						</div>
+						<div className="space-y-3">
+							<div className="skeleton-shimmer h-4 w-full rounded-md" />
+							<div className="skeleton-shimmer h-4 w-11/12 rounded-md" />
+							<div className="skeleton-shimmer h-4 w-4/5 rounded-md" />
+							<div className="skeleton-shimmer h-4 w-2/3 rounded-md" />
 						</div>
 					</div>
 				</div>
@@ -286,28 +330,23 @@ export default function PluginDetailPage() {
 
 	if (!plugin) {
 		return (
-			<div className="flex items-center justify-center bg-background py-16">
+			<div className="flex min-h-[60dvh] items-center justify-center bg-background py-16">
 				<div className="px-4 text-center">
 					<div className="mb-4 text-6xl">😕</div>
-					<h1 className="mb-2 font-bold text-2xl">Плагин не найден</h1>
+					<h1 className="mb-2 font-bold text-2xl">{t("not_found_title")}</h1>
 					<p className="mb-4 text-muted-foreground">
-						Возможно, плагин был удален или ссылка неверна
+						{t("not_found_description")}
 					</p>
 					<Link href="/plugins">
-						<Button>Вернуться к каталогу</Button>
+						<Button className="min-h-11">{t("back_to_catalog")}</Button>
 					</Link>
 				</div>
 			</div>
 		);
 	}
 
-	const screenshots = plugin.screenshots
-		? (JSON.parse(plugin.screenshots) as string[])
-		: [];
-	const tags = plugin.tags ? (JSON.parse(plugin.tags) as string[]) : [];
-	const requirements = plugin.requirements
-		? JSON.parse(plugin.requirements)
-		: {};
+	const screenshots = safeJsonParse<string[]>(plugin.screenshots ?? "[]", []);
+	const tags = safeJsonParse<string[]>(plugin.tags ?? "[]", []);
 
 	const latestVersion = versions?.[0];
 	const latestChangelog = latestVersion?.changelog || plugin.changelog;
@@ -316,42 +355,57 @@ export default function PluginDetailPage() {
 		plugin.category;
 	const hasLinks = Boolean(plugin.githubUrl || plugin.documentationUrl);
 
+	const tabs: Array<{ id: TabId; label: string }> = [
+		{ id: "description", label: t("description") },
+		{
+			id: "versions",
+			label:
+				versions && versions.length > 0
+					? `${t("versions")} (${versions.length})`
+					: t("versions"),
+		},
+		{ id: "reviews", label: `${t("reviews")} (${plugin.ratingCount})` },
+		{ id: "changelog", label: t("changelog_tab") },
+		{ id: "pipeline", label: t("pipeline_tab") },
+	];
+
 	return (
 		<div className="bg-background">
-			{/* Mobile Header */}
-			<div className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60 lg:hidden">
-				<div className="flex items-center justify-between px-4 py-3">
+			<div className="glass sticky top-0 z-50 border-b lg:hidden">
+				<div className="flex items-center justify-between px-4 py-2">
 					<Button
 						variant="ghost"
 						size="icon"
 						onClick={() => router.back()}
-						className="h-8 w-8"
+						className="h-11 w-11"
+						aria-label={t("back_to_catalog")}
 					>
-						<ChevronLeft className="h-4 w-4" />
+						<ChevronLeft className="h-5 w-5" />
 					</Button>
-					<div className="flex items-center gap-2">
+					<div className="flex items-center gap-1">
 						<Button
 							variant="ghost"
 							size="icon"
 							onClick={handleToggleFavorite}
-							className={cn("h-8 w-8", isFavorited && "text-red-500")}
+							className={cn("h-11 w-11", isFavorited && "text-primary")}
+							aria-label={t("favorite_aria")}
 						>
-							<Heart className={cn("h-4 w-4", isFavorited && "fill-current")} />
+							<Heart className={cn("h-5 w-5", isFavorited && "fill-current")} />
 						</Button>
 						<Button
 							variant="ghost"
 							size="icon"
 							onClick={handleShare}
-							className="h-8 w-8"
+							className="h-11 w-11"
+							aria-label={t("share_aria")}
 						>
-							<Share2 className="h-4 w-4" />
+							<Share2 className="h-5 w-5" />
 						</Button>
 					</div>
 				</div>
 			</div>
 
-			<div className="container mx-auto max-w-4xl px-4 py-4 lg:py-8">
-				{/* Desktop Back Button */}
+			<div className="container mx-auto max-w-4xl px-4 py-4 pb-28 md:pb-8 lg:py-8">
 				<div className="mb-6 hidden lg:block">
 					<Button
 						variant="ghost"
@@ -359,44 +413,20 @@ export default function PluginDetailPage() {
 						className="gap-2"
 					>
 						<ChevronLeft className="h-4 w-4" />
-						Назад к каталогу
+						{t("back_to_catalog")}
 					</Button>
 				</div>
 
 				<div className="space-y-6">
-					{/* Hero Section */}
-					<div className="space-y-4">
-						{/* Plugin Icon & Title */}
+					<motion.section className="space-y-4" {...sectionMotion(0)}>
 						<div className="flex items-start gap-4">
-							<div
-								className={cn(
-									"flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl shadow-lg",
-									plugin.category === "ui" &&
-										"bg-linear-to-br from-purple-500 to-pink-500",
-									plugin.category === "utility" &&
-										"bg-linear-to-br from-blue-500 to-cyan-500",
-									plugin.category === "security" &&
-										"bg-linear-to-br from-red-500 to-orange-500",
-									plugin.category === "automation" &&
-										"bg-linear-to-br from-green-500 to-emerald-500",
-									plugin.category === "development" &&
-										"bg-linear-to-br from-indigo-500 to-purple-500",
-									![
-										"ui",
-										"utility",
-										"security",
-										"automation",
-										"development",
-									].includes(plugin.category) &&
-										"bg-linear-to-br from-gray-500 to-slate-500",
-								)}
-							>
-								<Code className="h-8 w-8 text-white" />
+							<div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-linear-to-br from-primary to-primary/60 shadow-lg">
+								<Code className="h-8 w-8 text-primary-foreground" />
 							</div>
 							<div className="min-w-0 flex-1">
 								<div className="flex items-start justify-between gap-4">
 									<div className="min-w-0">
-										<h1 className="font-bold text-2xl leading-tight lg:text-3xl">
+										<h1 className="text-balance font-bold text-2xl leading-tight lg:text-3xl">
 											{plugin.name}
 										</h1>
 										<p className="mt-1 text-muted-foreground">
@@ -409,24 +439,29 @@ export default function PluginDetailPage() {
 											size="icon"
 											onClick={handleToggleFavorite}
 											className={cn(
-												isFavorited && "border-red-500 text-red-500",
+												isFavorited && "border-primary text-primary",
 											)}
+											aria-label={t("favorite_aria")}
 										>
 											<Heart
 												className={cn("h-4 w-4", isFavorited && "fill-current")}
 											/>
 										</Button>
-										<Button variant="outline" size="icon" onClick={handleShare}>
+										<Button
+											variant="outline"
+											size="icon"
+											onClick={handleShare}
+											aria-label={t("share_aria")}
+										>
 											<Share2 className="h-4 w-4" />
 										</Button>
 									</div>
 								</div>
 
-								{/* Meta Info */}
 								<div className="mt-3 flex flex-wrap items-center gap-3 text-muted-foreground text-sm">
 									<Link
 										href={`/developers/${plugin.authorId}`}
-										className="group inline-flex items-center gap-1 hover:text-foreground"
+										className="group inline-flex min-h-11 items-center gap-1 hover:text-foreground md:min-h-0"
 									>
 										<Avatar className="h-5 w-5">
 											<AvatarImage src={authorData?.image || undefined} />
@@ -446,14 +481,13 @@ export default function PluginDetailPage() {
 										<span>v{plugin.version}</span>
 									</div>
 									{plugin.verified && (
-										<Badge className="bg-blue-600 text-xs">
+										<Badge className="border-transparent bg-contrast text-contrast-foreground text-xs">
 											<Shield className="mr-1 h-3 w-3" />
-											Проверен
+											{t("verified")}
 										</Badge>
 									)}
 								</div>
 
-								{/* Tags */}
 								{tags.length > 0 && (
 									<div className="mt-3 flex flex-wrap gap-1">
 										{tags.slice(0, 4).map((tag) => (
@@ -471,34 +505,34 @@ export default function PluginDetailPage() {
 							</div>
 						</div>
 
-						{/* Quick Stats */}
-						<div className="grid grid-cols-3 gap-4 rounded-xl bg-muted/50 p-4">
-							<div className="text-center">
+						<div className="grid grid-cols-3 gap-2 rounded-xl bg-muted/50 p-4 sm:gap-4">
+							<div className="min-w-0 text-center">
 								<div className="flex items-center justify-center gap-1 font-bold text-lg text-primary">
-									<Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+									<Star className="h-4 w-4 shrink-0 fill-warning text-warning" />
 									{plugin.rating.toFixed(1)}
 								</div>
-								<div className="text-muted-foreground text-xs">
-									{plugin.ratingCount} отзывов
+								<div className="truncate text-muted-foreground text-xs">
+									{plugin.ratingCount} · {t("stats_reviews")}
 								</div>
 							</div>
-							<div className="text-center">
+							<div className="min-w-0 text-center">
 								<div className="font-bold text-lg text-primary">
 									{formatNumber(plugin.downloadCount)}
 								</div>
-								<div className="text-muted-foreground text-xs">Скачиваний</div>
+								<div className="truncate text-muted-foreground text-xs">
+									{t("stats_downloads")}
+								</div>
 							</div>
-							<div className="text-center">
+							<div className="min-w-0 text-center">
 								<div className="font-bold text-lg text-primary">
 									{versions?.length || 1}
 								</div>
-								<div className="text-muted-foreground text-xs">
-									{versions?.length === 1 ? "Версия" : "Версий"}
+								<div className="truncate text-muted-foreground text-xs">
+									{t("versions_label", { count: versions?.length || 1 })}
 								</div>
 							</div>
 						</div>
 
-						{/* Action Buttons */}
 						<div className="space-y-3">
 							<TelegramBotIntegration
 								pluginId={plugin.id}
@@ -508,21 +542,24 @@ export default function PluginDetailPage() {
 								onDownload={handleDownload}
 							/>
 							{session?.user?.id === plugin.authorId && (
-								<Button variant="outline" asChild className="w-full">
+								<Button
+									variant="outline"
+									asChild
+									className="min-h-11 w-full md:min-h-9"
+								>
 									<Link href={`/my-plugins/${plugin.slug}/manage`}>
 										<Edit className="mr-2 h-4 w-4" />
-										Управление плагином
+										{t("manage_plugin")}
 									</Link>
 								</Button>
 							)}
 						</div>
-					</div>
+					</motion.section>
 
-					{/* Security Warning */}
 					{plugin.latestSecurityCheck &&
 						plugin.latestSecurityCheck.status !== "passed" &&
 						plugin.latestSecurityCheck.details && (
-							<div className="mb-6">
+							<motion.section {...sectionMotion(1)}>
 								<SecurityWarning
 									securityResult={{
 										status: plugin.latestSecurityCheck.classification as
@@ -537,499 +574,625 @@ export default function PluginDetailPage() {
 										shortDescription:
 											plugin.latestSecurityCheck.shortDescription,
 										issues:
-											JSON.parse(plugin.latestSecurityCheck.details).issues ||
-											[],
+											safeJsonParse<{ issues?: [] }>(
+												plugin.latestSecurityCheck.details,
+												{},
+											).issues || [],
 									}}
 									variant="banner"
 									showDetails={true}
 								/>
-							</div>
+							</motion.section>
 						)}
 
-					{/* Screenshots */}
 					{screenshots.length > 0 && (
-						<div className="space-y-4">
-							<h2 className="font-semibold text-xl">Скриншоты</h2>
+						<motion.section className="space-y-4" {...sectionMotion(1)}>
+							<h2 className="font-semibold text-xl">{t("screenshots")}</h2>
 							<ImageGallery
 								images={screenshots}
-								alt={`Скриншоты плагина ${plugin.name}`}
+								alt={t("screenshots_alt", { name: plugin.name })}
 								category={plugin.category}
 								verified={plugin.verified}
 							/>
-						</div>
+						</motion.section>
 					)}
 
-					{/* Content Tabs */}
-					<Tabs defaultValue="description" className="w-full">
-						<div className="overflow-x-auto">
-							<TabsList className="inline-flex h-auto w-max min-w-full justify-start">
-								<TabsTrigger value="description" className="whitespace-nowrap">
-									{t("description")}
-								</TabsTrigger>
-								<TabsTrigger value="versions" className="whitespace-nowrap">
-									{t("versions")}{" "}
-									{versions && versions.length > 0 && `(${versions.length})`}
-								</TabsTrigger>
-								<TabsTrigger value="reviews" className="whitespace-nowrap">
-									{t("reviews")} ({plugin.ratingCount})
-								</TabsTrigger>
-								<TabsTrigger value="changelog" className="whitespace-nowrap">
-									Изменения
-								</TabsTrigger>
-								<TabsTrigger value="pipeline" className="whitespace-nowrap">
-									Проверки
-								</TabsTrigger>
-							</TabsList>
+					<motion.section className="w-full" {...sectionMotion(2)}>
+						<div
+							role="tablist"
+							aria-label={t("description")}
+							className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0"
+						>
+							{tabs.map((tab) => (
+								<button
+									key={tab.id}
+									type="button"
+									role="tab"
+									aria-selected={activeTab === tab.id}
+									onClick={() => setActiveTab(tab.id)}
+									className={cn(
+										"press-scale tap-highlight-none min-h-11 shrink-0 snap-start whitespace-nowrap rounded-full border px-4 font-medium text-sm transition-colors",
+										activeTab === tab.id
+											? "border-transparent bg-contrast text-contrast-foreground"
+											: "border-border bg-card text-muted-foreground hover:text-foreground",
+									)}
+								>
+									{tab.label}
+								</button>
+							))}
 						</div>
 
-						<TabsContent value="description" className="mt-6">
-							<div className="prose prose-neutral dark:prose-invert max-w-none">
-								<ReactMarkdown>{plugin.description}</ReactMarkdown>
-							</div>
-
-							{/* Additional Info Cards */}
-							<div
-								className={cn(
-									"mt-8 grid gap-4",
-									hasLinks ? "sm:grid-cols-2" : "sm:grid-cols-1",
-								)}
+						<AnimatePresence mode="wait" initial={false}>
+							<motion.div
+								key={activeTab}
+								initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+								animate={{ opacity: 1, y: 0 }}
+								exit={reduceMotion ? undefined : { opacity: 0, y: -8 }}
+								transition={{ duration: 0.2, ease: "easeOut" }}
+								className="mt-6"
 							>
-								<Card className="transition-colors hover:border-primary/30">
-									<CardContent className="p-4">
-										<Link
-											href={`/developers/${plugin.authorId}`}
-											className="group flex items-start gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-										>
-											<Avatar className="h-12 w-12">
-												<AvatarImage src={authorData?.image || undefined} />
-												<AvatarFallback className="text-sm">
-													{(authorData?.name || plugin.author)
-														.slice(0, 2)
-														.toUpperCase()}
-												</AvatarFallback>
-											</Avatar>
-											<div className="min-w-0 flex-1">
-												<div className="flex items-center gap-2">
-													<h3 className="truncate font-semibold">
-														{authorData?.name || plugin.author}
-													</h3>
-													{authorData?.isVerified && (
-														<Badge className="bg-blue-600 text-xs">
-															<Shield className="mr-1 h-3 w-3" />
-															Проверен
-														</Badge>
-													)}
-												</div>
-												{authorData?.telegramUsername && (
-													<p className="text-primary text-sm">
-														@{authorData.telegramUsername}
-													</p>
-												)}
-												{authorData?.bio && (
-													<p className="mt-1 line-clamp-2 text-muted-foreground text-sm">
-														{authorData.bio}
-													</p>
-												)}
-												{authorData?.stats && (
-													<div className="mt-3 grid grid-cols-3 gap-2 text-center">
-														<div>
-															<div className="font-semibold text-sm">
-																{authorData.stats.totalPlugins || 0}
-															</div>
-															<div className="text-muted-foreground text-xs">
-																Плагинов
-															</div>
-														</div>
-														<div>
-															<div className="font-semibold text-sm">
-																{formatNumber(
-																	Number(authorData.stats.totalDownloads) || 0,
-																)}
-															</div>
-															<div className="text-muted-foreground text-xs">
-																Скачиваний
-															</div>
-														</div>
-														<div>
-															<div className="flex items-center justify-center gap-1 font-semibold text-sm">
-																<Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
-																{(
-																	Number(authorData.stats.averageRating) || 0
-																).toFixed(1)}
-															</div>
-															<div className="text-muted-foreground text-xs">
-																Рейтинг
-															</div>
-														</div>
-													</div>
-												)}
-											</div>
-										</Link>
-										<div className="mt-3 flex gap-2">
-											{authorData?.githubUsername && (
-												<Button asChild variant="outline" size="sm">
-													<a
-														href={`https://github.com/${authorData.githubUsername}`}
-														target="_blank"
-														rel="noopener noreferrer"
-														className="inline-flex items-center gap-2"
-													>
-														<Github className="h-4 w-4" /> GitHub
-													</a>
-												</Button>
-											)}
-											{authorData?.website && (
-												<Button asChild variant="outline" size="sm">
-													<a
-														href={authorData.website}
-														target="_blank"
-														rel="noopener noreferrer"
-														className="inline-flex items-center gap-2"
-													>
-														<Globe className="h-4 w-4" /> Веб-сайт
-													</a>
-												</Button>
-											)}
-											{authorData?.telegramUsername && (
-												<Button asChild variant="outline" size="sm">
-													<a
-														href={`https://t.me/${authorData.telegramUsername}`}
-														target="_blank"
-														rel="noopener noreferrer"
-														className="inline-flex items-center gap-2"
-													>
-														<MessageSquare className="h-4 w-4" /> Telegram
-													</a>
-												</Button>
-											)}
+								{activeTab === "description" && (
+									<div>
+										<div className="prose prose-neutral dark:prose-invert max-w-none">
+											<ReactMarkdown>{plugin.description}</ReactMarkdown>
 										</div>
-									</CardContent>
-								</Card>
 
-								{(plugin.githubUrl || plugin.documentationUrl) && (
-									<Card>
-										<CardContent className="p-4">
-											<div className="flex flex-wrap gap-2">
-												{plugin.githubUrl && (
-													<Tooltip>
-														<TooltipTrigger asChild>
-															<Button asChild variant="outline" size="sm">
-																<a
-																	href={plugin.githubUrl}
-																	target="_blank"
-																	rel="noopener noreferrer"
-																	className="inline-flex items-center gap-2"
-																>
-																	<Github className="h-4 w-4" /> Исходный код{" "}
-																	<ExternalLink className="h-3 w-3" />
-																</a>
-															</Button>
-														</TooltipTrigger>
-														<TooltipContent>
-															Открыть репозиторий GitHub
-														</TooltipContent>
-													</Tooltip>
-												)}
-												{plugin.documentationUrl && (
-													<Tooltip>
-														<TooltipTrigger asChild>
-															<Button asChild variant="outline" size="sm">
-																<a
-																	href={plugin.documentationUrl}
-																	target="_blank"
-																	rel="noopener noreferrer"
-																	className="inline-flex items-center gap-2"
-																>
-																	<FileText className="h-4 w-4" /> Документация{" "}
-																	<ExternalLink className="h-3 w-3" />
-																</a>
-															</Button>
-														</TooltipTrigger>
-														<TooltipContent>
-															Открыть документацию
-														</TooltipContent>
-													</Tooltip>
-												)}
-											</div>
-										</CardContent>
-									</Card>
-								)}
-
-								{authorData?.donationRequisites && (
-									<DonationWidget
-										methods={(() => {
-											try {
-												return JSON.parse(
-													authorData.donationRequisites || "null",
-												);
-											} catch {
-												return null;
-											}
-										})()}
-									/>
-								)}
-							</div>
-						</TabsContent>
-
-						<TabsContent value="versions" className="mt-6">
-							<PluginVersions pluginSlug={plugin.slug} />
-						</TabsContent>
-
-						<TabsContent value="reviews" className="mt-6">
-							<div className="space-y-6">
-								{/* Review Form */}
-								{session && (
-									<Card className="border-primary/20">
-										<CardContent className="p-4">
-											<div className="space-y-4">
-												<div className="flex items-center gap-3">
-													<Avatar className="h-8 w-8">
-														<AvatarImage
-															src={session.user?.image || undefined}
-														/>
-														<AvatarFallback>
-															{session.user?.name?.slice(0, 2).toUpperCase() ||
-																"??"}
-														</AvatarFallback>
-													</Avatar>
-													<div className="flex-1">
-														<p className="font-medium text-sm">
-															{session.user?.name}
-														</p>
-														<div className="mt-1 flex gap-1">
-															{[1, 2, 3, 4, 5].map((star) => (
-																<button
-																	key={star}
-																	type="button"
-																	onClick={() => setReviewRating(star)}
-																	className="transition-colors"
-																	aria-label={`Оценить на ${star}`}
-																>
-																	<Star
-																		className={cn(
-																			"h-4 w-4",
-																			star <= reviewRating
-																				? "fill-yellow-400 text-yellow-400"
-																				: "text-muted-foreground",
-																		)}
-																	/>
-																</button>
-															))}
-														</div>
-													</div>
-												</div>
-												<Textarea
-													value={reviewComment}
-													onChange={(e) => setReviewComment(e.target.value)}
-													placeholder="Поделитесь своим мнением о плагине..."
-													rows={3}
-													className="resize-none"
-												/>
-												<SmartCaptcha
-													onSuccess={setReviewCaptchaToken}
-													onError={() => setReviewCaptchaToken("")}
-												/>
-												<div className="flex justify-end">
-													<Button
-														onClick={handleAddReview}
-														disabled={
-															addReviewMutation.isPending ||
-															!reviewComment.trim() ||
-															!reviewCaptchaToken
-														}
-														size="sm"
-													>
-														{addReviewMutation.isPending
-															? "Отправка..."
-															: "Отправить отзыв"}
-													</Button>
-												</div>
-											</div>
-										</CardContent>
-									</Card>
-								)}
-
-								{/* Reviews List */}
-								<div className="space-y-4">
-									{reviewsData?.reviews.map(
-										(review: {
-											id: number;
-											rating: number;
-											title: string | null;
-											comment: string | null;
-											helpful: number;
-											createdAt: string | Date;
-											userId: string;
-											user: {
-												name: string | null;
-												image: string | null;
-											} | null;
-										}) => (
-											<Card key={review.id}>
+										<div
+											className={cn(
+												"mt-8 grid gap-4",
+												hasLinks ? "sm:grid-cols-2" : "sm:grid-cols-1",
+											)}
+										>
+											<Card className="transition-colors hover:border-primary/30">
 												<CardContent className="p-4">
-													<div className="flex items-start gap-3">
-														<Avatar className="h-8 w-8">
+													<Link
+														href={`/developers/${plugin.authorId}`}
+														className="group flex items-start gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+													>
+														<Avatar className="h-12 w-12">
 															<AvatarImage
-																src={review.user?.image || undefined}
+																src={authorData?.image || undefined}
 															/>
-															<AvatarFallback>
-																{review.user?.name?.slice(0, 2).toUpperCase() ||
-																	"??"}
+															<AvatarFallback className="text-sm">
+																{(authorData?.name || plugin.author)
+																	.slice(0, 2)
+																	.toUpperCase()}
 															</AvatarFallback>
 														</Avatar>
-														<div className="flex-1 space-y-2">
-															<div className="flex items-center justify-between gap-2">
-																<div className="flex items-center gap-2">
-																	<span className="font-medium text-sm">
-																		{review.user?.name}
-																	</span>
-																	<div className="flex">
-																		{[1, 2, 3, 4, 5].map((star) => (
+														<div className="min-w-0 flex-1">
+															<div className="flex items-center gap-2">
+																<h3 className="truncate font-semibold">
+																	{authorData?.name || plugin.author}
+																</h3>
+																{authorData?.isVerified && (
+																	<Badge className="border-transparent bg-contrast text-contrast-foreground text-xs">
+																		<Shield className="mr-1 h-3 w-3" />
+																		{t("verified")}
+																	</Badge>
+																)}
+															</div>
+															{authorData?.telegramUsername && (
+																<p className="text-primary text-sm">
+																	@{authorData.telegramUsername}
+																</p>
+															)}
+															{authorData?.bio && (
+																<p className="mt-1 line-clamp-2 text-muted-foreground text-sm">
+																	{authorData.bio}
+																</p>
+															)}
+															{authorData?.stats && (
+																<div className="mt-3 grid grid-cols-3 gap-2 text-center">
+																	<div>
+																		<div className="font-semibold text-sm">
+																			{authorData.stats.totalPlugins || 0}
+																		</div>
+																		<div className="text-muted-foreground text-xs">
+																			{t("author_plugins")}
+																		</div>
+																	</div>
+																	<div>
+																		<div className="font-semibold text-sm">
+																			{formatNumber(
+																				Number(
+																					authorData.stats.totalDownloads,
+																				) || 0,
+																			)}
+																		</div>
+																		<div className="text-muted-foreground text-xs">
+																			{t("author_downloads")}
+																		</div>
+																	</div>
+																	<div>
+																		<div className="flex items-center justify-center gap-1 font-semibold text-sm">
+																			<Star className="h-3.5 w-3.5 fill-warning text-warning" />
+																			{(
+																				Number(
+																					authorData.stats.averageRating,
+																				) || 0
+																			).toFixed(1)}
+																		</div>
+																		<div className="text-muted-foreground text-xs">
+																			{t("author_rating")}
+																		</div>
+																	</div>
+																</div>
+															)}
+														</div>
+													</Link>
+													<div className="mt-3 flex flex-wrap gap-2">
+														{authorData?.githubUsername && (
+															<Button
+																asChild
+																variant="outline"
+																size="sm"
+																className="min-h-11 md:min-h-8"
+															>
+																<a
+																	href={`https://github.com/${authorData.githubUsername}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center gap-2"
+																>
+																	<Github className="h-4 w-4" /> GitHub
+																</a>
+															</Button>
+														)}
+														{authorData?.website && (
+															<Button
+																asChild
+																variant="outline"
+																size="sm"
+																className="min-h-11 md:min-h-8"
+															>
+																<a
+																	href={authorData.website}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center gap-2"
+																>
+																	<Globe className="h-4 w-4" /> {t("website")}
+																</a>
+															</Button>
+														)}
+														{authorData?.telegramUsername && (
+															<Button
+																asChild
+																variant="outline"
+																size="sm"
+																className="min-h-11 md:min-h-8"
+															>
+																<a
+																	href={`https://t.me/${authorData.telegramUsername}`}
+																	target="_blank"
+																	rel="noopener noreferrer"
+																	className="inline-flex items-center gap-2"
+																>
+																	<MessageSquare className="h-4 w-4" /> Telegram
+																</a>
+															</Button>
+														)}
+													</div>
+												</CardContent>
+											</Card>
+
+											{hasLinks && (
+												<Card>
+													<CardContent className="p-4">
+														<div className="flex flex-wrap gap-2">
+															{plugin.githubUrl && (
+																<Tooltip>
+																	<TooltipTrigger asChild>
+																		<Button
+																			asChild
+																			variant="outline"
+																			size="sm"
+																			className="min-h-11 md:min-h-8"
+																		>
+																			<a
+																				href={plugin.githubUrl}
+																				target="_blank"
+																				rel="noopener noreferrer"
+																				className="inline-flex items-center gap-2"
+																			>
+																				<Github className="h-4 w-4" />{" "}
+																				{t("source_code")}{" "}
+																				<ExternalLink className="h-3 w-3" />
+																			</a>
+																		</Button>
+																	</TooltipTrigger>
+																	<TooltipContent>
+																		{t("open_github")}
+																	</TooltipContent>
+																</Tooltip>
+															)}
+															{plugin.documentationUrl && (
+																<Tooltip>
+																	<TooltipTrigger asChild>
+																		<Button
+																			asChild
+																			variant="outline"
+																			size="sm"
+																			className="min-h-11 md:min-h-8"
+																		>
+																			<a
+																				href={plugin.documentationUrl}
+																				target="_blank"
+																				rel="noopener noreferrer"
+																				className="inline-flex items-center gap-2"
+																			>
+																				<FileText className="h-4 w-4" />{" "}
+																				{t("documentation")}{" "}
+																				<ExternalLink className="h-3 w-3" />
+																			</a>
+																		</Button>
+																	</TooltipTrigger>
+																	<TooltipContent>
+																		{t("open_docs")}
+																	</TooltipContent>
+																</Tooltip>
+															)}
+														</div>
+													</CardContent>
+												</Card>
+											)}
+
+											{authorData?.donationRequisites && (
+												<DonationWidget
+													methods={safeJsonParse(
+														authorData.donationRequisites || "null",
+														null,
+													)}
+												/>
+											)}
+										</div>
+									</div>
+								)}
+
+								{activeTab === "versions" && (
+									<PluginVersions pluginSlug={plugin.slug} />
+								)}
+
+								{activeTab === "reviews" && (
+									<div className="space-y-6">
+										{session && (
+											<Card className="border-primary/20">
+												<CardContent className="p-4">
+													<div className="space-y-4">
+														<div className="flex items-center gap-3">
+															<Avatar className="h-8 w-8">
+																<AvatarImage
+																	src={session.user?.image || undefined}
+																/>
+																<AvatarFallback>
+																	{session.user?.name
+																		?.slice(0, 2)
+																		.toUpperCase() || "??"}
+																</AvatarFallback>
+															</Avatar>
+															<div className="flex-1">
+																<p className="font-medium text-sm">
+																	{session.user?.name}
+																</p>
+																<div className="mt-1 flex gap-1">
+																	{[1, 2, 3, 4, 5].map((star) => (
+																		<button
+																			key={star}
+																			type="button"
+																			onClick={() => setReviewRating(star)}
+																			className="tap-highlight-none flex h-11 w-8 items-center justify-center transition-colors md:h-6 md:w-6"
+																			aria-label={t("rate_star_aria", {
+																				star,
+																			})}
+																		>
 																			<Star
-																				key={star}
 																				className={cn(
-																					"h-3 w-3",
-																					star <= review.rating
-																						? "fill-yellow-400 text-yellow-400"
+																					"h-4 w-4",
+																					star <= reviewRating
+																						? "fill-warning text-warning"
 																						: "text-muted-foreground",
 																				)}
 																			/>
-																		))}
-																	</div>
-																	<span className="text-muted-foreground text-xs">
-																		{formatDate(review.createdAt)}
-																	</span>
+																		</button>
+																	))}
 																</div>
-																{(session?.user?.id === review.userId ||
-																	session?.user?.role === "admin") && (
-																	<div className="flex items-center gap-2">
-																		<Button
-																			variant="outline"
-																			size="sm"
-																			onClick={() => {
-																				setEditingReviewId(review.id);
-																				setEditingRating(review.rating);
-																				setEditingComment(review.comment ?? "");
-																			}}
-																		>
-																			<Edit className="mr-2 h-3.5 w-3.5" />{" "}
-																			Редактировать
-																		</Button>
-																		<Button
-																			variant="outline"
-																			size="sm"
-																			onClick={() => {
-																				if (confirm("Удалить отзыв?")) {
-																					deleteReviewMutation.mutate({
-																						reviewId: review.id,
-																					});
-																				}
-																			}}
-																		>
-																			<Trash2 className="mr-2 h-3.5 w-3.5" />{" "}
-																			Удалить
-																		</Button>
-																	</div>
-																)}
 															</div>
-															{editingReviewId === review.id ? (
-																<div className="space-y-2">
-																	<div className="flex gap-1">
-																		{[1, 2, 3, 4, 5].map((star) => (
-																			<button
-																				key={star}
-																				type="button"
-																				onClick={() => setEditingRating(star)}
-																				aria-label={`Изменить оценку на ${star}`}
-																			>
-																				<Star
-																					className={cn(
-																						"h-4 w-4",
-																						star <= editingRating
-																							? "fill-yellow-400 text-yellow-400"
-																							: "text-muted-foreground",
-																					)}
-																				/>
-																			</button>
-																		))}
-																	</div>
-																	<Textarea
-																		value={editingComment}
-																		onChange={(e) =>
-																			setEditingComment(e.target.value)
-																		}
-																		rows={3}
-																		className="resize-none"
-																	/>
-																	<div className="flex gap-2">
-																		<Button
-																			size="sm"
-																			onClick={() => {
-																				updateReviewMutation.mutate({
-																					reviewId: review.id,
-																					rating: editingRating,
-																					comment: editingComment,
-																				});
-																			}}
-																			disabled={updateReviewMutation.isPending}
-																		>
-																			Сохранить
-																		</Button>
-																		<Button
-																			variant="outline"
-																			size="sm"
-																			onClick={() => setEditingReviewId(null)}
-																		>
-																			Отмена
-																		</Button>
-																	</div>
-																</div>
-															) : (
-																review.comment && (
-																	<p className="text-muted-foreground text-sm">
-																		{review.comment}
-																	</p>
-																)
-															)}
+														</div>
+														<Textarea
+															ref={reviewTextareaRef}
+															value={reviewComment}
+															onChange={(e) => setReviewComment(e.target.value)}
+															placeholder={t("review_placeholder")}
+															rows={3}
+															className="resize-none"
+														/>
+														<SmartCaptcha
+															onSuccess={setReviewCaptchaToken}
+															onError={() => setReviewCaptchaToken("")}
+														/>
+														<div className="flex justify-end">
+															<Button
+																onClick={handleAddReview}
+																disabled={
+																	addReviewMutation.isPending ||
+																	!reviewComment.trim() ||
+																	!reviewCaptchaToken
+																}
+																size="sm"
+																className="min-h-11 md:min-h-8"
+															>
+																{addReviewMutation.isPending
+																	? t("sending")
+																	: t("submit_review")}
+															</Button>
 														</div>
 													</div>
 												</CardContent>
 											</Card>
-										),
-									)}
-								</div>
-							</div>
-						</TabsContent>
+										)}
 
-						<TabsContent value="changelog" className="mt-6">
-							<div className="space-y-6">
-								{latestChangelog ? (
-									<div className="prose prose-neutral dark:prose-invert max-w-none">
-										<ReactMarkdown>{latestChangelog}</ReactMarkdown>
-									</div>
-								) : (
-									<div className="rounded-lg border border-dashed p-8 text-center">
-										<FileText className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
-										<h4 className="mb-2 font-medium">
-											История изменений не найдена
-										</h4>
-										<p className="text-muted-foreground text-sm">
-											Автор плагина пока не добавил описание изменений.
-										</p>
+										{reviewsData && reviewsData.reviews.length === 0 ? (
+											<div className="rounded-xl border border-dashed p-8 text-center">
+												<MessageSquare className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+												<h4 className="mb-2 font-medium">
+													{t("no_reviews_title")}
+												</h4>
+												<p className="mx-auto mb-4 max-w-sm text-muted-foreground text-sm">
+													{t("no_reviews_description")}
+												</p>
+												<Button
+													onClick={handleWriteFirstReview}
+													className="min-h-11"
+												>
+													<Star className="mr-2 h-4 w-4" />
+													{t("write_first_review")}
+												</Button>
+											</div>
+										) : (
+											<div className="space-y-4">
+												{reviewsData?.reviews.map(
+													(review: {
+														id: number;
+														rating: number;
+														title: string | null;
+														comment: string | null;
+														helpful: number;
+														createdAt: string | Date;
+														userId: string;
+														user: {
+															name: string | null;
+															image: string | null;
+														} | null;
+													}) => (
+														<Card key={review.id} className="w-full">
+															<CardContent className="p-4">
+																<div className="flex items-start gap-3">
+																	<Avatar className="h-8 w-8">
+																		<AvatarImage
+																			src={review.user?.image || undefined}
+																		/>
+																		<AvatarFallback>
+																			{review.user?.name
+																				?.slice(0, 2)
+																				.toUpperCase() || "??"}
+																		</AvatarFallback>
+																	</Avatar>
+																	<div className="min-w-0 flex-1 space-y-2">
+																		<div className="flex flex-wrap items-center justify-between gap-2">
+																			<div className="flex flex-wrap items-center gap-2">
+																				<span className="font-medium text-sm">
+																					{review.user?.name}
+																				</span>
+																				<div className="flex">
+																					{[1, 2, 3, 4, 5].map((star) => (
+																						<Star
+																							key={star}
+																							className={cn(
+																								"h-3 w-3",
+																								star <= review.rating
+																									? "fill-warning text-warning"
+																									: "text-muted-foreground",
+																							)}
+																						/>
+																					))}
+																				</div>
+																				<span className="text-muted-foreground text-xs">
+																					{formatDate(review.createdAt, locale)}
+																				</span>
+																			</div>
+																			{(session?.user?.id === review.userId ||
+																				session?.user?.role === "admin") && (
+																				<div className="flex items-center gap-2">
+																					<Button
+																						variant="outline"
+																						size="sm"
+																						className="min-h-11 md:min-h-8"
+																						onClick={() => {
+																							setEditingReviewId(review.id);
+																							setEditingRating(review.rating);
+																							setEditingComment(
+																								review.comment ?? "",
+																							);
+																						}}
+																					>
+																						<Edit className="mr-2 h-3.5 w-3.5" />{" "}
+																						{t("edit")}
+																					</Button>
+																					<Button
+																						variant="outline"
+																						size="sm"
+																						className="min-h-11 md:min-h-8"
+																						onClick={() => {
+																							if (
+																								confirm(
+																									t("confirm_delete_review"),
+																								)
+																							) {
+																								deleteReviewMutation.mutate({
+																									reviewId: review.id,
+																								});
+																							}
+																						}}
+																					>
+																						<Trash2 className="mr-2 h-3.5 w-3.5" />{" "}
+																						{t("delete")}
+																					</Button>
+																				</div>
+																			)}
+																		</div>
+																		{editingReviewId === review.id ? (
+																			<div className="space-y-2">
+																				<div className="flex gap-1">
+																					{[1, 2, 3, 4, 5].map((star) => (
+																						<button
+																							key={star}
+																							type="button"
+																							onClick={() =>
+																								setEditingRating(star)
+																							}
+																							className="tap-highlight-none flex h-11 w-8 items-center justify-center md:h-6 md:w-6"
+																							aria-label={t(
+																								"edit_rating_aria",
+																								{ star },
+																							)}
+																						>
+																							<Star
+																								className={cn(
+																									"h-4 w-4",
+																									star <= editingRating
+																										? "fill-warning text-warning"
+																										: "text-muted-foreground",
+																								)}
+																							/>
+																						</button>
+																					))}
+																				</div>
+																				<Textarea
+																					value={editingComment}
+																					onChange={(e) =>
+																						setEditingComment(e.target.value)
+																					}
+																					rows={3}
+																					className="resize-none"
+																				/>
+																				<div className="flex gap-2">
+																					<Button
+																						size="sm"
+																						className="min-h-11 md:min-h-8"
+																						onClick={() => {
+																							updateReviewMutation.mutate({
+																								reviewId: review.id,
+																								rating: editingRating,
+																								comment: editingComment,
+																							});
+																						}}
+																						disabled={
+																							updateReviewMutation.isPending
+																						}
+																					>
+																						{t("save")}
+																					</Button>
+																					<Button
+																						variant="outline"
+																						size="sm"
+																						className="min-h-11 md:min-h-8"
+																						onClick={() =>
+																							setEditingReviewId(null)
+																						}
+																					>
+																						{t("cancel")}
+																					</Button>
+																				</div>
+																			</div>
+																		) : (
+																			review.comment && (
+																				<p className="text-muted-foreground text-sm">
+																					{review.comment}
+																				</p>
+																			)
+																		)}
+																	</div>
+																</div>
+															</CardContent>
+														</Card>
+													),
+												)}
+											</div>
+										)}
 									</div>
 								)}
-							</div>
-						</TabsContent>
 
-						<TabsContent value="pipeline" className="mt-6">
-							<PluginPipeline pluginSlug={plugin.slug} />
-						</TabsContent>
-					</Tabs>
+								{activeTab === "changelog" && (
+									<div className="space-y-6">
+										{latestChangelog ? (
+											<div className="prose prose-neutral dark:prose-invert max-w-none">
+												<ReactMarkdown>{latestChangelog}</ReactMarkdown>
+											</div>
+										) : (
+											<div className="rounded-lg border border-dashed p-8 text-center">
+												<FileText className="mx-auto mb-4 h-12 w-12 text-muted-foreground" />
+												<h4 className="mb-2 font-medium">
+													{t("no_changelog_title")}
+												</h4>
+												<p className="text-muted-foreground text-sm">
+													{t("no_changelog_description")}
+												</p>
+											</div>
+										)}
+									</div>
+								)}
 
-					{/* Subscription - показывать только если пользователь вошел */}
+								{activeTab === "pipeline" && (
+									<PluginPipeline pluginSlug={plugin.slug} />
+								)}
+							</motion.div>
+						</AnimatePresence>
+					</motion.section>
+
 					{session && (
-						<PluginSubscription pluginId={plugin.id} pluginName={plugin.name} />
+						<motion.section {...sectionMotion(3)}>
+							<PluginSubscription
+								pluginId={plugin.id}
+								pluginName={plugin.name}
+							/>
+						</motion.section>
 					)}
+				</div>
+			</div>
+
+			<div className="glass fixed inset-x-0 bottom-16 z-40 border-t px-4 py-2.5 md:hidden">
+				<div className="mx-auto flex max-w-4xl items-center gap-3">
+					<div className="min-w-0 shrink-0">
+						<div className="flex items-center gap-1 font-semibold text-sm">
+							<Star className="h-4 w-4 fill-warning text-warning" />
+							{plugin.rating.toFixed(1)}
+							<span className="font-normal text-muted-foreground">
+								({plugin.ratingCount})
+							</span>
+						</div>
+						<div className="text-muted-foreground text-xs">
+							{formatNumber(plugin.downloadCount)} · {t("stats_downloads")}
+						</div>
+					</div>
+					<motion.div
+						key={downloadPulse}
+						className="min-w-0 flex-1"
+						animate={
+							reduceMotion || downloadPulse === 0
+								? undefined
+								: { scale: [1, 1.05, 1] }
+						}
+						transition={{ duration: 0.45, ease: "easeOut" }}
+					>
+						<Button
+							className="press-scale min-h-11 w-full"
+							onClick={handleMobileDownload}
+							disabled={downloadMutation.isPending}
+						>
+							<Download className="mr-2 h-4 w-4" />
+							{t("download")}
+						</Button>
+					</motion.div>
 				</div>
 			</div>
 		</div>

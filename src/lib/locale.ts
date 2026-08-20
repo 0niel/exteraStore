@@ -37,5 +37,17 @@ export function getCurrentLocale(): Locale {
 export function setLocaleCookie(locale: Locale) {
 	if (typeof document === "undefined") return;
 
+	if (typeof cookieStore !== "undefined") {
+		void cookieStore.set({
+			name: "locale",
+			value: locale,
+			path: "/",
+			expires: Date.now() + 60 * 60 * 24 * 365 * 1000,
+			sameSite: "lax",
+		});
+		return;
+	}
+
+	// biome-ignore lint/suspicious/noDocumentCookie: fallback for browsers without the Cookie Store API
 	document.cookie = `locale=${locale}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
 }

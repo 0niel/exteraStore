@@ -46,7 +46,7 @@ export const favoritesRouter = createTRPCRouter({
 	remove: protectedProcedure
 		.input(z.object({ pluginId: z.number() }))
 		.mutation(async ({ ctx, input }) => {
-			const result = await ctx.db
+			const _result = await ctx.db
 				.delete(pluginFavorites)
 				.where(
 					and(

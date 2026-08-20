@@ -5,9 +5,10 @@ import { Inter } from "next/font/google";
 import { cookies, headers } from "next/headers";
 import { SessionProvider } from "next-auth/react";
 import { NextIntlClientProvider } from "next-intl";
-import { getMessages } from "next-intl/server";
+import { getMessages, getTranslations } from "next-intl/server";
 import { ThemeProvider } from "next-themes";
 import { Footer } from "~/components/footer";
+import { MobileTabBar } from "~/components/mobile-tab-bar";
 import { Navigation } from "~/components/navigation";
 import { TelegramWebAppAuth } from "~/components/telegram-web-app-auth";
 import { Toaster } from "~/components/ui/sonner";
@@ -93,6 +94,7 @@ export default async function RootLayout({
 	const session = await auth();
 	const messages = await getMessages();
 	const locale = await getServerLocale();
+	const t = await getTranslations("Navigation");
 	const telegramBotUsername =
 		process.env.TELEGRAM_BOT_USERNAME ??
 		process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
@@ -107,7 +109,7 @@ export default async function RootLayout({
 					href="#main-content"
 					className="fixed top-[max(.5rem,env(safe-area-inset-top))] left-2 z-100 -translate-y-24 rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground shadow-lg transition-transform focus:translate-y-0"
 				>
-					Перейти к содержимому
+					{t("skip_to_content")}
 				</a>
 				<NextIntlClientProvider messages={messages}>
 					<SessionProvider session={session}>
@@ -119,7 +121,7 @@ export default async function RootLayout({
 								disableTransitionOnChange
 							>
 								<TelegramWebAppAuth />
-								<div className="flex min-h-dvh flex-col overflow-x-hidden">
+								<div className="flex min-h-dvh flex-col overflow-x-hidden pb-16 md:pb-0">
 									<Navigation telegramBotUsername={telegramBotUsername} />
 									<main
 										id="main-content"
@@ -130,6 +132,7 @@ export default async function RootLayout({
 									</main>
 									<Footer />
 								</div>
+								<MobileTabBar />
 								<Toaster />
 							</ThemeProvider>
 						</TRPCReactProvider>

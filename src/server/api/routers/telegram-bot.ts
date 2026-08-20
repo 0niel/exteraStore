@@ -11,7 +11,6 @@ import {
 	pluginVersions,
 	users,
 } from "~/server/db/schema";
-import { checkDownloadRateLimit, hashIp } from "~/server/lib/rate-limiter";
 
 const botUserSchema = z.object({
 	id: z.number(),
@@ -21,7 +20,7 @@ const botUserSchema = z.object({
 	language_code: z.string().optional(),
 });
 
-const botMessageSchema = z.object({
+const _botMessageSchema = z.object({
 	message_id: z.number(),
 	from: botUserSchema,
 	chat: z.object({

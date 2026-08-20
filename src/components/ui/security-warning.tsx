@@ -28,6 +28,13 @@ interface SecurityWarningProps {
 	showDetails?: boolean;
 }
 
+const severityBadgeClasses: Record<SecurityIssue["severity"], string> = {
+	critical: "border-destructive/60 text-destructive",
+	high: "border-destructive/40 text-destructive",
+	medium: "border-warning/60 text-warning",
+	low: "border-border text-muted-foreground",
+};
+
 export function SecurityWarning({
 	securityResult,
 	variant = "default",
@@ -46,33 +53,31 @@ export function SecurityWarning({
 		switch (securityResult.classification) {
 			case "critical":
 				return {
-					border: "border-red-200 dark:border-red-800",
-					bg: "bg-red-50 dark:bg-red-950/10",
-					icon: "text-red-600 dark:text-red-400",
-					badge: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+					border: "border-destructive/30",
+					bg: "bg-destructive/10",
+					icon: "text-destructive",
+					badge: "bg-destructive/15 text-destructive",
 				};
 			case "unsafe":
 				return {
-					border: "border-red-200 dark:border-red-700",
-					bg: "bg-red-50 dark:bg-red-950/10",
-					icon: "text-red-500 dark:text-red-400",
-					badge: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
+					border: "border-destructive/30",
+					bg: "bg-destructive/10",
+					icon: "text-destructive",
+					badge: "bg-destructive/15 text-destructive",
 				};
 			case "potentially_unsafe":
 				return {
-					border: "border-yellow-200 dark:border-yellow-700",
-					bg: "bg-yellow-50 dark:bg-yellow-950/10",
-					icon: "text-yellow-600 dark:text-yellow-400",
-					badge:
-						"bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
+					border: "border-warning/30",
+					bg: "bg-warning/10",
+					icon: "text-warning",
+					badge: "bg-warning/15 text-warning",
 				};
 			default:
 				return {
-					border: "border-gray-200 dark:border-gray-700",
-					bg: "bg-gray-50 dark:bg-gray-950/10",
-					icon: "text-gray-600 dark:text-gray-400",
-					badge:
-						"bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300",
+					border: "border-border",
+					bg: "bg-muted/50",
+					icon: "text-muted-foreground",
+					badge: "bg-muted text-muted-foreground",
 				};
 		}
 	};
@@ -129,7 +134,7 @@ export function SecurityWarning({
 							<h4 className="font-medium text-sm">{t("security_warning")}</h4>
 							<Badge
 								variant="secondary"
-								className={cn("w-fit text-xs", colors.badge)}
+								className={cn("w-fit border-transparent text-xs", colors.badge)}
 							>
 								{getTitle()}
 							</Badge>
@@ -146,7 +151,7 @@ export function SecurityWarning({
 					<Button
 						variant="ghost"
 						size="icon"
-						className="h-6 w-6 shrink-0"
+						className="h-11 w-11 shrink-0 md:h-6 md:w-6"
 						onClick={() => setIsDismissed(true)}
 					>
 						<X className="h-3 w-3" />
@@ -170,7 +175,10 @@ export function SecurityWarning({
 				<div className="min-w-0 flex-1">
 					<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
 						<h4 className="font-semibold">{t("security_warning")}</h4>
-						<Badge variant="secondary" className={cn("w-fit", colors.badge)}>
+						<Badge
+							variant="secondary"
+							className={cn("w-fit border-transparent", colors.badge)}
+						>
 							{getTitle()}
 						</Badge>
 					</div>
@@ -183,7 +191,7 @@ export function SecurityWarning({
 							<button
 								type="button"
 								onClick={() => setIsOpen(!isOpen)}
-								className="flex items-center gap-1 font-medium text-primary text-sm hover:underline"
+								className="tap-highlight-none flex min-h-11 items-center gap-1 font-medium text-primary text-sm hover:underline md:min-h-0"
 								aria-expanded={isOpen}
 							>
 								{t("security_details")} ({securityResult.issues.length})
@@ -206,14 +214,7 @@ export function SecurityWarning({
 													variant="outline"
 													className={cn(
 														"w-fit text-xs",
-														issue.severity === "critical" &&
-															"border-red-500 text-red-700 dark:text-red-300",
-														issue.severity === "high" &&
-															"border-red-400 text-red-600 dark:text-red-400",
-														issue.severity === "medium" &&
-															"border-yellow-500 text-yellow-700 dark:text-yellow-300",
-														issue.severity === "low" &&
-															"border-blue-500 text-blue-700 dark:text-blue-300",
+														severityBadgeClasses[issue.severity],
 													)}
 												>
 													{issue.severity}
@@ -224,7 +225,8 @@ export function SecurityWarning({
 											</div>
 											<p className="mt-2 text-sm">{issue.description}</p>
 											<p className="mt-2 text-muted-foreground text-xs">
-												<strong>Рекомендация:</strong> {issue.recommendation}
+												<strong>{t("recommendation")}:</strong>{" "}
+												{issue.recommendation}
 											</p>
 										</div>
 									))}
@@ -236,7 +238,7 @@ export function SecurityWarning({
 				<Button
 					variant="ghost"
 					size="icon"
-					className="h-6 w-6 shrink-0"
+					className="h-11 w-11 shrink-0 md:h-6 md:w-6"
 					onClick={() => setIsDismissed(true)}
 				>
 					<X className="h-3 w-3" />

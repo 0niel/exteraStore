@@ -1,0 +1,154 @@
+{
+	"en": {
+		"Home": {
+			"hero": {
+				"badge": "Community plugin catalog for exteraGram",
+				"titleLine1": "Your Telegram.",
+				"titleLine2": "Without limits.",
+				"subtitle": "Discover trusted plugins, reshape the interface, and automate routine in the most flexible Telegram client.",
+				"searchPlaceholder": "What do you want to add to Telegram?",
+				"searchDialogPlaceholder": "Search plugins...",
+				"searchAria": "Search plugins",
+				"browseCatalog": "Browse catalog",
+				"openCollections": "Open collections",
+				"featurePythonTitle": "Python",
+				"featurePythonText": "Simple API and a quick start",
+				"featureXposedTitle": "Xposed",
+				"featureXposedText": "Deep client customization",
+				"featureLimitlessTitle": "Limitless",
+				"featureLimitlessText": "Freedom without the noise",
+				"statsPlugins": "plugins",
+				"statsDownloads": "downloads",
+				"statsDevelopers": "developers",
+				"tagThemes": "Themes",
+				"tagAutomation": "Automation",
+				"tagPrivacy": "Privacy",
+				"tagInterface": "Interface",
+				"tagTools": "Tools",
+				"tagMedia": "Media",
+				"tagBots": "Bots",
+				"tagProductivity": "Productivity"
+			},
+			"featured": {
+				"eyebrow": "Editor's choice",
+				"title": "Start with the proven",
+				"description": "Hand-picked plugins with high ratings and clear value.",
+				"viewAll": "All picks"
+			},
+			"trending": {
+				"eyebrow": "Hot right now",
+				"title": "Gaining momentum",
+				"description": "Ranked by real downloads over the past weeks.",
+				"viewAll": "Full ranking"
+			},
+			"collections": {
+				"eyebrow": "AI collections",
+				"title": "Plugins for your task",
+				"description": "Ready-made thematic sets based on ratings and descriptions.",
+				"viewAll": "All collections",
+				"aiBadge": "AI collection",
+				"pluginsCount": "{count, plural, one {# plugin} other {# plugins}}",
+				"viewCollection": "View all {count, plural, one {# plugin} other {# plugins}}",
+				"emptyTitle": "Collections are coming soon",
+				"emptyDescription": "AI is analyzing plugins and building thematic sets. Check back later!"
+			},
+			"developer": {
+				"eyebrow": "For developers",
+				"title": "Build what you're missing",
+				"description": "Python API, documentation, and publishing in the exteraGram catalog.",
+				"start": "Start building",
+				"github": "GitHub"
+			}
+		},
+		"Footer": {
+			"license": "License"
+		},
+		"Errors": {
+			"error_title": "Something went wrong",
+			"error_description": "We couldn't load this page. Try again or go back to the homepage.",
+			"retry": "Try again",
+			"go_home": "Go home",
+			"notfound_title": "Page not found",
+			"notfound_description": "The link may be outdated. Find the plugin you need in the catalog or go back home.",
+			"open_catalog": "Open catalog",
+			"go_back": "Go back",
+			"loading": "Loading page"
+		}
+	},
+	"ru": {
+		"Home": {
+			"hero": {
+				"badge": "Каталог плагинов сообщества exteraGram",
+				"titleLine1": "Ваш Telegram.",
+				"titleLine2": "Без ограничений.",
+				"subtitle": "Находите проверенные плагины, меняйте интерфейс и автоматизируйте рутину в самом гибком клиенте Telegram.",
+				"searchPlaceholder": "Что хотите добавить в Telegram?",
+				"searchDialogPlaceholder": "Поиск плагинов...",
+				"searchAria": "Поиск плагинов",
+				"browseCatalog": "Смотреть каталог",
+				"openCollections": "Открыть подборки",
+				"featurePythonTitle": "Python",
+				"featurePythonText": "Простой API и быстрый старт",
+				"featureXposedTitle": "Xposed",
+				"featureXposedText": "Глубокая настройка клиента",
+				"featureLimitlessTitle": "Limitless",
+				"featureLimitlessText": "Свобода без лишнего шума",
+				"statsPlugins": "плагинов",
+				"statsDownloads": "загрузок",
+				"statsDevelopers": "разработчиков",
+				"tagThemes": "Темы",
+				"tagAutomation": "Автоматизация",
+				"tagPrivacy": "Приватность",
+				"tagInterface": "Интерфейс",
+				"tagTools": "Инструменты",
+				"tagMedia": "Медиа",
+				"tagBots": "Боты",
+				"tagProductivity": "Продуктивность"
+			},
+			"featured": {
+				"eyebrow": "Выбор редакции",
+				"title": "Начните с проверенного",
+				"description": "Отобранные плагины с высоким рейтингом и понятной пользой.",
+				"viewAll": "Все рекомендации"
+			},
+			"trending": {
+				"eyebrow": "Актуально сейчас",
+				"title": "Набирают популярность",
+				"description": "Рейтинг формируется по реальным загрузкам за последние недели.",
+				"viewAll": "Весь рейтинг"
+			},
+			"collections": {
+				"eyebrow": "Подборки от ИИ",
+				"title": "Плагины под вашу задачу",
+				"description": "Готовые тематические наборы на основе рейтингов и описаний.",
+				"viewAll": "Все подборки",
+				"aiBadge": "ИИ-подборка",
+				"pluginsCount": "{count, plural, one {# плагин} few {# плагина} many {# плагинов} other {# плагина}}",
+				"viewCollection": "Смотреть все {count, plural, one {# плагин} few {# плагина} many {# плагинов} other {# плагина}}",
+				"emptyTitle": "Подборки скоро появятся",
+				"emptyDescription": "ИИ анализирует плагины и создаёт тематические подборки. Загляните позже!"
+			},
+			"developer": {
+				"eyebrow": "Для разработчиков",
+				"title": "Создайте то, чего вам не хватает",
+				"description": "Python API, документация и публикация в каталоге exteraGram.",
+				"start": "Начать разработку",
+				"github": "GitHub"
+			}
+		},
+		"Footer": {
+			"license": "Лицензия"
+		},
+		"Errors": {
+			"error_title": "Что-то пошло не так",
+			"error_description": "Не удалось загрузить страницу. Попробуйте ещё раз или вернитесь на главную.",
+			"retry": "Повторить",
+			"go_home": "На главную",
+			"notfound_title": "Такой страницы нет",
+			"notfound_description": "Возможно, ссылка устарела. Найдите нужный плагин в каталоге или вернитесь на главную.",
+			"open_catalog": "Открыть каталог",
+			"go_back": "Назад",
+			"loading": "Загрузка страницы"
+		}
+	}
+}

@@ -13,7 +13,6 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
 import {
 	Card,
 	CardContent,
@@ -90,7 +89,7 @@ export function PluginSubscription({
 				...prev,
 				[type]: enabled,
 			}));
-		} catch (error) {}
+		} catch (_error) {}
 	};
 
 	if (!session) {
@@ -118,11 +117,10 @@ export function PluginSubscription({
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="space-y-4">
-				{/* Plugin Updates */}
 				<div className="flex items-center justify-between">
 					<div className="space-y-1">
 						<div className="flex items-center gap-2">
-							<RefreshCw className="h-4 w-4 text-blue-500" />
+							<RefreshCw className="h-4 w-4 text-primary" />
 							<span className="font-medium">{t("updates")}</span>
 						</div>
 						<p className="text-muted-foreground text-sm">{t("new_versions")}</p>
@@ -138,11 +136,10 @@ export function PluginSubscription({
 					/>
 				</div>
 
-				{/* Reviews */}
 				<div className="flex items-center justify-between">
 					<div className="space-y-1">
 						<div className="flex items-center gap-2">
-							<MessageSquare className="h-4 w-4 text-green-500" />
+							<MessageSquare className="h-4 w-4 text-success" />
 							<span className="font-medium">{t("new_reviews")}</span>
 						</div>
 						<p className="text-muted-foreground text-sm">
@@ -160,11 +157,10 @@ export function PluginSubscription({
 					/>
 				</div>
 
-				{/* Security */}
 				<div className="flex items-center justify-between">
 					<div className="space-y-1">
 						<div className="flex items-center gap-2">
-							<Shield className="h-4 w-4 text-red-500" />
+							<Shield className="h-4 w-4 text-destructive" />
 							<span className="font-medium">{t("security")}</span>
 							<Badge variant="outline" className="text-xs">
 								{t("important")}
@@ -185,7 +181,6 @@ export function PluginSubscription({
 					/>
 				</div>
 
-				{/* Telegram Settings */}
 				{settings && (
 					<div className="border-t pt-4">
 						<div className="mb-2 flex items-center justify-between">
@@ -213,12 +208,11 @@ export function PluginSubscription({
 					</div>
 				)}
 
-				{/* Subscription Status */}
 				<div className="border-t pt-4">
 					<div className="flex items-center gap-2 text-muted-foreground text-sm">
 						{Object.values(subscriptions).some(Boolean) ? (
 							<>
-								<Bell className="h-4 w-4 text-green-500" />
+								<Bell className="h-4 w-4 text-success" />
 								<span>{t("subscribed")}</span>
 							</>
 						) : (

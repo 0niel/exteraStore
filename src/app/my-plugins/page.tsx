@@ -1,17 +1,16 @@
 "use client";
 
+import { motion, useReducedMotion } from "framer-motion";
 import {
 	Download,
-	Edit,
 	Eye,
 	GitBranch,
 	MoreHorizontal,
+	Package,
 	Plus,
 	Search,
 	Settings,
 	Star,
-	Trash2,
-	Upload,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -36,13 +35,61 @@ import {
 import { EmptyState } from "~/components/ui/empty-state";
 import { Input } from "~/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
+import { formatNumber } from "~/lib/utils";
 import type { plugins as Plugin } from "~/server/db/schema";
 import { api } from "~/trpc/react";
+
+const fadeUp = {
+	hidden: { opacity: 0, y: 14 },
+	show: {
+		opacity: 1,
+		y: 0,
+		transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] as const },
+	},
+};
+
+const stagger = {
+	hidden: {},
+	show: { transition: { staggerChildren: 0.06 } },
+};
+
+function MyPluginsSkeleton() {
+	return (
+		<div className="space-y-6" aria-hidden="true">
+			<div className="flex flex-wrap gap-3">
+				{[0, 1, 2].map((i) => (
+					<div key={i} className="skeleton-shimmer h-11 w-36 rounded-full" />
+				))}
+			</div>
+			<div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+				{[0, 1, 2, 3, 4, 5].map((i) => (
+					<div key={i} className="space-y-4 rounded-xl border bg-card p-5">
+						<div className="flex items-start justify-between gap-3">
+							<div className="w-full space-y-2">
+								<div className="skeleton-shimmer h-5 w-2/3 rounded-md" />
+								<div className="skeleton-shimmer h-3 w-full rounded-md" />
+								<div className="skeleton-shimmer h-3 w-3/4 rounded-md" />
+							</div>
+							<div className="skeleton-shimmer h-6 w-20 shrink-0 rounded-full" />
+						</div>
+						<div className="flex justify-between gap-2">
+							<div className="skeleton-shimmer h-4 w-14 rounded-md" />
+							<div className="skeleton-shimmer h-4 w-14 rounded-md" />
+							<div className="skeleton-shimmer h-4 w-14 rounded-md" />
+						</div>
+						<div className="skeleton-shimmer h-11 w-full rounded-lg" />
+					</div>
+				))}
+			</div>
+		</div>
+	);
+}
 
 export default function MyPluginsPage() {
 	const { data: session } = useSession();
 	const router = useRouter();
 	const t = useTranslations("MyPluginsPage");
+	const reduceMotion = useReducedMotion();
 	const [searchQuery, setSearchQuery] = useState("");
 
 	const { data: myPlugins, isLoading } = api.plugins.getByAuthor.useQuery(
@@ -52,20 +99,18 @@ export default function MyPluginsPage() {
 
 	if (!session) {
 		return (
-			<div className="flex min-h-screen items-center justify-center">
-				<Card className="w-full max-w-md">
+			<div className="flex min-h-[60dvh] items-center justify-center px-4">
+				<Card className="w-full max-w-md animate-scale-in">
 					<CardHeader className="text-center">
-						<CardTitle>Требуется авторизация</CardTitle>
-						<CardDescription>
-							Войдите в систему для управления плагинами
-						</CardDescription>
+						<CardTitle>{t("login_required")}</CardTitle>
+						<CardDescription>{t("login_required_description")}</CardDescription>
 					</CardHeader>
 					<CardContent>
 						<Button
 							onClick={() => router.push("/auth/signin")}
 							className="w-full"
 						>
-							Войти
+							{t("login")}
 						</Button>
 					</CardContent>
 				</Card>
@@ -90,57 +135,118 @@ export default function MyPluginsPage() {
 		(p: typeof Plugin.$inferSelect) => p.status === "rejected",
 	);
 
+	const totalDownloads = (myPlugins ?? []).reduce(
+		(sum: number, p: typeof Plugin.$inferSelect) => sum + p.downloadCount,
+		0,
+	);
+	const ratedPlugins = (myPlugins ?? []).filter(
+		(p: typeof Plugin.$inferSelect) => p.ratingCount > 0,
+	);
+	const averageRating =
+		ratedPlugins.length > 0
+			? ratedPlugins.reduce(
+					(sum: number, p: typeof Plugin.$inferSelect) => sum + p.rating,
+					0,
+				) / ratedPlugins.length
+			: 0;
+
+	const statChips = [
+		{
+			key: "stat_total",
+			icon: Package,
+			value: formatNumber(myPlugins?.length ?? 0),
+		},
+		{
+			key: "stat_downloads",
+			icon: Download,
+			value: formatNumber(totalDownloads),
+		},
+		{ key: "stat_rating", icon: Star, value: averageRating.toFixed(1) },
+	] as const;
+
+	const renderGrid = (plugins: (typeof Plugin.$inferSelect)[]) => (
+		<motion.div
+			initial={reduceMotion ? false : "hidden"}
+			animate="show"
+			variants={stagger}
+			className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3"
+		>
+			{plugins.map((plugin) => (
+				<motion.div key={plugin.id} variants={fadeUp}>
+					<PluginCard plugin={plugin} />
+				</motion.div>
+			))}
+		</motion.div>
+	);
+
 	return (
-		<div className="bg-background py-8">
+		<div className="bg-background py-6 sm:py-8">
 			<div className="container mx-auto max-w-6xl px-4">
-				<div className="mb-8 flex items-center justify-between">
+				<div className="mb-6 flex animate-fade-up flex-col gap-4 sm:mb-8 md:flex-row md:items-center md:justify-between">
 					<div>
-						<h1 className="mb-2 font-bold text-4xl">Мои плагины</h1>
-						<p className="text-muted-foreground text-xl">
-							Управляйте своими плагинами и отслеживайте статистику
+						<h1 className="mb-2 font-bold text-3xl sm:text-4xl">
+							{t("title")}
+						</h1>
+						<p className="text-lg text-muted-foreground sm:text-xl">
+							{t("subtitle")}
 						</p>
 					</div>
-					<Button
-						asChild
-						className="bg-primary text-primary-foreground hover:bg-primary/90"
-					>
+					<Button asChild className="press-scale w-full md:w-auto">
 						<Link href="/upload">
 							<Plus className="mr-2 h-4 w-4" />
-							Загрузить новый плагин
+							{t("upload_new")}
 						</Link>
 					</Button>
 				</div>
 
-				<div className="mb-6">
+				{!isLoading && (
+					<div
+						className="mb-6 flex animate-fade-up flex-wrap gap-3"
+						style={{ animationDelay: "60ms" }}
+					>
+						{statChips.map((chip) => (
+							<div
+								key={chip.key}
+								className="flex min-h-11 items-center gap-2 rounded-full border bg-surface px-4 py-2"
+							>
+								<chip.icon className="h-4 w-4 text-primary" />
+								<span className="font-semibold text-sm">{chip.value}</span>
+								<span className="text-muted-foreground text-sm">
+									{t(chip.key)}
+								</span>
+							</div>
+						))}
+					</div>
+				)}
+
+				<div
+					className="mb-6 animate-fade-up"
+					style={{ animationDelay: "120ms" }}
+				>
 					<div className="relative max-w-md">
-						<Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-muted-foreground" />
+						<Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 						<Input
-							placeholder="Поиск среди ваших плагинов..."
+							placeholder={t("search_placeholder")}
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
-							className="pl-10"
+							className="min-h-11 pl-10"
 						/>
 					</div>
 				</div>
 
 				{isLoading ? (
-					<div className="py-12 text-center">
-						<p className="text-muted-foreground">Загрузка плагинов...</p>
-					</div>
+					<MyPluginsSkeleton />
 				) : (
 					<Tabs defaultValue="published" className="space-y-6">
-						<TabsList>
-							<TabsTrigger
-								value="published"
-								className="flex items-center gap-2"
-							>
-								Опубликованные ({publishedPlugins.length})
+						<TabsList className="grid w-full grid-cols-3 sm:inline-flex sm:w-auto">
+							<TabsTrigger value="published" className="min-h-9">
+								{t("tab_published")} ({publishedPlugins.length})
 							</TabsTrigger>
-							<TabsTrigger value="pending" className="flex items-center gap-2">
-								На модерации ({pendingPlugins.length})
+							<TabsTrigger value="pending" className="min-h-9">
+								{t("tab_pending")} ({pendingPlugins.length})
 							</TabsTrigger>
-							<TabsTrigger value="rejected" className="flex items-center gap-2">
-								Отклоненные ({rejectedPlugins.length})
+							<TabsTrigger value="rejected" className="min-h-9">
+								{t("tab_rejected")} ({rejectedPlugins.length})
 							</TabsTrigger>
 						</TabsList>
 
@@ -148,19 +254,13 @@ export default function MyPluginsPage() {
 							{publishedPlugins.length === 0 ? (
 								<EmptyState
 									icon="📤"
-									title="Нет опубликованных плагинов"
-									description="Загрузите свой первый плагин и поделитесь им с сообществом"
-									actionLabel="Загрузить плагин"
-									onAction={() => (window.location.href = "/upload")}
+									title={t("empty_published_title")}
+									description={t("empty_published_description")}
+									actionLabel={t("empty_published_action")}
+									onAction={() => router.push("/upload")}
 								/>
 							) : (
-								<div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-									{publishedPlugins.map(
-										(plugin: typeof Plugin.$inferSelect) => (
-											<PluginCard key={plugin.id} plugin={plugin} />
-										),
-									)}
-								</div>
+								renderGrid(publishedPlugins)
 							)}
 						</TabsContent>
 
@@ -168,15 +268,11 @@ export default function MyPluginsPage() {
 							{pendingPlugins.length === 0 ? (
 								<EmptyState
 									icon="⏳"
-									title="Нет плагинов на модерации"
-									description="Здесь будут отображаться плагины, ожидающие проверки"
+									title={t("empty_pending_title")}
+									description={t("empty_pending_description")}
 								/>
 							) : (
-								<div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-									{pendingPlugins.map((plugin: typeof Plugin.$inferSelect) => (
-										<PluginCard key={plugin.id} plugin={plugin} />
-									))}
-								</div>
+								renderGrid(pendingPlugins)
 							)}
 						</TabsContent>
 
@@ -184,15 +280,11 @@ export default function MyPluginsPage() {
 							{rejectedPlugins.length === 0 ? (
 								<EmptyState
 									icon="✅"
-									title="Нет отклоненных плагинов"
-									description="Отлично! У вас нет отклоненных плагинов"
+									title={t("empty_rejected_title")}
+									description={t("empty_rejected_description")}
 								/>
 							) : (
-								<div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-									{rejectedPlugins.map((plugin: typeof Plugin.$inferSelect) => (
-										<PluginCard key={plugin.id} plugin={plugin} />
-									))}
-								</div>
+								renderGrid(rejectedPlugins)
 							)}
 						</TabsContent>
 					</Tabs>
@@ -204,44 +296,38 @@ export default function MyPluginsPage() {
 
 function PluginCard({ plugin }: { plugin: typeof Plugin.$inferSelect }) {
 	const t = useTranslations("MyPluginsPage");
-	const getStatusColor = (status: string) => {
-		switch (status) {
-			case "approved":
-				return "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400";
-			case "pending":
-				return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400";
-			case "rejected":
-				return "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400";
-			default:
-				return "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400";
-		}
+
+	const statusStyles: Record<string, string> = {
+		approved: "border-transparent bg-success/15 text-success",
+		pending: "border-transparent bg-warning/15 text-warning",
+		rejected: "border-transparent bg-destructive/15 text-destructive",
 	};
 
-	const getStatusText = (status: string) => {
-		switch (status) {
-			case "approved":
-				return "Опубликован";
-			case "pending":
-				return "На модерации";
-			case "rejected":
-				return "Отклонен";
-			default:
-				return "Неизвестно";
-		}
+	const statusLabels: Record<string, string> = {
+		approved: t("status_approved"),
+		pending: t("status_pending"),
+		rejected: t("status_rejected"),
 	};
 
 	return (
-		<Card className="group transition-all duration-200 hover:shadow-lg">
+		<Card className="card-lift h-full">
 			<CardHeader className="pb-3">
-				<div className="flex items-start justify-between">
-					<div className="flex-1">
-						<CardTitle className="mb-1 text-lg">{plugin.name}</CardTitle>
+				<div className="flex items-start justify-between gap-3">
+					<div className="min-w-0 flex-1">
+						<CardTitle className="mb-1 truncate text-lg">
+							{plugin.name}
+						</CardTitle>
 						<CardDescription className="line-clamp-2">
 							{plugin.shortDescription || plugin.description}
 						</CardDescription>
 					</div>
-					<Badge className={getStatusColor(plugin.status)}>
-						{getStatusText(plugin.status)}
+					<Badge
+						className={
+							statusStyles[plugin.status] ??
+							"border-transparent bg-muted text-muted-foreground"
+						}
+					>
+						{statusLabels[plugin.status] ?? t("status_unknown")}
 					</Badge>
 				</div>
 			</CardHeader>
@@ -252,7 +338,7 @@ function PluginCard({ plugin }: { plugin: typeof Plugin.$inferSelect }) {
 					</span>
 					<span className="flex items-center gap-1">
 						<Download className="h-4 w-4" />
-						{plugin.downloadCount}
+						{formatNumber(plugin.downloadCount)}
 					</span>
 					<span className="flex items-center gap-1">
 						<Star className="h-4 w-4" />
@@ -260,22 +346,36 @@ function PluginCard({ plugin }: { plugin: typeof Plugin.$inferSelect }) {
 					</span>
 				</div>
 
-				{/* Мобильная версия - кнопки в две строки */}
 				<div className="space-y-2 sm:hidden">
-					<Button variant="outline" size="sm" asChild className="w-full">
+					<Button
+						variant="outline"
+						size="sm"
+						asChild
+						className="min-h-11 w-full"
+					>
 						<Link href={`/plugins/${plugin.slug}`}>
 							<Eye className="mr-2 h-4 w-4" />
 							{t("view")}
 						</Link>
 					</Button>
 					<div className="flex gap-2">
-						<Button variant="outline" size="sm" asChild className="flex-1">
+						<Button
+							variant="outline"
+							size="sm"
+							asChild
+							className="min-h-11 flex-1"
+						>
 							<Link href={`/plugins/${plugin.slug}/versions`}>
 								<GitBranch className="mr-1 h-4 w-4" />
 								{t("versions")}
 							</Link>
 						</Button>
-						<Button variant="outline" size="sm" asChild className="flex-1">
+						<Button
+							variant="outline"
+							size="sm"
+							asChild
+							className="min-h-11 flex-1"
+						>
 							<Link href={`/my-plugins/${plugin.slug}/manage`}>
 								<Settings className="mr-1 h-4 w-4" />
 								{t("manage")}
@@ -284,9 +384,13 @@ function PluginCard({ plugin }: { plugin: typeof Plugin.$inferSelect }) {
 					</div>
 				</div>
 
-				{/* Планшетная версия - dropdown menu */}
 				<div className="hidden items-center gap-2 sm:flex lg:hidden">
-					<Button variant="outline" size="sm" asChild className="flex-1">
+					<Button
+						variant="outline"
+						size="sm"
+						asChild
+						className="min-h-11 flex-1"
+					>
 						<Link href={`/plugins/${plugin.slug}`}>
 							<Eye className="mr-2 h-4 w-4" />
 							{t("view")}
@@ -294,7 +398,12 @@ function PluginCard({ plugin }: { plugin: typeof Plugin.$inferSelect }) {
 					</Button>
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
-							<Button variant="outline" size="sm">
+							<Button
+								variant="outline"
+								size="sm"
+								className="min-h-11"
+								aria-label={t("manage")}
+							>
 								<MoreHorizontal className="h-4 w-4" />
 							</Button>
 						</DropdownMenuTrigger>
@@ -326,10 +435,10 @@ function PluginCard({ plugin }: { plugin: typeof Plugin.$inferSelect }) {
 						variant="outline"
 						size="sm"
 						asChild
-						className="flex-1"
+						className="min-h-11 flex-1"
 						title={t("view")}
 					>
-						<Link href={`/plugins/${plugin.slug}`}>
+						<Link href={`/plugins/${plugin.slug}`} aria-label={t("view")}>
 							<Eye className="h-4 w-4" />
 						</Link>
 					</Button>
@@ -337,10 +446,13 @@ function PluginCard({ plugin }: { plugin: typeof Plugin.$inferSelect }) {
 						variant="outline"
 						size="sm"
 						asChild
-						className="flex-1"
+						className="min-h-11 flex-1"
 						title={t("versions")}
 					>
-						<Link href={`/plugins/${plugin.slug}/versions`}>
+						<Link
+							href={`/plugins/${plugin.slug}/versions`}
+							aria-label={t("versions")}
+						>
 							<GitBranch className="h-4 w-4" />
 						</Link>
 					</Button>
@@ -348,10 +460,13 @@ function PluginCard({ plugin }: { plugin: typeof Plugin.$inferSelect }) {
 						variant="outline"
 						size="sm"
 						asChild
-						className="flex-1"
+						className="min-h-11 flex-1"
 						title={t("manage")}
 					>
-						<Link href={`/my-plugins/${plugin.slug}/manage`}>
+						<Link
+							href={`/my-plugins/${plugin.slug}/manage`}
+							aria-label={t("manage")}
+						>
 							<Settings className="h-4 w-4" />
 						</Link>
 					</Button>

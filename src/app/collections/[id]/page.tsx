@@ -1,66 +1,55 @@
 "use client";
 
-import {
-	ArrowLeft,
-	Calendar,
-	Download,
-	Sparkles,
-	Star,
-	User,
-} from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import { ArrowLeft, Calendar, Sparkles, Star } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useFormatter, useTranslations } from "next-intl";
 
 import { PluginCard } from "~/components/plugin-card";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "~/components/ui/card";
+import { Card, CardContent } from "~/components/ui/card";
 import { EmptyState } from "~/components/ui/empty-state";
 import { Skeleton } from "~/components/ui/skeleton";
-import { cn, formatDate } from "~/lib/utils";
+import { cn, createValidDate } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
-const collectionIcons = {
-	"Полезные инструменты": "🛠️",
-	"Удиви друзей": "✨",
-	"Для продуктивности": "📈",
-	"Социальные фишки": "👥",
-	"Любимчики сообщества": "❤️",
-	"Скрытые жемчужины": "💎",
-} as const;
+const coverTreatments = [
+	{
+		cover: "bg-contrast text-contrast-foreground",
+		chip: "bg-primary text-primary-foreground",
+	},
+	{
+		cover: "bg-primary text-primary-foreground",
+		chip: "bg-contrast text-contrast-foreground",
+	},
+	{
+		cover: "border-2 border-primary bg-primary/10 text-foreground",
+		chip: "bg-primary text-primary-foreground",
+	},
+] as const;
 
-const collectionColors = {
-	"Полезные инструменты": "from-blue-500 to-cyan-500",
-	"Удиви друзей": "from-purple-500 to-pink-500",
-	"Для продуктивности": "from-green-500 to-emerald-500",
-	"Социальные фишки": "from-orange-500 to-red-500",
-	"Любимчики сообщества": "from-red-500 to-pink-500",
-	"Скрытые жемчужины": "from-indigo-500 to-purple-500",
-} as const;
+function getTreatment(id: number) {
+	return coverTreatments[Math.abs(id) % coverTreatments.length]!;
+}
 
 function CollectionSkeleton() {
 	return (
 		<div className="space-y-6">
 			<div className="space-y-4">
-				<Skeleton className="h-8 w-32" />
-				<Skeleton className="h-12 w-3/4" />
-				<Skeleton className="h-6 w-full" />
-				<Skeleton className="h-6 w-2/3" />
+				<Skeleton className="skeleton-shimmer h-8 w-32" />
+				<Skeleton className="skeleton-shimmer h-48 w-full rounded-2xl" />
+				<Skeleton className="skeleton-shimmer h-20 w-full rounded-xl" />
 			</div>
 			<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
 				{Array.from({ length: 6 }).map((_, i) => (
 					<div key={i} className="space-y-4 rounded-lg border p-4">
-						<Skeleton className="h-32 w-full" />
+						<Skeleton className="skeleton-shimmer h-32 w-full" />
 						<div className="space-y-2">
-							<Skeleton className="h-5 w-3/4" />
-							<Skeleton className="h-4 w-full" />
-							<Skeleton className="h-4 w-2/3" />
+							<Skeleton className="skeleton-shimmer h-5 w-3/4" />
+							<Skeleton className="skeleton-shimmer h-4 w-full" />
+							<Skeleton className="skeleton-shimmer h-4 w-2/3" />
 						</div>
 					</div>
 				))}
@@ -70,9 +59,12 @@ function CollectionSkeleton() {
 }
 
 export default function CollectionDetailPage() {
+	const t = useTranslations("CollectionsPage");
+	const format = useFormatter();
+	const reduceMotion = useReducedMotion();
 	const params = useParams();
 	const router = useRouter();
-	const collectionId = Number.parseInt(params.id as string);
+	const collectionId = Number.parseInt(params.id as string, 10);
 
 	const { data: collections, isLoading } =
 		api.aiCollections.getAICollections.useQuery({ limit: 20 });
@@ -80,10 +72,8 @@ export default function CollectionDetailPage() {
 	const collection = collections?.find((c: any) => c.id === collectionId);
 	const plugins = collection?.plugins || [];
 
-	const gradientColor =
-		collectionColors[collection?.name as keyof typeof collectionColors] || "";
-	const emoji =
-		collectionIcons[collection?.name as keyof typeof collectionIcons] || "🔮";
+	const treatment = getTreatment(collection?.id ?? 0);
+	const initial = (collection?.name || "?").trim().charAt(0).toUpperCase();
 
 	if (isLoading) {
 		return (
@@ -97,15 +87,17 @@ export default function CollectionDetailPage() {
 
 	if (!collection) {
 		return (
-			<div className="flex items-center justify-center bg-background py-16">
-				<div className="px-4 text-center">
-					<div className="mb-4 text-6xl">🤖</div>
-					<h1 className="mb-2 font-bold text-2xl">Подборка не найдена</h1>
-					<p className="mb-4 text-muted-foreground">
-						Возможно, подборка была удалена или ссылка неверна
+			<div className="flex min-h-[60dvh] items-center justify-center bg-background">
+				<div className="animate-fade-up px-4 text-center">
+					<div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-contrast text-contrast-foreground">
+						<Sparkles className="h-10 w-10" />
+					</div>
+					<h1 className="mb-2 font-bold text-2xl">{t("not_found_title")}</h1>
+					<p className="mb-6 text-muted-foreground">
+						{t("not_found_description")}
 					</p>
 					<Link href="/collections">
-						<Button>Вернуться к подборкам</Button>
+						<Button className="min-h-11">{t("back_to_collections")}</Button>
 					</Link>
 				</div>
 			</div>
@@ -114,78 +106,83 @@ export default function CollectionDetailPage() {
 
 	return (
 		<div className="bg-background">
-			{/* Mobile Header */}
-			<div className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 lg:hidden">
-				<div className="flex items-center justify-between px-4 py-3">
+			<div className="glass sticky top-0 z-50 border-b lg:hidden">
+				<div className="flex items-center justify-between px-4 py-2">
 					<Button
 						variant="ghost"
 						size="icon"
 						onClick={() => router.back()}
-						className="h-8 w-8"
+						className="h-11 w-11"
+						aria-label={t("back")}
 					>
 						<ArrowLeft className="h-4 w-4" />
 					</Button>
-					<div className="flex items-center gap-2">
-						<span className="text-lg">{emoji}</span>
-						<span className="font-medium text-sm">{collection.name}</span>
-					</div>
-					<div className="w-8" /> {/* Spacer */}
+					<span className="truncate px-2 font-medium text-sm">
+						{collection.name}
+					</span>
+					<div className="w-11" />
 				</div>
 			</div>
 
 			<div className="container mx-auto px-4 py-4 lg:py-8">
-				{/* Desktop Back Button */}
 				<div className="mb-6 hidden lg:block">
 					<Button
 						variant="ghost"
 						onClick={() => router.back()}
-						className="gap-2"
+						className="min-h-11 gap-2"
 					>
 						<ArrowLeft className="h-4 w-4" />
-						Назад к подборкам
+						{t("back_to_collections")}
 					</Button>
 				</div>
 
-				{/* Hero Section */}
 				<div className="mb-8 space-y-6">
-					{/* Collection Header */}
-					<div className="relative overflow-hidden rounded-2xl">
-						<div className={cn("h-48 bg-gradient-to-br", gradientColor)}>
-							<div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-							<div className="absolute right-6 bottom-6 left-6 text-white">
-								<div className="mb-3 flex items-center gap-3">
-									<div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 text-2xl backdrop-blur-sm">
-										{emoji}
-									</div>
-									<Badge
-										variant="secondary"
-										className="bg-white/20 text-white backdrop-blur-sm"
-									>
-										ИИ подборка
-									</Badge>
-								</div>
-								<h1 className="mb-2 font-bold text-3xl leading-tight lg:text-4xl">
+					<div
+						className={cn(
+							"relative animate-fade-up overflow-hidden rounded-2xl p-6 lg:p-8",
+							treatment.cover,
+						)}
+					>
+						<span
+							aria-hidden="true"
+							className="pointer-events-none absolute -right-6 -bottom-16 select-none font-bold text-[14rem] leading-none opacity-15"
+						>
+							{initial}
+						</span>
+						<div className="relative flex min-h-40 flex-col justify-between gap-6">
+							<span
+								className={cn(
+									"inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1.5 font-medium text-xs",
+									treatment.chip,
+								)}
+							>
+								<Sparkles className="h-3.5 w-3.5" />
+								{t("ai_curated")}
+							</span>
+							<div>
+								<h1 className="mb-2 font-bold text-3xl leading-tight tracking-tight lg:text-4xl">
 									{collection.name}
 								</h1>
-								<p className="text-lg text-white/90 lg:text-xl">
+								<p className="max-w-2xl text-lg opacity-80 lg:text-xl">
 									{collection.description}
 								</p>
 							</div>
 						</div>
 					</div>
 
-					{/* Stats */}
-					<div className="grid grid-cols-3 gap-4 rounded-xl bg-muted/50 p-4">
+					<div className="grid animate-fade-up grid-cols-3 gap-4 rounded-xl border bg-card p-4">
 						<div className="text-center">
-							<div className="flex items-center justify-center gap-1 font-bold text-lg text-primary">
+							<div className="flex items-center justify-center gap-1 font-bold text-lg text-primary tabular-nums">
 								<Sparkles className="h-4 w-4" />
 								{plugins.length}
 							</div>
-							<div className="text-muted-foreground text-xs">Плагинов</div>
+							<div className="text-muted-foreground text-xs">
+								{t("stat_plugins")}
+							</div>
 						</div>
 						<div className="text-center">
-							<div className="flex items-center justify-center gap-1 font-bold text-lg text-primary">
-								<Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+							<div className="flex items-center justify-center gap-1 font-bold text-lg text-primary tabular-nums">
+								<Star className="h-4 w-4 fill-warning text-warning" />
 								{plugins.length > 0
 									? (
 											plugins.reduce(
@@ -196,74 +193,83 @@ export default function CollectionDetailPage() {
 									: "0.0"}
 							</div>
 							<div className="text-muted-foreground text-xs">
-								Средний рейтинг
+								{t("avg_rating")}
 							</div>
 						</div>
 						<div className="text-center">
-							<div className="flex items-center justify-center gap-1 font-bold text-lg text-primary">
+							<div className="flex items-center justify-center gap-1 font-bold text-lg text-primary tabular-nums">
 								<Calendar className="h-4 w-4" />
-								{formatDate(collection.generatedAt).split(" ")[0]}
+								{format.dateTime(createValidDate(collection.generatedAt), {
+									day: "numeric",
+									month: "short",
+								})}
 							</div>
-							<div className="text-muted-foreground text-xs">Создана</div>
+							<div className="text-muted-foreground text-xs">
+								{t("created")}
+							</div>
 						</div>
 					</div>
 				</div>
 
-				{/* Plugins Grid */}
 				<div className="space-y-6">
 					<div className="flex items-center justify-between">
-						<h2 className="font-bold text-2xl">Плагины в подборке</h2>
+						<div className="flex items-center gap-3">
+							<span className="h-6 w-1 rounded-full bg-primary" />
+							<h2 className="font-bold text-2xl">
+								{t("plugins_in_collection")}
+							</h2>
+						</div>
 						<Badge variant="outline" className="text-sm">
-							{plugins.length}{" "}
-							{plugins.length === 1
-								? "плагин"
-								: plugins.length < 5
-									? "плагина"
-									: "плагинов"}
+							{t("plugin_count", { count: plugins.length })}
 						</Badge>
 					</div>
 
 					{plugins.length === 0 ? (
 						<EmptyState
-							icon="🔍"
-							title="Плагины не найдены"
-							description="В этой подборке пока нет плагинов"
+							icon="0"
+							title={t("empty_plugins_title")}
+							description={t("empty_plugins_description")}
 						/>
 					) : (
 						<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-							{plugins.map((plugin: any) => (
-								<PluginCard
+							{plugins.map((plugin: any, index: number) => (
+								<motion.div
 									key={plugin.id}
-									plugin={plugin}
+									initial={reduceMotion ? false : { opacity: 0, y: 24 }}
+									whileInView={reduceMotion ? undefined : { opacity: 1, y: 0 }}
+									viewport={{ once: true, margin: "-80px" }}
+									transition={{
+										duration: 0.5,
+										delay: (index % 3) * 0.06,
+										ease: [0.16, 1, 0.3, 1],
+									}}
 									className="h-full"
-								/>
+								>
+									<PluginCard plugin={plugin} className="h-full" />
+								</motion.div>
 							))}
 						</div>
 					)}
 				</div>
 
-				{/* Info Section */}
-				<Card className="mt-12 border bg-gradient-to-r from-purple-500/10 to-pink-500/10 backdrop-blur-sm">
+				<Card className="mt-12 overflow-hidden border">
 					<CardContent className="p-6">
-						<div className="flex items-start gap-4">
-							<div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-purple-500/20 text-2xl">
-								🤖
+						<div className="flex flex-col items-start gap-4 sm:flex-row">
+							<div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-contrast text-contrast-foreground">
+								<Sparkles className="h-6 w-6" />
 							</div>
 							<div>
 								<h3 className="mb-2 font-bold text-lg">
-									Создано искусственным интеллектом
+									{t("ai_generated_title")}
 								</h3>
 								<p className="mb-4 text-muted-foreground">
-									Эта подборка была автоматически создана нашим ИИ на основе
-									анализа рейтингов, отзывов пользователей и популярности
-									плагинов. Подборки обновляются еженедельно, чтобы всегда
-									предлагать самые актуальные и качественные решения.
+									{t("ai_generated_description")}
 								</p>
 								<div className="flex flex-wrap gap-2">
-									<Badge variant="secondary">Анализ рейтингов</Badge>
-									<Badge variant="secondary">Изучение отзывов</Badge>
-									<Badge variant="secondary">Отслеживание трендов</Badge>
-									<Badge variant="secondary">Еженедельные обновления</Badge>
+									<Badge variant="secondary">{t("how_badge_ratings")}</Badge>
+									<Badge variant="secondary">{t("how_badge_reviews")}</Badge>
+									<Badge variant="secondary">{t("how_badge_trends")}</Badge>
+									<Badge variant="secondary">{t("how_badge_weekly")}</Badge>
 								</div>
 							</div>
 						</div>

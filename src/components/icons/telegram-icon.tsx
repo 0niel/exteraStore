@@ -1,5 +1,3 @@
-import React from "react";
-
 interface TelegramIconProps {
 	className?: string;
 	size?: number;

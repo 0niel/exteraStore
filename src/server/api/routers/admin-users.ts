@@ -1,4 +1,4 @@
-import { and, count, desc, eq, like, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, like, or, type SQL, sql } from "drizzle-orm";
 import { z } from "zod";
 import { env } from "~/env";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
@@ -28,7 +28,7 @@ export const adminUsersRouter = createTRPCRouter({
 			if (!isAdmin) throw new Error("Unauthorized");
 
 			const offset = (input.page - 1) * input.limit;
-			const whereClauses = [] as any[];
+			const whereClauses: (SQL | undefined)[] = [];
 
 			if (input.banned !== undefined) {
 				whereClauses.push(eq(users.isBanned, input.banned));

@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, Upload } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -31,23 +31,18 @@ import { Input } from "~/components/ui/input";
 import { Switch } from "~/components/ui/switch";
 import { api } from "~/trpc/react";
 
-const uploadVersionSchema = z.object({
-	version: z
-		.string()
-		.min(1, "Версия обязательна")
-		.max(50, "Версия слишком длинная"),
-	fileContent: z.string().min(1, "Файл обязателен"),
-	changelog: z.string().optional(),
-	isStable: z.boolean(),
-});
-
 interface UploadVersionDialogProps {
 	pluginId: number;
 	onUploadSuccess: () => void;
 	pluginName?: string;
 }
 
-type UploadVersionForm = z.infer<typeof uploadVersionSchema>;
+interface UploadVersionForm {
+	version: string;
+	fileContent: string;
+	changelog?: string;
+	isStable: boolean;
+}
 
 export function UploadVersionDialog({
 	pluginId,
@@ -59,6 +54,20 @@ export function UploadVersionDialog({
 	const [file, setFile] = useState<File | null>(null);
 	const [captchaToken, setCaptchaToken] = useState<string>("");
 	const [captchaKey, setCaptchaKey] = useState(0);
+
+	const uploadVersionSchema = useMemo(
+		() =>
+			z.object({
+				version: z
+					.string()
+					.min(1, t("version_required"))
+					.max(50, t("version_too_long")),
+				fileContent: z.string().min(1, t("file_required")),
+				changelog: z.string().optional(),
+				isStable: z.boolean(),
+			}),
+		[t],
+	);
 
 	const form = useForm<UploadVersionForm>({
 		resolver: zodResolver(uploadVersionSchema),
@@ -108,7 +117,7 @@ export function UploadVersionDialog({
 
 	const onSubmit = (data: UploadVersionForm) => {
 		if (!captchaToken) {
-			toast.error("Пожалуйста, пройдите проверку капчи.");
+			toast.error(t("captcha_required"));
 			return;
 		}
 
@@ -129,10 +138,10 @@ export function UploadVersionDialog({
 	return (
 		<Dialog open={open} onOpenChange={handleOpenChange}>
 			<DialogTrigger asChild>
-				<Button className="w-full sm:w-auto">
+				<Button className="press-scale min-h-11 w-full sm:w-auto">
 					<Upload className="mr-2 h-4 w-4" />
 					<span className="hidden sm:inline">{t("upload_new_version")}</span>
-					<span className="sm:hidden">Загрузить версию</span>
+					<span className="sm:hidden">{t("upload_version")}</span>
 				</Button>
 			</DialogTrigger>
 			<DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto sm:max-h-[85vh]">
@@ -267,14 +276,14 @@ export function UploadVersionDialog({
 								type="button"
 								variant="outline"
 								onClick={() => handleOpenChange(false)}
-								className="w-full sm:w-auto"
+								className="min-h-11 w-full sm:w-auto"
 							>
 								{t("cancel")}
 							</Button>
 							<Button
 								type="submit"
 								disabled={createVersionMutation.isPending || !captchaToken}
-								className="w-full sm:w-auto"
+								className="press-scale min-h-11 w-full sm:w-auto"
 							>
 								{createVersionMutation.isPending && (
 									<Loader2 className="mr-2 h-4 w-4 animate-spin" />

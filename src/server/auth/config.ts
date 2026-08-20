@@ -4,10 +4,9 @@ import { objectToAuthDataMap } from "@telegram-auth/server/utils";
 import { eq } from "drizzle-orm";
 import type { DefaultSession, NextAuthConfig } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import DiscordProvider from "next-auth/providers/discord";
 
 import { env } from "~/env";
-import { db } from "~/server/db";
+import { type Database, db } from "~/server/db";
 import {
 	accounts,
 	sessions,
@@ -15,17 +14,15 @@ import {
 	verificationTokens,
 } from "~/server/db/schema";
 
+type AdapterSchema = NonNullable<
+	Parameters<typeof DrizzleAdapter<Database>>[1]
+>;
+
 const ADMINS = (env.INITIAL_ADMINS ?? "i_am_oniel")
 	.split(",")
 	.map((a) => a.trim().toLowerCase())
 	.filter(Boolean);
 
-/**
- * Module augmentation for `next-auth` types. Allows us to add custom properties to the `session`
- * object and keep type safety.
- *
- * @see https:
- */
 declare module "next-auth" {
 	interface Session extends DefaultSession {
 		user: {
@@ -47,11 +44,6 @@ declare module "next-auth" {
 	}
 }
 
-/**
- * Options for NextAuth.js used to configure adapters, providers, callbacks, etc.
- *
- * @see https:
- */
 export const authConfig = {
 	secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
 	trustHost: true,
@@ -140,7 +132,7 @@ export const authConfig = {
 						return {
 							...existingUser,
 							role: userIsAdmin ? "admin" : existingUser.role,
-						} as any;
+						};
 					}
 
 					const inserted = await db
@@ -171,19 +163,22 @@ export const authConfig = {
 	session: {
 		strategy: "jwt",
 	},
-	adapter: DrizzleAdapter(db, {
-		usersTable: users as any,
-		accountsTable: accounts as any,
-		sessionsTable: sessions as any,
-		verificationTokensTable: verificationTokens as any,
-	}),
+	adapter: DrizzleAdapter(
+		db as Database,
+		{
+			usersTable: users,
+			accountsTable: accounts,
+			sessionsTable: sessions,
+			verificationTokensTable: verificationTokens,
+		} as unknown as AdapterSchema,
+	),
 	callbacks: {
 		jwt: async ({ token, user }) => {
 			if (user) {
-				token.id = (user as any).id;
-				token.telegramUsername = (user as any).telegramUsername;
-				token.role = (user as any).role;
-				token.isVerified = (user as any).isVerified;
+				token.id = user.id;
+				token.telegramUsername = user.telegramUsername;
+				token.role = user.role;
+				token.isVerified = user.isVerified;
 			}
 			return token;
 		},
@@ -199,9 +194,9 @@ export const authConfig = {
 		},
 		signIn: async () => true,
 	},
-	events: {
-		error: async (err: any) => {
-			console.error("[EVENT] error", err);
+	logger: {
+		error: (error: Error) => {
+			console.error("[EVENT] error", error);
 		},
-	} as any,
+	},
 } satisfies NextAuthConfig;

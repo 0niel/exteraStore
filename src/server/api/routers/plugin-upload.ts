@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
-import { generateSlug, generateUniqueSlug } from "~/lib/utils";
+import { generateSlug } from "~/lib/utils";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import {
 	pluginActivities,
@@ -62,7 +62,6 @@ export const pluginUploadRouter = createTRPCRouter({
 				throw new Error("Captcha verification failed");
 			}
 
-			// Не позволяем создавать плагины с уже существующим названием (игнор регистра, пробелы)
 			const normalized = input.name.trim().toLowerCase();
 			const existing = await ctx.db
 				.select({ id: plugins.id })
@@ -137,7 +136,6 @@ export const pluginUploadRouter = createTRPCRouter({
 				hash: fileHash,
 			});
 
-			// Логируем активность: создан плагин
 			try {
 				await ctx.db.insert(pluginActivities).values({
 					type: "plugin.created",
@@ -149,7 +147,6 @@ export const pluginUploadRouter = createTRPCRouter({
 				});
 			} catch {}
 
-			// Автоматически запускаем проверки безопасности для нового плагина
 			try {
 				const { pluginPipelineRouter } = await import(
 					"~/server/api/routers/plugin-pipeline"
@@ -228,7 +225,6 @@ export const pluginUploadRouter = createTRPCRouter({
 						.where(eq(plugins.id, input.pluginId));
 				}
 
-				// Логируем активность: создана версия
 				try {
 					await ctx.db.insert(pluginActivities).values({
 						type: "version.released",
@@ -256,7 +252,6 @@ export const pluginUploadRouter = createTRPCRouter({
 					console.error("Failed to send notifications:", error);
 				}
 
-				// Автоматически запускаем проверки безопасности для новой версии
 				try {
 					const { pluginPipelineRouter } = await import(
 						"~/server/api/routers/plugin-pipeline"
@@ -333,7 +328,10 @@ export const pluginUploadRouter = createTRPCRouter({
 					throw new Error(`GitHub API error: ${response.statusText}`);
 				}
 
-				const data = (await response.json()) as any;
+				const data = (await response.json()) as {
+					content: string;
+					sha: string;
+				};
 				const fileContent = Buffer.from(data.content, "base64").toString(
 					"utf8",
 				);
@@ -401,7 +399,6 @@ export const pluginUploadRouter = createTRPCRouter({
 					})
 					.where(eq(pluginGitRepos.id, plugin.gitRepo.id));
 
-				// Автоматически запускаем проверки безопасности для обновленной версии
 				try {
 					const { pluginPipelineRouter } = await import(
 						"~/server/api/routers/plugin-pipeline"

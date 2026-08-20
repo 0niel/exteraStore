@@ -1,19 +1,24 @@
-import { Skeleton } from "~/components/ui/skeleton";
+import { useTranslations } from "next-intl";
 
 export default function Loading() {
+	const t = useTranslations("Errors");
+
 	return (
-		<div className="container mx-auto px-4 py-10 sm:py-14" aria-busy="true">
-			<div className="mx-auto max-w-3xl space-y-4 text-center">
-				<Skeleton className="mx-auto h-5 w-32 rounded-full" />
-				<Skeleton className="mx-auto h-12 w-full max-w-xl rounded-xl" />
-				<Skeleton className="mx-auto h-5 w-full max-w-md" />
+		<div
+			className="flex min-h-[60dvh] items-center justify-center px-4"
+			aria-busy="true"
+		>
+			<div className="flex flex-col items-center gap-4">
+				<div className="flex h-14 w-14 animate-pulse-dot items-center justify-center rounded-2xl bg-primary shadow-lg">
+					<span className="font-bold text-lg text-primary-foreground">eS</span>
+				</div>
+				<div className="flex items-center gap-1.5">
+					<span className="size-1.5 animate-pulse-dot rounded-full bg-primary" />
+					<span className="size-1.5 animate-pulse-dot rounded-full bg-primary [animation-delay:200ms]" />
+					<span className="size-1.5 animate-pulse-dot rounded-full bg-primary [animation-delay:400ms]" />
+				</div>
+				<span className="sr-only">{t("loading")}</span>
 			</div>
-			<div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-				{Array.from({ length: 6 }).map((_, index) => (
-					<Skeleton key={index} className="h-72 rounded-2xl" />
-				))}
-			</div>
-			<span className="sr-only">Загрузка страницы</span>
 		</div>
 	);
 }

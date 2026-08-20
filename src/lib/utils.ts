@@ -23,7 +23,10 @@ export function formatNumber(num: number): string {
 	return num.toString();
 }
 
-export function formatDate(date: Date | number | string): string {
+export function formatDate(
+	date: Date | number | string,
+	locale?: string,
+): string {
 	let validDate: Date;
 
 	if (typeof date === "number") {
@@ -34,7 +37,7 @@ export function formatDate(date: Date | number | string): string {
 		validDate = date;
 	}
 
-	return new Intl.DateTimeFormat("ru-RU", {
+	return new Intl.DateTimeFormat(locale ?? "en", {
 		year: "numeric",
 		month: "long",
 		day: "numeric",

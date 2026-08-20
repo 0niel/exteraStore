@@ -1,5 +1,6 @@
 "use client";
 
+import { motion, useReducedMotion } from "framer-motion";
 import {
 	Clock3,
 	Download,
@@ -63,14 +64,6 @@ interface PopularPlugin {
 	downloadCount: number;
 }
 
-const sortOptions: Array<{ value: SortOption; label: string }> = [
-	{ value: "relevance", label: "По релевантности" },
-	{ value: "newest", label: "Сначала новые" },
-	{ value: "popular", label: "Популярные" },
-	{ value: "rating", label: "По рейтингу" },
-	{ value: "downloads", label: "По загрузкам" },
-];
-
 function Highlight({ text, query }: { text: string; query: string }) {
 	const normalizedQuery = query.trim().toLocaleLowerCase();
 	if (!normalizedQuery) return text;
@@ -81,7 +74,7 @@ function Highlight({ text, query }: { text: string; query: string }) {
 	return (
 		<>
 			{text.slice(0, index)}
-			<mark className="rounded-sm bg-primary/15 text-foreground">
+			<mark className="rounded-sm bg-primary/10 font-medium text-primary">
 				{text.slice(index, index + normalizedQuery.length)}
 			</mark>
 			{text.slice(index + normalizedQuery.length)}
@@ -95,6 +88,7 @@ export function SearchDialog({
 	className,
 }: SearchDialogProps) {
 	const t = useTranslations("SearchDialog");
+	const prefersReducedMotion = useReducedMotion();
 	const router = useRouter();
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [open, setOpen] = useState(false);
@@ -233,13 +227,21 @@ export function SearchDialog({
 		</Button>
 	);
 
+	const sortOptions: Array<{ value: SortOption; label: string }> = [
+		{ value: "relevance", label: t("relevance") },
+		{ value: "newest", label: t("newest") },
+		{ value: "popular", label: t("popular") },
+		{ value: "rating", label: t("rating") },
+		{ value: "downloads", label: t("downloads_sort") },
+	];
+
 	const resultCount = searchResults?.plugins.length || 0;
 	const statusText = useMemo(() => {
 		if (!debouncedQuery) return "";
-		if (isSearching) return "Ищем плагины";
-		if (isError) return "Не удалось выполнить поиск";
-		return `Найдено: ${resultCount}`;
-	}, [debouncedQuery, isError, isSearching, resultCount]);
+		if (isSearching) return t("searching");
+		if (isError) return t("search_failed");
+		return t("results_found", { count: resultCount });
+	}, [debouncedQuery, isError, isSearching, resultCount, t]);
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
@@ -250,16 +252,17 @@ export function SearchDialog({
 			>
 				<div className="flex min-h-16 items-center gap-3 border-b px-4 pr-[max(1rem,env(safe-area-inset-right))] pl-[max(1rem,env(safe-area-inset-left))] sm:px-5">
 					<div className="min-w-0 flex-1">
-						<DialogTitle>Поиск плагинов</DialogTitle>
+						<DialogTitle>{t("title")}</DialogTitle>
 						<DialogDescription className="truncate">
-							По названию, автору или категории
+							{t("subtitle")}
 						</DialogDescription>
 					</div>
 					<Button
 						variant="ghost"
 						size="icon"
+						className="press-scale size-11"
 						onClick={() => setOpen(false)}
-						aria-label="Закрыть поиск"
+						aria-label={t("close")}
 					>
 						<X />
 					</Button>
@@ -282,14 +285,14 @@ export function SearchDialog({
 								placeholder={placeholder || t("search_plugins")}
 								className="h-12 rounded-xl pr-12 pl-12 text-base"
 								autoComplete="off"
-								aria-label="Поисковый запрос"
+								aria-label={t("query_label")}
 							/>
 							{query && (
 								<button
 									type="button"
 									onClick={() => setQuery("")}
-									className="absolute top-1/2 right-1 flex size-11 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-									aria-label="Очистить поиск"
+									className="press-scale absolute top-1/2 right-1 flex size-11 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+									aria-label={t("clear_query")}
 								>
 									<X className="size-4" />
 								</button>
@@ -299,8 +302,9 @@ export function SearchDialog({
 							type="button"
 							variant={hasActiveFilters ? "default" : "outline"}
 							size="icon"
+							className="press-scale size-11"
 							onClick={() => setShowFilters((value) => !value)}
-							aria-label="Фильтры поиска"
+							aria-label={t("filters")}
 							aria-expanded={showFilters}
 						>
 							<Filter />
@@ -310,7 +314,7 @@ export function SearchDialog({
 					{showFilters && (
 						<div className="mt-3 space-y-3 rounded-xl bg-muted/50 p-3">
 							<div>
-								<div className="mb-2 font-medium text-sm">Сортировка</div>
+								<div className="mb-2 font-medium text-sm">{t("sort_by")}</div>
 								<div className="scrollbar-hide -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
 									{sortOptions.map((option) => (
 										<button
@@ -337,7 +341,7 @@ export function SearchDialog({
 							</div>
 							<div className="grid gap-3 sm:grid-cols-[1fr_auto]">
 								<label className="grid gap-1 font-medium text-sm">
-									Категория
+									{t("category")}
 									<select
 										value={filters.category}
 										onChange={(event) =>
@@ -348,7 +352,7 @@ export function SearchDialog({
 										}
 										className="h-11 rounded-lg border bg-background px-3 font-normal"
 									>
-										<option value="">Все категории</option>
+										<option value="">{t("all_categories")}</option>
 										{categories?.map((category) => (
 											<option key={category.id} value={category.slug}>
 												{category.name}
@@ -357,7 +361,7 @@ export function SearchDialog({
 									</select>
 								</label>
 								<div>
-									<div className="mb-1 font-medium text-sm">Рейтинг</div>
+									<div className="mb-1 font-medium text-sm">{t("rating")}</div>
 									<div className="flex gap-2">
 										{[4, 3].map((rating) => (
 											<button
@@ -384,8 +388,12 @@ export function SearchDialog({
 								</div>
 							</div>
 							{hasActiveFilters && (
-								<Button variant="ghost" onClick={resetFilters}>
-									Сбросить фильтры
+								<Button
+									variant="ghost"
+									className="min-h-11"
+									onClick={resetFilters}
+								>
+									{t("clear_filters")}
 								</Button>
 							)}
 						</div>
@@ -415,80 +423,94 @@ export function SearchDialog({
 						) : isError ? (
 							<EmptyState
 								icon="↻"
-								title="Поиск временно недоступен"
-								description="Проверьте соединение и попробуйте ещё раз."
-								actionLabel="Повторить"
+								title={t("search_error_title")}
+								description={t("search_error_description")}
+								actionLabel={t("retry")}
 								onAction={() => void refetch()}
 							/>
 						) : resultCount === 0 ? (
 							<EmptyState
 								icon="⌕"
-								title="Ничего не нашли"
-								description={`Попробуйте сократить запрос «${query.trim()}» или сбросить фильтры.`}
-								actionLabel={hasActiveFilters ? "Сбросить фильтры" : undefined}
+								title={t("no_results")}
+								description={t("no_results_hint", { query: query.trim() })}
+								actionLabel={hasActiveFilters ? t("clear_filters") : undefined}
 								onAction={hasActiveFilters ? resetFilters : undefined}
 							/>
 						) : (
 							<div className="space-y-2">
 								<div className="mb-2 flex items-center justify-between gap-3">
 									<h3 className="font-medium text-muted-foreground text-sm">
-										Найдено {resultCount}
+										{t("results_found", { count: resultCount })}
 									</h3>
 									<Button
 										variant="ghost"
 										size="sm"
 										onClick={() => submitSearch()}
 									>
-										Все результаты
+										{t("show_all")}
 									</Button>
 								</div>
-								{searchResults?.plugins.map((plugin: SearchResult) => (
-									<Link
-										key={plugin.id}
-										href={`/plugins/${plugin.slug}`}
-										onClick={() => {
-											saveSearch(query);
-											setOpen(false);
-										}}
-										className="flex min-h-19 items-center gap-3 rounded-xl border border-transparent p-3 transition-colors hover:border-border hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-									>
-										<div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-											{plugin.featured ? (
-												<Star className="size-5 fill-current" />
-											) : (
-												<Search className="size-5" />
-											)}
-										</div>
-										<div className="min-w-0 flex-1">
-											<div className="truncate font-semibold">
-												<Highlight text={plugin.name} query={query} />
-											</div>
-											<div className="line-clamp-1 text-muted-foreground text-sm">
-												<Highlight
-													text={plugin.shortDescription || plugin.author}
-													query={query}
-												/>
-											</div>
-										</div>
-										<div className="hidden shrink-0 text-right text-muted-foreground text-xs sm:block">
-											<div className="flex items-center justify-end gap-1">
-												<Star className="size-3.5" />
-												{plugin.rating.toFixed(1)}
-											</div>
-											<div className="mt-1 flex items-center gap-1">
-												<Download className="size-3.5" />
-												{formatNumber(plugin.downloadCount)}
-											</div>
-										</div>
-									</Link>
-								))}
+								{searchResults?.plugins.map(
+									(plugin: SearchResult, index: number) => (
+										<motion.div
+											key={plugin.id}
+											initial={
+												prefersReducedMotion ? false : { opacity: 0, y: 8 }
+											}
+											animate={{ opacity: 1, y: 0 }}
+											transition={{
+												duration: 0.3,
+												ease: [0.16, 1, 0.3, 1],
+												delay: Math.min(index * 0.03, 0.24),
+											}}
+										>
+											<Link
+												href={`/plugins/${plugin.slug}`}
+												onClick={() => {
+													saveSearch(query);
+													setOpen(false);
+												}}
+												className="flex min-h-19 items-center gap-3 rounded-xl border border-transparent p-3 transition-colors hover:border-border hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+											>
+												<div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+													{plugin.featured ? (
+														<Star className="size-5 fill-current" />
+													) : (
+														<Search className="size-5" />
+													)}
+												</div>
+												<div className="min-w-0 flex-1">
+													<div className="truncate font-semibold">
+														<Highlight text={plugin.name} query={query} />
+													</div>
+													<div className="line-clamp-1 text-muted-foreground text-sm">
+														<Highlight
+															text={plugin.shortDescription || plugin.author}
+															query={query}
+														/>
+													</div>
+												</div>
+												<div className="hidden shrink-0 text-right text-muted-foreground text-xs sm:block">
+													<div className="flex items-center justify-end gap-1">
+														<Star className="size-3.5" />
+														{plugin.rating.toFixed(1)}
+													</div>
+													<div className="mt-1 flex items-center gap-1">
+														<Download className="size-3.5" />
+														{formatNumber(plugin.downloadCount)}
+													</div>
+												</div>
+											</Link>
+										</motion.div>
+									),
+								)}
 							</div>
 						)
 					) : (
 						<div className="space-y-7">
 							<section aria-labelledby="quick-discovery">
 								<h3 id="quick-discovery" className="mb-3 font-semibold">
-									Быстрый старт
+									{t("quick_start")}
 								</h3>
 								<div className="grid grid-cols-3 gap-2">
 									{["Python", "Xposed", "Limitless"].map((item) => (
@@ -499,7 +521,7 @@ export function SearchDialog({
 												setQuery(item);
 												inputRef.current?.focus();
 											}}
-											className="min-h-12 rounded-xl border bg-primary/5 px-2 font-medium text-sm transition-colors hover:border-primary/40 hover:bg-primary/10"
+											className="press-scale min-h-12 rounded-xl border bg-primary/5 px-2 font-medium text-sm transition-colors hover:border-primary/40 hover:bg-primary/10"
 										>
 											{item}
 										</button>
@@ -515,10 +537,10 @@ export function SearchDialog({
 											className="flex items-center gap-2 font-semibold"
 										>
 											<Clock3 className="size-4 text-primary" />
-											Недавние запросы
+											{t("recent_searches")}
 										</h3>
 										<Button variant="ghost" size="sm" onClick={clearRecent}>
-											Очистить
+											{t("clear")}
 										</Button>
 									</div>
 									<div className="flex flex-wrap gap-2">
@@ -530,7 +552,7 @@ export function SearchDialog({
 													setQuery(item);
 													inputRef.current?.focus();
 												}}
-												className="min-h-11 rounded-full border bg-background px-4 text-sm transition-colors hover:border-primary/40 hover:bg-primary/5"
+												className="press-scale min-h-11 rounded-full border bg-background px-4 text-sm transition-colors hover:border-primary/40 hover:bg-primary/5"
 											>
 												{item}
 											</button>
@@ -545,7 +567,7 @@ export function SearchDialog({
 									className="mb-3 flex items-center gap-2 font-semibold"
 								>
 									<TrendingUp className="size-4 text-primary" />
-									Популярно сейчас
+									{t("trending_now")}
 								</h3>
 								{isLoadingPopular ? (
 									<div className="grid gap-2 sm:grid-cols-2">
@@ -567,11 +589,13 @@ export function SearchDialog({
 														{plugin.name}
 													</div>
 													<div className="text-muted-foreground text-xs">
-														{formatNumber(plugin.downloadCount)} загрузок
+														{t("downloads", {
+															count: formatNumber(plugin.downloadCount),
+														})}
 													</div>
 												</div>
 												<span className="flex items-center gap-1 text-sm">
-													<Star className="size-3.5 fill-yellow-400 text-yellow-400" />
+													<Star className="size-3.5 fill-warning text-warning" />
 													{plugin.rating.toFixed(1)}
 												</span>
 											</Link>

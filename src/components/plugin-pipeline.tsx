@@ -12,8 +12,8 @@ import {
 	Zap,
 } from "lucide-react";
 
-import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import {
@@ -30,6 +30,18 @@ interface PluginPipelineProps {
 	pluginSlug: string;
 }
 
+interface PipelineCheck {
+	checkType: string;
+	status: string;
+	createdAt: Date | number | string;
+	shortDescription?: string | null;
+	classification?: string | null;
+	executionTime?: number | null;
+	completedAt?: Date | number | string | null;
+	details?: string | null;
+	errorMessage?: string | null;
+}
+
 const checkTypeIcons = {
 	security: Shield,
 	performance: Zap,
@@ -37,6 +49,7 @@ const checkTypeIcons = {
 
 export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 	const t = useTranslations("PluginPipeline");
+	const locale = useLocale();
 	const [isRunning, setIsRunning] = useState(false);
 
 	const checkTypeNames = {
@@ -55,10 +68,9 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 		{ refetchInterval: isRunning ? 2000 : false },
 	);
 
-	const { data: queueStatus } = api.pluginPipeline.getQueueStatus.useQuery(
-		undefined,
-		{ refetchInterval: isRunning ? 2000 : false },
-	);
+	api.pluginPipeline.getQueueStatus.useQuery(undefined, {
+		refetchInterval: isRunning ? 2000 : false,
+	});
 
 	const { data: pluginQueueStatus } =
 		api.pluginPipeline.getPluginQueueStatus.useQuery(
@@ -84,6 +96,46 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 		}
 		runChecksMutation.mutate({ pluginId: plugin.id });
 	};
+
+	const groupedChecks: Record<string, PipelineCheck[]> =
+		checks?.reduce(
+			(acc: Record<string, PipelineCheck[]>, check: PipelineCheck) => {
+				if (!acc[check.checkType]) {
+					acc[check.checkType] = [];
+				}
+				acc[check.checkType]?.push(check);
+				return acc;
+			},
+			{} as Record<string, PipelineCheck[]>,
+		) || {};
+
+	const latestChecks = Object.entries(groupedChecks).map(
+		([type, typeChecks]) => {
+			const latest = typeChecks.sort(
+				(a, b) =>
+					createValidDate(b.createdAt).getTime() -
+					createValidDate(a.createdAt).getTime(),
+			)[0];
+			return { type, check: latest };
+		},
+	);
+
+	const hasRunningChecks = latestChecks.some(
+		({ check }) => check?.status === "running",
+	);
+
+	const isPluginInQueue =
+		pluginQueueStatus &&
+		(pluginQueueStatus.status === "queued" ||
+			pluginQueueStatus.status === "processing");
+
+	useEffect(() => {
+		if ((hasRunningChecks || isPluginInQueue) && !isRunning) {
+			setIsRunning(true);
+		} else if (!hasRunningChecks && !isPluginInQueue && isRunning) {
+			setIsRunning(false);
+		}
+	}, [hasRunningChecks, isPluginInQueue, isRunning]);
 
 	if (isLoading) {
 		return (
@@ -121,44 +173,6 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 				</Card>
 			</div>
 		);
-	}
-
-	const groupedChecks =
-		checks?.reduce(
-			(acc: Record<string, any[]>, check: any) => {
-				if (!acc[check.checkType]) {
-					acc[check.checkType] = [];
-				}
-				acc[check.checkType]?.push(check);
-				return acc;
-			},
-			{} as Record<string, any[]>,
-		) || {};
-
-	const latestChecks = Object.entries(groupedChecks).map(
-		([type, typeChecks]) => {
-			const latest = (typeChecks as any[]).sort(
-				(a: any, b: any) =>
-					createValidDate(b.createdAt).getTime() -
-					createValidDate(a.createdAt).getTime(),
-			)[0];
-			return { type, check: latest };
-		},
-	);
-
-	const hasRunningChecks = latestChecks.some(
-		({ check }) => check?.status === "running",
-	);
-
-	const isPluginInQueue =
-		pluginQueueStatus &&
-		(pluginQueueStatus.status === "queued" ||
-			pluginQueueStatus.status === "processing");
-
-	if ((hasRunningChecks || isPluginInQueue) && !isRunning) {
-		setIsRunning(true);
-	} else if (!hasRunningChecks && !isPluginInQueue && isRunning) {
-		setIsRunning(false);
 	}
 
 	return (
@@ -211,19 +225,19 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 						let statusIcon = Clock;
 
 						if (check?.status === "running") {
-							statusColor = "bg-yellow-500";
+							statusColor = "bg-warning";
 							statusText = t("in_progress");
 							statusIcon = RefreshCw;
 						} else if (check?.status === "passed") {
-							statusColor = "bg-green-500";
+							statusColor = "bg-success";
 							statusText = t("success");
 							statusIcon = CheckCircle;
 						} else if (check?.status === "failed") {
-							statusColor = "bg-red-500";
+							statusColor = "bg-destructive";
 							statusText = t("failed");
 							statusIcon = XCircle;
 						} else if (check?.status === "error") {
-							statusColor = "bg-red-500";
+							statusColor = "bg-destructive";
 							statusText = t("failed");
 							statusIcon = AlertTriangle;
 						}
@@ -263,24 +277,24 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 														check?.status === "running" ? "animate-spin" : ""
 													} ${
 														check?.status === "passed"
-															? "text-green-600"
+															? "text-success"
 															: check?.status === "failed" ||
 																	check?.status === "error"
-																? "text-red-600"
+																? "text-destructive"
 																: check?.status === "running"
-																	? "text-yellow-600"
+																	? "text-warning"
 																	: "text-muted-foreground"
 													}`}
 												/>
 												<span
 													className={`rounded-full px-2 py-0.5 font-medium text-xs ${
 														check?.status === "running"
-															? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
+															? "bg-warning/15 text-warning"
 															: check?.status === "passed"
-																? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+																? "bg-success/15 text-success"
 																: check?.status === "failed" ||
 																		check?.status === "error"
-																	? "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+																	? "bg-destructive/15 text-destructive"
 																	: "bg-muted text-muted-foreground"
 													}`}
 												>
@@ -301,25 +315,25 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 													<span
 														className={`inline-flex items-center gap-1 rounded-md px-2 py-1 font-medium text-xs ${
 															check.classification === "critical"
-																? "border border-red-200 bg-red-100 text-red-800 dark:border-red-800 dark:bg-red-900/30 dark:text-red-400"
+																? "border border-destructive/30 bg-destructive/10 text-destructive"
 																: check.classification === "unsafe"
-																	? "border border-red-200 bg-red-100 text-red-800 dark:border-red-800 dark:bg-red-900/30 dark:text-red-400"
+																	? "border border-destructive/30 bg-destructive/10 text-destructive"
 																	: check.classification ===
 																			"potentially_unsafe"
-																		? "border border-yellow-200 bg-yellow-100 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-																		: "border border-green-200 bg-green-100 text-green-800 dark:border-green-800 dark:bg-green-900/30 dark:text-green-400"
+																		? "border border-warning/30 bg-warning/10 text-warning"
+																		: "border border-success/30 bg-success/10 text-success"
 														}`}
 													>
 														<div
 															className={`h-1.5 w-1.5 rounded-full ${
 																check.classification === "critical"
-																	? "bg-red-500"
+																	? "bg-destructive"
 																	: check.classification === "unsafe"
-																		? "bg-red-500"
+																		? "bg-destructive"
 																		: check.classification ===
 																				"potentially_unsafe"
-																			? "bg-yellow-500"
-																			: "bg-green-500"
+																			? "bg-warning"
+																			: "bg-success"
 															}`}
 														></div>
 														{check.classification === "critical"
@@ -343,7 +357,7 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 									)}
 									{check?.completedAt && (
 										<span className="hidden rounded-full bg-muted/50 px-2 py-1 sm:inline">
-											{formatDate(check.completedAt)}
+											{formatDate(check.completedAt, locale)}
 										</span>
 									)}
 
@@ -353,7 +367,7 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 												<Button
 													variant="ghost"
 													size="sm"
-													className="h-6 w-6 p-0 text-muted-foreground opacity-0 transition-all duration-200 hover:text-primary group-hover:opacity-100"
+													className="h-11 w-11 p-0 text-muted-foreground transition-all duration-200 hover:text-primary md:h-6 md:w-6 md:opacity-0 md:group-hover:opacity-100"
 												>
 													<Info className="h-4 w-4" />
 												</Button>
@@ -365,7 +379,7 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 											>
 												<div className="border-border border-b bg-accent/50 p-4">
 													<h4 className="flex items-center gap-2 font-semibold text-foreground">
-														<div className="h-2 w-2 rounded-full bg-green-500"></div>
+														<div className="h-2 w-2 rounded-full bg-success"></div>
 														{t("check_details")}
 													</h4>
 												</div>
@@ -391,7 +405,7 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 												<Button
 													variant="ghost"
 													size="sm"
-													className="h-6 w-6 p-0 text-red-500 opacity-0 transition-all duration-200 hover:text-red-600 group-hover:opacity-100"
+													className="h-11 w-11 p-0 text-destructive transition-all duration-200 hover:text-destructive/80 md:h-6 md:w-6 md:opacity-0 md:group-hover:opacity-100"
 												>
 													<AlertTriangle className="h-4 w-4" />
 												</Button>
@@ -401,14 +415,14 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 												align="end"
 												side="bottom"
 											>
-												<div className="border-red-200 border-b bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/30">
-													<h4 className="flex items-center gap-2 font-semibold text-red-900 dark:text-red-400">
-														<div className="h-2 w-2 rounded-full bg-red-500"></div>
+												<div className="border-destructive/30 border-b bg-destructive/10 p-4">
+													<h4 className="flex items-center gap-2 font-semibold text-destructive">
+														<div className="h-2 w-2 rounded-full bg-destructive"></div>
 														{t("error_details")}
 													</h4>
 												</div>
 												<div className="p-4">
-													<p className="rounded-md border border-red-200 bg-red-50 p-3 text-red-700 text-xs leading-relaxed dark:border-red-800 dark:bg-red-900/30 dark:text-red-400">
+													<p className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-destructive text-xs leading-relaxed">
 														{check.errorMessage}
 													</p>
 												</div>
@@ -424,7 +438,7 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 
 			{latestChecks.length === 0 && !isRunning && (
 				<div className="rounded-lg border-2 border-border border-dashed bg-muted/30 p-8 text-center transition-all duration-200 hover:bg-muted/50">
-					<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-primary/10 to-primary/20 shadow-sm">
+					<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-linear-to-br from-primary/10 to-primary/20 shadow-sm">
 						<Shield className="h-7 w-7 text-primary" />
 					</div>
 					<h3 className="mb-2 font-semibold text-foreground text-lg">
@@ -454,10 +468,10 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 			)}
 
 			{(isRunning || runChecksMutation.isPending) && (
-				<div className="rounded-lg border border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10 p-6 shadow-sm">
+				<div className="rounded-lg border border-primary/20 bg-linear-to-r from-primary/5 to-primary/10 p-6 shadow-sm">
 					<div className="flex items-center gap-4">
 						<div className="flex-shrink-0">
-							<div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-primary/10 to-primary/20 shadow-sm">
+							<div className="flex h-12 w-12 items-center justify-center rounded-full bg-linear-to-br from-primary/10 to-primary/20 shadow-sm">
 								<RefreshCw className="h-5 w-5 animate-spin text-primary" />
 							</div>
 						</div>
@@ -473,7 +487,7 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 
 					<div className="mt-6 space-y-3">
 						<div className="flex items-center gap-4 rounded-md bg-background/50 p-3 text-sm">
-							<div className="h-2 w-2 animate-pulse rounded-full bg-yellow-500"></div>
+							<div className="h-2 w-2 animate-pulse rounded-full bg-warning"></div>
 							<Shield className="h-4 w-4 text-primary" />
 							<span className="font-medium text-foreground">
 								{t("security_check")}
@@ -484,7 +498,7 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 						</div>
 						<div className="flex items-center gap-4 rounded-md bg-background/50 p-3 text-sm">
 							<div
-								className="h-2 w-2 animate-pulse rounded-full bg-yellow-500"
+								className="h-2 w-2 animate-pulse rounded-full bg-warning"
 								style={{ animationDelay: "0.3s" }}
 							></div>
 							<Zap className="h-4 w-4 text-primary" />

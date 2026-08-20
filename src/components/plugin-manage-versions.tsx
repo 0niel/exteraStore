@@ -11,7 +11,7 @@ import {
 	User,
 } from "lucide-react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 import {
@@ -26,29 +26,18 @@ import {
 } from "~/components/ui/alert-dialog";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "~/components/ui/card";
+import { Card, CardContent } from "~/components/ui/card";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "~/components/ui/table";
 import { formatBytes, formatDate } from "~/lib/utils";
+import type { RouterOutputs } from "~/trpc/react";
 import { api } from "~/trpc/react";
+
+type PluginVersion = RouterOutputs["pluginUpload"]["getVersions"][number];
 
 interface PluginManageVersionsProps {
 	pluginId: number;
@@ -60,6 +49,7 @@ export function PluginManageVersions({
 	pluginSlug,
 }: PluginManageVersionsProps) {
 	const t = useTranslations("PluginManageVersions");
+	const locale = useLocale();
 	const {
 		data: versions,
 		isLoading,
@@ -73,13 +63,13 @@ export function PluginManageVersions({
 
 	const deleteVersion = api.pluginVersions.deleteVersion.useMutation({
 		onSuccess: () => {
-			toast.success("Версия удалена");
+			toast.success(t("toast_deleted"));
 			setDeleteDialogOpen(false);
 			setVersionToDelete(null);
 			refetch();
 		},
 		onError: (error) => {
-			toast.error("Не удалось удалить версию", { description: error.message });
+			toast.error(t("toast_delete_error"), { description: error.message });
 		},
 	});
 
@@ -104,7 +94,7 @@ export function PluginManageVersions({
 
 	return (
 		<div className="space-y-4">
-			{versions.map((version: any, index: any) => (
+			{versions.map((version: PluginVersion, index: number) => (
 				<Card key={version.id} className={index === 0 ? "border-primary" : ""}>
 					<CardContent className="pt-6">
 						<div className="flex items-start justify-between gap-4">
@@ -112,7 +102,9 @@ export function PluginManageVersions({
 								<div className="mb-2 flex items-center gap-2">
 									<h4 className="font-semibold text-lg">v{version.version}</h4>
 									{index === 0 && (
-										<Badge className="bg-green-600">{t("current")}</Badge>
+										<Badge className="border-transparent bg-success/15 text-success">
+											{t("current")}
+										</Badge>
 									)}
 									{version.isStable ? (
 										<Badge variant="outline">{t("stable")}</Badge>
@@ -124,7 +116,7 @@ export function PluginManageVersions({
 								<div className="mb-3 grid grid-cols-2 gap-4 text-muted-foreground text-sm md:grid-cols-4">
 									<div className="flex items-center gap-1">
 										<Calendar className="h-4 w-4" />
-										<span>{formatDate(version.createdAt)}</span>
+										<span>{formatDate(version.createdAt, locale)}</span>
 									</div>
 									<div className="flex items-center gap-1">
 										<Download className="h-4 w-4" />
@@ -186,7 +178,11 @@ export function PluginManageVersions({
 							<div className="flex flex-col gap-2">
 								<DropdownMenu>
 									<DropdownMenuTrigger asChild>
-										<Button variant="outline" size="sm">
+										<Button
+											variant="outline"
+											size="sm"
+											aria-label={t("actions")}
+										>
 											<MoreVertical className="h-4 w-4" />
 										</Button>
 									</DropdownMenuTrigger>
@@ -213,7 +209,7 @@ export function PluginManageVersions({
 											}}
 										>
 											<Trash2 className="mr-2 h-4 w-4" />
-											Удалить версию
+											{t("delete_version")}
 										</DropdownMenuItem>
 									</DropdownMenuContent>
 								</DropdownMenu>
@@ -225,14 +221,15 @@ export function PluginManageVersions({
 			<AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
 				<AlertDialogContent>
 					<AlertDialogHeader>
-						<AlertDialogTitle>Удалить версию?</AlertDialogTitle>
+						<AlertDialogTitle>{t("delete_version_title")}</AlertDialogTitle>
 						<AlertDialogDescription>
-							Это действие нельзя отменить. Версия v{versionToDelete} будет
-							удалена.
+							{t("delete_version_description", {
+								version: versionToDelete ?? "",
+							})}
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogCancel>Отмена</AlertDialogCancel>
+						<AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
 						<AlertDialogAction
 							onClick={() => {
 								if (!versionToDelete) return;
@@ -243,7 +240,7 @@ export function PluginManageVersions({
 							{deleteVersion.isPending && (
 								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 							)}
-							Удалить
+							{t("confirm_delete")}
 						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>

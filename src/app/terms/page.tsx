@@ -1,8 +1,11 @@
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { PageHeader } from "~/components/page-header";
+
+const LAST_UPDATED = new Date("2026-08-20");
 
 export default function TermsPage() {
 	const t = useTranslations("Terms");
+	const format = useFormatter();
 
 	return (
 		<div className="container mx-auto px-4 py-8">
@@ -44,7 +47,12 @@ export default function TermsPage() {
 				<p>{t("contact.content")}</p>
 
 				<p className="mt-8 text-muted-foreground text-sm">
-					{t("last_updated")}: {new Date().toLocaleDateString()}
+					{t("last_updated")}:{" "}
+					{format.dateTime(LAST_UPDATED, {
+						year: "numeric",
+						month: "long",
+						day: "numeric",
+					})}
 				</p>
 			</div>
 		</div>

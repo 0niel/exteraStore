@@ -10,13 +10,13 @@ import {
 	QrCode,
 	Wallet,
 } from "lucide-react";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
+import { Badge } from "~/components/ui/badge";
+import { Button } from "~/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Separator } from "~/components/ui/separator";
+import { cn } from "~/lib/utils";
 
 export type DonationMethodType =
 	| "sbp"
@@ -31,11 +31,16 @@ export type DonationMethodType =
 
 export interface DonationMethod {
 	type: DonationMethodType;
-	value: string; // url, phone, wallet, card, etc.
-	label?: string; // optional display label
+	value: string;
+	label?: string;
 }
 
-function getMethodMeta(type: DonationMethodType): {
+type Translator = (key: string) => string;
+
+function getMethodMeta(
+	type: DonationMethodType,
+	t: Translator,
+): {
 	title: string;
 	icon: React.ComponentType<{ className?: string }>;
 	action: "open" | "copy";
@@ -48,49 +53,48 @@ function getMethodMeta(type: DonationMethodType): {
 			return { title: "DonationAlerts", icon: Gift, action: "open" };
 		case "yoomoney":
 			return {
-				title: "ЮMoney",
+				title: "YooMoney",
 				icon: Wallet,
 				action: "copy",
-				hint: "Кошелек скопирован",
+				hint: t("wallet_copied"),
 			};
 		case "sbp":
 			return {
-				title: "СБП",
+				title: t("sbp_title"),
 				icon: QrCode,
 				action: "copy",
-				hint: "Реквизиты СБП скопированы",
+				hint: t("sbp_copied"),
 			};
 		case "card":
 			return {
-				title: "Карта",
+				title: t("card_title"),
 				icon: CreditCard,
 				action: "copy",
-				hint: "Номер карты скопирован",
+				hint: t("card_copied"),
 			};
 		case "ton":
 			return {
 				title: "TON",
 				icon: Wallet,
 				action: "copy",
-				hint: "Адрес TON скопирован",
+				hint: t("address_copied"),
 			};
 		case "usdt_trc20":
 			return {
 				title: "USDT TRC20",
 				icon: Banknote,
 				action: "copy",
-				hint: "Адрес USDT скопирован",
+				hint: t("address_copied"),
 			};
 		case "btc":
 			return {
 				title: "BTC",
 				icon: Bitcoin,
 				action: "copy",
-				hint: "Адрес BTC скопирован",
+				hint: t("address_copied"),
 			};
-		case "custom":
 		default:
-			return { title: "Другое", icon: LinkIcon, action: "open" };
+			return { title: t("other_title"), icon: LinkIcon, action: "open" };
 	}
 }
 
@@ -110,10 +114,12 @@ export function DonationWidget({
 	methods?: DonationMethod[] | null;
 	className?: string;
 }) {
+	const t = useTranslations("DonationWidget");
+
 	if (!methods || methods.length === 0) return null;
 
 	const handleAction = (method: DonationMethod) => {
-		const meta = getMethodMeta(method.type);
+		const meta = getMethodMeta(method.type, t);
 		if (meta.action === "open" || isLikelyUrl(method.value)) {
 			const url = isLikelyUrl(method.value)
 				? method.value
@@ -122,8 +128,8 @@ export function DonationWidget({
 		} else {
 			navigator.clipboard
 				.writeText(method.value)
-				.then(() => toast.success(meta.hint || "Скопировано"))
-				.catch(() => toast.error("Не удалось скопировать"));
+				.then(() => toast.success(meta.hint || t("copied")))
+				.catch(() => toast.error(t("copy_error")));
 		}
 	};
 
@@ -131,18 +137,17 @@ export function DonationWidget({
 		<Card className={cn("border-primary/20", className)}>
 			<CardHeader>
 				<CardTitle className="flex items-center gap-2">
-					<HandCoins className="h-5 w-5" /> Поддержать автора
+					<HandCoins className="h-5 w-5" /> {t("support_author")}
 				</CardTitle>
 			</CardHeader>
 			<CardContent className="space-y-4">
 				<p className="text-muted-foreground text-sm">
-					Если вам нравится этот проект — поддержите автора. Это поможет
-					развивать экосистему плагинов.
+					{t("support_description")}
 				</p>
 				<Separator />
 				<div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
 					{methods.map((m, idx) => {
-						const meta = getMethodMeta(m.type);
+						const meta = getMethodMeta(m.type, t);
 						const Icon = meta.icon;
 						const showValue =
 							m.type === "card" ? maskCard(m.value) : clipValue(m.value);
@@ -150,7 +155,7 @@ export function DonationWidget({
 							<Button
 								key={idx}
 								variant="outline"
-								className="justify-start gap-2"
+								className="press-scale min-h-11 justify-start gap-2"
 								onClick={() => handleAction(m)}
 							>
 								<Icon className="h-4 w-4" />
@@ -163,9 +168,9 @@ export function DonationWidget({
 					})}
 				</div>
 				<div className="flex items-center gap-2">
-					<Badge variant="secondary">Безопасно</Badge>
+					<Badge variant="secondary">{t("safe")}</Badge>
 					<span className="text-muted-foreground text-xs">
-						Мы не храним платежные данные — только реквизиты, указанные автором.
+						{t("disclaimer")}
 					</span>
 				</div>
 			</CardContent>
