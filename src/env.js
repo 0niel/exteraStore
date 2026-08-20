@@ -22,19 +22,13 @@ export const env = createEnv({
 			.string()
 			.url()
 			.default("https://tg-proxy.controlisanillusion08.workers.dev"),
-		TELEGRAM_WEBHOOK_SECRET:
-			process.env.NODE_ENV === "production"
-				? z
-						.string()
-						.min(32)
-						.max(256)
-						.regex(/^[A-Za-z0-9_-]+$/)
-				: z
-						.string()
-						.min(32)
-						.max(256)
-						.regex(/^[A-Za-z0-9_-]+$/)
-						.optional(),
+		TELEGRAM_WEBHOOK_SECRET: z
+			.string()
+			.min(32)
+			.max(256)
+			.regex(/^[A-Za-z0-9_-]+$/)
+			.optional(),
+		TELEGRAM_POLLING: z.enum(["true", "false"]).default("true"),
 		OPENROUTER_API_KEY: z.string().optional(),
 		OPENROUTER_MODEL: z.string().default("google/gemini-3.6-flash"),
 		CRON_SECRET: z.string().min(32).optional(),
@@ -65,6 +59,7 @@ export const env = createEnv({
 		TELEGRAM_BOT_USERNAME: process.env.TELEGRAM_BOT_USERNAME,
 		TELEGRAM_API_BASE_URL: process.env.TELEGRAM_API_BASE_URL,
 		TELEGRAM_WEBHOOK_SECRET: process.env.TELEGRAM_WEBHOOK_SECRET,
+		TELEGRAM_POLLING: process.env.TELEGRAM_POLLING,
 		OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
 		OPENROUTER_MODEL: process.env.OPENROUTER_MODEL,
 		CRON_SECRET: process.env.CRON_SECRET,

@@ -1,6 +1,8 @@
 import { env } from "~/env";
 
 const REQUEST_TIMEOUT_MS = 15_000;
+const TELEGRAM_USER_AGENT =
+	"Mozilla/5.0 (compatible; exteraStore/1.0; +https://exterastore.app)";
 const MAX_RETRIES = 3;
 const MAX_RETRY_DELAY_MS = 10_000;
 
@@ -29,6 +31,10 @@ export type TelegramMessageOptions = {
 	disable_web_page_preview?: boolean;
 };
 
+export type TelegramRequestOptions = {
+	timeoutMs?: number;
+};
+
 function wait(ms: number) {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -52,6 +58,7 @@ function getRetryDelay(
 export async function telegramRequest<T>(
 	method: string,
 	payload: Record<string, unknown> | FormData,
+	options: TelegramRequestOptions = {},
 ): Promise<T> {
 	if (!env.TELEGRAM_BOT_TOKEN) {
 		throw new Error("Telegram bot token is not configured");
@@ -59,16 +66,22 @@ export async function telegramRequest<T>(
 
 	const baseUrl = env.TELEGRAM_API_BASE_URL.replace(/\/+$/, "");
 	const url = `${baseUrl}/bot${env.TELEGRAM_BOT_TOKEN}/${method}`;
+	const timeoutMs = options.timeoutMs ?? REQUEST_TIMEOUT_MS;
 
 	for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
 		const controller = new AbortController();
-		const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+		const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
 		try {
 			const multipart = payload instanceof FormData;
 			const response = await fetch(url, {
 				method: "POST",
-				headers: multipart ? undefined : { "Content-Type": "application/json" },
+				headers: multipart
+					? { "User-Agent": TELEGRAM_USER_AGENT }
+					: {
+							"Content-Type": "application/json",
+							"User-Agent": TELEGRAM_USER_AGENT,
+						},
 				body: multipart ? payload : JSON.stringify(payload),
 				signal: controller.signal,
 			});

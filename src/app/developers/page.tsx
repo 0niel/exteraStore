@@ -208,7 +208,7 @@ export default function DevelopersPage() {
 													className={cn(
 														"absolute top-3 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-xl font-bold font-mono text-sm tabular-nums",
 														rank === 1
-															? "btn-glow bg-primary text-primary-foreground"
+															? "bg-primary text-primary-foreground"
 															: "bg-primary/10 text-primary",
 													)}
 												>

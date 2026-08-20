@@ -25,6 +25,12 @@ const createPluginSchema = z.object({
 	changelog: z.string().optional(),
 	githubUrl: z.string().url().optional(),
 	documentationUrl: z.string().url().optional(),
+	minExteraVersion: z
+		.string()
+		.max(20)
+		.regex(/^\d+(\.\d+)*$/)
+		.optional(),
+	exteralessCompatible: z.boolean().optional(),
 	captchaToken: z.string().min(1),
 });
 
@@ -96,6 +102,8 @@ export const pluginUploadRouter = createTRPCRouter({
 					changelog: input.changelog,
 					githubUrl: input.githubUrl,
 					documentationUrl: input.documentationUrl,
+					minExteraVersion: input.minExteraVersion,
+					exteralessCompatible: input.exteralessCompatible,
 					status: "pending",
 				})
 				.returning();

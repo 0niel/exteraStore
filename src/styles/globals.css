@@ -330,9 +330,7 @@
 }
 
 @utility btn-glow {
-	box-shadow:
-		0 4px 14px -2px color-mix(in oklch, var(--primary) 40%, transparent),
-		inset 0 1px 0 oklch(1 0 0 / 0.15);
+	box-shadow: 0 1px 2px color-mix(in oklch, var(--primary) 25%, transparent);
 }
 
 @utility section-band {

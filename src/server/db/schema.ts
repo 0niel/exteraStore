@@ -57,6 +57,8 @@ export const plugins = pgTable(
 		screenshots: text("screenshots"),
 		requirements: text("requirements"),
 		changelog: text("changelog"),
+		minExteraVersion: text("min_extera_version"),
+		exteralessCompatible: boolean("exteraless_compatible"),
 		createdAt: integer("created_at")
 			.default(sql`extract(epoch from now())`)
 			.notNull(),

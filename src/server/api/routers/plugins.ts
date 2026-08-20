@@ -31,6 +31,7 @@ export const pluginsRouter = createTRPCRouter({
 					.enum(["newest", "popular", "rating", "downloads"])
 					.default("newest"),
 				featured: z.boolean().optional(),
+				exteralessOnly: z.boolean().optional(),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
@@ -41,6 +42,9 @@ export const pluginsRouter = createTRPCRouter({
 				input.category ? eq(plugins.category, input.category) : undefined,
 				input.search ? like(plugins.name, `%${input.search}%`) : undefined,
 				input.featured ? eq(plugins.featured, true) : undefined,
+				input.exteralessOnly
+					? eq(plugins.exteralessCompatible, true)
+					: undefined,
 			);
 
 			let orderBy;
@@ -758,6 +762,13 @@ export const pluginsRouter = createTRPCRouter({
 				categorySlug: z.string(),
 				tags: z.string(),
 				screenshots: z.string(),
+				minExteraVersion: z
+					.string()
+					.max(20)
+					.regex(/^\d+(\.\d+)*$/)
+					.nullable()
+					.optional(),
+				exteralessCompatible: z.boolean().nullable().optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -784,6 +795,8 @@ export const pluginsRouter = createTRPCRouter({
 					category: input.categorySlug,
 					tags: input.tags,
 					screenshots: input.screenshots,
+					minExteraVersion: input.minExteraVersion,
+					exteralessCompatible: input.exteralessCompatible,
 					updatedAt: sql`extract(epoch from now())`,
 				})
 				.where(eq(plugins.id, input.id))

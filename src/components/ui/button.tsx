@@ -10,7 +10,7 @@ const buttonVariants = cva(
 		variants: {
 			variant: {
 				default:
-					"btn-glow bg-linear-to-b from-primary to-[color-mix(in_oklch,var(--primary)_82%,black)] text-primary-foreground hover:brightness-110",
+					"bg-linear-to-b from-primary to-[color-mix(in_oklch,var(--primary)_82%,black)] text-primary-foreground hover:brightness-110",
 				destructive:
 					"bg-destructive text-white shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40",
 				outline:

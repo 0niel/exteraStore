@@ -75,6 +75,9 @@ function PluginsContent() {
 	const [sortBy, setSortBy] = useState<SortOption>(
 		isSortOption(initialSort) ? initialSort : "newest",
 	);
+	const [exteralessOnly, setExteralessOnly] = useState(
+		searchParams.get("exteraless") === "1",
+	);
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 	const [page, setPage] = useState(1);
 	const [debouncedSearch] = useDebounce(search.trim(), 250);
@@ -92,6 +95,7 @@ function PluginsContent() {
 		category: category || undefined,
 		sortBy,
 		featured: featuredOnly || undefined,
+		exteralessOnly: exteralessOnly || undefined,
 	});
 	const { data: categories } = api.plugins.getCategories.useQuery();
 
@@ -101,21 +105,35 @@ function PluginsContent() {
 		if (category) params.set("category", category);
 		if (sortBy !== "newest") params.set("sort", sortBy);
 		if (featuredOnly) params.set("featured", "true");
+		if (exteralessOnly) params.set("exteraless", "1");
 		const queryString = params.toString();
 		if (queryString !== currentQuery) {
 			router.replace(queryString ? `/plugins?${queryString}` : "/plugins", {
 				scroll: false,
 			});
 		}
-	}, [category, currentQuery, debouncedSearch, featuredOnly, router, sortBy]);
+	}, [
+		category,
+		currentQuery,
+		debouncedSearch,
+		exteralessOnly,
+		featuredOnly,
+		router,
+		sortBy,
+	]);
 
 	const hasFilters =
-		Boolean(search) || Boolean(category) || sortBy !== "newest" || featuredOnly;
+		Boolean(search) ||
+		Boolean(category) ||
+		sortBy !== "newest" ||
+		featuredOnly ||
+		exteralessOnly;
 
 	const clearFilters = () => {
 		setSearch("");
 		setCategory("");
 		setSortBy("newest");
+		setExteralessOnly(false);
 		setPage(1);
 		router.replace("/plugins", { scroll: false });
 	};
@@ -222,7 +240,7 @@ function PluginsContent() {
 							className={cn(
 								"press-scale min-h-11 shrink-0 snap-start rounded-full border px-4 font-medium text-sm transition-all duration-200 ease-[var(--ease-spring)]",
 								category === ""
-									? "btn-glow border-primary bg-primary text-primary-foreground"
+									? "border-primary bg-primary text-primary-foreground"
 									: "border-border bg-background/70 backdrop-blur hover:border-primary/40 hover:bg-primary/5",
 							)}
 							aria-pressed={category === ""}
@@ -242,7 +260,7 @@ function PluginsContent() {
 								className={cn(
 									"press-scale min-h-11 shrink-0 snap-start rounded-full border px-4 font-medium text-sm transition-all duration-200 ease-[var(--ease-spring)]",
 									category === item.slug
-										? "btn-glow border-primary bg-primary text-primary-foreground"
+										? "border-primary bg-primary text-primary-foreground"
 										: "border-border bg-background/70 backdrop-blur hover:border-primary/40 hover:bg-primary/5",
 								)}
 								aria-pressed={category === item.slug}
@@ -255,6 +273,22 @@ function PluginsContent() {
 								)}
 							</button>
 						))}
+						<button
+							type="button"
+							onClick={() => {
+								setExteralessOnly((current) => !current);
+								setPage(1);
+							}}
+							className={cn(
+								"press-scale min-h-11 shrink-0 snap-start rounded-full border px-4 font-medium text-sm transition-all duration-200 ease-[var(--ease-spring)]",
+								exteralessOnly
+									? "border-primary bg-primary text-primary-foreground"
+									: "border-border bg-background/70 backdrop-blur hover:border-primary/40 hover:bg-primary/5",
+							)}
+							aria-pressed={exteralessOnly}
+						>
+							{t("exteraless_only")}
+						</button>
 					</fieldset>
 				</div>
 
