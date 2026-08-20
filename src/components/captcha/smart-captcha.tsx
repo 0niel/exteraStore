@@ -46,7 +46,11 @@ export function SmartCaptcha({ onSuccess, onError }: SmartCaptchaProps) {
 
 	useEffect(() => {
 		const sitekey = env.NEXT_PUBLIC_YANDEX_CAPTCHA_CLIENT_KEY;
-		if (!sitekey) return;
+		if (!sitekey) {
+			onSuccessRef.current("captcha-disabled");
+			setShouldHide(true);
+			return;
+		}
 
 		let disposed = false;
 		const timers = new Set<ReturnType<typeof setTimeout>>();

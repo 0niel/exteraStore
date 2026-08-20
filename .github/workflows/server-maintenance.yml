@@ -96,6 +96,8 @@ jobs:
           (./scripts/docker-cmd.sh compose logs app --tail 30 2>/dev/null || sudo docker compose logs app --tail 30) | tail -30
           echo "=== local health ==="
           curl -sf -m 10 http://localhost:3000/api/health || echo "local health check failed"
+          echo "=== public build vars ==="
+          grep -E '^(NEXT_PUBLIC_[A-Z_]+|TELEGRAM_BOT_USERNAME|TELEGRAM_POLLING|OPENROUTER_MODEL|TELEGRAM_API_BASE_URL)=' .env || echo "none"
           REMOTE
 
       - name: Check public health
