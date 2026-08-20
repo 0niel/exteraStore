@@ -93,7 +93,8 @@ jobs:
           echo "=== disk ==="
           df -h / | tail -1
           echo "=== app logs (tail) ==="
-          (./scripts/docker-cmd.sh compose logs app --tail 30 2>/dev/null || sudo docker compose logs app --tail 30) | tail -30
+          APP_ID=$(sudo docker ps -qf "name=app" | head -1)
+          if [ -n "$APP_ID" ]; then sudo docker logs "$APP_ID" --tail 40 2>&1 | tail -40; else echo "app container not found"; fi
           echo "=== local health ==="
           curl -sf -m 10 http://localhost:3000/api/health || echo "local health check failed"
           echo "=== public build vars ==="
