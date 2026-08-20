@@ -98,4 +98,52 @@ export const pulseRouter = createTRPCRouter({
 				},
 			};
 		}),
+
+	stats: publicProcedure.query(async ({ ctx }) => {
+		const now = Math.floor(Date.now() / 1000);
+		const dayStart = now - (now % 86_400);
+		const weekAgo = dayStart - 6 * 86_400;
+
+		const [byDay, byType, activeDevs] = await Promise.all([
+			ctx.db
+				.select({
+					day: sql<number>`floor(${pluginActivities.createdAt} / 86400) * 86400`,
+					total: count(),
+				})
+				.from(pluginActivities)
+				.where(sql`${pluginActivities.createdAt} >= ${weekAgo}`)
+				.groupBy(sql`floor(${pluginActivities.createdAt} / 86400) * 86400`),
+			ctx.db
+				.select({ type: pluginActivities.type, total: count() })
+				.from(pluginActivities)
+				.where(sql`${pluginActivities.createdAt} >= ${weekAgo}`)
+				.groupBy(pluginActivities.type),
+			ctx.db
+				.select({
+					total: sql<number>`count(distinct ${pluginActivities.actorId})`,
+				})
+				.from(pluginActivities)
+				.where(sql`${pluginActivities.createdAt} >= ${weekAgo}`),
+		]);
+
+		const days: Array<{ day: number; total: number }> = [];
+		for (let i = 6; i >= 0; i--) {
+			const day = dayStart - i * 86_400;
+			const found = byDay.find((d) => Number(d.day) === day);
+			days.push({ day, total: found ? Number(found.total) : 0 });
+		}
+
+		const typeCount = (type: string) =>
+			Number(byType.find((t) => t.type === type)?.total ?? 0);
+
+		return {
+			days,
+			today: days[days.length - 1]?.total ?? 0,
+			week: days.reduce((acc, d) => acc + d.total, 0),
+			plugins: typeCount("plugin.created"),
+			releases: typeCount("version.released"),
+			reviews: typeCount("review.added"),
+			activeDevelopers: Number(activeDevs[0]?.total ?? 0),
+		};
+	}),
 });
