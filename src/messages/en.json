@@ -297,7 +297,8 @@
 		"download": "Download",
 		"min_extera_chip": "exteraGram ≥ {version}",
 		"exteraless_compatible": "Compatible with exteraless",
-		"exteraless_incompatible": "Not compatible with exteraless"
+		"exteraless_incompatible": "Not compatible with exteraless",
+		"exteraless_min_chip": "exteraless ≥ {version}"
 	},
 	"TextImprovement": {
 		"improve_text": "Improve with AI",
@@ -538,7 +539,11 @@
 		"enter_webhook_url": "Enter a webhook URL",
 		"webhook_url_label": "Webhook URL",
 		"webhook_url_placeholder": "https://example.com/api/telegram/webhook",
-		"eyebrow": "Telegram"
+		"eyebrow": "Telegram",
+		"broadcast_hint": "Sent to every user with Telegram notifications enabled. HTML markup is supported.",
+		"username_hint": "Telegram username without @.",
+		"chat_id_hint": "Numeric Telegram chat ID, e.g. 123456789.",
+		"webhook_hint": "Public HTTPS URL that will receive bot updates."
 	},
 	"Developers": {
 		"badge": "Community",
@@ -656,7 +661,11 @@
 		"donations": "Support the author",
 		"remove_link": "Remove link",
 		"eyebrow_account": "Account",
-		"eyebrow_stats": "Statistics"
+		"eyebrow_stats": "Statistics",
+		"display_name_hint": "Shown as the author name on your plugins.",
+		"website_hint": "Full URL including https://.",
+		"bio_hint": "A few sentences about you, shown on your public developer page.",
+		"links_hint": "Add links to your Telegram, GitHub or other profiles."
 	},
 	"AdminPlugins": {
 		"title": "Plugin Administration",
@@ -748,7 +757,10 @@
 		"save": "Save",
 		"create": "Create",
 		"delete": "Delete",
-		"eyebrow": "Catalog"
+		"eyebrow": "Catalog",
+		"name_help": "Display name shown to users; the slug is generated automatically.",
+		"description_help": "Short description shown on the category page.",
+		"color_help": "Accent color in HEX, e.g. #ef4444."
 	},
 	"AdminLayout": {
 		"admin_panel": "Admin Panel",
@@ -1209,7 +1221,8 @@
 		"type_ton": "TON",
 		"type_usdt_trc20": "USDT TRC20",
 		"type_btc": "BTC",
-		"type_custom": "Other link"
+		"type_custom": "Other link",
+		"fields_hint": "Type, requisite and an optional label shown on the donate button."
 	},
 	"FavoritesPage": {
 		"login_required": "Sign in required",
@@ -1277,7 +1290,16 @@
 		"exteraless_label": "exteraless compatibility",
 		"exteraless_unspecified": "Not specified",
 		"exteraless_yes": "Compatible",
-		"exteraless_no": "Not compatible"
+		"exteraless_no": "Not compatible",
+		"name_hint": "Renaming also changes the plugin URL (slug).",
+		"short_description_hint": "One sentence shown in plugin cards and search results.",
+		"description_hint": "Full description with Markdown: features, setup, usage examples.",
+		"category_hint": "Pick the closest category so users can browse to your plugin.",
+		"tags_hint": "3-6 tags, press Enter to add each one.",
+		"min_extera_version_hint": "Lowest exteraGram version the plugin works on. Leave empty if any.",
+		"exteraless_hint": "Does the plugin work in exteraless (without exteraGram-specific APIs)?",
+		"min_exteraless_version_label": "Minimum exteraless version",
+		"min_exteraless_version_hint": "Optional. Lowest exteraless version the plugin supports."
 	},
 	"UploadPage": {
 		"login_required": "Sign in required",
@@ -1347,7 +1369,21 @@
 		"exteraless_label": "exteraless compatibility",
 		"exteraless_unspecified": "Not specified",
 		"exteraless_yes": "Compatible",
-		"exteraless_no": "Not compatible"
+		"exteraless_no": "Not compatible",
+		"name_hint": "A short, unique name — this is how users will find your plugin.",
+		"short_description_hint": "One sentence shown in plugin cards and search results.",
+		"description_hint": "Full description with Markdown: features, setup, usage examples.",
+		"version_hint": "Semantic version, e.g. 1.0.0. You can publish updates later.",
+		"changelog_hint": "What changed in this version. Markdown is supported.",
+		"category_hint": "Pick the closest category so users can browse to your plugin.",
+		"tags_hint": "3-6 tags, press Enter to add each one.",
+		"github_url_hint": "Link to the source repository — builds trust and enables sync.",
+		"docs_url_hint": "Link to external documentation, if you have any.",
+		"min_extera_version_hint": "Lowest exteraGram version the plugin works on. Leave empty if any.",
+		"exteraless_hint": "Does the plugin work in exteraless (without exteraGram-specific APIs)?",
+		"min_exteraless_version_label": "Minimum exteraless version",
+		"min_exteraless_version_hint": "Optional. Lowest exteraless version the plugin supports.",
+		"error_min_exteraless_version": "Enter a version like 1.2.0 (digits and dots only)"
 	},
 	"PluginChangesPage": {
 		"copied": "Copied to clipboard",

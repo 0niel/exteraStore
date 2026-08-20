@@ -49,7 +49,12 @@ export function TagInput({
 	};
 
 	return (
-		<div className="flex min-h-11 flex-wrap items-center gap-2 rounded-xl border bg-transparent px-3 py-2 transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 dark:bg-input/30">
+		// biome-ignore lint/a11y/useKeyWithClickEvents: click only delegates focus to the inner input, which stays keyboard-accessible
+		// biome-ignore lint/a11y/noStaticElementInteractions: click only delegates focus to the inner input, which stays keyboard-accessible
+		<div
+			className="flex min-h-11 cursor-text flex-wrap items-center gap-2 rounded-xl border bg-transparent px-3 py-2 transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 dark:bg-input/30"
+			onClick={() => inputRef.current?.focus()}
+		>
 			<AnimatePresence initial={false}>
 				{tags.map((tag) => (
 					<motion.span

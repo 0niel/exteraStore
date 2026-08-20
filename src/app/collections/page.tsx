@@ -53,26 +53,35 @@ function CollectionCard({
 
 	return (
 		<Card className="group card-lift h-full overflow-hidden border bg-card">
-			<div className="relative h-28 overflow-hidden border-b bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-4">
-				<div aria-hidden="true" className="dot-grid absolute inset-0" />
+			<div className="relative">
+				<div className="relative h-24 overflow-hidden bg-gradient-to-br from-primary/25 via-primary/10 to-primary/5 p-4 dark:from-primary/30 dark:via-primary/12 dark:to-transparent">
+					<div
+						aria-hidden="true"
+						className="dot-grid absolute inset-0 opacity-70"
+					/>
+					<div className="relative flex items-start justify-between">
+						<span className="font-bold font-mono text-muted-foreground text-sm tabular-nums">
+							{String(index + 1).padStart(2, "0")}
+						</span>
+						<span className="glass inline-flex items-center gap-1 rounded-full border border-primary/25 px-2.5 py-1 font-medium text-primary text-xs">
+							<Sparkles className="h-3 w-3" />
+							{t("ai_curated")}
+						</span>
+					</div>
+					<div
+						aria-hidden="true"
+						className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-primary via-primary/40 to-transparent"
+					/>
+				</div>
 				<span
 					aria-hidden="true"
-					className="pointer-events-none absolute top-1/2 -right-2 -translate-y-1/2 select-none font-black font-mono text-[5.5rem] text-primary leading-none opacity-10 transition-opacity duration-300 group-hover:opacity-15"
+					className="absolute -bottom-6 left-4 flex size-12 select-none items-center justify-center rounded-2xl bg-linear-to-b from-primary to-[color-mix(in_oklch,var(--primary)_78%,black)] font-black text-2xl text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-card transition-transform duration-300 group-hover:scale-105"
 				>
 					{initial}
 				</span>
-				<div className="relative flex items-start justify-between">
-					<span className="font-bold font-mono text-muted-foreground text-sm tabular-nums">
-						{String(index + 1).padStart(2, "0")}
-					</span>
-					<span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 font-medium text-primary text-xs">
-						<Sparkles className="h-3 w-3" />
-						{t("ai_curated")}
-					</span>
-				</div>
 			</div>
 
-			<CardContent className="p-4">
+			<CardContent className="p-4 pt-9">
 				<h3 className="mb-1.5 line-clamp-1 font-bold text-lg leading-tight transition-colors group-hover:text-primary">
 					{collection.name}
 				</h3>

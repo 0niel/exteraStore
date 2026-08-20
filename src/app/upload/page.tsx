@@ -43,6 +43,7 @@ import {
 import {
 	Form,
 	FormControl,
+	FormDescription,
 	FormField,
 	FormItem,
 	FormLabel,
@@ -103,6 +104,18 @@ const buildFormSchema = (t: (key: string) => string) =>
 				},
 			),
 		exteralessCompatible: z.enum(["unspecified", "yes", "no"]),
+		minExteralessVersion: z
+			.string()
+			.optional()
+			.refine(
+				(val) =>
+					!val ||
+					val.trim() === "" ||
+					(val.trim().length <= 20 && /^\d+(\.\d+)*$/.test(val.trim())),
+				{
+					message: t("error_min_exteraless_version"),
+				},
+			),
 	});
 
 type FormData = z.infer<ReturnType<typeof buildFormSchema>>;
@@ -137,6 +150,7 @@ export default function UploadPluginPage() {
 			documentationUrl: "",
 			minExteraVersion: "",
 			exteralessCompatible: "unspecified",
+			minExteralessVersion: "",
 		},
 	});
 
@@ -220,6 +234,10 @@ export default function UploadPluginPage() {
 				data.exteralessCompatible === "unspecified"
 					? undefined
 					: data.exteralessCompatible === "yes",
+			minExteralessVersion:
+				data.exteralessCompatible === "yes"
+					? data.minExteralessVersion?.trim() || undefined
+					: undefined,
 			screenshots: JSON.stringify(screenshots),
 			fileContent,
 			filename: fileName || undefined,
@@ -396,7 +414,15 @@ export default function UploadPluginPage() {
 											name="name"
 											render={({ field }) => (
 												<FormItem>
-													<FormLabel>{t("name_label")}</FormLabel>
+													<FormLabel>
+														{t("name_label")}
+														<span
+															className="text-destructive"
+															aria-hidden="true"
+														>
+															*
+														</span>
+													</FormLabel>
 													<FormControl>
 														<Input
 															className="min-h-11"
@@ -404,6 +430,9 @@ export default function UploadPluginPage() {
 															{...field}
 														/>
 													</FormControl>
+													<FormDescription className="text-xs">
+														{t("name_hint")}
+													</FormDescription>
 													<FormMessage />
 													{(similar?.length ?? 0) > 0 && (
 														<div className="mt-2 rounded-lg border bg-muted/40 p-3 text-xs">
@@ -446,7 +475,15 @@ export default function UploadPluginPage() {
 											name="shortDescription"
 											render={({ field }) => (
 												<FormItem>
-													<FormLabel>{t("short_description_label")}</FormLabel>
+													<FormLabel>
+														{t("short_description_label")}
+														<span
+															className="text-destructive"
+															aria-hidden="true"
+														>
+															*
+														</span>
+													</FormLabel>
 													<FormControl>
 														<Input
 															className="min-h-11"
@@ -455,6 +492,14 @@ export default function UploadPluginPage() {
 															{...field}
 														/>
 													</FormControl>
+													<div className="flex items-start justify-between gap-2">
+														<FormDescription className="text-xs">
+															{t("short_description_hint")}
+														</FormDescription>
+														<span className="shrink-0 font-mono text-muted-foreground text-xs">
+															{field.value.length}/500
+														</span>
+													</div>
 													<FormMessage />
 												</FormItem>
 											)}
@@ -476,6 +521,9 @@ export default function UploadPluginPage() {
 															pluginName={form.watch("name")}
 														/>
 													</FormControl>
+													<FormDescription className="text-xs">
+														{t("description_hint")}
+													</FormDescription>
 													<FormMessage />
 												</FormItem>
 											)}
@@ -503,14 +551,25 @@ export default function UploadPluginPage() {
 											name="version"
 											render={({ field }) => (
 												<FormItem>
-													<FormLabel>{t("version_label")}</FormLabel>
+													<FormLabel>
+														{t("version_label")}
+														<span
+															className="text-destructive"
+															aria-hidden="true"
+														>
+															*
+														</span>
+													</FormLabel>
 													<FormControl>
 														<Input
-															className="min-h-11"
+															className="min-h-11 font-mono"
 															placeholder="1.0.0"
 															{...field}
 														/>
 													</FormControl>
+													<FormDescription className="text-xs">
+														{t("version_hint")}
+													</FormDescription>
 													<FormMessage />
 												</FormItem>
 											)}
@@ -533,6 +592,9 @@ export default function UploadPluginPage() {
 															pluginName={form.watch("name")}
 														/>
 													</FormControl>
+													<FormDescription className="text-xs">
+														{t("changelog_hint")}
+													</FormDescription>
 													<FormMessage />
 												</FormItem>
 											)}
@@ -583,6 +645,9 @@ export default function UploadPluginPage() {
 															)}
 														</SelectContent>
 													</Select>
+													<FormDescription className="text-xs">
+														{t("category_hint")}
+													</FormDescription>
 													<FormMessage />
 												</FormItem>
 											)}
@@ -601,6 +666,9 @@ export default function UploadPluginPage() {
 															placeholder={t("tags_placeholder")}
 														/>
 													</FormControl>
+													<FormDescription className="text-xs">
+														{t("tags_hint")}
+													</FormDescription>
 													<FormMessage />
 													<TagSuggest
 														name={watchedName}
@@ -651,10 +719,13 @@ export default function UploadPluginPage() {
 														<Input
 															className="min-h-11"
 															type="url"
-															placeholder="https://github.com/..."
+															placeholder="https://github.com/username/repo"
 															{...field}
 														/>
 													</FormControl>
+													<FormDescription className="text-xs">
+														{t("github_url_hint")}
+													</FormDescription>
 													<FormMessage />
 												</FormItem>
 											)}
@@ -670,10 +741,13 @@ export default function UploadPluginPage() {
 														<Input
 															className="min-h-11"
 															type="url"
-															placeholder="https://docs.example.com/..."
+															placeholder="https://docs.example.com/plugin"
 															{...field}
 														/>
 													</FormControl>
+													<FormDescription className="text-xs">
+														{t("docs_url_hint")}
+													</FormDescription>
 													<FormMessage />
 												</FormItem>
 											)}
@@ -709,6 +783,9 @@ export default function UploadPluginPage() {
 															{...field}
 														/>
 													</FormControl>
+													<FormDescription className="text-xs">
+														{t("min_extera_version_hint")}
+													</FormDescription>
 													<FormMessage />
 												</FormItem>
 											)}
@@ -754,10 +831,62 @@ export default function UploadPluginPage() {
 															))}
 														</div>
 													</FormControl>
+													<FormDescription className="text-xs">
+														{t("exteraless_hint")}
+													</FormDescription>
 													<FormMessage />
 												</FormItem>
 											)}
 										/>
+
+										<AnimatePresence initial={false}>
+											{form.watch("exteralessCompatible") === "yes" && (
+												<motion.div
+													key="min-exteraless-version"
+													initial={
+														reduceMotion
+															? false
+															: { opacity: 0, height: 0, y: -6 }
+													}
+													animate={{ opacity: 1, height: "auto", y: 0 }}
+													exit={
+														reduceMotion
+															? undefined
+															: { opacity: 0, height: 0, y: -6 }
+													}
+													transition={{
+														duration: 0.25,
+														ease: [0.16, 1, 0.3, 1],
+													}}
+													className="overflow-hidden"
+												>
+													<FormField
+														control={form.control}
+														name="minExteralessVersion"
+														render={({ field }) => (
+															<FormItem>
+																<FormLabel>
+																	{t("min_exteraless_version_label")}
+																</FormLabel>
+																<FormControl>
+																	<Input
+																		className="min-h-11 font-mono"
+																		placeholder="1.2.0"
+																		maxLength={20}
+																		inputMode="decimal"
+																		{...field}
+																	/>
+																</FormControl>
+																<FormDescription className="text-xs">
+																	{t("min_exteraless_version_hint")}
+																</FormDescription>
+																<FormMessage />
+															</FormItem>
+														)}
+													/>
+												</motion.div>
+											)}
+										</AnimatePresence>
 									</CardContent>
 								</Card>
 

@@ -322,17 +322,22 @@ export default function AdminCategoriesPage() {
 								<Label htmlFor="name">{t("name")} *</Label>
 								<Input
 									id="name"
+									className="min-h-11"
 									value={name}
 									onChange={handleNameChange}
 									placeholder={t("name_placeholder")}
 									required
 								/>
+								<p className="text-muted-foreground text-xs">
+									{t("name_help")}
+								</p>
 							</div>
 
 							<div className="space-y-2">
 								<Label htmlFor="slug">{t("slug")} *</Label>
 								<Input
 									id="slug"
+									className="min-h-11 font-mono"
 									value={slug}
 									onChange={(e) => setSlug(e.target.value)}
 									placeholder={t("slug_placeholder")}
@@ -352,6 +357,9 @@ export default function AdminCategoriesPage() {
 									placeholder={t("description_placeholder")}
 									rows={3}
 								/>
+								<p className="text-muted-foreground text-xs">
+									{t("description_help")}
+								</p>
 							</div>
 
 							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -359,6 +367,7 @@ export default function AdminCategoriesPage() {
 									<Label htmlFor="icon">{t("icon")}</Label>
 									<Input
 										id="icon"
+										className="min-h-11"
 										value={icon}
 										onChange={(e) => setIcon(e.target.value)}
 										placeholder={t("icon_placeholder")}
@@ -373,6 +382,7 @@ export default function AdminCategoriesPage() {
 									<div className="flex gap-2">
 										<Input
 											id="color"
+											className="min-h-11 font-mono"
 											value={color}
 											onChange={(e) => setColor(e.target.value)}
 											placeholder={t("color_placeholder")}
@@ -384,6 +394,9 @@ export default function AdminCategoriesPage() {
 											/>
 										)}
 									</div>
+									<p className="text-muted-foreground text-xs">
+										{t("color_help")}
+									</p>
 								</div>
 							</div>
 

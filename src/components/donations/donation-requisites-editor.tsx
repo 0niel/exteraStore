@@ -132,7 +132,7 @@ export function DonationRequisitesEditor({
 									<Button
 										variant="outline"
 										size="icon"
-										className="shrink-0"
+										className="h-11 w-11 shrink-0"
 										onClick={() => removeMethod(idx)}
 										aria-label={t("remove")}
 									>
@@ -154,6 +154,7 @@ export function DonationRequisitesEditor({
 						{t("add_method")}
 					</Button>
 				</div>
+				<p className="text-muted-foreground text-xs">{t("fields_hint")}</p>
 			</CardContent>
 		</Card>
 	);

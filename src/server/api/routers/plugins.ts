@@ -781,6 +781,12 @@ export const pluginsRouter = createTRPCRouter({
 					.nullable()
 					.optional(),
 				exteralessCompatible: z.boolean().nullable().optional(),
+				minExteralessVersion: z
+					.string()
+					.max(20)
+					.regex(/^\d+(\.\d+)*$/)
+					.nullable()
+					.optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -809,6 +815,10 @@ export const pluginsRouter = createTRPCRouter({
 					screenshots: input.screenshots,
 					minExteraVersion: input.minExteraVersion,
 					exteralessCompatible: input.exteralessCompatible,
+					minExteralessVersion:
+						input.exteralessCompatible === true
+							? input.minExteralessVersion
+							: null,
 					updatedAt: sql`extract(epoch from now())`,
 				})
 				.where(eq(plugins.id, input.id))

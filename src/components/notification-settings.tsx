@@ -145,9 +145,14 @@ export function NotificationSettings() {
 					</div>
 				) : (
 					rows.map((row) => (
-						<div
+						<label
 							key={row.key}
-							className="flex min-h-11 items-center justify-between gap-4"
+							htmlFor={`notification-setting-${row.key}`}
+							className={`-mx-3 flex min-h-11 items-center justify-between gap-4 rounded-xl px-3 py-2 transition-colors ${
+								row.disabled
+									? "cursor-not-allowed opacity-60"
+									: "cursor-pointer hover:bg-primary/5"
+							}`}
 						>
 							<div className="space-y-1">
 								<div className="flex items-center gap-2">
@@ -161,6 +166,7 @@ export function NotificationSettings() {
 								</p>
 							</div>
 							<Switch
+								id={`notification-setting-${row.key}`}
 								checked={flags[row.key]}
 								onCheckedChange={(checked: boolean) =>
 									handleToggle(row.key, checked)
@@ -168,7 +174,7 @@ export function NotificationSettings() {
 								disabled={row.disabled}
 								aria-label={row.label}
 							/>
-						</div>
+						</label>
 					))
 				)}
 			</CardContent>

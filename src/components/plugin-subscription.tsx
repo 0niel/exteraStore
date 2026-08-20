@@ -40,6 +40,8 @@ export function PluginSubscription({
 		security_alerts: false,
 	});
 
+	const utils = api.useUtils();
+
 	const { data: settings } =
 		api.pluginPipeline.getNotificationSettings.useQuery(undefined, {
 			enabled: !!session,
@@ -60,6 +62,7 @@ export function PluginSubscription({
 	const subscribeMutation = api.pluginPipeline.subscribe.useMutation({
 		onSuccess: () => {
 			toast.success(t("subscription_created"));
+			void utils.pluginPipeline.getSubscriptions.invalidate({ pluginId });
 		},
 		onError: (error) => {
 			toast.error(t("subscription_error", { error: error.message }));
@@ -69,6 +72,7 @@ export function PluginSubscription({
 	const unsubscribeMutation = api.pluginPipeline.unsubscribe.useMutation({
 		onSuccess: () => {
 			toast.success(t("subscription_canceled"));
+			void utils.pluginPipeline.getSubscriptions.invalidate({ pluginId });
 		},
 		onError: (error) => {
 			toast.error(t("unsubscribe_error", { error: error.message }));
@@ -84,6 +88,11 @@ export function PluginSubscription({
 			return;
 		}
 
+		setSubscriptions((prev) => ({
+			...prev,
+			[type]: enabled,
+		}));
+
 		try {
 			if (enabled) {
 				await subscribeMutation.mutateAsync({
@@ -96,12 +105,12 @@ export function PluginSubscription({
 					subscriptionType: type,
 				});
 			}
-
+		} catch (_error) {
 			setSubscriptions((prev) => ({
 				...prev,
-				[type]: enabled,
+				[type]: !enabled,
 			}));
-		} catch (_error) {}
+		}
 	};
 
 	if (!session) {
@@ -129,75 +138,65 @@ export function PluginSubscription({
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="space-y-4">
-				<div className="flex items-center justify-between">
-					<div className="space-y-1">
-						<div className="flex items-center gap-2">
-							<span className="flex size-7 items-center justify-center rounded-xl bg-primary/10 text-primary">
-								<RefreshCw className="h-3.5 w-3.5" />
-							</span>
-							<span className="font-medium">{t("updates")}</span>
-						</div>
-						<p className="text-muted-foreground text-sm">{t("new_versions")}</p>
-					</div>
-					<Switch
-						checked={subscriptions.updates}
-						onCheckedChange={(checked: boolean) =>
-							handleSubscriptionToggle("updates", checked)
-						}
-						disabled={
+				{(
+					[
+						{
+							key: "updates",
+							icon: RefreshCw,
+							label: t("updates"),
+							description: t("new_versions"),
+						},
+						{
+							key: "reviews",
+							icon: MessageSquare,
+							label: t("new_reviews"),
+							description: t("new_reviews_ratings"),
+						},
+						{
+							key: "security_alerts",
+							icon: Shield,
+							label: t("security"),
+							description: t("critical_security"),
+							badge: t("important"),
+						},
+					] as const
+				).map((row) => (
+					<label
+						key={row.key}
+						htmlFor={`plugin-subscription-${row.key}`}
+						className={`-mx-3 flex min-h-11 items-center justify-between gap-4 rounded-xl px-3 py-2 transition-colors ${
 							subscribeMutation.isPending || unsubscribeMutation.isPending
-						}
-					/>
-				</div>
-
-				<div className="flex items-center justify-between">
-					<div className="space-y-1">
-						<div className="flex items-center gap-2">
-							<span className="flex size-7 items-center justify-center rounded-xl bg-primary/10 text-primary">
-								<MessageSquare className="h-3.5 w-3.5" />
-							</span>
-							<span className="font-medium">{t("new_reviews")}</span>
+								? "cursor-not-allowed opacity-60"
+								: "cursor-pointer hover:bg-primary/5"
+						}`}
+					>
+						<div className="space-y-1">
+							<div className="flex items-center gap-2">
+								<span className="flex size-7 items-center justify-center rounded-xl bg-primary/10 text-primary">
+									<row.icon className="h-3.5 w-3.5" />
+								</span>
+								<span className="font-medium">{row.label}</span>
+								{"badge" in row && (
+									<Badge variant="outline" className="text-xs">
+										{row.badge}
+									</Badge>
+								)}
+							</div>
+							<p className="text-muted-foreground text-sm">{row.description}</p>
 						</div>
-						<p className="text-muted-foreground text-sm">
-							{t("new_reviews_ratings")}
-						</p>
-					</div>
-					<Switch
-						checked={subscriptions.reviews}
-						onCheckedChange={(checked: boolean) =>
-							handleSubscriptionToggle("reviews", checked)
-						}
-						disabled={
-							subscribeMutation.isPending || unsubscribeMutation.isPending
-						}
-					/>
-				</div>
-
-				<div className="flex items-center justify-between">
-					<div className="space-y-1">
-						<div className="flex items-center gap-2">
-							<span className="flex size-7 items-center justify-center rounded-xl bg-primary/10 text-primary">
-								<Shield className="h-3.5 w-3.5" />
-							</span>
-							<span className="font-medium">{t("security")}</span>
-							<Badge variant="outline" className="text-xs">
-								{t("important")}
-							</Badge>
-						</div>
-						<p className="text-muted-foreground text-sm">
-							{t("critical_security")}
-						</p>
-					</div>
-					<Switch
-						checked={subscriptions.security_alerts}
-						onCheckedChange={(checked: boolean) =>
-							handleSubscriptionToggle("security_alerts", checked)
-						}
-						disabled={
-							subscribeMutation.isPending || unsubscribeMutation.isPending
-						}
-					/>
-				</div>
+						<Switch
+							id={`plugin-subscription-${row.key}`}
+							checked={subscriptions[row.key]}
+							onCheckedChange={(checked: boolean) =>
+								handleSubscriptionToggle(row.key, checked)
+							}
+							disabled={
+								subscribeMutation.isPending || unsubscribeMutation.isPending
+							}
+							aria-label={row.label}
+						/>
+					</label>
+				))}
 
 				{settings && (
 					<div className="border-t pt-4">

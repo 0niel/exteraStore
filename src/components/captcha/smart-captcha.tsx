@@ -17,6 +17,7 @@ declare global {
 				container: HTMLElement,
 				params: {
 					sitekey: string;
+					hl?: string;
 					callback?: (token: string) => void;
 					"error-callback"?: () => void;
 					"expired-callback"?: () => void;
@@ -37,7 +38,6 @@ export function SmartCaptcha({ onSuccess, onError }: SmartCaptchaProps) {
 	const reduceMotionRef = useRef(false);
 	const [isSuccess, setIsSuccess] = useState(false);
 	const [showSuccess, setShowSuccess] = useState(false);
-	const [shouldHide, setShouldHide] = useState(false);
 	const [reduceMotion, setReduceMotion] = useState(false);
 
 	onSuccessRef.current = onSuccess;
@@ -48,7 +48,6 @@ export function SmartCaptcha({ onSuccess, onError }: SmartCaptchaProps) {
 		const sitekey = env.NEXT_PUBLIC_YANDEX_CAPTCHA_CLIENT_KEY;
 		if (!sitekey) {
 			onSuccessRef.current("captcha-disabled");
-			setShouldHide(true);
 			return;
 		}
 
@@ -59,21 +58,6 @@ export function SmartCaptcha({ onSuccess, onError }: SmartCaptchaProps) {
 			if (disposed) return;
 			setIsSuccess(true);
 			setShowSuccess(true);
-			const hideDelay = reduceMotionRef.current ? 0 : 1200;
-			const fadeDelay = reduceMotionRef.current ? 0 : 1000;
-
-			timers.add(
-				setTimeout(() => {
-					setShowSuccess(false);
-				}, fadeDelay),
-			);
-
-			timers.add(
-				setTimeout(() => {
-					setShouldHide(true);
-				}, hideDelay),
-			);
-
 			onSuccessRef.current(token);
 		};
 
@@ -81,7 +65,6 @@ export function SmartCaptcha({ onSuccess, onError }: SmartCaptchaProps) {
 			if (disposed) return;
 			setIsSuccess(false);
 			setShowSuccess(false);
-			setShouldHide(false);
 			onErrorRef.current?.();
 		};
 
@@ -97,6 +80,7 @@ export function SmartCaptcha({ onSuccess, onError }: SmartCaptchaProps) {
 						containerRef.current,
 						{
 							sitekey,
+							hl: document.documentElement.lang === "ru" ? "ru" : "en",
 							callback: handleSuccess,
 							"error-callback": handleInvalidToken,
 							"expired-callback": handleInvalidToken,
@@ -162,17 +146,17 @@ export function SmartCaptcha({ onSuccess, onError }: SmartCaptchaProps) {
 	}
 
 	return (
-		<div className={shouldHide ? "hidden" : "space-y-2"}>
+		<div
+			className={`${
+				reduceMotion ? "" : "transition-[height] duration-300 ease-out"
+			} overflow-hidden`}
+			style={{ height: isSuccess ? "44px" : "100px" }}
+		>
 			<div
-				ref={containerRef}
-				className={`${
-					reduceMotion ? "" : "transition-all duration-300 ease-out"
-				} ${isSuccess ? "opacity-0" : "opacity-100"}`}
-				style={{
-					height: isSuccess ? 0 : "100px",
-					overflow: "hidden",
-				}}
-			/>
+				className={`${isSuccess ? "pointer-events-none hidden" : ""} overflow-hidden rounded-xl border dark:border-0 dark:[filter:invert(0.88)_hue-rotate(180deg)_saturate(1.3)]`}
+			>
+				<div ref={containerRef} className="h-[100px]" />
+			</div>
 
 			{showSuccess && (
 				<output
@@ -181,7 +165,7 @@ export function SmartCaptcha({ onSuccess, onError }: SmartCaptchaProps) {
 						reduceMotion
 							? ""
 							: "fade-in-0 slide-in-from-top-1 animate-in duration-300"
-					} inline-flex items-center gap-2 rounded-md border border-success/30 bg-success/10 px-2.5 py-1 font-medium text-success text-xs shadow-sm`}
+					} flex min-h-11 items-center gap-2 rounded-xl border border-success/30 bg-success/10 px-3 font-medium text-sm text-success`}
 				>
 					<CheckCircle2 className="h-4 w-4 text-success" aria-hidden="true" />
 					<span>{t("captcha_passed")}</span>

@@ -394,6 +394,11 @@ export default function ProfilePage() {
 															}
 															placeholder={t("display_name_placeholder")}
 														/>
+													) : null}
+													{isEditing ? (
+														<p className="mt-1.5 text-muted-foreground text-xs">
+															{t("display_name_hint")}
+														</p>
 													) : (
 														<p className="mt-1 text-muted-foreground text-sm">
 															{userProfile?.name || t("not_specified")}
@@ -417,6 +422,11 @@ export default function ProfilePage() {
 															}
 															placeholder="https://example.com"
 														/>
+													) : null}
+													{isEditing ? (
+														<p className="mt-1.5 text-muted-foreground text-xs">
+															{t("website_hint")}
+														</p>
 													) : userProfile?.website ? (
 														<a
 															href={userProfile.website}
@@ -447,6 +457,11 @@ export default function ProfilePage() {
 														placeholder={t("bio_placeholder")}
 														rows={4}
 													/>
+												) : null}
+												{isEditing ? (
+													<p className="mt-1.5 text-muted-foreground text-xs">
+														{t("bio_hint")}
+													</p>
 												) : (
 													<p className="mt-1 text-muted-foreground text-sm">
 														{userProfile?.bio || t("not_specified")}
@@ -533,6 +548,9 @@ export default function ProfilePage() {
 															<Plus className="mr-2 h-4 w-4" />
 															{t("add_link")}
 														</Button>
+														<p className="text-muted-foreground text-xs">
+															{t("links_hint")}
+														</p>
 													</div>
 												) : userLinks.length > 0 ? (
 													<div className="mt-2 flex flex-wrap gap-2">
