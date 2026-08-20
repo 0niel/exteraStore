@@ -25,6 +25,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { z } from "zod";
+import { TagSuggest } from "~/components/ai/tag-suggest";
 import { SmartCaptcha } from "~/components/captcha/smart-captcha";
 import { MarkdownEditor } from "~/components/markdown-editor";
 import { ScreenshotUploader } from "~/components/screenshot-uploader";
@@ -575,6 +576,26 @@ export default function UploadPluginPage() {
 														/>
 													</FormControl>
 													<FormMessage />
+													<TagSuggest
+														name={watchedName}
+														description={
+															form.watch("description") ||
+															watchedShortDescription
+														}
+														currentTags={field.value || []}
+														onAddTag={(tag) =>
+															field.onChange([...(field.value || []), tag])
+														}
+														onApplyCategory={(categorySlug) =>
+															form.setValue("categorySlug", categorySlug, {
+																shouldDirty: true,
+															})
+														}
+														categories={categories?.map((cat) => ({
+															slug: cat.slug,
+															name: cat.name,
+														}))}
+													/>
 												</FormItem>
 											)}
 										/>

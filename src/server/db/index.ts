@@ -18,8 +18,7 @@ const isPostgres = env.DATABASE_URL?.startsWith("postgresql") ?? false;
 
 export type Database = PostgresJsDatabase<typeof schema>;
 
-// biome-ignore lint/suspicious/noExplicitAny: typing db as Database propagates strict drizzle row types through tRPC into app pages/components that rely on looser shapes; fixing those is outside this refactor's scope
-let db: any;
+let db: Database;
 let client: Client | null = null;
 let postgresClient: postgres.Sql | null = null;
 

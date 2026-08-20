@@ -49,9 +49,10 @@ interface Category {
 	id: number;
 	name: string;
 	slug: string;
-	description?: string;
-	icon?: string;
-	color?: string;
+	description: string | null;
+	icon: string | null;
+	color: string | null;
+	createdAt: number;
 	pluginCount?: number;
 }
 

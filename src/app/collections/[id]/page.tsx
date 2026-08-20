@@ -13,7 +13,10 @@ import { Card, CardContent } from "~/components/ui/card";
 import { EmptyState } from "~/components/ui/empty-state";
 import { Skeleton } from "~/components/ui/skeleton";
 import { cn, createValidDate } from "~/lib/utils";
-import { api } from "~/trpc/react";
+import { api, type RouterOutputs } from "~/trpc/react";
+
+type AICollection = RouterOutputs["aiCollections"]["getAICollections"][number];
+type CollectionPlugin = AICollection["plugins"][number];
 
 const coverTreatments = [
 	{
@@ -31,7 +34,9 @@ const coverTreatments = [
 ] as const;
 
 function getTreatment(id: number) {
-	return coverTreatments[Math.abs(id) % coverTreatments.length]!;
+	return (
+		coverTreatments[Math.abs(id) % coverTreatments.length] ?? coverTreatments[0]
+	);
 }
 
 function CollectionSkeleton() {
@@ -69,7 +74,7 @@ export default function CollectionDetailPage() {
 	const { data: collections, isLoading } =
 		api.aiCollections.getAICollections.useQuery({ limit: 20 });
 
-	const collection = collections?.find((c: any) => c.id === collectionId);
+	const collection = collections?.find((c) => c.id === collectionId);
 	const plugins = collection?.plugins || [];
 
 	const treatment = getTreatment(collection?.id ?? 0);
@@ -186,7 +191,7 @@ export default function CollectionDetailPage() {
 								{plugins.length > 0
 									? (
 											plugins.reduce(
-												(acc: number, p: any) => acc + p.rating,
+												(acc: number, p: CollectionPlugin) => acc + p.rating,
 												0,
 											) / plugins.length
 										).toFixed(1)
@@ -232,7 +237,7 @@ export default function CollectionDetailPage() {
 						/>
 					) : (
 						<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-							{plugins.map((plugin: any, index: number) => (
+							{plugins.map((plugin: CollectionPlugin, index: number) => (
 								<motion.div
 									key={plugin.id}
 									initial={reduceMotion ? false : { opacity: 0, y: 24 }}

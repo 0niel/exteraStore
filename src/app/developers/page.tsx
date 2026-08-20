@@ -28,7 +28,10 @@ import { Input } from "~/components/ui/input";
 import { Progress } from "~/components/ui/progress";
 import { Skeleton } from "~/components/ui/skeleton";
 import { cn, formatNumber } from "~/lib/utils";
-import { api } from "~/trpc/react";
+import { api, type RouterOutputs } from "~/trpc/react";
+
+type Developer =
+	RouterOutputs["developers"]["getDevelopers"]["developers"][number];
 
 const tiers = [
 	{ key: "rising", min: 0, icon: Sparkles },
@@ -54,18 +57,18 @@ function getDeveloperTier(downloads: number, rating: number, plugins: number) {
 function getTierProgress(downloads: number, rating: number, plugins: number) {
 	const score = getScore(downloads, rating, plugins);
 	let currentIndex = 0;
-	for (let i = 0; i < tiers.length; i++) {
-		if (score >= tiers[i]!.min) currentIndex = i;
+	for (const [i, tier] of tiers.entries()) {
+		if (score >= tier.min) currentIndex = i;
 	}
 
-	if (currentIndex === tiers.length - 1) {
+	const currentTier = tiers[currentIndex] ?? tiers[0];
+	const nextTier = tiers[currentIndex + 1];
+	if (!nextTier) {
 		return { progress: 100, nextTier: null };
 	}
 
-	const currentMin = tiers[currentIndex]!.min;
-	const nextTier = tiers[currentIndex + 1]!;
 	const progress = Math.min(
-		((score - currentMin) / (nextTier.min - currentMin)) * 100,
+		((score - currentTier.min) / (nextTier.min - currentTier.min)) * 100,
 		100,
 	);
 
@@ -159,7 +162,7 @@ export default function DevelopersPage() {
 				) : (
 					<>
 						<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-							{filteredDevelopers.map((developer: any, index: number) => {
+							{filteredDevelopers.map((developer: Developer, index: number) => {
 								const tier = getDeveloperTier(
 									developer.totalDownloads || 0,
 									developer.averageRating || 0,
@@ -334,7 +337,10 @@ export default function DevelopersPage() {
 																aria-label={t("website")}
 																onClick={(e) => {
 																	e.stopPropagation();
-																	window.open(developer.website, "_blank");
+																	window.open(
+																		developer.website ?? undefined,
+																		"_blank",
+																	);
 																}}
 															>
 																<Globe className="h-4 w-4" />

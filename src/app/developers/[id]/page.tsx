@@ -24,7 +24,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
-import { DonationWidget } from "@/components/donations/donation-widget";
+import { DonationWidget } from "~/components/donations/donation-widget";
 import { PluginCard } from "~/components/plugin-card";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
@@ -39,7 +39,10 @@ import {
 import { Progress } from "~/components/ui/progress";
 import { Skeleton } from "~/components/ui/skeleton";
 import { formatNumber } from "~/lib/utils";
-import { api } from "~/trpc/react";
+import { api, type RouterOutputs } from "~/trpc/react";
+
+type DeveloperPlugin =
+	RouterOutputs["developers"]["getDeveloper"]["plugins"][number];
 
 const tiers = [
 	{ key: "rising", min: 0, icon: Sparkles },
@@ -69,22 +72,22 @@ function getNextTierProgress(
 ) {
 	const score = getScore(downloads, rating, plugins);
 	let currentIndex = 0;
-	for (let i = 0; i < tiers.length; i++) {
-		if (score >= tiers[i]!.min) currentIndex = i;
+	for (const [i, tier] of tiers.entries()) {
+		if (score >= tier.min) currentIndex = i;
 	}
 
-	if (currentIndex === tiers.length - 1) {
+	const currentTier = tiers[currentIndex] ?? tiers[0];
+	const nextTier = tiers[currentIndex + 1];
+	if (!nextTier) {
 		return {
 			progress: 100,
-			currentTier: tiers[currentIndex]!,
+			currentTier,
 			nextTier: null,
 			currentScore: score,
 			scoreNeeded: 0,
 		};
 	}
 
-	const currentTier = tiers[currentIndex]!;
-	const nextTier = tiers[currentIndex + 1]!;
 	const progress = Math.min(
 		((score - currentTier.min) / (nextTier.min - currentTier.min)) * 100,
 		100,
@@ -409,7 +412,7 @@ export default function DeveloperProfilePage() {
 									</Card>
 								) : (
 									<div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-										{plugins.map((plugin: any, index: number) => (
+										{plugins.map((plugin: DeveloperPlugin, index: number) => (
 											<motion.div
 												key={plugin.id}
 												initial={reduceMotion ? false : { opacity: 0, y: 24 }}

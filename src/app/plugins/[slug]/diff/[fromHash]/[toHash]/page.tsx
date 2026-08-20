@@ -16,6 +16,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { DiffExplain } from "~/components/ai/diff-explain";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { EmptyState } from "~/components/ui/empty-state";
@@ -337,6 +338,16 @@ export default function PluginDiffPage() {
 							</Card>
 						</motion.div>
 					</div>
+
+					{plugin && (
+						<motion.div {...sectionMotion}>
+							<DiffExplain
+								pluginId={plugin.id}
+								fromHash={fromHash}
+								toHash={toHash}
+							/>
+						</motion.div>
+					)}
 
 					<motion.div {...sectionMotion}>{renderDiff()}</motion.div>
 				</div>

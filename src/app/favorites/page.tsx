@@ -18,7 +18,6 @@ import {
 } from "~/components/ui/card";
 import { EmptyState } from "~/components/ui/empty-state";
 import { Input } from "~/components/ui/input";
-import type { plugins as Plugin } from "~/server/db/schema";
 import { api } from "~/trpc/react";
 
 function FavoritesSkeleton() {
@@ -104,7 +103,7 @@ export default function FavoritesPage() {
 
 	const filteredFavorites =
 		favoritesData?.favorites.filter(
-			(plugin: typeof Plugin.$inferSelect) =>
+			(plugin) =>
 				plugin.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
 				plugin.description.toLowerCase().includes(searchQuery.toLowerCase()),
 		) || [];
@@ -156,40 +155,36 @@ export default function FavoritesPage() {
 							className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3"
 						>
 							<AnimatePresence mode="popLayout" initial={false}>
-								{filteredFavorites.map(
-									(plugin: typeof Plugin.$inferSelect, index: number) => (
-										<motion.div
-											key={plugin.id}
-											layout={!reduceMotion}
-											initial={
-												reduceMotion
-													? false
-													: { opacity: 0, y: 16, scale: 0.98 }
-											}
-											animate={{
-												opacity: 1,
-												y: 0,
-												scale: 1,
-												transition: {
-													duration: 0.4,
-													delay: reduceMotion ? 0 : Math.min(index, 8) * 0.05,
-													ease: [0.16, 1, 0.3, 1],
-												},
-											}}
-											exit={
-												reduceMotion
-													? undefined
-													: {
-															opacity: 0,
-															scale: 0.92,
-															transition: { duration: 0.25 },
-														}
-											}
-										>
-											<PluginCard plugin={plugin} />
-										</motion.div>
-									),
-								)}
+								{filteredFavorites.map((plugin, index) => (
+									<motion.div
+										key={plugin.id}
+										layout={!reduceMotion}
+										initial={
+											reduceMotion ? false : { opacity: 0, y: 16, scale: 0.98 }
+										}
+										animate={{
+											opacity: 1,
+											y: 0,
+											scale: 1,
+											transition: {
+												duration: 0.4,
+												delay: reduceMotion ? 0 : Math.min(index, 8) * 0.05,
+												ease: [0.16, 1, 0.3, 1],
+											},
+										}}
+										exit={
+											reduceMotion
+												? undefined
+												: {
+														opacity: 0,
+														scale: 0.92,
+														transition: { duration: 0.25 },
+													}
+										}
+									>
+										<PluginCard plugin={plugin} />
+									</motion.div>
+								))}
 							</AnimatePresence>
 						</motion.div>
 

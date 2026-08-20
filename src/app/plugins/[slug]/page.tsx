@@ -25,6 +25,8 @@ import { useLocale, useTranslations } from "next-intl";
 import React, { useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
+import { AskAi } from "~/components/ai/ask-ai";
+import { ReviewSummary } from "~/components/ai/review-summary";
 import { SmartCaptcha } from "~/components/captcha/smart-captcha";
 import { DonationWidget } from "~/components/donations/donation-widget";
 import { ImageGallery } from "~/components/image-gallery";
@@ -572,7 +574,7 @@ export default function PluginDetailPage() {
 											| "unsafe"
 											| "critical",
 										shortDescription:
-											plugin.latestSecurityCheck.shortDescription,
+											plugin.latestSecurityCheck.shortDescription ?? "",
 										issues:
 											safeJsonParse<{ issues?: [] }>(
 												plugin.latestSecurityCheck.details,
@@ -633,6 +635,9 @@ export default function PluginDetailPage() {
 							>
 								{activeTab === "description" && (
 									<div>
+										<div className="mb-4 flex justify-end">
+											<AskAi pluginId={plugin.id} pluginName={plugin.name} />
+										</div>
 										<div className="prose prose-neutral dark:prose-invert max-w-none">
 											<ReactMarkdown>{plugin.description}</ReactMarkdown>
 										</div>
@@ -855,6 +860,7 @@ export default function PluginDetailPage() {
 
 								{activeTab === "reviews" && (
 									<div className="space-y-6">
+										<ReviewSummary pluginId={plugin.id} />
 										{session && (
 											<Card className="border-primary/20">
 												<CardContent className="p-4">
@@ -950,173 +956,158 @@ export default function PluginDetailPage() {
 											</div>
 										) : (
 											<div className="space-y-4">
-												{reviewsData?.reviews.map(
-													(review: {
-														id: number;
-														rating: number;
-														title: string | null;
-														comment: string | null;
-														helpful: number;
-														createdAt: string | Date;
-														userId: string;
-														user: {
-															name: string | null;
-															image: string | null;
-														} | null;
-													}) => (
-														<Card key={review.id} className="w-full">
-															<CardContent className="p-4">
-																<div className="flex items-start gap-3">
-																	<Avatar className="h-8 w-8">
-																		<AvatarImage
-																			src={review.user?.image || undefined}
-																		/>
-																		<AvatarFallback>
-																			{review.user?.name
-																				?.slice(0, 2)
-																				.toUpperCase() || "??"}
-																		</AvatarFallback>
-																	</Avatar>
-																	<div className="min-w-0 flex-1 space-y-2">
-																		<div className="flex flex-wrap items-center justify-between gap-2">
-																			<div className="flex flex-wrap items-center gap-2">
-																				<span className="font-medium text-sm">
-																					{review.user?.name}
-																				</span>
-																				<div className="flex">
-																					{[1, 2, 3, 4, 5].map((star) => (
+												{reviewsData?.reviews.map((review) => (
+													<Card key={review.id} className="w-full">
+														<CardContent className="p-4">
+															<div className="flex items-start gap-3">
+																<Avatar className="h-8 w-8">
+																	<AvatarImage
+																		src={review.user?.image || undefined}
+																	/>
+																	<AvatarFallback>
+																		{review.user?.name
+																			?.slice(0, 2)
+																			.toUpperCase() || "??"}
+																	</AvatarFallback>
+																</Avatar>
+																<div className="min-w-0 flex-1 space-y-2">
+																	<div className="flex flex-wrap items-center justify-between gap-2">
+																		<div className="flex flex-wrap items-center gap-2">
+																			<span className="font-medium text-sm">
+																				{review.user?.name}
+																			</span>
+																			<div className="flex">
+																				{[1, 2, 3, 4, 5].map((star) => (
+																					<Star
+																						key={star}
+																						className={cn(
+																							"h-3 w-3",
+																							star <= review.rating
+																								? "fill-warning text-warning"
+																								: "text-muted-foreground",
+																						)}
+																					/>
+																				))}
+																			</div>
+																			<span className="text-muted-foreground text-xs">
+																				{formatDate(review.createdAt, locale)}
+																			</span>
+																		</div>
+																		{(session?.user?.id === review.userId ||
+																			session?.user?.role === "admin") && (
+																			<div className="flex items-center gap-2">
+																				<Button
+																					variant="outline"
+																					size="sm"
+																					className="min-h-11 md:min-h-8"
+																					onClick={() => {
+																						setEditingReviewId(review.id);
+																						setEditingRating(review.rating);
+																						setEditingComment(
+																							review.comment ?? "",
+																						);
+																					}}
+																				>
+																					<Edit className="mr-2 h-3.5 w-3.5" />{" "}
+																					{t("edit")}
+																				</Button>
+																				<Button
+																					variant="outline"
+																					size="sm"
+																					className="min-h-11 md:min-h-8"
+																					onClick={() => {
+																						if (
+																							confirm(
+																								t("confirm_delete_review"),
+																							)
+																						) {
+																							deleteReviewMutation.mutate({
+																								reviewId: review.id,
+																							});
+																						}
+																					}}
+																				>
+																					<Trash2 className="mr-2 h-3.5 w-3.5" />{" "}
+																					{t("delete")}
+																				</Button>
+																			</div>
+																		)}
+																	</div>
+																	{editingReviewId === review.id ? (
+																		<div className="space-y-2">
+																			<div className="flex gap-1">
+																				{[1, 2, 3, 4, 5].map((star) => (
+																					<button
+																						key={star}
+																						type="button"
+																						onClick={() =>
+																							setEditingRating(star)
+																						}
+																						className="tap-highlight-none flex h-11 w-8 items-center justify-center md:h-6 md:w-6"
+																						aria-label={t("edit_rating_aria", {
+																							star,
+																						})}
+																					>
 																						<Star
-																							key={star}
 																							className={cn(
-																								"h-3 w-3",
-																								star <= review.rating
+																								"h-4 w-4",
+																								star <= editingRating
 																									? "fill-warning text-warning"
 																									: "text-muted-foreground",
 																							)}
 																						/>
-																					))}
-																				</div>
-																				<span className="text-muted-foreground text-xs">
-																					{formatDate(review.createdAt, locale)}
-																				</span>
+																					</button>
+																				))}
 																			</div>
-																			{(session?.user?.id === review.userId ||
-																				session?.user?.role === "admin") && (
-																				<div className="flex items-center gap-2">
-																					<Button
-																						variant="outline"
-																						size="sm"
-																						className="min-h-11 md:min-h-8"
-																						onClick={() => {
-																							setEditingReviewId(review.id);
-																							setEditingRating(review.rating);
-																							setEditingComment(
-																								review.comment ?? "",
-																							);
-																						}}
-																					>
-																						<Edit className="mr-2 h-3.5 w-3.5" />{" "}
-																						{t("edit")}
-																					</Button>
-																					<Button
-																						variant="outline"
-																						size="sm"
-																						className="min-h-11 md:min-h-8"
-																						onClick={() => {
-																							if (
-																								confirm(
-																									t("confirm_delete_review"),
-																								)
-																							) {
-																								deleteReviewMutation.mutate({
-																									reviewId: review.id,
-																								});
-																							}
-																						}}
-																					>
-																						<Trash2 className="mr-2 h-3.5 w-3.5" />{" "}
-																						{t("delete")}
-																					</Button>
-																				</div>
-																			)}
-																		</div>
-																		{editingReviewId === review.id ? (
-																			<div className="space-y-2">
-																				<div className="flex gap-1">
-																					{[1, 2, 3, 4, 5].map((star) => (
-																						<button
-																							key={star}
-																							type="button"
-																							onClick={() =>
-																								setEditingRating(star)
-																							}
-																							className="tap-highlight-none flex h-11 w-8 items-center justify-center md:h-6 md:w-6"
-																							aria-label={t(
-																								"edit_rating_aria",
-																								{ star },
-																							)}
-																						>
-																							<Star
-																								className={cn(
-																									"h-4 w-4",
-																									star <= editingRating
-																										? "fill-warning text-warning"
-																										: "text-muted-foreground",
-																								)}
-																							/>
-																						</button>
-																					))}
-																				</div>
-																				<Textarea
-																					value={editingComment}
-																					onChange={(e) =>
-																						setEditingComment(e.target.value)
+																			<Textarea
+																				value={editingComment}
+																				onChange={(e) =>
+																					setEditingComment(e.target.value)
+																				}
+																				rows={3}
+																				className="resize-none"
+																			/>
+																			<div className="flex gap-2">
+																				<Button
+																					size="sm"
+																					className="min-h-11 md:min-h-8"
+																					onClick={() => {
+																						updateReviewMutation.mutate({
+																							reviewId: review.id,
+																							rating: editingRating,
+																							comment: editingComment,
+																						});
+																					}}
+																					disabled={
+																						updateReviewMutation.isPending
 																					}
-																					rows={3}
-																					className="resize-none"
-																				/>
-																				<div className="flex gap-2">
-																					<Button
-																						size="sm"
-																						className="min-h-11 md:min-h-8"
-																						onClick={() => {
-																							updateReviewMutation.mutate({
-																								reviewId: review.id,
-																								rating: editingRating,
-																								comment: editingComment,
-																							});
-																						}}
-																						disabled={
-																							updateReviewMutation.isPending
-																						}
-																					>
-																						{t("save")}
-																					</Button>
-																					<Button
-																						variant="outline"
-																						size="sm"
-																						className="min-h-11 md:min-h-8"
-																						onClick={() =>
-																							setEditingReviewId(null)
-																						}
-																					>
-																						{t("cancel")}
-																					</Button>
-																				</div>
+																				>
+																					{t("save")}
+																				</Button>
+																				<Button
+																					variant="outline"
+																					size="sm"
+																					className="min-h-11 md:min-h-8"
+																					onClick={() =>
+																						setEditingReviewId(null)
+																					}
+																				>
+																					{t("cancel")}
+																				</Button>
 																			</div>
-																		) : (
-																			review.comment && (
-																				<p className="text-muted-foreground text-sm">
-																					{review.comment}
-																				</p>
-																			)
-																		)}
-																	</div>
+																		</div>
+																	) : (
+																		review.comment && (
+																			<p className="text-muted-foreground text-sm">
+																				{review.comment}
+																			</p>
+																		)
+																	)}
 																</div>
-															</CardContent>
-														</Card>
-													),
-												)}
+															</div>
+														</CardContent>
+													</Card>
+												))}
 											</div>
 										)}
 									</div>

@@ -235,7 +235,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 			for (const subscriber of subscribers) {
 				try {
 					const chatId =
-						subscriber.telegramChatId ?? subscriber.user.telegramId;
+						subscriber.telegramChatId ?? subscriber.user?.telegramId;
 					if (chatId) {
 						const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
 						const pluginUrl = `${baseUrl}/plugins/${plugin[0].slug}`;
@@ -255,23 +255,23 @@ export const telegramNotificationsRouter = createTRPCRouter({
 							},
 						});
 						results.push({
-							subscriber: subscriber.user.name ?? "Unknown",
+							subscriber: subscriber.user?.name ?? "Unknown",
 							status: "sent",
 						});
 					} else {
 						results.push({
-							subscriber: subscriber.user.name ?? "Unknown",
+							subscriber: subscriber.user?.name ?? "Unknown",
 							status: "failed",
 							reason: "No chat ID",
 						});
 					}
 				} catch (error) {
 					console.error(
-						`Failed to send notification to ${subscriber.user.name}:`,
+						`Failed to send notification to ${subscriber.user?.name}:`,
 						error,
 					);
 					results.push({
-						subscriber: subscriber.user.name ?? "Unknown",
+						subscriber: subscriber.user?.name ?? "Unknown",
 						status: "failed",
 						reason: error instanceof Error ? error.message : "Unknown error",
 					});

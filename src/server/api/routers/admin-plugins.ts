@@ -98,6 +98,10 @@ export const adminPluginsRouter = createTRPCRouter({
 				.where(eq(plugins.id, input.id))
 				.returning();
 
+			if (!updatedPlugin) {
+				throw new Error("Plugin not found");
+			}
+
 			try {
 				await ctx.db.insert(pluginActivities).values({
 					type: "plugin.approved",
@@ -158,6 +162,10 @@ export const adminPluginsRouter = createTRPCRouter({
 				.set({ status: "rejected", updatedAt: sql`extract(epoch from now())` })
 				.where(eq(plugins.id, input.id))
 				.returning();
+
+			if (!updatedPlugin) {
+				throw new Error("Plugin not found");
+			}
 
 			if (pluginWithAuthor[0].author?.telegramId) {
 				try {

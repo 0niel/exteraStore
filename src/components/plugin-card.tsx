@@ -42,9 +42,9 @@ interface Plugin {
 	createdAt: Date | number;
 	latestSecurityCheck?: {
 		status: string;
-		classification: string;
-		shortDescription: string;
-		details: string;
+		classification: string | null;
+		shortDescription: string | null;
+		details: string | null;
 	} | null;
 }
 
@@ -226,7 +226,7 @@ export function PluginCard({
 						| "potentially_unsafe"
 						| "unsafe"
 						| "critical",
-					shortDescription: plugin.latestSecurityCheck.shortDescription,
+					shortDescription: plugin.latestSecurityCheck.shortDescription ?? "",
 					issues: securityIssues,
 				}}
 				variant="compact"

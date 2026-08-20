@@ -113,6 +113,7 @@ export const developersRouter = createTRPCRouter({
 					shortDescription: plugins.shortDescription,
 					version: plugins.version,
 					category: plugins.category,
+					tags: plugins.tags,
 					author: plugins.author,
 					authorId: plugins.authorId,
 					price: plugins.price,

@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, Sparkles } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
@@ -35,6 +35,7 @@ export function TextImprovementButton({
 	className,
 }: TextImprovementButtonProps) {
 	const t = useTranslations("TextImprovement");
+	const locale = useLocale();
 	const [isImproving, setIsImproving] = useState(false);
 
 	const improveTextMutation = api.pluginPipeline.improveText.useMutation({
@@ -60,6 +61,7 @@ export function TextImprovementButton({
 			text: text.trim(),
 			textType,
 			pluginName,
+			locale: locale === "en" ? "en" : "ru",
 		});
 	};
 

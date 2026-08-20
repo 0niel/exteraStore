@@ -8,6 +8,8 @@ import {
 	real,
 	serial,
 	text,
+	uniqueIndex,
+	varchar,
 } from "drizzle-orm/pg-core";
 
 export const posts = pgTable(
@@ -619,6 +621,28 @@ export const userPluginSubscriptions = pgTable(
 			t.pluginId,
 			t.subscriptionType,
 		),
+	],
+);
+
+export const aiArtifacts = pgTable(
+	"extera_plugins_ai_artifact",
+	{
+		id: serial("id").primaryKey(),
+		pluginId: integer("plugin_id").references(() => plugins.id, {
+			onDelete: "cascade",
+		}),
+		kind: varchar("kind", { length: 64 }).notNull(),
+		cacheKey: varchar("cache_key", { length: 256 }).notNull(),
+		locale: varchar("locale", { length: 8 }).notNull(),
+		content: text("content").notNull(),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+	},
+	(t) => [
+		uniqueIndex("ai_artifact_cache_key_idx").on(t.cacheKey),
+		index("ai_artifact_plugin_idx").on(t.pluginId),
+		index("ai_artifact_kind_idx").on(t.kind),
 	],
 );
 

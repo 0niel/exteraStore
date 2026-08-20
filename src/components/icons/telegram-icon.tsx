@@ -5,7 +5,13 @@ interface TelegramIconProps {
 
 export function TelegramIcon({ className = "", size = 24 }: TelegramIconProps) {
 	return (
-		<svg width="1000px" height="1000px" viewBox="0 0 1000 1000" version="1.1">
+		<svg
+			width={size}
+			height={size}
+			className={className}
+			viewBox="0 0 1000 1000"
+			version="1.1"
+		>
 			<title>Artboard</title>
 			<desc>Created with Sketch.</desc>
 			<defs>
