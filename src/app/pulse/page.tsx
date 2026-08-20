@@ -13,7 +13,16 @@ import { Card, CardContent } from "~/components/ui/card";
 import { EmptyState } from "~/components/ui/empty-state";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import { api } from "~/trpc/react";
+import { api, type RouterOutputs } from "~/trpc/react";
+
+type PulseItem = RouterOutputs["pulse"]["get"]["items"][number];
+
+type PulseTab = "all" | "plugin.created" | "version.released" | "review.added";
+
+const defaultBubble = {
+	icon: Star,
+	className: "border border-warning/40 bg-warning/15 text-warning",
+};
 
 const eventBubbles: Record<
 	string,
@@ -27,10 +36,7 @@ const eventBubbles: Record<
 		icon: Tag,
 		className: "bg-contrast text-contrast-foreground",
 	},
-	"review.added": {
-		icon: Star,
-		className: "border border-warning/40 bg-warning/15 text-warning",
-	},
+	"review.added": defaultBubble,
 };
 
 export default function PulsePage() {
@@ -39,9 +45,7 @@ export default function PulsePage() {
 	const now = useNow({ updateInterval: 60_000 });
 	const reduceMotion = useReducedMotion();
 	const [page, setPage] = useState(1);
-	const [tab, setTab] = useState<
-		"all" | "plugin.created" | "version.released" | "review.added"
-	>("all");
+	const [tab, setTab] = useState<PulseTab>("all");
 
 	const activeTypes = tab === "all" ? undefined : [tab];
 	const { data, isLoading, isFetching } = api.pulse.get.useQuery({
@@ -54,7 +58,7 @@ export default function PulsePage() {
 	const totalPages = data?.pagination.totalPages ?? 1;
 
 	const groups = useMemo(() => {
-		const map = new Map<string, { date: Date; items: any[] }>();
+		const map = new Map<string, { date: Date; items: PulseItem[] }>();
 		for (const it of items) {
 			const d = new Date(it.createdAt * 1000);
 			const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
@@ -81,7 +85,7 @@ export default function PulsePage() {
 	};
 
 	const renderBubble = (type: string) => {
-		const bubble = eventBubbles[type] ?? eventBubbles["review.added"]!;
+		const bubble = eventBubbles[type] ?? defaultBubble;
 		const BubbleIcon = bubble.icon;
 		return (
 			<div
@@ -117,7 +121,7 @@ export default function PulsePage() {
 							<Tabs
 								value={tab}
 								onValueChange={(v) => {
-									setTab(v as any);
+									setTab(v as PulseTab);
 									setPage(1);
 								}}
 								className="w-full sm:w-auto"
@@ -236,7 +240,7 @@ export default function PulsePage() {
 									</span>
 								</div>
 								<div className="space-y-3">
-									{group.items.map((it: any, idx: number) => (
+									{group.items.map((it, idx) => (
 										<motion.div
 											key={it.id}
 											initial={reduceMotion ? false : { opacity: 0, y: 16 }}

@@ -17,7 +17,7 @@ export const categoriesRouter = createTRPCRouter({
 			.from(pluginCategories);
 
 		const categoriesWithCounts = await Promise.all(
-			categories.map(async (category: typeof pluginCategories.$inferSelect) => {
+			categories.map(async (category) => {
 				const [pluginCount] = await ctx.db
 					.select({ count: count() })
 					.from(plugins)

@@ -1,5 +1,6 @@
 import { adminPluginsRouter } from "~/server/api/routers/admin-plugins";
 import { adminUsersRouter } from "~/server/api/routers/admin-users";
+import { aiRouter } from "~/server/api/routers/ai";
 import { categoriesRouter } from "~/server/api/routers/categories";
 import { developersRouter } from "~/server/api/routers/developers";
 import { favoritesRouter } from "~/server/api/routers/favorites";
@@ -32,6 +33,7 @@ export const appRouter = createTRPCRouter({
 	adminPlugins: adminPluginsRouter,
 	adminUsers: adminUsersRouter,
 	aiCollections: aiCollectionsRouter,
+	ai: aiRouter,
 	pulse: pulseRouter,
 });
 

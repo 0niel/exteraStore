@@ -104,7 +104,7 @@ export function PluginVersions({ pluginSlug }: PluginVersionsProps) {
 						description: t("telegram_sent_description"),
 						duration: 3000,
 					});
-				} else {
+				} else if (data.fileContent) {
 					const blob = new Blob([data.fileContent], {
 						type: data.mimeType,
 					});

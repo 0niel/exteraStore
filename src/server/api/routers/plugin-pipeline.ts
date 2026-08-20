@@ -19,7 +19,7 @@ import {
 	users,
 } from "~/server/db/schema";
 import { sendTelegramMessage } from "~/server/lib/telegram-client";
-import { PluginAIChecker } from "./plugin-pipeline-ai";
+import { type AILocale, PluginAIChecker } from "./plugin-pipeline-ai";
 
 type PipelineContext = Awaited<ReturnType<typeof createTRPCContext>>;
 
@@ -333,6 +333,10 @@ export const pluginPipelineRouter = createTRPCRouter({
 				})
 				.returning();
 
+			if (!queueItem) {
+				throw new Error("Failed to enqueue pipeline checks");
+			}
+
 			processQueueItem(ctx, queueItem.id).catch(() => {
 				console.error("Error processing queue item in background");
 			});
@@ -639,6 +643,7 @@ export const pluginPipelineRouter = createTRPCRouter({
 					.max(20_000, "Текст слишком длинный"),
 				textType: z.enum(["description", "changelog"]),
 				pluginName: z.string().max(256).optional(),
+				locale: z.enum(["en", "ru"]).default("ru"),
 			}),
 		)
 		.mutation(async ({ input }) => {
@@ -652,6 +657,7 @@ export const pluginPipelineRouter = createTRPCRouter({
 					input.text,
 					input.textType,
 					input.pluginName,
+					input.locale,
 				);
 				return result;
 			} catch {
@@ -827,6 +833,7 @@ export const DEFAULT_AI_COLLECTION_THEMES = [
 export async function generateAndSaveAICollections(
 	database: typeof import("~/server/db").db,
 	themes: readonly string[],
+	locale: AILocale = "ru",
 ) {
 	const allPlugins = await database
 		.select({
@@ -858,6 +865,7 @@ export async function generateAndSaveAICollections(
 			const collection = await aiChecker.generateAICollection(
 				allPlugins,
 				theme,
+				locale,
 			);
 
 			const [savedCollection] = await database
@@ -892,13 +900,14 @@ export const aiCollectionsRouter = createTRPCRouter({
 		.input(
 			z.object({
 				themes: z.array(z.string()).default([...DEFAULT_AI_COLLECTION_THEMES]),
+				locale: z.enum(["en", "ru"]).default("ru"),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
 			if (ctx.session.user.role !== "admin") {
 				throw new Error("Unauthorized");
 			}
-			return generateAndSaveAICollections(ctx.db, input.themes);
+			return generateAndSaveAICollections(ctx.db, input.themes, input.locale);
 		}),
 
 	getAICollections: publicProcedure

@@ -62,7 +62,7 @@ export function TelegramWebAppAuth() {
 		}, 800);
 
 		return () => clearTimeout(timer);
-	}, [isTelegramWebApp, webApp, user, authAttempted, session]);
+	}, [isTelegramWebApp, webApp, user, authAttempted, session, t]);
 
 	return null;
 }

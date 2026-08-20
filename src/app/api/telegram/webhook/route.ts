@@ -755,13 +755,14 @@ async function showCategories(
 		for (let i = 0; i < pageCategories.length; i += 2) {
 			const row: Array<{ text: string; callback_data: string }> = [];
 			const category1 = pageCategories[i];
+			if (!category1) break;
 			row.push({
 				text: `${category1.icon || "📁"} ${category1.name}`,
 				callback_data: `category_${category1.slug}_0`,
 			});
 
-			if (i + 1 < pageCategories.length) {
-				const category2 = pageCategories[i + 1];
+			const category2 = pageCategories[i + 1];
+			if (category2) {
 				row.push({
 					text: `${category2.icon || "📁"} ${category2.name}`,
 					callback_data: `category_${category2.slug}_0`,

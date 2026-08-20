@@ -221,6 +221,10 @@ export const pluginsRouter = createTRPCRouter({
 				.where(eq(pluginReviews.id, input.reviewId))
 				.returning();
 
+			if (!updated) {
+				throw new Error("Review not found");
+			}
+
 			const avgRating = await ctx.db
 				.select({
 					avg: sql<number>`AVG(${pluginReviews.rating})`,
@@ -340,6 +344,10 @@ export const pluginsRouter = createTRPCRouter({
 					comment: input.comment,
 				})
 				.returning();
+
+			if (!review) {
+				throw new Error("Failed to create review");
+			}
 
 			const avgRating = await ctx.db
 				.select({

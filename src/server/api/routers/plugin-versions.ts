@@ -283,13 +283,9 @@ export const pluginVersionsRouter = createTRPCRouter({
 				.where(eq(pluginVersions.pluginId, plugin[0].id));
 
 			const fromVersionData = versions.find(
-				(v: typeof pluginVersions.$inferSelect) =>
-					v.version === input.fromVersion,
+				(v) => v.version === input.fromVersion,
 			);
-			const toVersionData = versions.find(
-				(v: typeof pluginVersions.$inferSelect) =>
-					v.version === input.toVersion,
-			);
+			const toVersionData = versions.find((v) => v.version === input.toVersion);
 
 			if (!fromVersionData || !toVersionData) {
 				throw new Error("One or both versions not found");
@@ -344,13 +340,9 @@ export const pluginVersionsRouter = createTRPCRouter({
 				.where(eq(pluginVersions.pluginId, plugin[0].id));
 
 			const fromVersionData = versions.find(
-				(v: typeof pluginVersions.$inferSelect) =>
-					v.version === input.fromVersion,
+				(v) => v.version === input.fromVersion,
 			);
-			const toVersionData = versions.find(
-				(v: typeof pluginVersions.$inferSelect) =>
-					v.version === input.toVersion,
-			);
+			const toVersionData = versions.find((v) => v.version === input.toVersion);
 
 			if (!fromVersionData || !toVersionData) {
 				throw new Error("One or both versions not found");
@@ -397,13 +389,11 @@ export const pluginVersionsRouter = createTRPCRouter({
 				.from(pluginVersions)
 				.where(eq(pluginVersions.pluginId, plugin[0].id));
 
-			const fromVersionData = versions.find(
-				(v: typeof pluginVersions.$inferSelect) =>
-					v.fileHash.startsWith(input.fromHash),
+			const fromVersionData = versions.find((v) =>
+				v.fileHash.startsWith(input.fromHash),
 			);
-			const toVersionData = versions.find(
-				(v: typeof pluginVersions.$inferSelect) =>
-					v.fileHash.startsWith(input.toHash),
+			const toVersionData = versions.find((v) =>
+				v.fileHash.startsWith(input.toHash),
 			);
 
 			if (!fromVersionData || !toVersionData) {

@@ -6,6 +6,8 @@ import {
 } from "~/server/api/routers/plugin-pipeline";
 import { db } from "~/server/db";
 
+export const maxDuration = 300;
+
 export async function GET(request: Request) {
 	const authHeader = request.headers.get("authorization");
 	if (!env.CRON_SECRET || authHeader !== `Bearer ${env.CRON_SECRET}`) {
@@ -18,6 +20,7 @@ export async function GET(request: Request) {
 		const result = await generateAndSaveAICollections(
 			db,
 			DEFAULT_AI_COLLECTION_THEMES,
+			"ru",
 		);
 
 		return NextResponse.json({ success: true, data: result });

@@ -14,7 +14,10 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { cn, createValidDate } from "~/lib/utils";
-import { api } from "~/trpc/react";
+import { api, type RouterOutputs } from "~/trpc/react";
+
+type AICollection = RouterOutputs["aiCollections"]["getAICollections"][number];
+type CollectionPlugin = AICollection["plugins"][number];
 
 const coverTreatments = [
 	{
@@ -32,7 +35,9 @@ const coverTreatments = [
 ] as const;
 
 function getTreatment(id: number) {
-	return coverTreatments[Math.abs(id) % coverTreatments.length]!;
+	return (
+		coverTreatments[Math.abs(id) % coverTreatments.length] ?? coverTreatments[0]
+	);
 }
 
 function CollectionSkeleton() {
@@ -57,7 +62,7 @@ function CollectionCard({
 	collection,
 	index,
 }: {
-	collection: any;
+	collection: AICollection;
 	index: number;
 }) {
 	const t = useTranslations("CollectionsPage");
@@ -113,7 +118,7 @@ function CollectionCard({
 				</div>
 
 				<div className="space-y-2">
-					{pluginData.slice(0, 2).map((plugin: any) => (
+					{pluginData.slice(0, 2).map((plugin: CollectionPlugin) => (
 						<Link
 							key={plugin.id}
 							href={`/plugins/${plugin.slug}`}
@@ -169,7 +174,7 @@ export default function CollectionsPage() {
 		api.aiCollections.getAICollections.useQuery({ limit: 20 });
 
 	const filteredCollections =
-		collections?.filter((collection: any) => {
+		collections?.filter((collection) => {
 			if (activeTab === "all") return true;
 			if (activeTab === "recent") {
 				const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
@@ -207,7 +212,7 @@ export default function CollectionsPage() {
 		}
 		return (
 			<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-				{filteredCollections.map((collection: any, index: number) => (
+				{filteredCollections.map((collection, index) => (
 					<motion.div
 						key={collection.id}
 						initial={reduceMotion ? false : { opacity: 0, y: 24 }}
@@ -262,7 +267,7 @@ export default function CollectionsPage() {
 							<div>
 								<p className="font-bold text-lg tabular-nums">
 									{collections?.reduce(
-										(acc: number, c: any) => acc + (c.plugins?.length || 0),
+										(acc, c) => acc + (c.plugins?.length || 0),
 										0,
 									) || 0}
 								</p>

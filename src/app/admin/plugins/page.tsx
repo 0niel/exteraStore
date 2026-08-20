@@ -60,7 +60,7 @@ interface AdminPlugin {
 	name: string;
 	slug: string;
 	description: string;
-	shortDescription?: string;
+	shortDescription: string | null;
 	author: string;
 	downloadCount: number;
 	rating: number;

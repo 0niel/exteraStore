@@ -50,6 +50,13 @@
 			"when": 1787060700000,
 			"tag": "0006_generous_donations",
 			"breakpoints": true
+		},
+		{
+			"idx": 7,
+			"version": "7",
+			"when": 1787241622427,
+			"tag": "0007_wide_thena",
+			"breakpoints": true
 		}
 	]
 }
