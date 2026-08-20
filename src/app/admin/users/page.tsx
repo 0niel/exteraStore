@@ -11,10 +11,19 @@ import {
 	Trash2,
 	UserX,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
+import { useState } from "react";
 import { toast } from "sonner";
+import {
+	AlertDialog,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "~/components/ui/alert-dialog";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
@@ -24,14 +33,6 @@ import {
 	CardHeader,
 	CardTitle,
 } from "~/components/ui/card";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "~/components/ui/dialog";
 import { EmptyState } from "~/components/ui/empty-state";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -45,9 +46,21 @@ const ADMINS = (env.NEXT_PUBLIC_INITIAL_ADMINS ?? "i_am_oniel")
 	.map((a) => a.trim().toLowerCase())
 	.filter(Boolean);
 
+const SKELETON_KEYS = ["sk-1", "sk-2", "sk-3", "sk-4", "sk-5", "sk-6"];
+
+function UsersSkeleton() {
+	return (
+		<div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
+			{SKELETON_KEYS.map((key) => (
+				<div key={key} className="skeleton-shimmer h-56 rounded-xl" />
+			))}
+		</div>
+	);
+}
+
 export default function AdminUsersPage() {
-	const router = useRouter();
 	const { data: session } = useSession();
+	const t = useTranslations("AdminUsers");
 	const [search, setSearch] = useState("");
 	const [banned, setBanned] = useState<boolean | undefined>(undefined);
 	const [banDialogOpen, setBanDialogOpen] = useState(false);
@@ -64,12 +77,6 @@ export default function AdminUsersPage() {
 		(session?.user?.telegramUsername &&
 			ADMINS.includes(session.user.telegramUsername.toLowerCase()));
 
-	useEffect(() => {
-		if (session && !isAdmin) {
-			router.push("/");
-		}
-	}, [session, router, isAdmin]);
-
 	const { data, refetch, isFetching } = api.adminUsers.getUsers.useQuery(
 		{
 			page: 1,
@@ -82,54 +89,52 @@ export default function AdminUsersPage() {
 
 	const banUser = api.adminUsers.banUser.useMutation({
 		onSuccess: () => {
-			toast.success("Пользователь забанен");
+			toast.success(t("toast_banned"));
 			setBanDialogOpen(false);
 			setSelectedUser(null);
 			setBanReason("");
 			refetch();
 		},
 		onError: (error) => {
-			toast.error("Ошибка", { description: error.message });
+			toast.error(t("toast_error"), { description: error.message });
 		},
 	});
 
 	const unbanUser = api.adminUsers.unbanUser.useMutation({
 		onSuccess: () => {
-			toast.success("Бан снят");
+			toast.success(t("toast_unbanned"));
 			refetch();
 		},
 		onError: (error) => {
-			toast.error("Ошибка", { description: error.message });
+			toast.error(t("toast_error"), { description: error.message });
 		},
 	});
 
 	const updateRole = api.adminUsers.updateRole.useMutation({
 		onSuccess: () => {
-			toast.success("Роль обновлена");
+			toast.success(t("toast_role_updated"));
 			refetch();
 		},
 		onError: (error) => {
-			toast.error("Ошибка", { description: error.message });
+			toast.error(t("toast_error"), { description: error.message });
 		},
 	});
 
 	const deleteAllReviews = api.adminUsers.deleteAllUserReviews.useMutation({
-		onSuccess: (data) => {
-			toast.success("Отзывы удалены", {
-				description: `Удалено отзывов: ${data.deleted}`,
+		onSuccess: (result) => {
+			toast.success(t("toast_reviews_deleted"), {
+				description: t("toast_reviews_deleted_description", {
+					count: result.deleted,
+				}),
 			});
 			setDeleteReviewsDialogOpen(false);
 			setSelectedUser(null);
 			refetch();
 		},
 		onError: (error) => {
-			toast.error("Ошибка", { description: error.message });
+			toast.error(t("toast_error"), { description: error.message });
 		},
 	});
-
-	if (!session || !isAdmin) {
-		return null;
-	}
 
 	const openBanDialog = (user: { id: string; name: string | null }) => {
 		setSelectedUser({ id: user.id, name: user.name });
@@ -162,18 +167,20 @@ export default function AdminUsersPage() {
 		deleteAllReviews.mutate({ userId: selectedUser.id });
 	};
 
+	const selectedName = selectedUser?.name || t("no_name");
+
 	return (
 		<div className="py-8">
 			<div className="container mx-auto max-w-6xl px-4">
 				<div className="mb-6 flex items-center justify-between">
-					<h1 className="font-bold text-4xl">Управление пользователями</h1>
+					<h1 className="font-bold text-3xl md:text-4xl">{t("title")}</h1>
 				</div>
 
 				<div className="mb-6 flex gap-4">
 					<div className="relative flex-1">
-						<Search className="absolute top-3 left-3 h-4 w-4 text-muted-foreground" />
+						<Search className="absolute top-3.5 left-3 h-4 w-4 text-muted-foreground" />
 						<Input
-							placeholder="Поиск по имени, email, username..."
+							placeholder={t("search_placeholder")}
 							value={search}
 							onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
 								setSearch(e.target.value)
@@ -189,51 +196,59 @@ export default function AdminUsersPage() {
 						setBanned(v === "all" ? undefined : v === "banned")
 					}
 				>
-					<TabsList>
-						<TabsTrigger value="all">Все пользователи</TabsTrigger>
-						<TabsTrigger value="active">Активные</TabsTrigger>
-						<TabsTrigger value="banned">Забаненные</TabsTrigger>
+					<TabsList className="scrollbar-hide w-full justify-start overflow-x-auto md:w-auto">
+						<TabsTrigger value="all">{t("all_users")}</TabsTrigger>
+						<TabsTrigger value="active">{t("active")}</TabsTrigger>
+						<TabsTrigger value="banned">{t("banned")}</TabsTrigger>
 					</TabsList>
 
 					{["all", "active", "banned"].map((tab) => (
 						<TabsContent key={tab} value={tab} className="mt-6">
 							{isFetching ? (
-								<div className="flex items-center justify-center p-8">
-									<Loader2 className="h-8 w-8 animate-spin" />
-								</div>
+								<UsersSkeleton />
 							) : !data?.users.length ? (
 								<EmptyState
 									icon="👥"
-									title="Пользователи не найдены"
-									description="Попробуйте изменить параметры поиска"
+									title={t("empty_title")}
+									description={t("empty_description")}
 								/>
 							) : (
-								<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+								<div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 lg:grid-cols-3">
 									{data?.users.map((user) => (
-										<Card key={user.id} className="group">
+										<Card key={user.id} className="group animate-fade-in">
 											<CardHeader>
-												<div className="flex items-start justify-between">
-													<div className="flex-1">
+												<div className="flex items-start justify-between gap-2">
+													<div className="min-w-0 flex-1">
 														<CardTitle className="line-clamp-1">
-															{user.name || "Без имени"}
+															{user.name || t("no_name")}
 														</CardTitle>
-														<CardDescription className="mt-1">
+														<CardDescription className="mt-1 truncate">
 															{user.email || user.telegramUsername || "—"}
 														</CardDescription>
 													</div>
-													{user.isBanned && (
-														<Badge variant="destructive">
-															<Ban className="mr-1 h-3 w-3" />
-															Забанен
-														</Badge>
-													)}
+													<div className="flex shrink-0 flex-col items-end gap-1">
+														{user.role === "admin" && (
+															<Badge className="bg-contrast text-contrast-foreground">
+																<Shield className="mr-1 h-3 w-3" />
+																{t("admin_badge")}
+															</Badge>
+														)}
+														{user.isBanned && (
+															<Badge variant="destructive">
+																<Ban className="mr-1 h-3 w-3" />
+																{t("banned_badge")}
+															</Badge>
+														)}
+													</div>
 												</div>
 											</CardHeader>
 											<CardContent className="space-y-4">
 												<div className="space-y-2 text-muted-foreground text-sm">
 													{user.telegramId && (
 														<div className="flex items-center gap-2">
-															<span className="font-medium">Telegram ID:</span>
+															<span className="font-medium">
+																{t("telegram_id")}
+															</span>
 															<span className="font-mono">
 																{user.telegramId}
 															</span>
@@ -241,19 +256,26 @@ export default function AdminUsersPage() {
 													)}
 													<div className="flex items-center gap-2">
 														<Shield className="h-4 w-4" />
-														<span>Роль: {user.role}</span>
+														<span>{t("role", { role: user.role })}</span>
 													</div>
 													<div className="flex items-center gap-2">
 														<Download className="h-4 w-4" />
-														<span>Плагинов: {user.pluginCount}</span>
+														<span>
+															{t("plugins_count", { count: user.pluginCount })}
+														</span>
 													</div>
 													<div className="flex items-center gap-2">
 														<MessageSquare className="h-4 w-4" />
-														<span>Отзывов: {user.reviewCount || 0}</span>
+														<span>
+															{t("reviews_count", {
+																count: user.reviewCount || 0,
+															})}
+														</span>
 													</div>
 													{user.isBanned && user.bannedReason && (
 														<div className="mt-2 rounded-md bg-destructive/10 p-2 text-destructive text-xs">
-															<strong>Причина бана:</strong> {user.bannedReason}
+															<strong>{t("ban_reason")}</strong>{" "}
+															{user.bannedReason}
 														</div>
 													)}
 												</div>
@@ -273,7 +295,7 @@ export default function AdminUsersPage() {
 															) : (
 																<CheckCircle className="mr-1 h-4 w-4" />
 															)}
-															Разбанить
+															{t("unban")}
 														</Button>
 													) : (
 														<Button
@@ -283,7 +305,7 @@ export default function AdminUsersPage() {
 															disabled={banUser.isPending}
 														>
 															<UserX className="mr-1 h-4 w-4" />
-															Забанить
+															{t("ban")}
 														</Button>
 													)}
 
@@ -300,7 +322,7 @@ export default function AdminUsersPage() {
 															disabled={updateRole.isPending}
 														>
 															<Shield className="mr-1 h-4 w-4" />
-															Сделать админом
+															{t("make_admin")}
 														</Button>
 													)}
 
@@ -313,7 +335,7 @@ export default function AdminUsersPage() {
 															className="text-destructive hover:text-destructive"
 														>
 															<Trash2 className="mr-1 h-4 w-4" />
-															Удалить отзывы
+															{t("delete_reviews")}
 														</Button>
 													)}
 												</div>
@@ -326,42 +348,39 @@ export default function AdminUsersPage() {
 					))}
 				</Tabs>
 
-				<Dialog open={banDialogOpen} onOpenChange={setBanDialogOpen}>
-					<DialogContent>
-						<DialogHeader>
-							<DialogTitle>Забанить пользователя</DialogTitle>
-							<DialogDescription>
-								Вы уверены, что хотите забанить пользователя{" "}
-								{selectedUser?.name}? Он не сможет скачивать плагины и
-								взаимодействовать с платформой.
-							</DialogDescription>
-						</DialogHeader>
-						<div className="space-y-4 py-4">
-							<div className="space-y-2">
-								<Label htmlFor="banReason">Причина бана (опционально)</Label>
-								<Textarea
-									id="banReason"
-									value={banReason}
-									onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-										setBanReason(e.target.value)
-									}
-									placeholder="Укажите причину бана..."
-									rows={4}
-								/>
-							</div>
+				<AlertDialog
+					open={banDialogOpen}
+					onOpenChange={(open) => {
+						setBanDialogOpen(open);
+						if (!open) {
+							setSelectedUser(null);
+							setBanReason("");
+						}
+					}}
+				>
+					<AlertDialogContent>
+						<AlertDialogHeader>
+							<AlertDialogTitle>{t("ban_dialog_title")}</AlertDialogTitle>
+							<AlertDialogDescription>
+								{t("ban_dialog_description", { name: selectedName })}
+							</AlertDialogDescription>
+						</AlertDialogHeader>
+						<div className="space-y-2">
+							<Label htmlFor="banReason">{t("ban_reason_label")}</Label>
+							<Textarea
+								id="banReason"
+								value={banReason}
+								onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+									setBanReason(e.target.value)
+								}
+								placeholder={t("ban_reason_placeholder")}
+								rows={4}
+							/>
 						</div>
-						<DialogFooter>
-							<Button
-								variant="outline"
-								onClick={() => {
-									setBanDialogOpen(false);
-									setSelectedUser(null);
-									setBanReason("");
-								}}
-								disabled={banUser.isPending}
-							>
-								Отмена
-							</Button>
+						<AlertDialogFooter>
+							<AlertDialogCancel disabled={banUser.isPending}>
+								{t("cancel")}
+							</AlertDialogCancel>
 							<Button
 								variant="destructive"
 								onClick={handleBan}
@@ -370,43 +389,44 @@ export default function AdminUsersPage() {
 								{banUser.isPending ? (
 									<>
 										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-										Баним...
+										{t("banning")}
 									</>
 								) : (
 									<>
 										<Ban className="mr-2 h-4 w-4" />
-										Забанить
+										{t("ban")}
 									</>
 								)}
 							</Button>
-						</DialogFooter>
-					</DialogContent>
-				</Dialog>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				</AlertDialog>
 
-				<Dialog
+				<AlertDialog
 					open={deleteReviewsDialogOpen}
-					onOpenChange={setDeleteReviewsDialogOpen}
+					onOpenChange={(open) => {
+						setDeleteReviewsDialogOpen(open);
+						if (!open) {
+							setSelectedUser(null);
+						}
+					}}
 				>
-					<DialogContent>
-						<DialogHeader>
-							<DialogTitle>Удалить все отзывы пользователя</DialogTitle>
-							<DialogDescription>
-								Вы уверены, что хотите удалить все отзывы пользователя{" "}
-								{selectedUser?.name}? Будет удалено отзывов:{" "}
-								{selectedUser?.reviewCount || 0}. Это действие необратимо.
-							</DialogDescription>
-						</DialogHeader>
-						<DialogFooter>
-							<Button
-								variant="outline"
-								onClick={() => {
-									setDeleteReviewsDialogOpen(false);
-									setSelectedUser(null);
-								}}
-								disabled={deleteAllReviews.isPending}
-							>
-								Отмена
-							</Button>
+					<AlertDialogContent>
+						<AlertDialogHeader>
+							<AlertDialogTitle>
+								{t("delete_reviews_dialog_title")}
+							</AlertDialogTitle>
+							<AlertDialogDescription>
+								{t("delete_reviews_dialog_description", {
+									name: selectedName,
+									count: selectedUser?.reviewCount || 0,
+								})}
+							</AlertDialogDescription>
+						</AlertDialogHeader>
+						<AlertDialogFooter>
+							<AlertDialogCancel disabled={deleteAllReviews.isPending}>
+								{t("cancel")}
+							</AlertDialogCancel>
 							<Button
 								variant="destructive"
 								onClick={handleDeleteAllReviews}
@@ -415,18 +435,18 @@ export default function AdminUsersPage() {
 								{deleteAllReviews.isPending ? (
 									<>
 										<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-										Удаление...
+										{t("deleting")}
 									</>
 								) : (
 									<>
 										<Trash2 className="mr-2 h-4 w-4" />
-										Удалить все отзывы
+										{t("delete_all_reviews")}
 									</>
 								)}
 							</Button>
-						</DialogFooter>
-					</DialogContent>
-				</Dialog>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				</AlertDialog>
 			</div>
 		</div>
 	);

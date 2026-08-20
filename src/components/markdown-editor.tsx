@@ -9,13 +9,13 @@ import {
 	List,
 	Quote,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
+import { useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { TextImprovementButton } from "~/components/text-improvement-button";
 import { Button } from "~/components/ui/button";
-import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Textarea } from "~/components/ui/textarea";
 
@@ -33,11 +33,12 @@ export function MarkdownEditor({
 	value,
 	onChange,
 	height = 300,
-	placeholder = "Use Markdown for formatting...",
+	placeholder,
 	showImproveButton = false,
 	textType = "description",
 	pluginName,
 }: MarkdownEditorProps) {
+	const t = useTranslations("MarkdownEditor");
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
 
 	const insertMarkdown = (before: string, after = "") => {
@@ -65,23 +66,43 @@ export function MarkdownEditor({
 		}, 10);
 	};
 
+	const toolbarActions = [
+		{ label: t("bold"), icon: Bold, action: () => insertMarkdown("**", "**") },
+		{
+			label: t("italic"),
+			icon: Italic,
+			action: () => insertMarkdown("*", "*"),
+		},
+		{ label: t("code"), icon: Code, action: () => insertMarkdown("`", "`") },
+		{
+			label: t("link"),
+			icon: Link,
+			action: () => insertMarkdown("[", "](url)"),
+		},
+		{ label: t("list"), icon: List, action: () => insertMarkdown("\n- ", "") },
+		{
+			label: t("quote"),
+			icon: Quote,
+			action: () => insertMarkdown("\n> ", ""),
+		},
+		{
+			label: t("image"),
+			icon: ImageIcon,
+			action: () => insertMarkdown("\n![alt](", ")"),
+		},
+	];
+
 	return (
 		<div className="w-full rounded-md border">
 			<Tabs defaultValue="write" className="w-full">
 				<div className="border-b">
 					<div className="flex items-center justify-between px-2 py-1.5 sm:px-3 sm:py-2">
-						<TabsList className="h-7 sm:h-8">
-							<TabsTrigger
-								value="write"
-								className="px-2 text-xs sm:px-3 sm:text-sm"
-							>
-								Write
+						<TabsList className="h-9 sm:h-8">
+							<TabsTrigger value="write" className="px-3 text-xs sm:text-sm">
+								{t("write")}
 							</TabsTrigger>
-							<TabsTrigger
-								value="preview"
-								className="px-2 text-xs sm:px-3 sm:text-sm"
-							>
-								Preview
+							<TabsTrigger value="preview" className="px-3 text-xs sm:text-sm">
+								{t("preview")}
 							</TabsTrigger>
 						</TabsList>
 						{showImproveButton && (
@@ -97,76 +118,20 @@ export function MarkdownEditor({
 						)}
 					</div>
 					<div className="flex flex-wrap items-center gap-0.5 px-2 pb-1.5 sm:gap-1 sm:px-3 sm:pb-2">
-						<Button
-							type="button"
-							variant="ghost"
-							size="sm"
-							onClick={() => insertMarkdown("**", "**")}
-							className="h-6 w-6 p-0 sm:h-7 sm:w-7"
-							title="Bold"
-						>
-							<Bold className="h-3 w-3" />
-						</Button>
-						<Button
-							type="button"
-							variant="ghost"
-							size="sm"
-							onClick={() => insertMarkdown("*", "*")}
-							className="h-6 w-6 p-0 sm:h-7 sm:w-7"
-							title="Italic"
-						>
-							<Italic className="h-3 w-3" />
-						</Button>
-						<Button
-							type="button"
-							variant="ghost"
-							size="sm"
-							onClick={() => insertMarkdown("`", "`")}
-							className="h-6 w-6 p-0 sm:h-7 sm:w-7"
-							title="Code"
-						>
-							<Code className="h-3 w-3" />
-						</Button>
-						<Button
-							type="button"
-							variant="ghost"
-							size="sm"
-							onClick={() => insertMarkdown("[", "](url)")}
-							className="h-6 w-6 p-0 sm:h-7 sm:w-7"
-							title="Link"
-						>
-							<Link className="h-3 w-3" />
-						</Button>
-						<Button
-							type="button"
-							variant="ghost"
-							size="sm"
-							onClick={() => insertMarkdown("\n- ", "")}
-							className="h-6 w-6 p-0 sm:h-7 sm:w-7"
-							title="List"
-						>
-							<List className="h-3 w-3" />
-						</Button>
-						<Button
-							type="button"
-							variant="ghost"
-							size="sm"
-							onClick={() => insertMarkdown("\n> ", "")}
-							className="h-6 w-6 p-0 sm:h-7 sm:w-7"
-							title="Quote"
-						>
-							<Quote className="h-3 w-3" />
-						</Button>
-						<Button
-							type="button"
-							variant="ghost"
-							size="sm"
-							onClick={() => insertMarkdown("\n![alt](", ")")}
-							className="h-6 w-6 p-0 sm:h-7 sm:w-7"
-							title="Image"
-						>
-							<ImageIcon className="h-3 w-3" />
-						</Button>
+						{toolbarActions.map((item) => (
+							<Button
+								key={item.label}
+								type="button"
+								variant="ghost"
+								size="sm"
+								onClick={item.action}
+								className="h-11 w-11 p-0 sm:h-8 sm:w-8"
+								title={item.label}
+								aria-label={item.label}
+							>
+								<item.icon className="h-3.5 w-3.5" />
+							</Button>
+						))}
 						{showImproveButton && (
 							<TextImprovementButton
 								text={value}
@@ -188,7 +153,7 @@ export function MarkdownEditor({
 						onChange={(e) => onChange(e.target.value)}
 						ref={textareaRef}
 						style={{ height: `${height}px` }}
-						placeholder={placeholder}
+						placeholder={placeholder || t("placeholder")}
 						className="w-full resize-y rounded-t-none border-0 focus:ring-0"
 					/>
 				</TabsContent>
@@ -198,7 +163,7 @@ export function MarkdownEditor({
 						style={{ minHeight: `${height}px` }}
 					>
 						<ReactMarkdown remarkPlugins={[remarkGfm]}>
-							{value || "Nothing to preview."}
+							{value || t("nothing_to_preview")}
 						</ReactMarkdown>
 					</div>
 				</TabsContent>

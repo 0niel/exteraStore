@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { client, db, postgresClient } from "~/server/db";
+import { db, postgresClient } from "~/server/db";
 
 export async function GET() {
 	try {

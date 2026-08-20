@@ -14,7 +14,7 @@ import {
 } from "~/components/ui/dropdown-menu";
 
 export function ThemeToggle() {
-	const { theme, setTheme, resolvedTheme } = useTheme();
+	const { setTheme, resolvedTheme } = useTheme();
 	const [mounted, setMounted] = useState(false);
 	const t = useTranslations("ThemeToggle");
 
@@ -118,10 +118,8 @@ export function FooterThemeToggle() {
 	if (!mounted) {
 		return (
 			<div className="flex w-full items-center justify-between">
-				<span className="text-gray-600 text-sm dark:text-gray-400">
-					{t("loading")}
-				</span>
-				<div className="h-6 w-12 animate-pulse rounded-full bg-gray-200 dark:bg-gray-700" />
+				<span className="text-muted-foreground text-sm">{t("loading")}</span>
+				<div className="h-6 w-12 animate-pulse rounded-full bg-muted" />
 			</div>
 		);
 	}
@@ -142,7 +140,7 @@ export function FooterThemeToggle() {
 					className={`flex min-h-11 w-full touch-manipulation items-center justify-between rounded-lg p-3 transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${
 						theme === key
 							? "border border-red-200 bg-red-50 text-red-600 dark:border-red-800/50 dark:bg-red-950/30 dark:text-red-400"
-							: "text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+							: "text-muted-foreground hover:bg-muted hover:text-foreground"
 					}`}
 					aria-pressed={theme === key}
 				>

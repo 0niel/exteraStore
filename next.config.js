@@ -1,15 +1,13 @@
-/**
- * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially useful
- * for Docker builds.
- */
 import "./src/env.js";
 
-/** @type {import("next").NextConfig} */
 import withNextIntl from "next-intl/plugin";
 
 const withNextIntlConfig = withNextIntl("./src/i18n.ts");
 
-export default withNextIntlConfig({
+/** @type {import("next").NextConfig} */
+const config = {
+	reactStrictMode: true,
+	poweredByHeader: false,
 	images: {
 		remotePatterns: [
 			{
@@ -24,6 +22,14 @@ export default withNextIntlConfig({
 				port: "",
 				pathname: "/**",
 			},
+			{
+				protocol: "https",
+				hostname: "t.me",
+				port: "",
+				pathname: "/**",
+			},
 		],
 	},
-});
+};
+
+export default withNextIntlConfig(config);

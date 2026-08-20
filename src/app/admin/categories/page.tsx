@@ -1,11 +1,19 @@
 "use client";
 
 import { Edit, Loader2, Plus, Trash2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
+import {
+	AlertDialog,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "~/components/ui/alert-dialog";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
@@ -35,7 +43,8 @@ const ADMINS = (env.NEXT_PUBLIC_INITIAL_ADMINS ?? "i_am_oniel")
 	.map((a) => a.trim().toLowerCase())
 	.filter(Boolean);
 
-// Добавить тип для категории
+const SKELETON_KEYS = ["sk-1", "sk-2", "sk-3", "sk-4", "sk-5", "sk-6"];
+
 interface Category {
 	id: number;
 	name: string;
@@ -46,8 +55,17 @@ interface Category {
 	pluginCount?: number;
 }
 
+function CategoriesSkeleton() {
+	return (
+		<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+			{SKELETON_KEYS.map((key) => (
+				<div key={key} className="skeleton-shimmer h-44 rounded-xl" />
+			))}
+		</div>
+	);
+}
+
 export default function AdminCategoriesPage() {
-	const router = useRouter();
 	const { data: session } = useSession();
 	const t = useTranslations("AdminCategories");
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -57,7 +75,6 @@ export default function AdminCategoriesPage() {
 		null,
 	);
 
-	// Форма
 	const [name, setName] = useState("");
 	const [slug, setSlug] = useState("");
 	const [description, setDescription] = useState("");
@@ -68,12 +85,6 @@ export default function AdminCategoriesPage() {
 		session?.user?.role === "admin" ||
 		(session?.user?.telegramUsername &&
 			ADMINS.includes(session.user.telegramUsername.toLowerCase()));
-
-	useEffect(() => {
-		if (session && !isAdmin) {
-			router.push("/");
-		}
-	}, [session, router, isAdmin]);
 
 	const {
 		data: categories,
@@ -183,7 +194,6 @@ export default function AdminCategoriesPage() {
 
 	const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		setName(e.target.value);
-		// Автоматически генерировать slug из имени, если не редактируем существующую категорию
 		if (!editingCategory) {
 			setSlug(
 				e.target.value
@@ -194,14 +204,10 @@ export default function AdminCategoriesPage() {
 		}
 	};
 
-	if (!session || !isAdmin) {
-		return null;
-	}
-
 	return (
 		<div className="py-8">
 			<div className="container mx-auto max-w-6xl px-4">
-				<div className="mb-6 flex items-center justify-between">
+				<div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 					<h1 className="font-bold text-3xl">{t("title")}</h1>
 					<Button onClick={() => handleOpenDialog()}>
 						<Plus className="mr-2 h-4 w-4" />
@@ -210,9 +216,7 @@ export default function AdminCategoriesPage() {
 				</div>
 
 				{isLoading ? (
-					<div className="flex items-center justify-center p-8">
-						<Loader2 className="h-8 w-8 animate-spin" />
-					</div>
+					<CategoriesSkeleton />
 				) : !categories?.length ? (
 					<EmptyState
 						icon="🗂️"
@@ -224,19 +228,19 @@ export default function AdminCategoriesPage() {
 				) : (
 					<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 						{categories.map((category: Category) => (
-							<Card key={category.id}>
+							<Card key={category.id} className="animate-fade-in">
 								<CardHeader className="pb-2">
 									<div className="flex items-start justify-between">
-										<div>
+										<div className="min-w-0">
 											<CardTitle className="flex items-center gap-2">
 												{category.icon && <span>{category.icon}</span>}
-												{category.name}
+												<span className="truncate">{category.name}</span>
 											</CardTitle>
 											<CardDescription>{category.slug}</CardDescription>
 										</div>
 										{category.color && (
 											<div
-												className="h-4 w-4 rounded-full"
+												className="h-4 w-4 shrink-0 rounded-full"
 												style={{ backgroundColor: category.color }}
 											/>
 										)}
@@ -254,6 +258,7 @@ export default function AdminCategoriesPage() {
 											<Button
 												size="sm"
 												variant="outline"
+												aria-label={t("edit_category")}
 												onClick={() => handleOpenDialog(category)}
 											>
 												<Edit className="h-4 w-4" />
@@ -261,6 +266,7 @@ export default function AdminCategoriesPage() {
 											<Button
 												size="sm"
 												variant="destructive"
+												aria-label={t("delete_category")}
 												onClick={() => handleDelete(category.id)}
 											>
 												<Trash2 className="h-4 w-4" />
@@ -273,7 +279,6 @@ export default function AdminCategoriesPage() {
 					</div>
 				)}
 
-				{/* Диалог создания/редактирования */}
 				<Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
 					<DialogContent>
 						<DialogHeader>
@@ -324,7 +329,7 @@ export default function AdminCategoriesPage() {
 								/>
 							</div>
 
-							<div className="grid grid-cols-2 gap-4">
+							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 								<div className="space-y-2">
 									<Label htmlFor="icon">{t("icon")}</Label>
 									<Input
@@ -349,7 +354,7 @@ export default function AdminCategoriesPage() {
 										/>
 										{color && (
 											<div
-												className="h-10 w-10 rounded-md border"
+												className="h-11 w-11 shrink-0 rounded-md border"
 												style={{ backgroundColor: color }}
 											/>
 										)}
@@ -381,22 +386,26 @@ export default function AdminCategoriesPage() {
 					</DialogContent>
 				</Dialog>
 
-				{/* Диалог подтверждения удаления */}
-				<Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-					<DialogContent>
-						<DialogHeader>
-							<DialogTitle>{t("delete_category")}</DialogTitle>
-							<DialogDescription>
+				<AlertDialog
+					open={isDeleteDialogOpen}
+					onOpenChange={(open) => {
+						setIsDeleteDialogOpen(open);
+						if (!open) {
+							setDeletingCategoryId(null);
+						}
+					}}
+				>
+					<AlertDialogContent>
+						<AlertDialogHeader>
+							<AlertDialogTitle>{t("delete_category")}</AlertDialogTitle>
+							<AlertDialogDescription>
 								{t("delete_category_description")}
-							</DialogDescription>
-						</DialogHeader>
-						<DialogFooter>
-							<Button
-								variant="outline"
-								onClick={() => setIsDeleteDialogOpen(false)}
-							>
+							</AlertDialogDescription>
+						</AlertDialogHeader>
+						<AlertDialogFooter>
+							<AlertDialogCancel disabled={deleteCategory.isPending}>
 								{t("cancel")}
-							</Button>
+							</AlertDialogCancel>
 							<Button
 								variant="destructive"
 								onClick={confirmDelete}
@@ -407,9 +416,9 @@ export default function AdminCategoriesPage() {
 								)}
 								{t("delete")}
 							</Button>
-						</DialogFooter>
-					</DialogContent>
-				</Dialog>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				</AlertDialog>
 			</div>
 		</div>
 	);

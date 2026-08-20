@@ -1,7 +1,8 @@
 "use client";
 
-import { AlertTriangle, Home, RotateCcw } from "lucide-react";
+import { Home, RotateCcw } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Button } from "~/components/ui/button";
 
 export default function ErrorPage({
@@ -10,28 +11,30 @@ export default function ErrorPage({
 	error: Error & { digest?: string };
 	reset: () => void;
 }) {
+	const t = useTranslations("Errors");
+
 	return (
-		<div className="container mx-auto flex min-h-[60vh] items-center justify-center px-4 py-12">
-			<div className="w-full max-w-lg rounded-3xl border bg-card p-6 text-center shadow-sm sm:p-10">
-				<div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
-					<AlertTriangle className="size-7" />
-				</div>
-				<h1 className="mt-5 text-balance font-bold text-2xl tracking-tight sm:text-3xl">
-					Что-то пошло не так
+		<div className="relative isolate flex min-h-[60dvh] items-center justify-center overflow-hidden px-4 py-12">
+			<div className="grid-fade absolute inset-x-0 top-0 -z-10 h-full" />
+			<div className="mx-auto max-w-xl text-center">
+				<p className="font-bold text-[clamp(5rem,22vw,10rem)] text-gradient-red leading-none tracking-tighter">
+					500
+				</p>
+				<h1 className="mt-4 text-balance font-bold text-2xl tracking-tight sm:text-4xl">
+					{t("error_title")}
 				</h1>
 				<p className="mt-3 text-pretty text-muted-foreground">
-					Не удалось загрузить страницу. Попробуйте ещё раз или вернитесь на
-					главную.
+					{t("error_description")}
 				</p>
-				<div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-					<Button onClick={reset}>
+				<div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
+					<Button onClick={reset} className="min-h-11">
 						<RotateCcw />
-						Повторить
+						{t("retry")}
 					</Button>
-					<Button asChild variant="outline">
+					<Button asChild variant="outline" className="min-h-11">
 						<Link href="/">
 							<Home />
-							На главную
+							{t("go_home")}
 						</Link>
 					</Button>
 				</div>

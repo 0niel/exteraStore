@@ -1,5 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { ImageUtils, YandexStorage } from "~/lib/yandex-storage";
+import {
+	deleteFile,
+	generateFileName,
+	isImage,
+	uploadFile,
+	validateImageSize,
+} from "~/lib/yandex-storage";
 import { auth } from "~/server/auth";
 
 export async function POST(request: NextRequest) {
@@ -38,7 +44,7 @@ export async function POST(request: NextRequest) {
 					`Processing file: ${file.name}, type: ${file.type}, size: ${file.size}`,
 				);
 
-				if (!ImageUtils.isImage(file.type)) {
+				if (!isImage(file.type)) {
 					errors.push(`File ${file.name} is not an image`);
 					continue;
 				}
@@ -46,12 +52,12 @@ export async function POST(request: NextRequest) {
 				const arrayBuffer = await file.arrayBuffer();
 				const buffer = Buffer.from(arrayBuffer);
 
-				if (!ImageUtils.validateImageSize(buffer, 5)) {
+				if (!validateImageSize(buffer, 5)) {
 					errors.push(`File ${file.name} is too large (max 5MB)`);
 					continue;
 				}
 
-				const safeFileName = ImageUtils.generateFileName(
+				const safeFileName = generateFileName(
 					file.name,
 					`${pluginSlug}-${imageType}`,
 				);
@@ -60,13 +66,13 @@ export async function POST(request: NextRequest) {
 				let uploadedUrl: string;
 
 				if (imageType === "screenshot") {
-					uploadedUrl = await YandexStorage.uploadFile(
+					uploadedUrl = await uploadFile(
 						buffer,
 						safeFileName,
 						file.type || "image/jpeg",
 					);
 				} else {
-					uploadedUrl = await YandexStorage.uploadFile(
+					uploadedUrl = await uploadFile(
 						buffer,
 						safeFileName,
 						file.type || "image/jpeg",
@@ -150,7 +156,7 @@ export async function DELETE(request: NextRequest) {
 			);
 		}
 
-		await YandexStorage.deleteFile(imageUrl);
+		await deleteFile(imageUrl);
 
 		return NextResponse.json({
 			success: true,

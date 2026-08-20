@@ -37,7 +37,7 @@ function AvatarImage({
 	>(
 		(event) => {
 			const img = event.currentTarget;
-			// If the image is a 1x1 px placeholder, hide image and let fallback render
+
 			if (img.naturalWidth === 1 && img.naturalHeight === 1) {
 				setShouldRenderImage(false);
 			} else {

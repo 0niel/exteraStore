@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import { relations, sql } from "drizzle-orm";
 import {
 	boolean,
@@ -10,14 +9,7 @@ import {
 	serial,
 	text,
 } from "drizzle-orm/pg-core";
-import type { AdapterAccount } from "next-auth/adapters";
 
-/**
- * This is an example of how to use the multi-project schema feature of Drizzle ORM. Use the same
- * database instance for multiple projects.
- *
- * @see https:
- */
 export const posts = pgTable(
 	"extera_plugins_post",
 	{

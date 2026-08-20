@@ -1,8 +1,20 @@
 "use client";
 
-import { ArrowRight, Calendar, Sparkles, Star } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import {
+	ArrowRight,
+	Calendar,
+	Gem,
+	Heart,
+	Rocket,
+	Sparkles,
+	Star,
+	Users,
+	Wrench,
+	Zap,
+} from "lucide-react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
@@ -16,46 +28,53 @@ type AICollection = typeof aiPluginCollections.$inferSelect & {
 	plugins: Plugin[];
 };
 
-const collectionIcons = {
-	"Полезные инструменты": "🛠️",
-	"Удиви друзей": "✨",
-	"Для продуктивности": "📈",
-	"Социальные фишки": "👥",
-	"Любимчики сообщества": "❤️",
-	"Скрытые жемчужины": "💎",
-} as const;
+const collectionIcons = [Wrench, Rocket, Users, Heart, Gem, Zap] as const;
 
-function CollectionPreview({ collection }: { collection: AICollection }) {
-	const emoji =
-		collectionIcons[collection.name as keyof typeof collectionIcons] || "🔮";
+function CollectionPreview({
+	collection,
+	index,
+}: {
+	collection: AICollection;
+	index: number;
+}) {
+	const t = useTranslations("Home");
+	const locale = useLocale();
+	const Icon = collectionIcons[index % collectionIcons.length] ?? Sparkles;
+	const contrastAccent = index % 2 === 1;
 
 	return (
-		<Card className="group overflow-hidden border bg-card transition-shadow duration-200 hover:shadow-md">
-			<div className="relative">
-				<div className="relative h-24 border-b">
-					<div className="flex h-full flex-col justify-between p-4">
-						<div className="flex items-start justify-between">
-							<Badge variant="secondary" className="font-medium text-xs">
-								<Sparkles className="mr-1 h-3 w-3" />
-								ИИ подборка
-							</Badge>
-							<div className="flex items-center gap-1 text-muted-foreground text-xs">
-								<Calendar className="h-3 w-3" />
-								<span>{formatDate(collection.generatedAt)}</span>
-							</div>
+		<Card className="group card-lift h-full overflow-hidden border bg-card">
+			<div className="relative h-24 border-b">
+				<div className="flex h-full flex-col justify-between p-4">
+					<div className="flex items-start justify-between">
+						<Badge variant="secondary" className="font-medium text-xs">
+							<Sparkles className="mr-1 h-3 w-3" />
+							{t("collections.aiBadge")}
+						</Badge>
+						<div className="flex items-center gap-1 text-muted-foreground text-xs">
+							<Calendar className="h-3 w-3" />
+							<span>{formatDate(collection.generatedAt, locale)}</span>
 						</div>
+					</div>
 
-						<div className="flex items-center gap-3">
-							<div className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted">
-								<span className="text-lg">{emoji}</span>
-							</div>
-							<div className="min-w-0 flex-1">
-								<h3 className="truncate font-bold text-lg leading-tight">
-									{collection.name}
-								</h3>
-								<div className="flex items-center gap-1 text-muted-foreground text-sm">
-									<span>{collection.plugins.length} плагинов</span>
-								</div>
+					<div className="flex items-center gap-3">
+						<div
+							className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+								contrastAccent
+									? "bg-contrast text-contrast-foreground"
+									: "bg-primary/10 text-primary"
+							}`}
+						>
+							<Icon className="h-4 w-4" />
+						</div>
+						<div className="min-w-0 flex-1">
+							<h3 className="truncate font-bold text-lg leading-tight">
+								{collection.name}
+							</h3>
+							<div className="text-muted-foreground text-sm">
+								{t("collections.pluginsCount", {
+									count: collection.plugins.length,
+								})}
 							</div>
 						</div>
 					</div>
@@ -85,7 +104,7 @@ function CollectionPreview({ collection }: { collection: AICollection }) {
 									</p>
 								</div>
 								<div className="flex items-center gap-1 text-muted-foreground text-xs">
-									<Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+									<Star className="h-3 w-3 fill-warning text-warning" />
 									<span>{plugin.rating.toFixed(1)}</span>
 								</div>
 							</div>
@@ -93,10 +112,14 @@ function CollectionPreview({ collection }: { collection: AICollection }) {
 					))}
 				</div>
 
-				<Button variant="ghost" size="sm" className="w-full" asChild>
+				<Button variant="ghost" size="sm" className="group/link w-full" asChild>
 					<Link href={`/collections/${collection.id}`}>
-						<span>Смотреть все {collection.plugins.length} плагинов</span>
-						<ArrowRight className="ml-1 h-3 w-3" />
+						<span>
+							{t("collections.viewCollection", {
+								count: collection.plugins.length,
+							})}
+						</span>
+						<ArrowRight className="ml-1 h-3 w-3 transition-transform group-hover/link:translate-x-1" />
 					</Link>
 				</Button>
 			</CardContent>
@@ -106,44 +129,69 @@ function CollectionPreview({ collection }: { collection: AICollection }) {
 
 export function AiCollections() {
 	const t = useTranslations("Home");
+	const reduceMotion = useReducedMotion();
 	const { data: collections, isLoading } =
 		api.aiCollections.getAICollections.useQuery({
 			limit: 3,
 		});
 
+	const container = {
+		hidden: {},
+		show: {
+			transition: { staggerChildren: reduceMotion ? 0 : 0.08 },
+		},
+	};
+	const item = {
+		hidden: reduceMotion ? {} : { opacity: 0, y: 20 },
+		show: {
+			opacity: 1,
+			y: 0,
+			transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const },
+		},
+	};
+
 	return (
-		<section className="py-12 sm:py-16" aria-labelledby="collections-title">
+		<section className="py-16 sm:py-24" aria-labelledby="collections-title">
 			<div className="container mx-auto px-4">
-				<div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+				<motion.div
+					initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+					whileInView={{ opacity: 1, y: 0 }}
+					viewport={{ once: true, margin: "-80px" }}
+					transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+					className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"
+				>
 					<div>
 						<div className="mb-2 inline-flex items-center gap-2 font-medium text-primary text-sm">
-							<Sparkles className="h-4 w-4" />
-							{t("aiCollections")}
+							<span className="size-1.5 rounded-full bg-primary" />
+							<span className="font-mono text-muted-foreground text-xs">
+								03
+							</span>
+							{t("collections.eyebrow")}
 						</div>
 						<h2
 							id="collections-title"
 							className="font-bold text-3xl tracking-tight sm:text-4xl"
 						>
-							Плагины под вашу задачу
+							{t("collections.title")}
 						</h2>
 						<p className="mt-2 max-w-2xl text-muted-foreground">
-							Готовые тематические наборы на основе рейтингов и описаний.
+							{t("collections.description")}
 						</p>
 					</div>
-					<Button variant="outline" asChild>
+					<Button variant="outline" asChild className="group">
 						<Link href="/collections">
-							Все подборки
-							<ArrowRight />
+							{t("collections.viewAll")}
+							<ArrowRight className="transition-transform group-hover:translate-x-1" />
 						</Link>
 					</Button>
-				</div>
+				</motion.div>
 
 				{isLoading ? (
-					<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+					<div className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-6 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pb-0 lg:grid-cols-3">
 						{Array.from({ length: 3 }).map((_, i) => (
 							<Card
 								key={i}
-								className="overflow-hidden border bg-card/50 backdrop-blur-sm"
+								className="w-[80vw] shrink-0 snap-start overflow-hidden border bg-card/50 md:w-auto md:shrink"
 							>
 								<Skeleton className="h-24 w-full" />
 								<div className="space-y-3 p-4">
@@ -160,22 +208,33 @@ export function AiCollections() {
 						))}
 					</div>
 				) : collections && collections.length > 0 ? (
-					<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-						{collections.map((collection: AICollection) => (
-							<CollectionPreview key={collection.id} collection={collection} />
+					<motion.div
+						variants={container}
+						initial="hidden"
+						whileInView="show"
+						viewport={{ once: true, margin: "-80px" }}
+						className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-6 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pb-0 lg:grid-cols-3"
+					>
+						{collections.map((collection: AICollection, index: number) => (
+							<motion.div
+								key={collection.id}
+								variants={item}
+								className="w-[80vw] shrink-0 snap-start md:w-auto md:shrink"
+							>
+								<CollectionPreview collection={collection} index={index} />
+							</motion.div>
 						))}
-					</div>
+					</motion.div>
 				) : (
 					<div className="py-16 text-center">
-						<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-lg bg-primary/10 text-2xl">
-							🤖
+						<div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+							<Sparkles className="h-7 w-7" />
 						</div>
 						<h3 className="mb-2 font-semibold text-xl">
-							Подборки скоро появятся
+							{t("collections.emptyTitle")}
 						</h3>
 						<p className="text-muted-foreground">
-							ИИ анализирует плагины и создает тематические подборки. Загляните
-							позже!
+							{t("collections.emptyDescription")}
 						</p>
 					</div>
 				)}

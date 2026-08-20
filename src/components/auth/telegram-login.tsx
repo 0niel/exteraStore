@@ -47,7 +47,7 @@ export function TelegramLoginButton({ botUsername }: { botUsername?: string }) {
 				size="lg"
 			>
 				<TelegramIcon className="mr-3 h-5 w-5" />
-				Войти через Telegram (не настроен)
+				{t("not_configured")}
 			</Button>
 		);
 	}

@@ -1,23 +1,23 @@
 "use client";
 
+import { motion, useReducedMotion } from "framer-motion";
 import {
 	AlertTriangle,
 	ArrowLeft,
 	Eye,
 	FileText,
 	GitBranch,
-	Image as ImageIcon,
 	Info,
 	Loader2,
 	Save,
 	Settings,
 	Tags,
 	Trash2,
-	UploadCloud,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { MarkdownEditor } from "~/components/markdown-editor";
@@ -54,6 +54,7 @@ import {
 } from "~/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { UploadVersionDialog } from "~/components/upload-version-dialog";
+import { safeJsonParse } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
 type FormData = {
@@ -64,10 +65,45 @@ type FormData = {
 	tags: string[];
 };
 
+function ManageSkeleton() {
+	return (
+		<div className="bg-background py-6 sm:py-8" aria-hidden="true">
+			<div className="container mx-auto max-w-6xl px-4">
+				<div className="mb-6 space-y-4 sm:mb-8">
+					<div className="skeleton-shimmer h-9 w-48 rounded-lg" />
+					<div className="skeleton-shimmer h-10 w-2/3 max-w-sm rounded-lg" />
+					<div className="skeleton-shimmer h-5 w-full max-w-md rounded-md" />
+				</div>
+				<div className="skeleton-shimmer mb-6 h-11 w-full rounded-lg" />
+				<div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+					<div className="space-y-6 lg:col-span-2">
+						<div className="space-y-4 rounded-xl border bg-card p-6">
+							<div className="skeleton-shimmer h-5 w-48 rounded-md" />
+							<div className="skeleton-shimmer h-11 w-full rounded-lg" />
+							<div className="skeleton-shimmer h-11 w-full rounded-lg" />
+							<div className="skeleton-shimmer h-48 w-full rounded-lg" />
+						</div>
+					</div>
+					<div className="space-y-6">
+						<div className="space-y-4 rounded-xl border bg-card p-6">
+							<div className="skeleton-shimmer h-5 w-36 rounded-md" />
+							<div className="skeleton-shimmer h-11 w-full rounded-lg" />
+							<div className="skeleton-shimmer h-11 w-full rounded-lg" />
+						</div>
+						<div className="skeleton-shimmer h-16 w-full rounded-xl" />
+					</div>
+				</div>
+			</div>
+		</div>
+	);
+}
+
 export default function PluginManagePage() {
 	const params = useParams();
 	const router = useRouter();
 	const { data: session } = useSession();
+	const t = useTranslations("ManagePlugin");
+	const reduceMotion = useReducedMotion();
 	const slug = params.slug as string;
 
 	const {
@@ -95,30 +131,30 @@ export default function PluginManagePage() {
 				shortDescription: plugin.shortDescription ?? "",
 				description: plugin.description,
 				categorySlug: plugin.category,
-				tags: plugin.tags ? JSON.parse(plugin.tags) : [],
+				tags: safeJsonParse<string[]>(plugin.tags ?? "", []),
 			});
-			setScreenshots(plugin.screenshots ? JSON.parse(plugin.screenshots) : []);
+			setScreenshots(safeJsonParse<string[]>(plugin.screenshots ?? "", []));
 		}
 	}, [plugin]);
 
 	const updatePlugin = api.plugins.update.useMutation({
 		onSuccess: (updatedPlugin) => {
 			if (!updatedPlugin) return;
-			toast.success("Плагин успешно обновлен!");
+			toast.success(t("toast_updated"));
 			router.push(`/my-plugins/${updatedPlugin.slug}/manage`);
 		},
-		onError: (error) => {
-			toast.error(`Ошибка при обновлении плагина: ${error.message}`);
+		onError: (mutationError) => {
+			toast.error(t("toast_update_error", { error: mutationError.message }));
 		},
 	});
 
 	const deletePlugin = api.plugins.delete.useMutation({
 		onSuccess: () => {
-			toast.success("Плагин успешно удален.");
+			toast.success(t("toast_deleted"));
 			router.push("/my-plugins");
 		},
-		onError: (error) => {
-			toast.error(`Ошибка при удалении плагина: ${error.message}`);
+		onError: (mutationError) => {
+			toast.error(t("toast_delete_error", { error: mutationError.message }));
 		},
 	});
 
@@ -140,23 +176,17 @@ export default function PluginManagePage() {
 	const isLoading = isPluginLoading || areCategoriesLoading;
 
 	if (isLoading) {
-		return (
-			<div className="flex h-screen items-center justify-center">
-				<Loader2 className="h-8 w-8 animate-spin" />
-			</div>
-		);
+		return <ManageSkeleton />;
 	}
 
 	if (!plugin || error) {
 		return (
-			<div className="flex h-screen flex-col items-center justify-center p-4 text-center">
+			<div className="flex min-h-[60dvh] animate-fade-in flex-col items-center justify-center p-4 text-center">
 				<AlertTriangle className="mb-4 h-12 w-12 text-destructive" />
-				<CardTitle className="mb-2 text-2xl">Плагин не найден</CardTitle>
-				<CardDescription>
-					Мы не смогли найти плагин с таким именем. Возможно, он был удален.
-				</CardDescription>
+				<CardTitle className="mb-2 text-2xl">{t("not_found_title")}</CardTitle>
+				<CardDescription>{t("not_found_description")}</CardDescription>
 				<Button asChild variant="link" className="mt-4">
-					<Link href="/my-plugins">Вернуться к моим плагинам</Link>
+					<Link href="/my-plugins">{t("back_to_my_plugins")}</Link>
 				</Button>
 			</div>
 		);
@@ -164,67 +194,74 @@ export default function PluginManagePage() {
 
 	if (session?.user?.id !== plugin.authorId) {
 		return (
-			<div className="flex h-screen flex-col items-center justify-center p-4 text-center">
+			<div className="flex min-h-[60dvh] animate-fade-in flex-col items-center justify-center p-4 text-center">
 				<AlertTriangle className="mb-4 h-12 w-12 text-destructive" />
-				<CardTitle className="mb-2 text-2xl">Доступ запрещен</CardTitle>
-				<CardDescription>
-					У вас нет прав для управления этим плагином.
-				</CardDescription>
+				<CardTitle className="mb-2 text-2xl">
+					{t("access_denied_title")}
+				</CardTitle>
+				<CardDescription>{t("access_denied_description")}</CardDescription>
 				<Button asChild variant="link" className="mt-4">
-					<Link href="/plugins">Просмотреть другие плагины</Link>
+					<Link href="/plugins">{t("browse_plugins")}</Link>
 				</Button>
 			</div>
 		);
 	}
 
 	return (
-		<div className="min-h-screen bg-background py-8">
+		<div className="bg-background py-6 sm:py-8">
 			<div className="container mx-auto max-w-6xl px-4">
-				{/* Header */}
-				<div className="mb-8">
+				<motion.div
+					initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+					animate={{ opacity: 1, y: 0 }}
+					transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+					className="mb-6 sm:mb-8"
+				>
 					<Button
 						variant="ghost"
 						size="sm"
 						onClick={() => router.push("/my-plugins")}
-						className="mb-4"
+						className="mb-4 -ml-2"
 					>
 						<ArrowLeft className="mr-2 h-4 w-4" />
-						Назад к моим плагинам
+						{t("back")}
 					</Button>
-					<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-						<div>
-							<h1 className="mb-2 font-bold text-4xl">{plugin.name}</h1>
-							<p className="text-muted-foreground text-xl">
-								Управляйте настройками и версиями вашего плагина
+					<div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+						<div className="min-w-0">
+							<h1 className="mb-2 truncate font-bold text-3xl sm:text-4xl">
+								{plugin.name}
+							</h1>
+							<p className="text-lg text-muted-foreground sm:text-xl">
+								{t("subtitle")}
 							</p>
 						</div>
 						<div className="flex gap-2">
-							<Button asChild variant="outline">
+							<Button
+								asChild
+								variant="outline"
+								className="press-scale w-full md:w-auto"
+							>
 								<Link href={`/plugins/${plugin.slug}`} target="_blank">
 									<Eye className="mr-2 h-4 w-4" />
-									Просмотреть публичную страницу
+									{t("view_public")}
 								</Link>
 							</Button>
 						</div>
 					</div>
-				</div>
+				</motion.div>
 
 				<Tabs defaultValue="edit" className="space-y-6">
-					<TabsList className="grid w-full grid-cols-3">
-						<TabsTrigger value="edit" className="flex items-center gap-2">
-							<FileText className="h-4 w-4" />
-							Редактировать
+					<TabsList className="grid w-full grid-cols-3 sm:inline-flex sm:w-auto">
+						<TabsTrigger value="edit" className="min-h-9 gap-2">
+							<FileText className="hidden h-4 w-4 sm:block" />
+							{t("tab_edit")}
 						</TabsTrigger>
-						<TabsTrigger value="versions" className="flex items-center gap-2">
-							<GitBranch className="h-4 w-4" />
-							Версии
+						<TabsTrigger value="versions" className="min-h-9 gap-2">
+							<GitBranch className="hidden h-4 w-4 sm:block" />
+							{t("tab_versions")}
 						</TabsTrigger>
-						<TabsTrigger
-							value="settings"
-							className="flex items-center gap-2 text-destructive"
-						>
-							<Settings className="h-4 w-4" />
-							Настройки
+						<TabsTrigger value="settings" className="min-h-9 gap-2">
+							<Settings className="hidden h-4 w-4 sm:block" />
+							{t("tab_settings")}
 						</TabsTrigger>
 					</TabsList>
 
@@ -235,30 +272,32 @@ export default function PluginManagePage() {
 									<CardHeader>
 										<CardTitle className="flex items-center gap-2">
 											<Info className="h-5 w-5" />
-											Основная информация
+											{t("basic_info_title")}
 										</CardTitle>
 										<CardDescription>
-											Обновите основные данные о вашем плагине
+											{t("basic_info_description")}
 										</CardDescription>
 									</CardHeader>
 									<CardContent className="space-y-6">
 										<div className="space-y-2">
-											<Label htmlFor="name">Название плагина *</Label>
+											<Label htmlFor="name">{t("name_label")}</Label>
 											<Input
 												id="name"
+												className="min-h-11"
 												value={formData.name}
 												onChange={(e) =>
 													setFormData((f) => ({ ...f, name: e.target.value }))
 												}
-												placeholder="Введите название плагина"
+												placeholder={t("name_placeholder")}
 											/>
 										</div>
 										<div className="space-y-2">
 											<Label htmlFor="shortDescription">
-												Краткое описание *
+												{t("short_description_label")}
 											</Label>
 											<Input
 												id="shortDescription"
+												className="min-h-11"
 												value={formData.shortDescription}
 												onChange={(e) =>
 													setFormData((f) => ({
@@ -266,11 +305,11 @@ export default function PluginManagePage() {
 														shortDescription: e.target.value,
 													}))
 												}
-												placeholder="Краткое описание плагина"
+												placeholder={t("short_description_placeholder")}
 											/>
 										</div>
 										<div className="space-y-2">
-											<Label>Полное описание *</Label>
+											<Label>{t("description_label")}</Label>
 											<MarkdownEditor
 												value={formData.description}
 												onChange={(val) =>
@@ -293,23 +332,25 @@ export default function PluginManagePage() {
 									<CardHeader>
 										<CardTitle className="flex items-center gap-2">
 											<Tags className="h-5 w-5" />
-											Категоризация
+											{t("categorization_title")}
 										</CardTitle>
 										<CardDescription>
-											Настройте категорию и теги для лучшего поиска
+											{t("categorization_description")}
 										</CardDescription>
 									</CardHeader>
 									<CardContent className="space-y-4">
 										<div className="space-y-2">
-											<Label>Категория *</Label>
+											<Label>{t("category_label")}</Label>
 											<Select
 												value={formData.categorySlug}
 												onValueChange={(val) =>
 													setFormData((f) => ({ ...f, categorySlug: val }))
 												}
 											>
-												<SelectTrigger>
-													<SelectValue placeholder="Выберите категорию" />
+												<SelectTrigger className="min-h-11 w-full">
+													<SelectValue
+														placeholder={t("category_placeholder")}
+													/>
 												</SelectTrigger>
 												<SelectContent>
 													{categories?.map((cat) => (
@@ -321,13 +362,13 @@ export default function PluginManagePage() {
 											</Select>
 										</div>
 										<div className="space-y-2">
-											<Label>Теги</Label>
+											<Label>{t("tags_label")}</Label>
 											<TagInput
 												value={formData.tags}
 												onChange={(val) =>
 													setFormData((f) => ({ ...f, tags: val }))
 												}
-												placeholder="Добавьте до 5 тегов..."
+												placeholder={t("tags_placeholder")}
 											/>
 										</div>
 									</CardContent>
@@ -335,7 +376,7 @@ export default function PluginManagePage() {
 								<Card>
 									<CardContent className="pt-6">
 										<Button
-											className="w-full"
+											className="press-scale w-full"
 											onClick={handleSave}
 											disabled={updatePlugin.isPending}
 										>
@@ -344,7 +385,7 @@ export default function PluginManagePage() {
 											) : (
 												<Save className="mr-2 h-4 w-4" />
 											)}
-											Сохранить изменения
+											{t("save_changes")}
 										</Button>
 									</CardContent>
 								</Card>
@@ -354,12 +395,10 @@ export default function PluginManagePage() {
 
 					<TabsContent value="versions">
 						<Card>
-							<CardHeader className="flex flex-row items-center justify-between">
+							<CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 								<div>
-									<CardTitle>Версии плагина</CardTitle>
-									<CardDescription>
-										Управляйте всеми версиями вашего плагина
-									</CardDescription>
+									<CardTitle>{t("versions_title")}</CardTitle>
+									<CardDescription>{t("versions_description")}</CardDescription>
 								</div>
 								<UploadVersionDialog
 									pluginId={plugin.id}
@@ -377,46 +416,52 @@ export default function PluginManagePage() {
 					</TabsContent>
 
 					<TabsContent value="settings">
-						<Card className="border-destructive">
+						<Card className="border-destructive/40 bg-destructive/5">
 							<CardHeader>
-								<CardTitle className="text-destructive">Опасная зона</CardTitle>
+								<CardTitle className="flex items-center gap-2 text-destructive">
+									<AlertTriangle className="h-5 w-5" />
+									{t("danger_zone_title")}
+								</CardTitle>
 								<CardDescription>
-									Эти действия необратимы. Будьте осторожны.
+									{t("danger_zone_description")}
 								</CardDescription>
 							</CardHeader>
 							<CardContent className="space-y-4">
-								<div>
-									<h4 className="font-semibold">Удалить плагин</h4>
-									<p className="mb-2 text-muted-foreground text-sm">
-										После удаления плагина восстановить его будет невозможно.
+								<div className="rounded-lg border border-destructive/30 bg-background p-4">
+									<h4 className="font-semibold">{t("delete_plugin_title")}</h4>
+									<p className="mb-3 text-muted-foreground text-sm">
+										{t("delete_plugin_description")}
 									</p>
 									<AlertDialog>
 										<AlertDialogTrigger asChild>
-											<Button variant="destructive">
+											<Button
+												variant="destructive"
+												className="press-scale w-full sm:w-auto"
+											>
 												<Trash2 className="mr-2 h-4 w-4" />
-												Удалить этот плагин
+												{t("delete_plugin_button")}
 											</Button>
 										</AlertDialogTrigger>
 										<AlertDialogContent>
 											<AlertDialogHeader>
 												<AlertDialogTitle>
-													Вы абсолютно уверены?
+													{t("delete_confirm_title")}
 												</AlertDialogTitle>
 												<AlertDialogDescription>
-													Это действие нельзя отменить. Плагин будет
-													безвозвратно удален со всеми данными с наших серверов.
+													{t("delete_confirm_description")}
 												</AlertDialogDescription>
 											</AlertDialogHeader>
 											<AlertDialogFooter>
-												<AlertDialogCancel>Отмена</AlertDialogCancel>
+												<AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
 												<AlertDialogAction
 													onClick={handleDelete}
 													disabled={deletePlugin.isPending}
+													className="bg-destructive text-white hover:bg-destructive/90"
 												>
 													{deletePlugin.isPending && (
 														<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 													)}
-													Продолжить
+													{t("confirm_delete")}
 												</AlertDialogAction>
 											</AlertDialogFooter>
 										</AlertDialogContent>

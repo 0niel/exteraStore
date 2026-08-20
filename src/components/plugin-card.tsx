@@ -1,23 +1,17 @@
 "use client";
 
-import {
-	Calendar,
-	Code,
-	Download,
-	ExternalLink,
-	Heart,
-	Shield,
-	Star,
-	User,
-} from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import { Calendar, Code, Download, Heart, Shield, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import { useLocale, useTranslations } from "next-intl";
+import { useState } from "react";
 import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { Card, CardContent } from "~/components/ui/card";
+import { Card } from "~/components/ui/card";
 import { SecurityWarning } from "~/components/ui/security-warning";
 import {
 	Tooltip,
@@ -68,12 +62,104 @@ interface SecurityIssue {
 	recommendation: string;
 }
 
+function CategoryChip({
+	category,
+	className,
+}: {
+	category: string;
+	className?: string;
+}) {
+	return (
+		<Badge
+			variant="outline"
+			className={cn(
+				"border bg-background/70 text-foreground text-xs backdrop-blur",
+				className,
+			)}
+		>
+			{category}
+		</Badge>
+	);
+}
+
+function VerifiedChip({
+	label,
+	compact,
+}: {
+	label: string;
+	compact?: boolean;
+}) {
+	if (compact) {
+		return (
+			<span className="flex size-5 items-center justify-center rounded-full bg-contrast text-contrast-foreground">
+				<Shield className="size-3" />
+			</span>
+		);
+	}
+	return (
+		<span className="inline-flex items-center gap-1 rounded-full bg-contrast px-2 py-1 text-contrast-foreground text-xs shadow-sm">
+			<Shield className="size-3.5" />
+			<span>{label}</span>
+		</span>
+	);
+}
+
+function FavoriteButton({
+	isFavorited,
+	pending,
+	onToggle,
+	labels,
+	className,
+}: {
+	isFavorited: boolean;
+	pending: boolean;
+	onToggle: () => void;
+	labels: { add: string; remove: string };
+	className?: string;
+}) {
+	const prefersReducedMotion = useReducedMotion();
+	return (
+		<Button
+			size="icon"
+			variant="secondary"
+			disabled={pending}
+			className={cn(
+				"press-scale pointer-events-auto size-11 rounded-full bg-background/85 shadow-sm backdrop-blur hover:bg-background",
+				isFavorited && "bg-primary/10 hover:bg-primary/20",
+				className,
+			)}
+			onClick={onToggle}
+			aria-label={isFavorited ? labels.remove : labels.add}
+			aria-pressed={isFavorited}
+		>
+			<motion.span
+				className="flex"
+				animate={
+					isFavorited && !prefersReducedMotion
+						? { scale: [1, 1.35, 1] }
+						: { scale: 1 }
+				}
+				transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+			>
+				<Heart
+					className={cn(
+						"size-4",
+						isFavorited ? "fill-primary text-primary" : "text-foreground",
+					)}
+				/>
+			</motion.span>
+		</Button>
+	);
+}
+
 export function PluginCard({
 	plugin,
 	className,
 	showAuthor = true,
 	compact = false,
 }: PluginCardProps) {
+	const t = useTranslations("PluginCard");
+	const locale = useLocale();
 	const tags = plugin.tags ? safeJsonParse<unknown>(plugin.tags, []) : [];
 	const screenshots = plugin.screenshots
 		? safeJsonParse<unknown>(plugin.screenshots, [])
@@ -89,18 +175,36 @@ export function PluginCard({
 
 	const router = useRouter();
 	const { data: session } = useSession();
+	const [optimisticFavorite, setOptimisticFavorite] = useState<boolean | null>(
+		null,
+	);
 	const { data: favoriteState, refetch: refetchFavorite } =
 		api.favorites.check.useQuery(
 			{ pluginId: plugin.id },
 			{ enabled: !!session?.user?.id },
 		);
 	const toggleFavorite = api.favorites.toggle.useMutation({
-		onSuccess: () => {
-			void refetchFavorite();
+		onSettled: () => {
+			void refetchFavorite().finally(() => setOptimisticFavorite(null));
 		},
 	});
+	const isFavorited = optimisticFavorite ?? favoriteState?.isFavorited ?? false;
 
-	const categoryName = plugin.category;
+	const handleFavorite = () => {
+		if (!session?.user?.id) {
+			router.push("/auth/signin");
+			return;
+		}
+		setOptimisticFavorite(!isFavorited);
+		toggleFavorite.mutate({ pluginId: plugin.id });
+	};
+
+	const favoriteLabels = {
+		add: t("add_favorite"),
+		remove: t("remove_favorite"),
+	};
+	const authorName = plugin.author || t("unknown_author");
+	const coverImage = safeScreenshots[0];
 	const securityIssues = plugin.latestSecurityCheck?.details
 		? safeJsonParse<{ issues?: SecurityIssue[] }>(
 				plugin.latestSecurityCheck.details,
@@ -108,68 +212,51 @@ export function PluginCard({
 			).issues || []
 		: [];
 
+	const securityBlock = plugin.latestSecurityCheck &&
+		plugin.latestSecurityCheck.status !== "passed" &&
+		plugin.latestSecurityCheck.details && (
+			<SecurityWarning
+				securityResult={{
+					status: plugin.latestSecurityCheck.classification as
+						| "safe"
+						| "warning"
+						| "danger",
+					classification: plugin.latestSecurityCheck.classification as
+						| "safe"
+						| "potentially_unsafe"
+						| "unsafe"
+						| "critical",
+					shortDescription: plugin.latestSecurityCheck.shortDescription,
+					issues: securityIssues,
+				}}
+				variant="compact"
+			/>
+		);
+
 	if (compact) {
 		return (
 			<Card
 				className={cn(
-					"group border-border/50 transition-all duration-200 hover:shadow-md",
+					"card-lift group relative overflow-hidden border-border/60 bg-card focus-within:ring-2 focus-within:ring-ring/40",
 					className,
 				)}
 			>
-				<div className="flex items-center gap-4 p-4">
+				<Link
+					href={`/plugins/${plugin.slug}`}
+					className="absolute inset-0 z-0 rounded-xl focus-visible:outline-none"
+					aria-label={`${plugin.name}: ${plugin.shortDescription || plugin.description}`}
+				>
+					<span className="sr-only">{plugin.name}</span>
+				</Link>
+				<div className="pointer-events-none relative z-10 flex min-h-11 items-center gap-3 p-3 sm:gap-4 sm:p-4">
 					<div className="relative shrink-0">
-						<div
-							className={cn(
-								"flex h-12 w-12 items-center justify-center rounded-lg",
-								plugin.category === "ui" &&
-									"bg-purple-100 dark:bg-purple-900/20",
-								plugin.category === "utility" &&
-									"bg-blue-100 dark:bg-blue-900/20",
-								plugin.category === "security" &&
-									"bg-red-100 dark:bg-red-900/20",
-								plugin.category === "automation" &&
-									"bg-green-100 dark:bg-green-900/20",
-								plugin.category === "development" &&
-									"bg-indigo-100 dark:bg-indigo-900/20",
-								![
-									"ui",
-									"utility",
-									"security",
-									"automation",
-									"development",
-								].includes(plugin.category) &&
-									"bg-gray-100 dark:bg-gray-900/20",
-							)}
-						>
-							<Code
-								className={cn(
-									"h-6 w-6",
-									plugin.category === "ui" &&
-										"text-purple-600 dark:text-purple-400",
-									plugin.category === "utility" &&
-										"text-blue-600 dark:text-blue-400",
-									plugin.category === "security" &&
-										"text-red-600 dark:text-red-400",
-									plugin.category === "automation" &&
-										"text-green-600 dark:text-green-400",
-									plugin.category === "development" &&
-										"text-indigo-600 dark:text-indigo-400",
-									![
-										"ui",
-										"utility",
-										"security",
-										"automation",
-										"development",
-									].includes(plugin.category) &&
-										"text-gray-600 dark:text-gray-400",
-								)}
-							/>
+						<div className="flex size-12 items-center justify-center rounded-xl border bg-muted">
+							<Code className="size-6 text-muted-foreground" />
 						</div>
 						{plugin.verified && (
 							<div className="absolute -top-1 -right-1">
-								<div className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-white">
-									<Shield className="h-3 w-3" />
-								</div>
+								<VerifiedChip label={t("verified")} compact />
+								<span className="sr-only">{t("verified")}</span>
 							</div>
 						)}
 					</div>
@@ -178,76 +265,50 @@ export function PluginCard({
 						<div className="flex items-start justify-between gap-2">
 							<div className="min-w-0">
 								<h3 className="truncate font-semibold transition-colors group-hover:text-primary">
-									<Link
-										href={`/plugins/${plugin.slug}`}
-										className="hover:underline"
-									>
-										{plugin.name}
-									</Link>
+									{plugin.name}
 								</h3>
 								<p className="line-clamp-1 text-muted-foreground text-sm">
 									{plugin.shortDescription || plugin.description}
 								</p>
 							</div>
-							<div className="flex shrink-0 items-center gap-2">
-								<div className="flex items-center gap-1">
-									<Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+							<div className="hidden shrink-0 items-center gap-2 sm:flex">
+								<span className="flex items-center gap-1">
+									<Star className="size-3.5 fill-warning text-warning" />
 									<span className="font-medium text-sm">
 										{plugin.rating.toFixed(1)}
 									</span>
-								</div>
-								<Badge variant="outline" className="text-xs">
-									{categoryName}
-								</Badge>
+								</span>
+								<CategoryChip category={plugin.category} />
 							</div>
 						</div>
 
-						<div className="mt-2 flex items-center gap-4 text-muted-foreground text-xs">
-							<div className="flex items-center gap-1">
-								<User className="h-3 w-3" />
-								<span>{plugin.author || "Unknown"}</span>
-							</div>
-							<div className="flex items-center gap-1">
-								<Download className="h-3 w-3" />
-								<span>{formatNumber(plugin.downloadCount)}</span>
-							</div>
-							<div className="flex items-center gap-1">
-								<Calendar className="h-3 w-3" />
-								<span>{formatDate(plugin.createdAt)}</span>
-							</div>
-						</div>
-
-						{plugin.latestSecurityCheck &&
-							plugin.latestSecurityCheck.status !== "passed" &&
-							plugin.latestSecurityCheck.details && (
-								<div className="mt-2">
-									<SecurityWarning
-										securityResult={{
-											status: plugin.latestSecurityCheck.classification as
-												| "safe"
-												| "warning"
-												| "danger",
-											classification: plugin.latestSecurityCheck
-												.classification as
-												| "safe"
-												| "potentially_unsafe"
-												| "unsafe"
-												| "critical",
-											shortDescription:
-												plugin.latestSecurityCheck.shortDescription,
-											issues: securityIssues,
-										}}
-										variant="compact"
-									/>
-								</div>
+						<div className="mt-1.5 flex items-center gap-3 text-muted-foreground text-xs sm:gap-4">
+							<span className="max-w-32 truncate">{authorName}</span>
+							<span className="flex items-center gap-1">
+								<Download className="size-3" />
+								{formatNumber(plugin.downloadCount)}
+							</span>
+							<span className="hidden items-center gap-1 sm:flex">
+								<Calendar className="size-3" />
+								{formatDate(plugin.createdAt, locale)}
+							</span>
+							{plugin.price > 0 && (
+								<span className="rounded-full bg-contrast px-2 py-0.5 font-medium text-contrast-foreground">
+									${plugin.price}
+								</span>
 							)}
+						</div>
+
+						{securityBlock && <div className="mt-2">{securityBlock}</div>}
 					</div>
 
-					<Button size="sm" variant="ghost" asChild>
-						<Link href={`/plugins/${plugin.slug}`}>
-							<ExternalLink className="h-4 w-4" />
-						</Link>
-					</Button>
+					<FavoriteButton
+						isFavorited={isFavorited}
+						pending={toggleFavorite.isPending}
+						onToggle={handleFavorite}
+						labels={favoriteLabels}
+						className="shrink-0"
+					/>
 				</div>
 			</Card>
 		);
@@ -256,7 +317,7 @@ export function PluginCard({
 	return (
 		<Card
 			className={cn(
-				"group relative flex h-full flex-col overflow-hidden border-border/60 bg-card transition-[border-color,box-shadow,transform] duration-200 focus-within:ring-2 focus-within:ring-ring/40 hover:border-primary/30 hover:shadow-lg motion-safe:hover:-translate-y-0.5",
+				"card-lift group relative flex h-full flex-col overflow-hidden border-border/60 bg-card focus-within:ring-2 focus-within:ring-ring/40",
 				plugin.featured && "border-primary/30",
 				className,
 			)}
@@ -272,9 +333,9 @@ export function PluginCard({
 				<div className="flex h-full flex-col p-5">
 					<div className="relative mb-4 overflow-hidden rounded-xl">
 						<div className="relative aspect-video">
-							{safeScreenshots.length > 0 ? (
+							{coverImage ? (
 								<Image
-									src={safeScreenshots[0]!}
+									src={coverImage}
 									alt={plugin.name}
 									fill
 									sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -287,71 +348,27 @@ export function PluginCard({
 								</div>
 							)}
 							{plugin.verified && (
-								<div className="absolute top-3 left-3 inline-flex items-center gap-1 rounded-full bg-blue-500/90 px-2 py-1 text-white text-xs shadow-sm">
-									<Shield className="h-3.5 w-3.5" />
-									<span>Verified</span>
+								<div className="absolute top-3 left-3">
+									<VerifiedChip label={t("verified")} />
 								</div>
 							)}
 							<div className="absolute bottom-3 left-3">
-								<Badge
-									variant="outline"
-									className={cn(
-										"bg-background/70 text-xs backdrop-blur",
-										plugin.category === "ui" &&
-											"border-purple-500/50 text-purple-600 dark:text-purple-400",
-										plugin.category === "utility" &&
-											"border-blue-500/50 text-blue-600 dark:text-blue-400",
-										plugin.category === "security" &&
-											"border-red-500/50 text-red-600 dark:text-red-400",
-										plugin.category === "automation" &&
-											"border-green-500/50 text-green-600 dark:text-green-400",
-										plugin.category === "development" &&
-											"border-indigo-500/50 text-indigo-600 dark:text-indigo-400",
-									)}
-								>
-									{categoryName}
-								</Badge>
+								<CategoryChip category={plugin.category} />
 							</div>
-							<div className="absolute right-3 bottom-3">
-								{plugin.price > 0 && (
-									<Badge className="border-green-500/20 bg-green-500/10 text-green-700 dark:text-green-500">
+							{plugin.price > 0 && (
+								<div className="absolute right-3 bottom-3">
+									<Badge className="border-transparent bg-contrast text-contrast-foreground">
 										${plugin.price}
 									</Badge>
-								)}
-							</div>
+								</div>
+							)}
 							<div className="absolute top-3 right-3">
-								<Button
-									size="icon"
-									variant="secondary"
-									className={cn(
-										"pointer-events-auto size-11 rounded-full bg-background/85 shadow-sm backdrop-blur hover:bg-background",
-										favoriteState?.isFavorited &&
-											"bg-red-500/10 hover:bg-red-500/20",
-									)}
-									onClick={(e) => {
-										e.preventDefault();
-										e.stopPropagation();
-										if (!session?.user?.id) {
-											router.push("/auth/signin");
-											return;
-										}
-										toggleFavorite.mutate({ pluginId: plugin.id });
-									}}
-									aria-label={
-										favoriteState?.isFavorited
-											? "Remove from favorites"
-											: "Add to favorites"
-									}
-								>
-									<Heart
-										className={cn(
-											"h-4 w-4",
-											favoriteState?.isFavorited
-												? "fill-red-500 text-red-500"
-												: "text-foreground",
-										)}
-									/>
-								</Button>
+								<FavoriteButton
+									isFavorited={isFavorited}
+									pending={toggleFavorite.isPending}
+									onToggle={handleFavorite}
+									labels={favoriteLabels}
+								/>
 							</div>
 						</div>
 					</div>
@@ -374,14 +391,14 @@ export function PluginCard({
 							<div className="mt-3 flex items-center gap-3">
 								<Avatar className="h-8 w-8">
 									<AvatarFallback className="bg-primary/10 text-xs">
-										{(plugin.author || "??").slice(0, 2).toUpperCase()}
+										{authorName.slice(0, 2).toUpperCase()}
 									</AvatarFallback>
 								</Avatar>
 								<div className="min-w-0 flex-1">
-									<p className="truncate font-medium text-sm">
-										{plugin.author}
+									<p className="truncate font-medium text-sm">{authorName}</p>
+									<p className="text-muted-foreground text-xs">
+										{t("developer")}
 									</p>
-									<p className="text-muted-foreground text-xs">Разработчик</p>
 								</div>
 							</div>
 						)}
@@ -410,7 +427,7 @@ export function PluginCard({
 								<Tooltip>
 									<TooltipTrigger asChild>
 										<div className="flex cursor-default items-center gap-1">
-											<Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+											<Star className="h-4 w-4 fill-warning text-warning" />
 											<span className="font-medium">
 												{plugin.rating.toFixed(1)}
 											</span>
@@ -419,9 +436,7 @@ export function PluginCard({
 											</span>
 										</div>
 									</TooltipTrigger>
-									<TooltipContent>
-										Средний рейтинг и число отзывов
-									</TooltipContent>
+									<TooltipContent>{t("rating_tooltip")}</TooltipContent>
 								</Tooltip>
 								<Tooltip>
 									<TooltipTrigger asChild>
@@ -430,40 +445,17 @@ export function PluginCard({
 											<span>{formatNumber(plugin.downloadCount)}</span>
 										</div>
 									</TooltipTrigger>
-									<TooltipContent>Скачиваний</TooltipContent>
+									<TooltipContent>{t("downloads_tooltip")}</TooltipContent>
 								</Tooltip>
 							</div>
 
 							<div className="hidden items-center gap-2 text-muted-foreground text-xs md:flex">
 								<Calendar className="h-3.5 w-3.5" />
-								<span>{formatDate(plugin.createdAt)}</span>
+								<span>{formatDate(plugin.createdAt, locale)}</span>
 							</div>
 						</div>
 
-						{plugin.latestSecurityCheck &&
-							plugin.latestSecurityCheck.status !== "passed" &&
-							plugin.latestSecurityCheck.details && (
-								<div className="pt-2">
-									<SecurityWarning
-										securityResult={{
-											status: plugin.latestSecurityCheck.classification as
-												| "safe"
-												| "warning"
-												| "danger",
-											classification: plugin.latestSecurityCheck
-												.classification as
-												| "safe"
-												| "potentially_unsafe"
-												| "unsafe"
-												| "critical",
-											shortDescription:
-												plugin.latestSecurityCheck.shortDescription,
-											issues: securityIssues,
-										}}
-										variant="compact"
-									/>
-								</div>
-							)}
+						{securityBlock && <div className="pt-2">{securityBlock}</div>}
 					</div>
 				</div>
 			</div>

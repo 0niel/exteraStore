@@ -35,7 +35,6 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
-import { Input } from "~/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "~/components/ui/sheet";
 import { cn } from "~/lib/utils";
 import { TelegramLoginButton } from "./auth/telegram-login";
@@ -54,9 +53,9 @@ export function Navigation({ telegramBotUsername }: NavigationProps) {
 
 	const navigation = [
 		{ name: t("home"), href: "/", icon: Home },
-		{ name: "Пульс", href: "/pulse", icon: Activity },
+		{ name: t("pulse"), href: "/pulse", icon: Activity },
 		{ name: t("plugins"), href: "/plugins", icon: Package },
-		{ name: "Подборки", href: "/collections", icon: Sparkles },
+		{ name: t("collections"), href: "/collections", icon: Sparkles },
 		{ name: t("categories"), href: "/categories", icon: Grid3X3 },
 		{ name: t("developers"), href: "/developers", icon: Users },
 	];
@@ -131,10 +130,7 @@ export function Navigation({ telegramBotUsername }: NavigationProps) {
 								<Button asChild size="sm" className="hidden sm:flex">
 									<Link href="/upload">
 										<Plus className="mr-1 h-4 w-4" />
-										<span className="hidden sm:inline">
-											{t("upload_plugin")}
-										</span>
-										<span className="sm:hidden">Upload</span>
+										<span>{t("upload_plugin")}</span>
 									</Link>
 								</Button>
 
@@ -224,7 +220,7 @@ export function Navigation({ telegramBotUsername }: NavigationProps) {
 									variant="ghost"
 									size="icon"
 									className="xl:hidden"
-									aria-label="Open navigation menu"
+									aria-label={t("open_menu")}
 								>
 									<Menu className="h-5 w-5" />
 								</Button>
@@ -368,8 +364,7 @@ export function Navigation({ telegramBotUsername }: NavigationProps) {
 										) : (
 											<div className="space-y-3">
 												<p className="text-center text-muted-foreground text-sm">
-													Войдите, чтобы загружать плагины и добавлять их в
-													избранное
+													{t("sign_in_hint")}
 												</p>
 												<TelegramLoginButton
 													botUsername={resolvedBotUsername}

@@ -1,7 +1,9 @@
 "use client";
 
-import { ArrowRight, TrendingUp } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
 import type { plugins } from "~/server/db/schema";
@@ -11,52 +13,93 @@ import { PluginCard } from "../plugin-card";
 type Plugin = typeof plugins.$inferSelect;
 
 export function TrendingPlugins() {
-	const { data: plugins, isLoading } = api.plugins.getTrending.useQuery({
+	const t = useTranslations("Home");
+	const reduceMotion = useReducedMotion();
+	const { data: trending, isLoading } = api.plugins.getTrending.useQuery({
 		limit: 4,
 	});
 
+	const container = {
+		hidden: {},
+		show: {
+			transition: { staggerChildren: reduceMotion ? 0 : 0.07 },
+		},
+	};
+	const item = {
+		hidden: reduceMotion ? {} : { opacity: 0, y: 18 },
+		show: {
+			opacity: 1,
+			y: 0,
+			transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] as const },
+		},
+	};
+
 	return (
 		<section
-			className="border-y bg-muted/25 py-12 sm:py-16"
+			className="border-y bg-muted/25 py-16 sm:py-24"
 			aria-labelledby="trending-title"
 		>
 			<div className="container mx-auto px-4">
-				<div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+				<motion.div
+					initial={reduceMotion ? false : { opacity: 0, y: 16 }}
+					whileInView={{ opacity: 1, y: 0 }}
+					viewport={{ once: true, margin: "-80px" }}
+					transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+					className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"
+				>
 					<div>
 						<div className="mb-2 inline-flex items-center gap-2 font-medium text-primary text-sm">
-							<TrendingUp className="h-4 w-4" />
-							Актуально сейчас
+							<span className="size-1.5 rounded-full bg-primary" />
+							<span className="font-mono text-muted-foreground text-xs">
+								02
+							</span>
+							{t("trending.eyebrow")}
 						</div>
 						<h2
 							id="trending-title"
 							className="font-bold text-3xl tracking-tight sm:text-4xl"
 						>
-							Набирают популярность
+							{t("trending.title")}
 						</h2>
 						<p className="mt-2 max-w-2xl text-muted-foreground">
-							Рейтинг формируется по реальным загрузкам за последние недели.
+							{t("trending.description")}
 						</p>
 					</div>
-					<Button asChild variant="outline">
+					<Button asChild variant="outline" className="group">
 						<Link href="/plugins?sort=popular">
-							Весь рейтинг
-							<ArrowRight />
+							{t("trending.viewAll")}
+							<ArrowRight className="transition-transform group-hover:translate-x-1" />
 						</Link>
 					</Button>
-				</div>
+				</motion.div>
 
 				{isLoading ? (
-					<div className="grid gap-3 md:grid-cols-2">
+					<div className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pb-0">
 						{Array.from({ length: 4 }).map((_, i) => (
-							<Skeleton key={i} className="h-28 w-full rounded-xl" />
+							<Skeleton
+								key={i}
+								className="h-28 w-[75vw] shrink-0 snap-start rounded-xl md:w-full md:shrink"
+							/>
 						))}
 					</div>
-				) : plugins && plugins.length > 0 ? (
-					<div className="grid gap-3 md:grid-cols-2">
-						{plugins.map((plugin: Plugin) => (
-							<PluginCard key={plugin.id} plugin={plugin} compact />
+				) : trending && trending.length > 0 ? (
+					<motion.div
+						variants={container}
+						initial="hidden"
+						whileInView="show"
+						viewport={{ once: true, margin: "-80px" }}
+						className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pb-0"
+					>
+						{trending.map((plugin: Plugin) => (
+							<motion.div
+								key={plugin.id}
+								variants={item}
+								className="w-[75vw] shrink-0 snap-start md:w-auto md:shrink"
+							>
+								<PluginCard plugin={plugin} compact />
+							</motion.div>
 						))}
-					</div>
+					</motion.div>
 				) : null}
 			</div>
 		</section>

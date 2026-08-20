@@ -80,7 +80,7 @@ export function VersionDiffDialog({
 		);
 
 		return (
-			<div className="max-h-96 overflow-auto rounded-lg bg-muted/30 p-4 font-mono text-sm">
+			<div className="scrollbar-hide max-h-96 overflow-auto rounded-lg bg-muted/30 p-4 font-mono text-sm">
 				{changes.map((change, index) => {
 					const lines = change.value.split("\n").filter((line) => line !== "");
 
@@ -89,12 +89,10 @@ export function VersionDiffDialog({
 						let prefix = " ";
 
 						if (change.added) {
-							className +=
-								"bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300";
+							className += "bg-success/10 text-success";
 							prefix = "+";
 						} else if (change.removed) {
-							className +=
-								"bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300";
+							className += "bg-destructive/10 text-destructive";
 							prefix = "-";
 						} else {
 							className += "text-muted-foreground";
@@ -117,7 +115,7 @@ export function VersionDiffDialog({
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>
-				<Button variant="ghost" size="sm" className="h-8 px-2">
+				<Button variant="ghost" size="sm" className="min-h-11 px-2 md:min-h-8">
 					<FileText className="mr-1 h-4 w-4" />
 					{triggerText || t("view_changes")}
 				</Button>
@@ -130,13 +128,16 @@ export function VersionDiffDialog({
 					</DialogDescription>
 				</DialogHeader>
 
-				<div className="flex gap-4 py-4">
+				<div className="flex flex-col gap-4 py-4 sm:flex-row">
 					<div className="flex-1">
-						<label className="mb-2 block font-medium text-sm">
+						<label
+							htmlFor="diff-from-version"
+							className="mb-2 block font-medium text-sm"
+						>
 							{t("old_version")}
 						</label>
 						<Select value={fromVersion} onValueChange={setFromVersion}>
-							<SelectTrigger>
+							<SelectTrigger id="diff-from-version" className="min-h-11 w-full">
 								<SelectValue placeholder={t("select_version")} />
 							</SelectTrigger>
 							<SelectContent>
@@ -151,11 +152,14 @@ export function VersionDiffDialog({
 					</div>
 
 					<div className="flex-1">
-						<label className="mb-2 block font-medium text-sm">
+						<label
+							htmlFor="diff-to-version"
+							className="mb-2 block font-medium text-sm"
+						>
 							{t("new_version")}
 						</label>
 						<Select value={toVersion} onValueChange={setToVersion}>
-							<SelectTrigger>
+							<SelectTrigger id="diff-to-version" className="min-h-11 w-full">
 								<SelectValue placeholder={t("select_version")} />
 							</SelectTrigger>
 							<SelectContent>

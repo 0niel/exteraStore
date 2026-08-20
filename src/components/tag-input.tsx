@@ -1,10 +1,10 @@
 "use client";
 
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useCallback, useRef, useState } from "react";
 import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 
 interface TagInputProps {
@@ -18,9 +18,9 @@ export function TagInput({
 	value: tags,
 	onChange,
 	placeholder,
-	suggestions = [],
 }: TagInputProps) {
 	const t = useTranslations("TagInput");
+	const reduceMotion = useReducedMotion();
 	const [inputValue, setInputValue] = useState("");
 	const inputRef = useRef<HTMLInputElement>(null);
 
@@ -43,34 +43,46 @@ export function TagInput({
 		if (e.key === "Enter" || e.key === ",") {
 			e.preventDefault();
 			handleAddTag(inputValue);
+		} else if (e.key === "Backspace" && !inputValue && tags.length > 0) {
+			handleRemoveTag(tags[tags.length - 1] as string);
 		}
 	};
 
 	return (
-		<div>
-			<div className="flex flex-wrap gap-2 rounded-md border p-2">
-				{tags.map((tag, index) => (
-					<Badge key={index} variant="secondary">
-						{tag}
-						<button
-							type="button"
-							onClick={() => handleRemoveTag(tag)}
-							className="ml-1 rounded-full hover:bg-muted-foreground/20"
-							aria-label={`Удалить ${tag}`}
-						>
-							<X className="h-3 w-3" />
-						</button>
-					</Badge>
+		<div className="flex min-h-11 flex-wrap items-center gap-2 rounded-lg border bg-transparent px-3 py-2 transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 dark:bg-input/30">
+			<AnimatePresence initial={false}>
+				{tags.map((tag) => (
+					<motion.span
+						key={tag}
+						layout={!reduceMotion}
+						initial={reduceMotion ? false : { opacity: 0, scale: 0.75 }}
+						animate={{ opacity: 1, scale: 1 }}
+						exit={reduceMotion ? undefined : { opacity: 0, scale: 0.75 }}
+						transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+						className="inline-flex"
+					>
+						<Badge variant="secondary" className="gap-1 py-1 pr-1 pl-2.5">
+							{tag}
+							<button
+								type="button"
+								onClick={() => handleRemoveTag(tag)}
+								className="tap-highlight-none relative flex size-5 items-center justify-center rounded-full transition-colors before:absolute before:-inset-2 before:content-[''] hover:bg-muted-foreground/20"
+								aria-label={t("remove_tag", { tag })}
+							>
+								<X className="h-3 w-3" />
+							</button>
+						</Badge>
+					</motion.span>
 				))}
-				<Input
-					ref={inputRef}
-					value={inputValue}
-					onChange={(e) => setInputValue(e.target.value)}
-					onKeyDown={handleKeyDown}
-					placeholder={placeholder || t("add_tag")}
-					className="m-0 h-auto flex-1 border-0 p-0 shadow-none focus-visible:ring-0"
-				/>
-			</div>
+			</AnimatePresence>
+			<Input
+				ref={inputRef}
+				value={inputValue}
+				onChange={(e) => setInputValue(e.target.value)}
+				onKeyDown={handleKeyDown}
+				placeholder={placeholder || t("add_tag")}
+				className="m-0 h-auto min-w-24 flex-1 border-0 bg-transparent p-0 shadow-none focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent"
+			/>
 		</div>
 	);
 }

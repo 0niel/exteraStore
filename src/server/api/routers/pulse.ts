@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, type SQL, sql } from "drizzle-orm";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import {
@@ -24,14 +24,14 @@ export const pulseRouter = createTRPCRouter({
 			const offset = (input.page - 1) * input.limit;
 
 			const whereClauses = [
-				input.types && input.types.length
+				input.types?.length
 					? inArray(pluginActivities.type, input.types)
 					: undefined,
 				input.pluginId
 					? eq(pluginActivities.pluginId, input.pluginId)
 					: undefined,
 				input.actorId ? eq(pluginActivities.actorId, input.actorId) : undefined,
-			].filter(Boolean) as any[];
+			].filter((clause): clause is SQL => clause !== undefined);
 
 			const whereExpr = whereClauses.length ? and(...whereClauses) : undefined;
 

@@ -20,7 +20,6 @@ import {
 	DialogDescription,
 	DialogHeader,
 	DialogTitle,
-	DialogTrigger,
 } from "~/components/ui/dialog";
 import { env } from "~/env";
 
@@ -36,7 +35,7 @@ export function TelegramBotIntegration({
 	pluginId,
 	pluginName,
 	telegramBotDeeplink,
-	price,
+	price: _price,
 	onDownload,
 }: TelegramBotIntegrationProps) {
 	const t = useTranslations("TelegramBotIntegration");
@@ -63,7 +62,7 @@ export function TelegramBotIntegration({
 					window.open(fallbackLink, "_blank");
 				}
 			}, 500);
-		} catch (error) {
+		} catch (_error) {
 			toast.error(t("bot_open_error"));
 		} finally {
 			setTimeout(() => setIsDownloading(false), 1000);
@@ -72,11 +71,11 @@ export function TelegramBotIntegration({
 
 	return (
 		<>
-			<Card className="bot-integration-card">
+			<Card className="border-primary/25 bg-linear-to-br from-primary/10 to-primary/5 transition-colors hover:border-primary/40">
 				<CardHeader className="pb-3">
 					<div className="flex items-center gap-2">
 						<div className="rounded-lg bg-primary/10 p-2">
-							<Bot className="telegram-pulse h-5 w-5 text-primary" />
+							<Bot className="h-5 w-5 animate-pulse-dot text-primary" />
 						</div>
 						<div>
 							<CardTitle className="text-lg">
@@ -97,12 +96,12 @@ export function TelegramBotIntegration({
 					<Button
 						onClick={handleTelegramDownload}
 						disabled={isDownloading}
-						className="w-full bg-red-600 text-white transition-colors hover:bg-red-700"
+						className="press-scale min-h-11 w-full bg-primary text-primary-foreground transition-colors hover:bg-primary/90"
 						size="lg"
 					>
 						{isDownloading ? (
 							<>
-								<div className="mr-2 h-4 w-4 animate-spin rounded-full border-white border-b-2" />
+								<div className="mr-2 h-4 w-4 animate-spin rounded-full border-primary-foreground border-b-2" />
 								{t("opening_bot")}
 							</>
 						) : (
@@ -167,18 +166,16 @@ export function TelegramBotIntegration({
 							</div>
 						</div>
 
-						<div className="flex items-center gap-2 rounded-lg bg-blue-50 p-3 dark:bg-blue-950/20">
-							<Shield className="h-4 w-4 text-blue-600" />
-							<p className="text-blue-800 text-sm dark:text-blue-200">
-								{t("plugins_verified")}
-							</p>
+						<div className="flex items-center gap-2 rounded-lg bg-success/10 p-3">
+							<Shield className="h-4 w-4 shrink-0 text-success" />
+							<p className="text-sm text-success">{t("plugins_verified")}</p>
 						</div>
 
 						<div className="flex gap-2">
 							<Button
 								variant="outline"
 								onClick={() => setIsDialogOpen(false)}
-								className="flex-1"
+								className="min-h-11 flex-1"
 							>
 								{t("close")}
 							</Button>
@@ -191,7 +188,7 @@ export function TelegramBotIntegration({
 										`https://t.me/${botUsername}?start=plugin_${pluginId}`;
 									window.open(botLink, "_blank");
 								}}
-								className="flex-1"
+								className="min-h-11 flex-1"
 							>
 								<ExternalLink className="mr-2 h-4 w-4" />
 								{t("open_bot_button")}
@@ -214,8 +211,8 @@ export function BotIntegrationStatus({
 		<div
 			className={`flex items-center gap-2 rounded-full px-3 py-1 text-xs ${
 				hasIntegration
-					? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
-					: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"
+					? "bg-success/15 text-success"
+					: "bg-muted text-muted-foreground"
 			}`}
 		>
 			<Bot className="h-3 w-3" />
@@ -229,11 +226,11 @@ export function BotIntegrationStatus({
 export function BotIntegrationPromo() {
 	const t = useTranslations("TelegramBotIntegration");
 	return (
-		<Card className="bot-integration-card">
+		<Card className="border-primary/25 bg-linear-to-br from-primary/10 to-primary/5 transition-colors hover:border-primary/40">
 			<CardContent className="pt-6">
 				<div className="space-y-4 text-center">
 					<div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-						<Bot className="telegram-bounce h-8 w-8 text-primary" />
+						<Bot className="h-8 w-8 animate-pulse-dot text-primary" />
 					</div>
 					<div>
 						<h3 className="mb-2 font-semibold text-lg">{t("title")}</h3>

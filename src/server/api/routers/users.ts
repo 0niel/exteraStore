@@ -62,7 +62,7 @@ export const usersRouter = createTRPCRouter({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const updateData: any = {};
+			const updateData: Partial<typeof users.$inferInsert> = {};
 
 			if (input.name !== undefined) updateData.name = input.name;
 			if (input.bio !== undefined) updateData.bio = input.bio || null;

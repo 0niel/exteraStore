@@ -1,54 +1,37 @@
 "use client";
 
-import { Plus, Save, Trash2 } from "lucide-react";
-import { useMemo } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { Plus, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type {
 	DonationMethod,
 	DonationMethodType,
-} from "@/components/donations/donation-widget";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from "~/components/donations/donation-widget";
+import { Button } from "~/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/ui/select";
+} from "~/components/ui/select";
 
-const TYPES: {
-	value: DonationMethodType;
-	label: string;
-	placeholder: string;
-}[] = [
-	{
-		value: "sbp",
-		label: "СБП (телефон/ссылка)",
-		placeholder: "+7... или https://...",
-	},
-	{
-		value: "card",
-		label: "Банковская карта",
-		placeholder: "0000 0000 0000 0000",
-	},
-	{ value: "yoomoney", label: "ЮMoney", placeholder: "4100..." },
-	{
-		value: "boosty",
-		label: "Boosty",
-		placeholder: "https://boosty.to/username",
-	},
-	{
-		value: "donationalerts",
-		label: "DonationAlerts",
-		placeholder: "https://www.donationalerts.com/r/...",
-	},
-	{ value: "ton", label: "TON", placeholder: "UQ... кошелек" },
-	{ value: "usdt_trc20", label: "USDT TRC20", placeholder: "T... адрес" },
-	{ value: "btc", label: "BTC", placeholder: "bc1..." },
-	{ value: "custom", label: "Другая ссылка", placeholder: "https://..." },
-];
+const TYPE_PLACEHOLDERS: Record<DonationMethodType, string> = {
+	sbp: "+7...",
+	card: "0000 0000 0000 0000",
+	yoomoney: "4100...",
+	boosty: "https://boosty.to/username",
+	donationalerts: "https://www.donationalerts.com/r/...",
+	ton: "UQ...",
+	usdt_trc20: "T...",
+	btc: "bc1...",
+	custom: "https://...",
+};
+
+const TYPE_VALUES = Object.keys(TYPE_PLACEHOLDERS) as DonationMethodType[];
 
 export function DonationRequisitesEditor({
 	value,
@@ -57,6 +40,8 @@ export function DonationRequisitesEditor({
 	value: DonationMethod[];
 	onChange: (next: DonationMethod[]) => void;
 }) {
+	const t = useTranslations("DonationEditor");
+	const reduceMotion = useReducedMotion();
 	const methods = value || [];
 
 	const addMethod = () => {
@@ -64,9 +49,11 @@ export function DonationRequisitesEditor({
 	};
 
 	const updateMethod = (index: number, patch: Partial<DonationMethod>) => {
-		const next = [...methods];
-		next[index] = { ...next[index]!, ...patch } as DonationMethod;
-		onChange(next);
+		onChange(
+			methods.map((method, i) =>
+				i === index ? ({ ...method, ...patch } as DonationMethod) : method,
+			),
+		);
 	};
 
 	const removeMethod = (index: number) => {
@@ -76,75 +63,90 @@ export function DonationRequisitesEditor({
 	return (
 		<Card>
 			<CardHeader>
-				<CardTitle>Поддержка автора (реквизиты)</CardTitle>
+				<CardTitle>{t("title")}</CardTitle>
 			</CardHeader>
 			<CardContent className="space-y-4">
 				<div className="space-y-3">
 					{methods.length === 0 && (
-						<p className="text-muted-foreground text-sm">
-							Добавьте способы поддержки: СБП, карта, ЮMoney, Boosty и т.д.
-						</p>
+						<p className="text-muted-foreground text-sm">{t("empty_hint")}</p>
 					)}
-					{methods.map((m, idx) => (
-						<div key={idx} className="grid grid-cols-1 gap-3 md:grid-cols-12">
-							<div className="md:col-span-3">
-								<Label className="sr-only">Тип</Label>
-								<Select
-									value={m.type}
-									onValueChange={(v: DonationMethodType) =>
-										updateMethod(idx, { type: v })
-									}
-								>
-									<SelectTrigger>
-										<SelectValue placeholder="Тип" />
-									</SelectTrigger>
-									<SelectContent>
-										{TYPES.map((t) => (
-											<SelectItem key={t.value} value={t.value}>
-												{t.label}
-											</SelectItem>
-										))}
-									</SelectContent>
-								</Select>
-							</div>
-							<div className="md:col-span-5">
-								<Label className="sr-only">Значение</Label>
-								<Input
-									value={m.value}
-									onChange={(e) => updateMethod(idx, { value: e.target.value })}
-									placeholder={
-										TYPES.find((t) => t.value === m.type)?.placeholder
-									}
-								/>
-							</div>
-							<div className="md:col-span-3">
-								<Label className="sr-only">Метка</Label>
-								<Input
-									value={m.label || ""}
-									onChange={(e) => updateMethod(idx, { label: e.target.value })}
-									placeholder="Отображаемое имя"
-								/>
-							</div>
-							<div className="flex items-center justify-end md:col-span-1">
-								<Button
-									variant="outline"
-									size="icon"
-									onClick={() => removeMethod(idx)}
-								>
-									<Trash2 className="h-4 w-4" />
-								</Button>
-							</div>
-						</div>
-					))}
+					<AnimatePresence initial={false}>
+						{methods.map((m, idx) => (
+							<motion.div
+								key={idx}
+								layout={!reduceMotion}
+								initial={reduceMotion ? false : { opacity: 0, scale: 0.97 }}
+								animate={{ opacity: 1, scale: 1 }}
+								exit={reduceMotion ? undefined : { opacity: 0, scale: 0.97 }}
+								transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+								className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-12"
+							>
+								<div className="sm:col-span-2 md:col-span-3">
+									<Label className="sr-only">{t("type_label")}</Label>
+									<Select
+										value={m.type}
+										onValueChange={(v: DonationMethodType) =>
+											updateMethod(idx, { type: v })
+										}
+									>
+										<SelectTrigger className="min-h-11 w-full">
+											<SelectValue placeholder={t("type_label")} />
+										</SelectTrigger>
+										<SelectContent>
+											{TYPE_VALUES.map((type) => (
+												<SelectItem key={type} value={type}>
+													{t(`type_${type}`)}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</div>
+								<div className="md:col-span-5">
+									<Label className="sr-only">{t("value_label")}</Label>
+									<Input
+										className="min-h-11"
+										value={m.value}
+										onChange={(e) =>
+											updateMethod(idx, { value: e.target.value })
+										}
+										placeholder={TYPE_PLACEHOLDERS[m.type]}
+									/>
+								</div>
+								<div className="flex gap-3 sm:col-span-2 md:col-span-4 md:gap-3">
+									<div className="flex-1">
+										<Label className="sr-only">{t("label_label")}</Label>
+										<Input
+											className="min-h-11"
+											value={m.label || ""}
+											onChange={(e) =>
+												updateMethod(idx, { label: e.target.value })
+											}
+											placeholder={t("label_placeholder")}
+										/>
+									</div>
+									<Button
+										variant="outline"
+										size="icon"
+										className="shrink-0"
+										onClick={() => removeMethod(idx)}
+										aria-label={t("remove")}
+									>
+										<Trash2 className="h-4 w-4" />
+									</Button>
+								</div>
+							</motion.div>
+						))}
+					</AnimatePresence>
 				</div>
 
 				<div className="flex gap-2">
 					<Button
 						variant="outline"
 						onClick={addMethod}
-						className="w-full md:w-auto"
+						className="min-h-11 w-full md:w-auto"
 					>
-						<Plus className="mr-2 h-4 w-4" /> Добавить способ
+						<Plus className="mr-2 h-4 w-4" />
+						{t("add_method")}
 					</Button>
 				</div>
 			</CardContent>

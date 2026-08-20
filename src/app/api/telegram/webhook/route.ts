@@ -401,8 +401,15 @@ async function showMainMenu(
 	}
 }
 
+interface TelegramCallbackQuery {
+	id: string;
+	data: string;
+	from: { id: number | string };
+	message: { message_id: number; chat: { id: number | string } };
+}
+
 async function handleCallbackQuery(
-	callbackQuery: any,
+	callbackQuery: TelegramCallbackQuery,
 	userId: string,
 	chatId: string,
 ) {

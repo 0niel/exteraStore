@@ -1,5 +1,6 @@
 "use client";
 
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
 	AlertCircle,
 	CheckCircle,
@@ -48,6 +49,7 @@ export function ScreenshotUploader({
 	maxSizeMB = 5,
 }: ScreenshotUploaderProps) {
 	const t = useTranslations("ScreenshotUploader");
+	const reduceMotion = useReducedMotion();
 	const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
 	const [isUploading, setIsUploading] = useState(false);
 
@@ -210,22 +212,27 @@ export function ScreenshotUploader({
 				</CardDescription>
 			</CardHeader>
 			<CardContent className="space-y-6">
-				{/* Dropzone */}
 				{screenshots.length < maxFiles && (
 					<div
 						{...getRootProps()}
-						className={`cursor-pointer rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
+						className={`tap-highlight-none min-h-11 cursor-pointer rounded-lg border-2 border-dashed p-6 text-center transition-[border-color,background-color,transform] duration-200 sm:p-8 ${
 							isDragActive
-								? "border-primary bg-primary/5"
+								? `border-primary bg-primary/5 ${reduceMotion ? "" : "scale-[1.01]"}`
 								: "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50"
-						}
-              ${isUploading ? "cursor-not-allowed opacity-50" : ""}
-            `}
+						} ${isUploading ? "cursor-not-allowed opacity-50" : ""}`}
 					>
 						<input {...getInputProps()} />
 						<div className="space-y-4">
-							<div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-								<Upload className="h-6 w-6 text-muted-foreground" />
+							<div
+								className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full transition-colors ${
+									isDragActive ? "bg-primary/10" : "bg-muted"
+								}`}
+							>
+								<Upload
+									className={`h-6 w-6 ${
+										isDragActive ? "text-primary" : "text-muted-foreground"
+									}`}
+								/>
 							</div>
 							<div>
 								<p className="font-medium text-lg">
@@ -235,7 +242,7 @@ export function ScreenshotUploader({
 									{t("or_click_to_select")}
 								</p>
 							</div>
-							<div className="flex justify-center gap-2">
+							<div className="flex flex-wrap justify-center gap-2">
 								<Badge variant="outline">PNG</Badge>
 								<Badge variant="outline">JPG</Badge>
 								<Badge variant="outline">GIF</Badge>
@@ -245,25 +252,27 @@ export function ScreenshotUploader({
 					</div>
 				)}
 
-				{/* Uploading Files */}
 				{uploadingFiles.length > 0 && (
 					<div className="space-y-3">
 						<h4 className="font-medium">{t("uploading_files")}</h4>
 						{uploadingFiles.map((item, index) => (
-							<div key={index} className="rounded-lg bg-muted/30 p-3">
-								<div className="mb-2 flex items-center justify-between">
+							<div
+								key={`${item.file.name}-${index}`}
+								className="rounded-lg bg-muted/30 p-3"
+							>
+								<div className="mb-2 flex items-center justify-between gap-2">
 									<span className="truncate font-medium text-sm">
 										{item.file.name}
 									</span>
-									<div className="flex items-center gap-2">
+									<div className="flex shrink-0 items-center gap-2">
 										{item.status === "uploading" && (
 											<Loader2 className="h-4 w-4 animate-spin" />
 										)}
 										{item.status === "success" && (
-											<CheckCircle className="h-4 w-4 text-green-500" />
+											<CheckCircle className="h-4 w-4 text-success" />
 										)}
 										{item.status === "error" && (
-											<AlertCircle className="h-4 w-4 text-red-500" />
+											<AlertCircle className="h-4 w-4 text-destructive" />
 										)}
 									</div>
 								</div>
@@ -271,14 +280,13 @@ export function ScreenshotUploader({
 									<Progress value={item.progress} className="h-2" />
 								)}
 								{item.status === "error" && item.error && (
-									<p className="text-red-500 text-sm">{item.error}</p>
+									<p className="text-destructive text-sm">{item.error}</p>
 								)}
 							</div>
 						))}
 					</div>
 				)}
 
-				{/* Uploaded Screenshots */}
 				{screenshots.length > 0 && (
 					<div className="space-y-3">
 						<div className="flex items-center justify-between">
@@ -288,42 +296,52 @@ export function ScreenshotUploader({
 							</Badge>
 						</div>
 						<div className="grid grid-cols-2 gap-4 md:grid-cols-3">
-							{screenshots.map((screenshot, index) => (
-								<div key={index} className="group relative">
-									<div className="relative aspect-video overflow-hidden rounded-lg border bg-muted">
-										<Image
-											src={screenshot}
-											alt={`Screenshot ${index + 1}`}
-											fill
-											className="object-cover"
-											sizes="(max-width: 768px) 50vw, 33vw"
-										/>
-									</div>
-									<Button
-										variant="destructive"
-										size="sm"
-										className="absolute top-2 right-2 h-6 w-6 p-0 opacity-0 transition-opacity group-hover:opacity-100"
-										onClick={() => removeScreenshot(index)}
+							<AnimatePresence initial={false}>
+								{screenshots.map((screenshot, index) => (
+									<motion.div
+										key={screenshot}
+										layout={!reduceMotion}
+										initial={reduceMotion ? false : { opacity: 0, scale: 0.9 }}
+										animate={{ opacity: 1, scale: 1 }}
+										exit={reduceMotion ? undefined : { opacity: 0, scale: 0.9 }}
+										transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+										className="group relative"
 									>
-										<X className="h-3 w-3" />
-									</Button>
-									<div className="absolute bottom-2 left-2">
-										<Badge variant="secondary" className="text-xs">
-											{index + 1}
-										</Badge>
-									</div>
-								</div>
-							))}
+										<div className="relative aspect-video overflow-hidden rounded-lg border bg-muted">
+											<Image
+												src={screenshot}
+												alt={t("screenshot_alt", { index: index + 1 })}
+												fill
+												className="object-cover"
+												sizes="(max-width: 768px) 50vw, 33vw"
+											/>
+										</div>
+										<Button
+											variant="destructive"
+											size="sm"
+											className="absolute top-2 right-2 h-8 w-8 p-0 opacity-100 transition-opacity before:absolute before:-inset-1.5 before:content-[''] md:opacity-0 md:group-hover:opacity-100 md:focus-visible:opacity-100"
+											onClick={() => removeScreenshot(index)}
+											aria-label={t("delete")}
+										>
+											<X className="h-3.5 w-3.5" />
+										</Button>
+										<div className="absolute bottom-2 left-2">
+											<Badge variant="secondary" className="text-xs">
+												{index + 1}
+											</Badge>
+										</div>
+									</motion.div>
+								))}
+							</AnimatePresence>
 						</div>
 					</div>
 				)}
 
-				{/* Info */}
 				<div className="space-y-1 text-muted-foreground text-sm">
-					<p>• {t("supported_formats")}</p>
-					<p>• {t("max_file_size", { maxSizeMB })}</p>
-					<p>• {t("recommended_resolution")}</p>
-					<p>• {t("first_screenshot_preview")}</p>
+					<p>{t("supported_formats")}</p>
+					<p>{t("max_file_size", { maxSizeMB })}</p>
+					<p>{t("recommended_resolution")}</p>
+					<p>{t("first_screenshot_preview")}</p>
 				</div>
 			</CardContent>
 		</Card>

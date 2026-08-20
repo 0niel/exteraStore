@@ -1,6 +1,7 @@
 "use client";
 
 import { signIn, useSession } from "next-auth/react";
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useTelegramWebApp } from "~/hooks/use-telegram-web-app";
@@ -8,6 +9,7 @@ import { useTelegramWebApp } from "~/hooks/use-telegram-web-app";
 export function TelegramWebAppAuth() {
 	const { isTelegramWebApp, webApp, user } = useTelegramWebApp();
 	const { data: session } = useSession();
+	const t = useTranslations("Auth");
 	const [authAttempted, setAuthAttempted] = useState(false);
 
 	useEffect(() => {
@@ -44,7 +46,7 @@ export function TelegramWebAppAuth() {
 				});
 
 				if (result?.ok) {
-					toast.success("Добро пожаловать в exteraStore!");
+					toast.success(t("webapp_welcome"));
 				} else if (result?.error) {
 					console.error("Auth error:", result.error);
 					toast.error("Ошибка входа через Telegram Web App");

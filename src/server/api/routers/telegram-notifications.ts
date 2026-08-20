@@ -20,7 +20,6 @@ import {
 	sendTelegramDocument,
 	sendTelegramMessage,
 	setTelegramWebhook,
-	type TelegramMessageOptions,
 } from "~/server/lib/telegram-client";
 
 const ADMINS = (env.INITIAL_ADMINS ?? "i_am_oniel")
@@ -28,35 +27,16 @@ const ADMINS = (env.INITIAL_ADMINS ?? "i_am_oniel")
 	.map((a) => a.trim().toLowerCase())
 	.filter(Boolean);
 
-class TelegramBot {
-	static async sendMessage(
-		chatId: string,
-		text: string,
-		options?: TelegramMessageOptions,
-	) {
-		return sendTelegramMessage(chatId, text, options);
+function createDeepLink(pluginSlug: string, version?: string): string {
+	const botUsername = env.TELEGRAM_BOT_USERNAME;
+	if (!botUsername) {
+		throw new Error("Telegram bot username not configured");
 	}
 
-	static async sendDocument(
-		chatId: string,
-		document: Buffer,
-		filename: string,
-		caption?: string,
-	) {
-		return sendTelegramDocument(chatId, document, filename, caption);
-	}
-
-	static createDeepLink(pluginSlug: string, version?: string): string {
-		const botUsername = env.TELEGRAM_BOT_USERNAME;
-		if (!botUsername) {
-			throw new Error("Telegram bot username not configured");
-		}
-
-		const params = version
-			? `plugin_${pluginSlug}_v${version}`
-			: `plugin_${pluginSlug}`;
-		return `https://t.me/${botUsername}?start=${params}`;
-	}
+	const params = version
+		? `plugin_${pluginSlug}_v${version}`
+		: `plugin_${pluginSlug}`;
+	return `https://t.me/${botUsername}?start=${params}`;
 }
 
 export const telegramNotificationsRouter = createTRPCRouter({
@@ -140,12 +120,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 			const fileContent = Buffer.from(version[0].fileContent, "utf-8");
 			const caption = `Плагин ${escapeHtml(plugin[0].name)} версии ${escapeHtml(version[0].version)}`;
 
-			await TelegramBot.sendDocument(
-				input.chatId,
-				fileContent,
-				fileName,
-				caption,
-			);
+			await sendTelegramDocument(input.chatId, fileContent, fileName, caption);
 
 			const existingDownload = await ctx.db
 				.select({ id: pluginDownloads.id })
@@ -205,10 +180,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 				throw new Error("Плагин не найден");
 			}
 
-			const deepLink = TelegramBot.createDeepLink(
-				input.pluginSlug,
-				input.version,
-			);
+			const deepLink = createDeepLink(input.pluginSlug, input.version);
 
 			return { deepLink };
 		}),
@@ -269,7 +241,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 						const pluginUrl = `${baseUrl}/plugins/${plugin[0].slug}`;
 						const message = `🎉 Обновление плагина!\n\n🔌 *${plugin[0].name}* v${input.newVersion} теперь доступен.\n\nНажмите, чтобы посмотреть детали.`;
 
-						await TelegramBot.sendMessage(chatId, message, {
+						await sendTelegramMessage(chatId, message, {
 							parse_mode: "Markdown",
 							reply_markup: {
 								inline_keyboard: [
@@ -396,7 +368,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 					const parts = input.command.split(" ");
 					const targetUsername = parts[1]?.replace("@", "").toLowerCase();
 					if (!targetUsername) {
-						await TelegramBot.sendMessage(
+						await sendTelegramMessage(
 							input.chatId,
 							"❌ Требуется имя пользователя",
 						);
@@ -417,7 +389,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 							ADMINS.includes(requester[0].username.toLowerCase()));
 
 					if (!requesterIsAdmin) {
-						await TelegramBot.sendMessage(input.chatId, "❌ Недостаточно прав");
+						await sendTelegramMessage(input.chatId, "❌ Недостаточно прав");
 						return { success: false };
 					}
 
@@ -426,7 +398,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 						.set({ role: "admin" })
 						.where(eq(users.telegramUsername, targetUsername));
 
-					await TelegramBot.sendMessage(
+					await sendTelegramMessage(
 						input.chatId,
 						`✅ ${targetUsername} теперь администратор`,
 					);
@@ -464,10 +436,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 					);
 
 					if (rateLimit.limited) {
-						await TelegramBot.sendMessage(
-							input.chatId,
-							`❌ ${rateLimit.reason}`,
-						);
+						await sendTelegramMessage(input.chatId, `❌ ${rateLimit.reason}`);
 						return { success: false };
 					}
 
@@ -515,7 +484,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 							.limit(1);
 
 						if (user[0]?.isBanned) {
-							await TelegramBot.sendMessage(
+							await sendTelegramMessage(
 								input.chatId,
 								`❌ ${user[0].bannedReason || "Your account has been banned"}`,
 							);
@@ -579,7 +548,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 						`📝 ${safeDesc}...\n\n` +
 						`👤 Автор: ${safeAuthor}\n📊 Рейтинг: ${updatedPlugin[0]?.rating.toFixed(1)}/5 (${updatedPlugin[0]?.ratingCount} отзывов)\n⬇️ Скачиваний: ${updatedPlugin[0]?.downloadCount}\n\nУстановите этот плагин в exteraGram!`;
 
-					await TelegramBot.sendDocument(
+					await sendTelegramDocument(
 						input.chatId,
 						fileContent,
 						fileName,
@@ -593,7 +562,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 			} catch (error) {
 				console.error("Bot command error:", error);
 
-				await TelegramBot.sendMessage(
+				await sendTelegramMessage(
 					input.chatId,
 					"❌ Ошибка при обработке команды. Попробуйте позже.",
 				);
@@ -635,7 +604,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 			for (const user of usersWithTelegram) {
 				try {
 					if (user.telegramId) {
-						await TelegramBot.sendMessage(user.telegramId, input.message);
+						await sendTelegramMessage(user.telegramId, input.message);
 						results.sent++;
 					}
 				} catch (error) {
@@ -680,7 +649,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 				throw new Error("User not found or has no Telegram ID");
 			}
 
-			await TelegramBot.sendMessage(user[0].telegramId, input.message);
+			await sendTelegramMessage(user[0].telegramId, input.message);
 
 			return { success: true, userFound: true };
 		}),
@@ -703,7 +672,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 				throw new Error("Unauthorized");
 			}
 
-			await TelegramBot.sendMessage(input.chatId, input.message);
+			await sendTelegramMessage(input.chatId, input.message);
 
 			return { success: true };
 		}),

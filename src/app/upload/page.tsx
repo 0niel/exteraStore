@@ -1,21 +1,26 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
+	Check,
+	CheckCircle2,
 	Code,
 	ExternalLink,
+	FileCode2,
 	FileText,
-	Image as ImageIcon,
 	Info,
 	Loader2,
-	Tag,
 	Tags,
 	UploadCloud,
+	X,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { useCallback, useMemo, useState } from "react";
+import { useDropzone } from "react-dropzone";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
@@ -48,58 +53,59 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "~/components/ui/select";
+import { formatBytes } from "~/lib/utils";
 import type { RouterOutputs } from "~/trpc/react";
 import { api } from "~/trpc/react";
 
-const formSchema = z.object({
-	name: z
-		.string()
-		.min(1, "Название плагина обязательно")
-		.max(256, "Название не должно превышать 256 символов"),
-	shortDescription: z
-		.string()
-		.min(1, "Краткое описание обязательно")
-		.max(500, "Краткое описание не должно превышать 500 символов"),
-	description: z.string().optional(),
-	categorySlug: z.string().optional(),
-	tags: z.array(z.string()).optional(),
-	version: z
-		.string()
-		.min(1, "Версия обязательна")
-		.max(50, "Версия не должна превышать 50 символов"),
-	changelog: z.string().optional(),
-	githubUrl: z
-		.string()
-		.optional()
-		.refine(
-			(val) => !val || val === "" || z.string().url().safeParse(val).success,
-			{
-				message: "Введите корректный URL GitHub репозитория",
-			},
-		),
-	documentationUrl: z
-		.string()
-		.optional()
-		.refine(
-			(val) => !val || val === "" || z.string().url().safeParse(val).success,
-			{
-				message: "Введите корректный URL документации",
-			},
-		),
-});
+const buildFormSchema = (t: (key: string) => string) =>
+	z.object({
+		name: z
+			.string()
+			.min(1, t("error_name_required"))
+			.max(256, t("error_name_max")),
+		shortDescription: z
+			.string()
+			.min(1, t("error_short_required"))
+			.max(500, t("error_short_max")),
+		description: z.string().optional(),
+		categorySlug: z.string().optional(),
+		tags: z.array(z.string()).optional(),
+		version: z
+			.string()
+			.min(1, t("error_version_required"))
+			.max(50, t("error_version_max")),
+		changelog: z.string().optional(),
+		githubUrl: z
+			.string()
+			.optional()
+			.refine((val) => !val || val === "" || z.url().safeParse(val).success, {
+				message: t("error_github_url"),
+			}),
+		documentationUrl: z
+			.string()
+			.optional()
+			.refine((val) => !val || val === "" || z.url().safeParse(val).success, {
+				message: t("error_docs_url"),
+			}),
+	});
 
-type FormData = z.infer<typeof formSchema>;
+type FormData = z.infer<ReturnType<typeof buildFormSchema>>;
 
 export default function UploadPluginPage() {
 	const { data: session } = useSession();
 	const router = useRouter();
+	const t = useTranslations("UploadPage");
+	const reduceMotion = useReducedMotion();
 	const [fileContent, setFileContent] = useState("");
 	const [fileName, setFileName] = useState<string | null>(null);
 	const [screenshots, setScreenshots] = useState<string[]>([]);
 	const [captchaToken, setCaptchaToken] = useState<string>("");
+	const [isSuccess, setIsSuccess] = useState(false);
 
 	const { data: categories, isLoading: areCategoriesLoading } =
 		api.categories.getAll.useQuery();
+
+	const formSchema = useMemo(() => buildFormSchema(t), [t]);
 
 	const form = useForm<FormData>({
 		resolver: zodResolver(formSchema),
@@ -116,21 +122,23 @@ export default function UploadPluginPage() {
 		},
 	});
 
-	// Поиск похожих плагинов по названию (для предотвращения дубликатов)
 	const watchedName = form.watch("name");
+	const watchedShortDescription = form.watch("shortDescription");
 	const [debouncedName] = useDebounce(watchedName, 300);
-	const { data: similar, isFetching: isSimilarFetching } =
-		api.plugins.similarByName.useQuery(
-			{ name: debouncedName || "", limit: 5 },
-			{ enabled: (debouncedName || "").trim().length >= 2 },
-		);
+	const { data: similar } = api.plugins.similarByName.useQuery(
+		{ name: debouncedName || "", limit: 5 },
+		{ enabled: (debouncedName || "").trim().length >= 2 },
+	);
 
 	type SimilarPlugin = RouterOutputs["plugins"]["similarByName"][number];
 
 	const createPlugin = api.pluginUpload.create.useMutation({
 		onSuccess: (plugin) => {
-			toast.success("Плагин отправлен на модерацию!");
-			router.push(`/plugins/${plugin.slug}`);
+			setIsSuccess(true);
+			toast.success(t("toast_success"));
+			setTimeout(() => {
+				router.push(`/plugins/${plugin.slug}`);
+			}, 1600);
 		},
 		onError: (error) => {
 			console.error("Plugin creation error:", error);
@@ -138,30 +146,32 @@ export default function UploadPluginPage() {
 			try {
 				const errorData = JSON.parse(error.message);
 				if (Array.isArray(errorData)) {
-					const fieldErrors = errorData.map((err: any) => {
-						const fieldName = err.path?.[0];
-						const message = err.message;
+					const fieldErrors = errorData.map(
+						(err: { path?: string[]; message?: string }) => {
+							const fieldName = err.path?.[0];
+							const message = err.message ?? "";
 
-						switch (fieldName) {
-							case "githubUrl":
-								return "GitHub URL: введите корректную ссылку или оставьте поле пустым";
-							case "documentationUrl":
-								return "URL документации: введите корректную ссылку или оставьте поле пустым";
-							case "name":
-								return `Название: ${message}`;
-							case "shortDescription":
-								return `Краткое описание: ${message}`;
-							default:
-								return `${fieldName}: ${message}`;
-						}
-					});
+							switch (fieldName) {
+								case "githubUrl":
+									return t("error_github_hint");
+								case "documentationUrl":
+									return t("error_docs_hint");
+								case "name":
+									return t("error_name_prefix", { message });
+								case "shortDescription":
+									return t("error_short_prefix", { message });
+								default:
+									return `${fieldName}: ${message}`;
+							}
+						},
+					);
 
-					toast.error(`Ошибки в форме:\n${fieldErrors.join("\n")}`);
+					toast.error(`${t("form_errors")}\n${fieldErrors.join("\n")}`);
 					return;
 				}
-			} catch (e) {}
+			} catch (_e) {}
 
-			toast.error(`Ошибка создания плагина: ${error.message}`);
+			toast.error(t("toast_error", { error: error.message }));
 		},
 	});
 
@@ -172,12 +182,12 @@ export default function UploadPluginPage() {
 		}
 
 		if (!fileContent) {
-			toast.error("Пожалуйста, загрузите файл плагина.");
+			toast.error(t("toast_file_required"));
 			return;
 		}
 
 		if (!captchaToken) {
-			toast.error("Пожалуйста, пройдите проверку капчи.");
+			toast.error(t("toast_captcha_required"));
 			return;
 		}
 
@@ -196,33 +206,48 @@ export default function UploadPluginPage() {
 		createPlugin.mutate(cleanedData);
 	};
 
-	const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const file = e.target.files?.[0];
-		if (file && (file.name.endsWith(".py") || file.name.endsWith(".plugin"))) {
-			setFileName(file.name);
-			const reader = new FileReader();
-			reader.onload = (event) => {
-				setFileContent(event.target?.result as string);
-			};
-			reader.readAsText(file);
-		} else {
-			toast.error("Пожалуйста, выберите корректный .py или .plugin файл.");
-		}
+	const onFileDrop = useCallback(
+		(acceptedFiles: File[]) => {
+			const file = acceptedFiles[0];
+			if (
+				file &&
+				(file.name.endsWith(".py") || file.name.endsWith(".plugin"))
+			) {
+				setFileName(file.name);
+				const reader = new FileReader();
+				reader.onload = (event) => {
+					setFileContent(event.target?.result as string);
+				};
+				reader.readAsText(file);
+			} else {
+				toast.error(t("toast_invalid_file"));
+			}
+		},
+		[t],
+	);
+
+	const { getRootProps, getInputProps, isDragActive } = useDropzone({
+		onDrop: onFileDrop,
+		multiple: false,
+	});
+
+	const clearFile = (e: React.MouseEvent) => {
+		e.stopPropagation();
+		setFileContent("");
+		setFileName(null);
 	};
 
 	if (!session) {
 		return (
-			<div className="flex min-h-screen items-center justify-center">
-				<Card className="w-full max-w-md text-center">
+			<div className="flex min-h-[60dvh] items-center justify-center px-4">
+				<Card className="w-full max-w-md animate-scale-in text-center">
 					<CardHeader>
-						<CardTitle>Требуется авторизация</CardTitle>
-						<CardDescription>
-							Вам необходимо войти в систему для загрузки плагина.
-						</CardDescription>
+						<CardTitle>{t("login_required")}</CardTitle>
+						<CardDescription>{t("login_required_description")}</CardDescription>
 					</CardHeader>
 					<CardContent>
-						<Button asChild>
-							<Link href="/auth/signin">Войти</Link>
+						<Button asChild className="w-full">
+							<Link href="/auth/signin">{t("login")}</Link>
 						</Button>
 					</CardContent>
 				</Card>
@@ -230,16 +255,102 @@ export default function UploadPluginPage() {
 		);
 	}
 
+	if (isSuccess) {
+		return (
+			<div className="flex min-h-[60dvh] items-center justify-center px-4">
+				<div className="animate-scale-in text-center">
+					<div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
+						<CheckCircle2 className="h-10 w-10 text-primary" />
+					</div>
+					<h2 className="mb-2 font-bold text-2xl sm:text-3xl">
+						{t("success_title")}
+					</h2>
+					<p className="text-muted-foreground">{t("success_description")}</p>
+				</div>
+			</div>
+		);
+	}
+
+	const steps = [
+		{
+			num: "01",
+			label: t("step_details"),
+			done:
+				watchedName.trim().length > 0 &&
+				watchedShortDescription.trim().length > 0,
+		},
+		{ num: "02", label: t("step_file"), done: !!fileContent },
+		{ num: "03", label: t("step_publish"), done: !!captchaToken },
+	];
+
 	return (
-		<section className="min-h-screen bg-muted/40 py-4 sm:py-8 md:py-12">
+		<section className="bg-muted/40 py-4 sm:py-8 md:py-12">
 			<div className="container mx-auto max-w-6xl px-3 sm:px-4">
-				<div className="mb-6 text-center sm:mb-8">
+				<div className="mb-6 animate-fade-up text-center sm:mb-8">
 					<h1 className="mb-2 font-bold text-2xl sm:text-3xl md:text-4xl">
-						Загрузить плагин
+						{t("title")}
 					</h1>
 					<p className="text-base text-muted-foreground sm:text-lg md:text-xl">
-						Поделитесь своим творением с сообществом exteraGram
+						{t("subtitle")}
 					</p>
+				</div>
+
+				<div
+					className="mb-6 grid animate-fade-up grid-cols-3 gap-2 sm:mb-8 sm:gap-4"
+					style={{ animationDelay: "80ms" }}
+				>
+					{steps.map((step) => (
+						<div
+							key={step.num}
+							className={`flex flex-col items-center gap-2 rounded-xl border p-3 text-center transition-colors duration-300 sm:flex-row sm:gap-3 sm:p-4 sm:text-left ${
+								step.done
+									? "border-primary/40 bg-primary/5"
+									: "border-border bg-card"
+							}`}
+						>
+							<div
+								className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-mono font-semibold text-sm transition-colors duration-300 ${
+									step.done
+										? "bg-primary text-primary-foreground"
+										: "bg-muted text-muted-foreground"
+								}`}
+							>
+								<AnimatePresence mode="wait" initial={false}>
+									{step.done ? (
+										<motion.span
+											key="check"
+											initial={
+												reduceMotion ? false : { scale: 0.5, opacity: 0 }
+											}
+											animate={{ scale: 1, opacity: 1 }}
+											transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+											className="flex"
+										>
+											<Check className="h-4 w-4" />
+										</motion.span>
+									) : (
+										<motion.span
+											key="num"
+											initial={
+												reduceMotion ? false : { scale: 0.5, opacity: 0 }
+											}
+											animate={{ scale: 1, opacity: 1 }}
+											transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+										>
+											{step.num}
+										</motion.span>
+									)}
+								</AnimatePresence>
+							</div>
+							<span
+								className={`font-medium text-xs sm:text-sm ${
+									step.done ? "text-foreground" : "text-muted-foreground"
+								}`}
+							>
+								{step.label}
+							</span>
+						</div>
+					))}
 				</div>
 
 				<Form {...form}>
@@ -249,12 +360,11 @@ export default function UploadPluginPage() {
 					>
 						<div className="grid grid-cols-1 gap-4 sm:gap-6 xl:grid-cols-3">
 							<div className="space-y-4 sm:space-y-6 xl:col-span-2">
-								{/* Основная информация */}
 								<Card>
 									<CardHeader>
 										<CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-											<Info className="h-4 w-4 sm:h-5 sm:w-5" /> Основная
-											информация
+											<Info className="h-4 w-4 sm:h-5 sm:w-5" />
+											{t("basic_info")}
 										</CardTitle>
 									</CardHeader>
 									<CardContent className="space-y-4 sm:space-y-6">
@@ -263,10 +373,11 @@ export default function UploadPluginPage() {
 											name="name"
 											render={({ field }) => (
 												<FormItem>
-													<FormLabel>Название плагина *</FormLabel>
+													<FormLabel>{t("name_label")}</FormLabel>
 													<FormControl>
 														<Input
-															placeholder="Мой потрясающий плагин"
+															className="min-h-11"
+															placeholder={t("name_placeholder")}
 															{...field}
 														/>
 													</FormControl>
@@ -274,11 +385,10 @@ export default function UploadPluginPage() {
 													{(similar?.length ?? 0) > 0 && (
 														<div className="mt-2 rounded-lg border bg-muted/40 p-3 text-xs">
 															<div className="mb-2 font-medium text-muted-foreground">
-																Найдены похожие плагины. Пожалуйста, убедитесь,
-																что вы не публикуете дубликат:
+																{t("similar_found")}
 															</div>
 															<ul className="space-y-1">
-																{similar!.map((p: SimilarPlugin) => (
+																{similar?.map((p: SimilarPlugin) => (
 																	<li
 																		key={p.id}
 																		className="flex items-center justify-between gap-2"
@@ -294,10 +404,10 @@ export default function UploadPluginPage() {
 																			)}
 																		</div>
 																		<Link
-																			className="shrink-0 underline"
+																			className="shrink-0 text-primary underline"
 																			href={`/plugins/${p.slug}`}
 																		>
-																			Открыть
+																			{t("open")}
 																		</Link>
 																	</li>
 																))}
@@ -313,10 +423,11 @@ export default function UploadPluginPage() {
 											name="shortDescription"
 											render={({ field }) => (
 												<FormItem>
-													<FormLabel>Краткое описание *</FormLabel>
+													<FormLabel>{t("short_description_label")}</FormLabel>
 													<FormControl>
 														<Input
-															placeholder="Краткое описание возможностей вашего плагина"
+															className="min-h-11"
+															placeholder={t("short_description_placeholder")}
 															maxLength={500}
 															{...field}
 														/>
@@ -331,7 +442,7 @@ export default function UploadPluginPage() {
 											name="description"
 											render={({ field }) => (
 												<FormItem>
-													<FormLabel>Описание</FormLabel>
+													<FormLabel>{t("description_label")}</FormLabel>
 													<FormControl>
 														<MarkdownEditor
 															value={field.value || ""}
@@ -349,18 +460,16 @@ export default function UploadPluginPage() {
 									</CardContent>
 								</Card>
 
-								{/* Скриншоты */}
 								<ScreenshotUploader
 									screenshots={screenshots}
 									onScreenshotsChange={setScreenshots}
 								/>
 
-								{/* Версия и изменения */}
 								<Card>
 									<CardHeader>
 										<CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-											<FileText className="h-4 w-4 sm:h-5 sm:w-5" /> Версия и
-											список изменений
+											<FileText className="h-4 w-4 sm:h-5 sm:w-5" />
+											{t("version_changelog_title")}
 										</CardTitle>
 									</CardHeader>
 									<CardContent className="space-y-4 sm:space-y-6">
@@ -369,9 +478,13 @@ export default function UploadPluginPage() {
 											name="version"
 											render={({ field }) => (
 												<FormItem>
-													<FormLabel>Версия</FormLabel>
+													<FormLabel>{t("version_label")}</FormLabel>
 													<FormControl>
-														<Input placeholder="1.0.0" {...field} />
+														<Input
+															className="min-h-11"
+															placeholder="1.0.0"
+															{...field}
+														/>
 													</FormControl>
 													<FormMessage />
 												</FormItem>
@@ -383,15 +496,13 @@ export default function UploadPluginPage() {
 											name="changelog"
 											render={({ field }) => (
 												<FormItem>
-													<FormLabel>
-														Список изменений (необязательно)
-													</FormLabel>
+													<FormLabel>{t("changelog_label")}</FormLabel>
 													<FormControl>
 														<MarkdownEditor
 															value={field.value || ""}
 															onChange={field.onChange}
 															height={150}
-															placeholder="- Добавлена функция X&#10;- Исправлена ошибка Y"
+															placeholder={t("changelog_placeholder")}
 															showImproveButton={true}
 															textType="changelog"
 															pluginName={form.watch("name")}
@@ -406,11 +517,11 @@ export default function UploadPluginPage() {
 							</div>
 
 							<div className="space-y-4 sm:space-y-6 xl:col-span-1">
-								{/* Организация */}
 								<Card>
 									<CardHeader>
 										<CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-											<Tags className="h-4 w-4 sm:h-5 sm:w-5" /> Организация
+											<Tags className="h-4 w-4 sm:h-5 sm:w-5" />
+											{t("organization_title")}
 										</CardTitle>
 									</CardHeader>
 									<CardContent className="space-y-4 sm:space-y-6">
@@ -419,20 +530,22 @@ export default function UploadPluginPage() {
 											name="categorySlug"
 											render={({ field }) => (
 												<FormItem>
-													<FormLabel>Категория</FormLabel>
+													<FormLabel>{t("category_label")}</FormLabel>
 													<Select
 														onValueChange={field.onChange}
 														value={field.value}
 													>
 														<FormControl>
-															<SelectTrigger>
-																<SelectValue placeholder="Выберите категорию" />
+															<SelectTrigger className="min-h-11 w-full">
+																<SelectValue
+																	placeholder={t("category_placeholder")}
+																/>
 															</SelectTrigger>
 														</FormControl>
 														<SelectContent className="max-h-[200px] overflow-y-auto">
 															{areCategoriesLoading ? (
 																<SelectItem value="loading" disabled>
-																	Загрузка...
+																	{t("loading")}
 																</SelectItem>
 															) : (
 																categories?.map((cat) => (
@@ -453,12 +566,12 @@ export default function UploadPluginPage() {
 											name="tags"
 											render={({ field }) => (
 												<FormItem>
-													<FormLabel>Теги</FormLabel>
+													<FormLabel>{t("tags_label")}</FormLabel>
 													<FormControl>
 														<TagInput
 															value={field.value || []}
 															onChange={field.onChange}
-															placeholder="Добавьте до 5 тегов..."
+															placeholder={t("tags_placeholder")}
 														/>
 													</FormControl>
 													<FormMessage />
@@ -468,12 +581,14 @@ export default function UploadPluginPage() {
 									</CardContent>
 								</Card>
 
-								{/* Ссылки */}
 								<Card>
 									<CardHeader>
 										<CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-											<ExternalLink className="h-4 w-4 sm:h-5 sm:w-5" /> Ссылки
-											<span className="hidden sm:inline">(необязательно)</span>
+											<ExternalLink className="h-4 w-4 sm:h-5 sm:w-5" />
+											{t("links_title")}
+											<span className="hidden text-muted-foreground sm:inline">
+												{t("links_optional")}
+											</span>
 										</CardTitle>
 									</CardHeader>
 									<CardContent className="space-y-3 sm:space-y-4">
@@ -482,9 +597,10 @@ export default function UploadPluginPage() {
 											name="githubUrl"
 											render={({ field }) => (
 												<FormItem>
-													<FormLabel>GitHub репозиторий</FormLabel>
+													<FormLabel>{t("github_label")}</FormLabel>
 													<FormControl>
 														<Input
+															className="min-h-11"
 															type="url"
 															placeholder="https://github.com/..."
 															{...field}
@@ -500,9 +616,10 @@ export default function UploadPluginPage() {
 											name="documentationUrl"
 											render={({ field }) => (
 												<FormItem>
-													<FormLabel>Документация</FormLabel>
+													<FormLabel>{t("docs_label")}</FormLabel>
 													<FormControl>
 														<Input
+															className="min-h-11"
 															type="url"
 															placeholder="https://docs.example.com/..."
 															{...field}
@@ -515,31 +632,114 @@ export default function UploadPluginPage() {
 									</CardContent>
 								</Card>
 
-								{/* Загрузка файла */}
 								<Card>
 									<CardHeader>
 										<CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-											<Code className="h-4 w-4 sm:h-5 sm:w-5" /> Файл плагина *
+											<Code className="h-4 w-4 sm:h-5 sm:w-5" />
+											{t("file_title")}
 										</CardTitle>
 										<CardDescription className="text-sm">
-											Загрузите `.py` или `.plugin` файл вашего плагина.
+											{t("file_description")}
 										</CardDescription>
 									</CardHeader>
 									<CardContent>
-										<Input
-											id="file"
-											type="file"
-											accept=".py,.plugin"
-											onChange={handleFileUpload}
-											required
-											className="cursor-pointer"
-										/>
-										{fileContent && (
-											<p className="mt-2 text-muted-foreground text-sm">
-												{fileContent.length.toLocaleString()} байт выбрано
-												{fileName ? ` — ${fileName}` : ""}.
-											</p>
-										)}
+										<div
+											{...getRootProps()}
+											className={`tap-highlight-none relative min-h-11 cursor-pointer rounded-xl p-6 text-center transition-[background-color,transform] duration-200 ${
+												isDragActive
+													? `bg-primary/5 ${reduceMotion ? "" : "scale-[1.02]"}`
+													: "hover:bg-muted/50"
+											}`}
+										>
+											<svg
+												className="pointer-events-none absolute inset-0 h-full w-full"
+												aria-hidden="true"
+											>
+												<motion.rect
+													x="1"
+													y="1"
+													style={{
+														width: "calc(100% - 2px)",
+														height: "calc(100% - 2px)",
+													}}
+													rx="11"
+													fill="none"
+													strokeWidth="2"
+													strokeDasharray="8 8"
+													className={
+														isDragActive
+															? "stroke-primary"
+															: fileContent
+																? "stroke-primary/50"
+																: "stroke-border"
+													}
+													animate={
+														!reduceMotion && isDragActive
+															? { strokeDashoffset: [0, -32] }
+															: { strokeDashoffset: 0 }
+													}
+													transition={
+														!reduceMotion && isDragActive
+															? {
+																	duration: 0.8,
+																	repeat: Number.POSITIVE_INFINITY,
+																	ease: "linear",
+																}
+															: { duration: 0.2 }
+													}
+												/>
+											</svg>
+											<input {...getInputProps()} />
+											{fileContent && fileName ? (
+												<div className="space-y-2">
+													<div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-primary/10">
+														<FileCode2 className="h-5 w-5 text-primary" />
+													</div>
+													<p className="break-all font-medium text-sm">
+														{fileName}
+													</p>
+													<p className="text-muted-foreground text-xs">
+														{t("file_selected", {
+															size: formatBytes(fileContent.length),
+														})}
+													</p>
+													<Button
+														type="button"
+														variant="ghost"
+														size="sm"
+														onClick={clearFile}
+														className="text-muted-foreground"
+													>
+														<X className="mr-1 h-3.5 w-3.5" />
+														{t("file_remove")}
+													</Button>
+												</div>
+											) : (
+												<div className="space-y-2">
+													<div
+														className={`mx-auto flex h-11 w-11 items-center justify-center rounded-full transition-colors ${
+															isDragActive ? "bg-primary/10" : "bg-muted"
+														}`}
+													>
+														<UploadCloud
+															className={`h-5 w-5 ${
+																isDragActive
+																	? "text-primary"
+																	: "text-muted-foreground"
+															}`}
+														/>
+													</div>
+													<p className="font-medium text-sm">
+														{isDragActive
+															? t("file_drop_here")
+															: t("file_drag_drop")}
+													</p>
+													<p className="text-muted-foreground text-xs">
+														{t("file_or_browse")}
+													</p>
+												</div>
+											)}
+										</div>
 									</CardContent>
 								</Card>
 							</div>
@@ -554,29 +754,29 @@ export default function UploadPluginPage() {
 							</CardContent>
 						</Card>
 
-						<div className="flex flex-col justify-end gap-3 sm:flex-row sm:gap-4">
+						<div className="flex flex-col justify-end gap-3 pb-safe sm:flex-row sm:gap-4">
 							<Button
 								type="button"
 								variant="outline"
 								onClick={() => router.back()}
 								className="w-full sm:w-auto"
 							>
-								Отмена
+								{t("cancel")}
 							</Button>
 							<Button
 								type="submit"
 								disabled={
 									createPlugin.isPending || !fileContent || !captchaToken
 								}
-								className="w-full sm:w-auto"
+								className="press-scale w-full sm:w-auto"
 							>
 								{createPlugin.isPending ? (
 									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 								) : (
 									<UploadCloud className="mr-2 h-4 w-4" />
 								)}
-								<span className="hidden sm:inline">Отправить на модерацию</span>
-								<span className="sm:hidden">Отправить</span>
+								<span className="hidden sm:inline">{t("submit")}</span>
+								<span className="sm:hidden">{t("submit_short")}</span>
 							</Button>
 						</div>
 					</form>

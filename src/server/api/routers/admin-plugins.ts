@@ -1,8 +1,11 @@
-import { and, asc, count, desc, eq, not, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, not, type SQL, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { env } from "~/env";
-import { TelegramNotifications } from "~/lib/telegram-notifications";
+import {
+	notifyPluginApproved,
+	notifyPluginRejected,
+} from "~/lib/telegram-notifications";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import {
 	pluginActivities,
@@ -34,7 +37,7 @@ export const adminPluginsRouter = createTRPCRouter({
 				);
 			if (!isAdmin) throw new Error("Unauthorized");
 			const offset = (input.page - 1) * input.limit;
-			const whereClauses = [] as any[];
+			const whereClauses: (SQL | undefined)[] = [];
 			if (input.status) whereClauses.push(eq(plugins.status, input.status));
 			if (input.search)
 				whereClauses.push(sql`${plugins.name} LIKE ${`%${input.search}%`}`);
@@ -95,7 +98,6 @@ export const adminPluginsRouter = createTRPCRouter({
 				.where(eq(plugins.id, input.id))
 				.returning();
 
-			// Лента активности: плагин одобрен
 			try {
 				await ctx.db.insert(pluginActivities).values({
 					type: "plugin.approved",
@@ -108,7 +110,7 @@ export const adminPluginsRouter = createTRPCRouter({
 
 			if (pluginWithAuthor[0].author?.telegramId) {
 				try {
-					await TelegramNotifications.notifyPluginApproved(
+					await notifyPluginApproved(
 						pluginWithAuthor[0].author.telegramId,
 						updatedPlugin.name,
 						updatedPlugin.slug,
@@ -159,7 +161,7 @@ export const adminPluginsRouter = createTRPCRouter({
 
 			if (pluginWithAuthor[0].author?.telegramId) {
 				try {
-					await TelegramNotifications.notifyPluginRejected(
+					await notifyPluginRejected(
 						pluginWithAuthor[0].author.telegramId,
 						updatedPlugin.name,
 						updatedPlugin.author,
