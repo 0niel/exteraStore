@@ -19,40 +19,20 @@ type AICollection = RouterOutputs["aiCollections"]["getAICollections"][number];
 type CollectionPlugin = AICollection["plugins"][number];
 type CollectionTab = "all" | "recent" | "popular";
 
-const coverTreatments = [
-	{
-		cover: "bg-primary text-primary-foreground",
-		chip: "bg-contrast text-contrast-foreground",
-	},
-	{
-		cover: "bg-primary/10 text-foreground",
-		chip: "bg-primary text-primary-foreground",
-	},
-	{
-		cover:
-			"border-primary border-b-2 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent text-foreground",
-		chip: "bg-primary text-primary-foreground",
-	},
-] as const;
-
-function getTreatment(id: number) {
-	return (
-		coverTreatments[Math.abs(id) % coverTreatments.length] ?? coverTreatments[0]
-	);
-}
-
 function CollectionSkeleton() {
 	return (
 		<Card className="overflow-hidden border bg-card">
-			<Skeleton className="skeleton-shimmer h-32 w-full rounded-none" />
+			<Skeleton className="skeleton-shimmer h-28 w-full rounded-none" />
 			<CardContent className="p-4">
+				<Skeleton className="skeleton-shimmer mb-2 h-6 w-3/4" />
+				<Skeleton className="skeleton-shimmer mb-3 h-4 w-full" />
 				<div className="mb-3 flex items-center justify-between">
-					<Skeleton className="skeleton-shimmer h-5 w-20" />
+					<Skeleton className="skeleton-shimmer h-4 w-24" />
 					<Skeleton className="skeleton-shimmer h-4 w-16" />
 				</div>
 				<div className="space-y-2">
-					<Skeleton className="skeleton-shimmer h-16 w-full" />
-					<Skeleton className="skeleton-shimmer h-16 w-full" />
+					<Skeleton className="skeleton-shimmer h-16 w-full rounded-xl" />
+					<Skeleton className="skeleton-shimmer h-16 w-full rounded-xl" />
 				</div>
 			</CardContent>
 		</Card>
@@ -68,39 +48,34 @@ function CollectionCard({
 }) {
 	const t = useTranslations("CollectionsPage");
 	const format = useFormatter();
-	const treatment = getTreatment(collection.id ?? index);
 	const initial = (collection.name || "?").trim().charAt(0).toUpperCase();
 	const pluginData = collection.plugins || [];
 
 	return (
 		<Card className="group card-lift h-full overflow-hidden border bg-card">
-			<div className={cn("relative h-36 overflow-hidden p-4", treatment.cover)}>
+			<div className="relative h-28 overflow-hidden border-b bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-4">
+				<div aria-hidden="true" className="dot-grid absolute inset-0" />
 				<span
 					aria-hidden="true"
-					className="pointer-events-none absolute -right-3 -bottom-10 select-none font-bold text-[8rem] leading-none opacity-15"
+					className="pointer-events-none absolute top-1/2 -right-2 -translate-y-1/2 select-none font-black font-mono text-[5.5rem] text-primary leading-none opacity-10 transition-opacity duration-300 group-hover:opacity-15"
 				>
 					{initial}
 				</span>
-				<div className="flex items-start justify-between">
-					<span className="font-bold font-mono text-2xl tabular-nums opacity-50">
+				<div className="relative flex items-start justify-between">
+					<span className="font-bold font-mono text-muted-foreground text-sm tabular-nums">
 						{String(index + 1).padStart(2, "0")}
 					</span>
-					<span
-						className={cn(
-							"inline-flex items-center gap-1 rounded-full px-2.5 py-1 font-medium text-xs",
-							treatment.chip,
-						)}
-					>
+					<span className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 font-medium text-primary text-xs">
 						<Sparkles className="h-3 w-3" />
 						{t("ai_curated")}
 					</span>
 				</div>
-				<h3 className="absolute right-4 bottom-4 left-4 font-bold text-lg leading-tight">
-					{collection.name}
-				</h3>
 			</div>
 
 			<CardContent className="p-4">
+				<h3 className="mb-1.5 line-clamp-1 font-bold text-lg leading-tight transition-colors group-hover:text-primary">
+					{collection.name}
+				</h3>
 				<p className="mb-3 line-clamp-2 text-muted-foreground text-sm">
 					{collection.description}
 				</p>

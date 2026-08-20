@@ -4,5 +4,9 @@ export async function register() {
 			"~/server/lib/telegram-polling"
 		);
 		startTelegramPolling();
+		const { startPipelineRetryLoop } = await import(
+			"~/server/lib/pipeline-retry"
+		);
+		startPipelineRetryLoop();
 	}
 }

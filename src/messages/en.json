@@ -19,7 +19,9 @@
 		"sign_in_hint": "Sign in to upload plugins and save favorites",
 		"open_menu": "Open navigation menu",
 		"menu_section": "Menu",
-		"account_section": "Account"
+		"account_section": "Account",
+		"notifications": "Notifications",
+		"notifications_empty": "No notifications yet"
 	},
 	"ThemeToggle": {
 		"toggle_theme": "Toggle theme",
@@ -568,7 +570,8 @@
 		"stats_plugins": "Plugins",
 		"stats_downloads": "Downloads",
 		"stats_rating": "Rating",
-		"section_leaderboard": "Leaderboard"
+		"section_leaderboard": "Leaderboard",
+		"page_of": "Page {page} of {total}"
 	},
 	"DeveloperProfile": {
 		"not_found": "Developer Not Found",
@@ -683,7 +686,27 @@
 		"delete_confirm_title": "Delete plugin",
 		"delete_confirm_description": "Are you sure you want to delete {name}? This action cannot be undone.",
 		"deleting": "Deleting...",
-		"eyebrow": "Moderation"
+		"eyebrow": "Moderation",
+		"ai_checks": "AI checks",
+		"ai_security": "Security",
+		"ai_performance": "Performance",
+		"ai_run": "Run AI checks",
+		"ai_running": "Running",
+		"ai_error": "Error",
+		"ai_no_checks": "Not checked",
+		"ai_show_issues": "Show issues ({count})",
+		"ai_hide_issues": "Hide issues",
+		"ai_recommendation": "Recommendation",
+		"class_safe": "Safe",
+		"class_potentially_unsafe": "Potentially unsafe",
+		"class_unsafe": "Unsafe",
+		"class_critical": "Critical",
+		"severity_low": "Low",
+		"severity_medium": "Medium",
+		"severity_high": "High",
+		"severity_critical": "Critical",
+		"toast_checks_started": "AI checks started",
+		"toast_checks_error": "Failed to start AI checks"
 	},
 	"PluginVersionsPage": {
 		"back_to_plugin": "Back to plugin",
@@ -736,7 +759,8 @@
 		"users": "Users",
 		"access_denied_title": "Access denied",
 		"access_denied_description": "You don't have permission to view the admin panel.",
-		"go_home": "Go to homepage"
+		"go_home": "Go to homepage",
+		"dashboard": "Dashboard"
 	},
 	"Footer": {
 		"description": "The revolutionary plugin store for exteraGram. Discover, create, and share plugins to enhance your Telegram experience.",
@@ -1101,7 +1125,7 @@
 	},
 	"PulsePage": {
 		"badge": "Activity",
-		"title": "exteraStore Pulse",
+		"title": "exteraGram Pulse",
 		"description": "A live feed of events: plugin publications, version releases and reviews",
 		"tab_all": "All",
 		"tab_plugins": "Plugins",
@@ -1418,5 +1442,44 @@
 		"suggest_error": "Failed to suggest tags. Please try again later.",
 		"suggest_category_label": "Suggested category:",
 		"suggest_category_applied": "Category applied"
+	},
+	"AdminDashboard": {
+		"eyebrow": "Admin",
+		"title": "Dashboard",
+		"subtitle": "Overview of the catalog, moderation, and AI pipeline",
+		"stat_plugins": "Plugins",
+		"stat_pending": "Pending review",
+		"stat_users": "Users",
+		"stat_downloads": "Downloads",
+		"stat_reviews": "Reviews",
+		"activity_title": "Activity, 7 days",
+		"queue_title": "Moderation queue",
+		"queue_empty": "No plugins waiting for review",
+		"review": "Review",
+		"view_all": "All",
+		"class_safe": "Safe",
+		"class_potentially_unsafe": "Potentially unsafe",
+		"class_unsafe": "Unsafe",
+		"class_critical": "Critical",
+		"class_unchecked": "Not checked",
+		"failures_title": "Recent pipeline failures",
+		"failures_empty": "No pipeline failures — all checks are healthy",
+		"failures_unknown": "Unknown error",
+		"failures_attempts": "{count}/{max} attempts"
+	},
+	"NotificationSettings": {
+		"eyebrow": "Notifications",
+		"title": "Notification settings",
+		"description": "Choose which Telegram notifications you want to receive.",
+		"telegram_label": "Telegram notifications",
+		"telegram_description": "Master switch for all notifications sent via Telegram.",
+		"updates_label": "Plugin updates",
+		"updates_description": "Get notified when plugins you use publish a new version.",
+		"security_label": "Security alerts",
+		"security_description": "Important alerts about vulnerable or removed plugins.",
+		"reviews_label": "Review replies",
+		"reviews_description": "Get notified when someone replies to your reviews.",
+		"saved": "Notification settings saved",
+		"save_error": "Failed to save settings: {error}"
 	}
 }

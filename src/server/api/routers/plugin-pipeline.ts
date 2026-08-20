@@ -1,6 +1,7 @@
 import { and, desc, eq, inArray, like, sql } from "drizzle-orm";
 import { z } from "zod";
 import { env } from "~/env";
+import { getAllowedNotificationUserIds } from "~/lib/telegram-notifications";
 import {
 	type createTRPCContext,
 	createTRPCRouter,
@@ -23,7 +24,75 @@ import { type AILocale, PluginAIChecker } from "./plugin-pipeline-ai";
 
 type PipelineContext = Awaited<ReturnType<typeof createTRPCContext>>;
 
-async function processQueueItem(ctx: PipelineContext, queueItemId: number) {
+async function sendSecurityAlerts(
+	ctx: PipelineContext,
+	pluginId: number,
+	plugin: { name: string; slug: string },
+) {
+	const subscribers = await ctx.db
+		.select({
+			userId: userPluginSubscriptions.userId,
+			telegramChatId: userPluginSubscriptions.telegramChatId,
+			userTelegramId: users.telegramId,
+		})
+		.from(userPluginSubscriptions)
+		.leftJoin(users, eq(userPluginSubscriptions.userId, users.id))
+		.where(
+			and(
+				eq(userPluginSubscriptions.pluginId, pluginId),
+				eq(userPluginSubscriptions.subscriptionType, "security_alerts"),
+				eq(userPluginSubscriptions.isActive, true),
+			),
+		);
+
+	const allowedUserIds = await getAllowedNotificationUserIds(
+		ctx.db,
+		subscribers.map((s: { userId: string }) => s.userId),
+		"security",
+	);
+
+	const baseUrl = env.NEXTAUTH_URL || "http://localhost:3000";
+	const pluginUrl = `${baseUrl}/plugins/${plugin.slug}`;
+
+	for (const subscriber of subscribers) {
+		if (!allowedUserIds.has(subscriber.userId)) {
+			continue;
+		}
+
+		await ctx.db.insert(notifications).values({
+			userId: subscriber.userId,
+			pluginId,
+			type: "security_alert",
+			title: "Критические проблемы найдены",
+			message: `В плагине ${plugin.name} обнаружены критические проблемы безопасности или производительности. Проверьте результаты проверки.`,
+		});
+
+		const chatId = subscriber.telegramChatId ?? subscriber.userTelegramId;
+		if (chatId && env.TELEGRAM_BOT_TOKEN) {
+			try {
+				await sendTelegramMessage(
+					chatId,
+					`🚨 *Предупреждение безопасности!*\n\n🔌 Плагин: *${plugin.name}*\n\nОбнаружены критические проблемы безопасности или производительности. Рекомендуем проверить плагин.`,
+					{
+						parse_mode: "Markdown",
+						reply_markup: {
+							inline_keyboard: [
+								[{ text: "🔍 Посмотреть детали", url: pluginUrl }],
+							],
+						},
+					},
+				);
+			} catch {
+				console.error("Failed to send security alert TG notification");
+			}
+		}
+	}
+}
+
+export async function processQueueItem(
+	ctx: PipelineContext,
+	queueItemId: number,
+) {
 	const queueItem = await ctx.db
 		.select()
 		.from(pluginPipelineQueue)
@@ -163,54 +232,7 @@ async function processQueueItem(ctx: PipelineContext, queueItemId: number) {
 		);
 
 		if (hasCriticalIssues) {
-			const subscribers = await ctx.db
-				.select({
-					userId: userPluginSubscriptions.userId,
-					telegramChatId: userPluginSubscriptions.telegramChatId,
-					userTelegramId: users.telegramId,
-				})
-				.from(userPluginSubscriptions)
-				.leftJoin(users, eq(userPluginSubscriptions.userId, users.id))
-				.where(
-					and(
-						eq(userPluginSubscriptions.pluginId, item.pluginId),
-						eq(userPluginSubscriptions.subscriptionType, "security_alerts"),
-						eq(userPluginSubscriptions.isActive, true),
-					),
-				);
-
-			const baseUrl = env.NEXTAUTH_URL || "http://localhost:3000";
-			const pluginUrl = `${baseUrl}/plugins/${plugin[0].slug}`;
-
-			for (const subscriber of subscribers) {
-				await ctx.db.insert(notifications).values({
-					userId: subscriber.userId,
-					pluginId: item.pluginId,
-					type: "security_alert",
-					title: "Критические проблемы найдены",
-					message: `В плагине ${plugin[0].name} обнаружены критические проблемы безопасности или производительности. Проверьте результаты проверки.`,
-				});
-
-				const chatId = subscriber.telegramChatId ?? subscriber.userTelegramId;
-				if (chatId && env.TELEGRAM_BOT_TOKEN) {
-					try {
-						await sendTelegramMessage(
-							chatId,
-							`🚨 *Предупреждение безопасности!*\n\n🔌 Плагин: *${plugin[0].name}*\n\nОбнаружены критические проблемы безопасности или производительности. Рекомендуем проверить плагин.`,
-							{
-								parse_mode: "Markdown",
-								reply_markup: {
-									inline_keyboard: [
-										[{ text: "🔍 Посмотреть детали", url: pluginUrl }],
-									],
-								},
-							},
-						);
-					} catch {
-						console.error("Failed to send security alert TG notification");
-					}
-				}
-			}
+			await sendSecurityAlerts(ctx, item.pluginId, plugin[0]);
 		}
 
 		return { pluginId: item.pluginId, status: "completed" };
@@ -549,65 +571,7 @@ export const pluginPipelineRouter = createTRPCRouter({
 					);
 
 					if (hasCriticalIssues) {
-						const subscribers = await ctx.db
-							.select({
-								userId: userPluginSubscriptions.userId,
-								telegramChatId: userPluginSubscriptions.telegramChatId,
-								userTelegramId: users.telegramId,
-							})
-							.from(userPluginSubscriptions)
-							.leftJoin(users, eq(userPluginSubscriptions.userId, users.id))
-							.where(
-								and(
-									eq(userPluginSubscriptions.pluginId, item.pluginId),
-									eq(
-										userPluginSubscriptions.subscriptionType,
-										"security_alerts",
-									),
-									eq(userPluginSubscriptions.isActive, true),
-								),
-							);
-
-						const baseUrl = env.NEXTAUTH_URL || "http://localhost:3000";
-						const pluginUrl = `${baseUrl}/plugins/${plugin[0].slug}`;
-
-						for (const subscriber of subscribers) {
-							await ctx.db.insert(notifications).values({
-								userId: subscriber.userId,
-								pluginId: item.pluginId,
-								type: "security_alert",
-								title: "Критические проблемы найдены",
-								message: `В плагине ${plugin[0].name} обнаружены критические проблемы безопасности или производительности. Проверьте результаты проверки.`,
-							});
-
-							const chatId =
-								subscriber.telegramChatId ?? subscriber.userTelegramId;
-							if (chatId && env.TELEGRAM_BOT_TOKEN) {
-								try {
-									await sendTelegramMessage(
-										chatId,
-										`🚨 *Предупреждение безопасности!*\n\n🔌 Плагин: *${plugin[0].name}*\n\nОбнаружены критические проблемы безопасности или производительности. Рекомендуем проверить плагин.`,
-										{
-											parse_mode: "Markdown",
-											reply_markup: {
-												inline_keyboard: [
-													[
-														{
-															text: "🔍 Посмотреть детали",
-															url: pluginUrl,
-														},
-													],
-												],
-											},
-										},
-									);
-								} catch {
-									console.error(
-										"Failed to send security alert TG notification",
-									);
-								}
-							}
-						}
+						await sendSecurityAlerts(ctx, item.pluginId, plugin[0]);
 					}
 
 					results.push({ pluginId: item.pluginId, status: "completed" });
@@ -807,13 +771,22 @@ export const pluginPipelineRouter = createTRPCRouter({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
+			const now = Math.floor(Date.now() / 1000);
 			const [settings] = await ctx.db
-				.update(userNotificationSettings)
-				.set({
+				.insert(userNotificationSettings)
+				.values({
+					userId: ctx.session.user.id,
+					telegramChatId: ctx.session.user.telegramId,
 					...input,
-					updatedAt: Math.floor(Date.now() / 1000),
+					updatedAt: now,
 				})
-				.where(eq(userNotificationSettings.userId, ctx.session.user.id))
+				.onConflictDoUpdate({
+					target: userNotificationSettings.userId,
+					set: {
+						...input,
+						updatedAt: now,
+					},
+				})
 				.returning();
 
 			return settings;

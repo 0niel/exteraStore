@@ -569,6 +569,7 @@ export default function PluginDetailPage() {
 							<TelegramBotIntegration
 								pluginId={plugin.id}
 								pluginName={plugin.name}
+								pluginSlug={plugin.slug}
 								telegramBotDeeplink={plugin.telegramBotDeeplink}
 								price={0}
 								onDownload={handleDownload}

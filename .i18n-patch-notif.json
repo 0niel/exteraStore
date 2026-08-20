@@ -1,0 +1,44 @@
+{
+	"en": {
+		"Navigation": {
+			"notifications": "Notifications",
+			"notifications_empty": "No notifications yet"
+		},
+		"NotificationSettings": {
+			"eyebrow": "Preferences",
+			"title": "Notification Settings",
+			"description": "Choose which Telegram notifications you want to receive",
+			"telegram_label": "Telegram notifications",
+			"telegram_description": "Master switch for all Telegram notifications",
+			"updates_label": "Plugin updates",
+			"updates_description": "New versions of plugins you follow",
+			"security_label": "Security alerts",
+			"security_description": "Critical security issues in plugins you follow",
+			"reviews_label": "New reviews",
+			"reviews_description": "New reviews on plugins you follow",
+			"saved": "Notification settings saved",
+			"save_error": "Failed to save settings: {error}"
+		}
+	},
+	"ru": {
+		"Navigation": {
+			"notifications": "Уведомления",
+			"notifications_empty": "Уведомлений пока нет"
+		},
+		"NotificationSettings": {
+			"eyebrow": "Настройки",
+			"title": "Настройки уведомлений",
+			"description": "Выберите, какие уведомления в Telegram вы хотите получать",
+			"telegram_label": "Уведомления в Telegram",
+			"telegram_description": "Главный переключатель всех уведомлений в Telegram",
+			"updates_label": "Обновления плагинов",
+			"updates_description": "Новые версии плагинов, на которые вы подписаны",
+			"security_label": "Предупреждения безопасности",
+			"security_description": "Критические проблемы безопасности в отслеживаемых плагинах",
+			"reviews_label": "Новые отзывы",
+			"reviews_description": "Новые отзывы на плагины, на которые вы подписаны",
+			"saved": "Настройки уведомлений сохранены",
+			"save_error": "Не удалось сохранить настройки: {error}"
+		}
+	}
+}

@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
+import { notifyPluginUpdateSubscribers } from "~/lib/telegram-notifications";
 import { generateSlug } from "~/lib/utils";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import {
@@ -246,15 +247,11 @@ export const pluginUploadRouter = createTRPCRouter({
 
 				try {
 					if (input.isStable) {
-						const { telegramNotificationsRouter } = await import(
-							"~/server/api/routers/telegram-notifications"
+						await notifyPluginUpdateSubscribers(
+							ctx.db,
+							input.pluginId,
+							input.version,
 						);
-						const notifySubscribers =
-							telegramNotificationsRouter.createCaller(ctx);
-						await notifySubscribers.notifySubscribers({
-							pluginId: input.pluginId,
-							newVersion: input.version,
-						});
 					}
 				} catch (error) {
 					console.error("Failed to send notifications:", error);
@@ -397,6 +394,16 @@ export const pluginUploadRouter = createTRPCRouter({
 							updatedAt: Math.floor(Date.now() / 1000),
 						})
 						.where(eq(plugins.id, input.pluginId));
+
+					try {
+						await notifyPluginUpdateSubscribers(
+							ctx.db,
+							input.pluginId,
+							newVersion,
+						);
+					} catch (error) {
+						console.error("Failed to send notifications:", error);
+					}
 				}
 
 				await ctx.db

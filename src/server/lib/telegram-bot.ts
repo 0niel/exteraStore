@@ -172,7 +172,7 @@ async function handlePluginDownload(
 		}
 
 		const lastPart = parts[parts.length - 1];
-		const hasVersion = lastPart?.startsWith("v");
+		const hasVersion = parts.length > 2 && /^v\d/.test(lastPart ?? "");
 
 		const pluginIdentifier = hasVersion
 			? parts.slice(1, -1).join("_")
@@ -341,6 +341,11 @@ async function handlePluginDownload(
 						telegramChatId: chatId,
 						isActive: true,
 					});
+				} else if (!existingSubscription[0].isActive) {
+					await db
+						.update(userPluginSubscriptions)
+						.set({ isActive: true, telegramChatId: chatId })
+						.where(eq(userPluginSubscriptions.id, existingSubscription[0].id));
 				}
 			}
 		} catch (error) {

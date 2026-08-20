@@ -15,10 +15,11 @@ import {
 	Target,
 	Trophy,
 	Users,
+	X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PageHeader } from "~/components/page-header";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
@@ -80,17 +81,28 @@ export default function DevelopersPage() {
 	const router = useRouter();
 	const reduceMotion = useReducedMotion();
 	const [searchQuery, setSearchQuery] = useState("");
+	const [debouncedQuery, setDebouncedQuery] = useState("");
 	const [page, setPage] = useState(1);
+
+	useEffect(() => {
+		const timer = setTimeout(() => {
+			setDebouncedQuery(searchQuery.trim());
+			setPage(1);
+		}, 300);
+		return () => clearTimeout(timer);
+	}, [searchQuery]);
 
 	const { data: developersData, isLoading } =
 		api.developers.getDevelopers.useQuery({
 			page,
 			limit: 12,
-			search: searchQuery,
+			search: debouncedQuery,
 		});
 
 	const filteredDevelopers = developersData?.developers || [];
-	const showMedals = page === 1 && searchQuery.trim() === "";
+	const totalDevelopers =
+		developersData?.pagination.total ?? filteredDevelopers.length;
+	const showMedals = page === 1 && debouncedQuery === "";
 
 	return (
 		<div className="bg-background">
@@ -106,13 +118,23 @@ export default function DevelopersPage() {
 					icon={Users}
 				>
 					<div className="relative w-full max-w-md">
-						<Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+						<Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
 						<Input
 							placeholder={t("search_placeholder")}
 							value={searchQuery}
 							onChange={(e) => setSearchQuery(e.target.value)}
-							className="min-h-11 pl-10"
+							className={cn("min-h-11 pl-10", searchQuery && "pr-12")}
 						/>
+						{searchQuery && (
+							<button
+								type="button"
+								onClick={() => setSearchQuery("")}
+								aria-label={t("clear_search")}
+								className="absolute top-1/2 right-0.5 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:text-primary"
+							>
+								<X className="h-4 w-4" />
+							</button>
+						)}
 					</div>
 				</PageHeader>
 
@@ -120,7 +142,7 @@ export default function DevelopersPage() {
 					<span className="eyebrow">{t("section_leaderboard")}</span>
 					{!isLoading && (
 						<span className="font-mono text-muted-foreground text-xs tabular-nums">
-							{String(filteredDevelopers.length).padStart(2, "0")}
+							{String(totalDevelopers).padStart(2, "0")}
 						</span>
 					)}
 				</div>
@@ -154,14 +176,14 @@ export default function DevelopersPage() {
 					<div>
 						<EmptyState
 							icon="@"
-							title={searchQuery ? t("no_results") : t("no_developers")}
+							title={debouncedQuery ? t("no_results") : t("no_developers")}
 							description={
-								searchQuery
+								debouncedQuery
 									? t("try_different_search")
 									: t("no_developers_description")
 							}
-							actionLabel={searchQuery ? t("clear_search") : undefined}
-							onAction={searchQuery ? () => setSearchQuery("") : undefined}
+							actionLabel={debouncedQuery ? t("clear_search") : undefined}
+							onAction={debouncedQuery ? () => setSearchQuery("") : undefined}
 						/>
 					</div>
 				) : (
@@ -198,8 +220,15 @@ export default function DevelopersPage() {
 										className="h-full"
 									>
 										<Card
-											className="group card-lift relative h-full cursor-pointer overflow-hidden bg-card"
+											className="group card-lift relative h-full cursor-pointer overflow-hidden bg-card focus-visible:ring-2 focus-visible:ring-ring"
+											role="link"
+											tabIndex={0}
 											onClick={() => router.push(`/developers/${developer.id}`)}
+											onKeyDown={(e) => {
+												if (e.key === "Enter") {
+													router.push(`/developers/${developer.id}`);
+												}
+											}}
 										>
 											<div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-primary to-primary/20 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
@@ -208,8 +237,8 @@ export default function DevelopersPage() {
 													className={cn(
 														"absolute top-3 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-xl font-bold font-mono text-sm tabular-nums",
 														rank === 1
-															? "bg-primary text-primary-foreground"
-															: "bg-primary/10 text-primary",
+															? "bg-primary text-primary-foreground shadow-md"
+															: "border border-primary/20 bg-primary/10 text-primary",
 													)}
 												>
 													<span className="sr-only">{t("rank", { rank })}</span>
@@ -395,9 +424,11 @@ export default function DevelopersPage() {
 								>
 									{t("previous")}
 								</Button>
-								<span className="flex items-center px-4 text-muted-foreground text-sm tabular-nums">
-									{t("page")} {page} {t("of")}{" "}
-									{developersData.pagination.totalPages}
+								<span className="flex items-center px-4 font-mono text-muted-foreground text-sm tabular-nums">
+									{t("page_of", {
+										page,
+										total: developersData.pagination.totalPages,
+									})}
 								</span>
 								<Button
 									variant="outline"

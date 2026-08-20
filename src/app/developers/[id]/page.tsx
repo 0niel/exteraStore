@@ -24,6 +24,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
+import type { DonationMethod } from "~/components/donations/donation-widget";
 import { DonationWidget } from "~/components/donations/donation-widget";
 import { PluginCard } from "~/components/plugin-card";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
@@ -38,7 +39,7 @@ import {
 } from "~/components/ui/card";
 import { EmptyState } from "~/components/ui/empty-state";
 import { Skeleton } from "~/components/ui/skeleton";
-import { formatNumber } from "~/lib/utils";
+import { formatNumber, safeJsonParse } from "~/lib/utils";
 import { api, type RouterOutputs } from "~/trpc/react";
 
 type DeveloperPlugin =
@@ -155,14 +156,22 @@ export default function DeveloperProfilePage() {
 			<div className="bg-background">
 				<div className="container mx-auto max-w-6xl px-4 py-8">
 					<div className="space-y-8">
-						<Skeleton className="skeleton-shimmer h-64 w-full rounded-2xl" />
+						<Skeleton className="skeleton-shimmer h-72 w-full rounded-3xl" />
 						<div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-							<div className="lg:col-span-2">
-								<Skeleton className="skeleton-shimmer h-96 w-full rounded-xl" />
+							<div className="space-y-6 lg:col-span-2">
+								<Skeleton className="skeleton-shimmer h-10 w-48 rounded-lg" />
+								<div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+									{Array.from({ length: 4 }).map((_, i) => (
+										<Skeleton
+											key={i}
+											className="skeleton-shimmer h-56 w-full rounded-2xl"
+										/>
+									))}
+								</div>
 							</div>
-							<div className="space-y-4">
-								<Skeleton className="skeleton-shimmer h-32 w-full rounded-xl" />
-								<Skeleton className="skeleton-shimmer h-48 w-full rounded-xl" />
+							<div className="space-y-6">
+								<Skeleton className="skeleton-shimmer h-48 w-full rounded-2xl" />
+								<Skeleton className="skeleton-shimmer h-56 w-full rounded-2xl" />
 							</div>
 						</div>
 					</div>
@@ -209,6 +218,10 @@ export default function DeveloperProfilePage() {
 	);
 	const TierIcon = tier.icon;
 	const tierName = t(`tier_${tier.key}`);
+	const donationMethods = safeJsonParse<DonationMethod[]>(
+		developer.donationRequisites ?? "",
+		[],
+	);
 
 	return (
 		<div className="bg-background">
@@ -222,7 +235,7 @@ export default function DeveloperProfilePage() {
 						/>
 						<div className="dot-grid absolute inset-x-0 top-0 -z-10 h-48" />
 						<div className="relative p-6 md:p-12">
-							<div className="mb-6 flex items-center justify-between">
+							<div className="mb-6 flex flex-wrap items-center justify-between gap-2">
 								<Button
 									variant="ghost"
 									onClick={() => router.back()}
@@ -451,16 +464,8 @@ export default function DeveloperProfilePage() {
 						</div>
 
 						<div className="space-y-6">
-							{developer.donationRequisites && (
-								<DonationWidget
-									methods={(() => {
-										try {
-											return JSON.parse(developer.donationRequisites || "null");
-										} catch {
-											return null;
-										}
-									})()}
-								/>
+							{donationMethods.length > 0 && (
+								<DonationWidget methods={donationMethods} />
 							)}
 							<Card>
 								<CardHeader>
