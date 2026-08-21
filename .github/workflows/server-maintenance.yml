@@ -111,6 +111,14 @@ jobs:
           grep -E '^(NEXT_PUBLIC_[A-Z_]+|TELEGRAM_BOT_USERNAME|TELEGRAM_POLLING|OPENROUTER_MODEL|TELEGRAM_API_BASE_URL)=' .env || echo "none"
           REMOTE
 
+      - name: Probe openrouter from runner
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          code=$(curl -sS -o /tmp/or.json -w '%{http_code}' -m 60 https://openrouter.ai/api/v1/chat/completions             -H "Authorization: Bearer $OPENROUTER_API_KEY" -H 'Content-Type: application/json'             -d '{"model":"google/gemini-3.6-flash","messages":[{"role":"user","content":"ping"}],"max_tokens":300}' || echo curl-failed)
+          echo "runner -> openrouter: $code"
+          head -c 200 /tmp/or.json; echo
+
       - name: Check public health
         run: |
           curl --fail --location --retry 6 --retry-delay 5 --retry-all-errors --connect-timeout 10 --max-time 20 https://exterastore.app/api/health
