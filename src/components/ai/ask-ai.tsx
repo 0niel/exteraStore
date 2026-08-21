@@ -30,6 +30,7 @@ export function AskAi({ pluginId, pluginName }: AskAiProps) {
 	const [answer, setAnswer] = useState<string | null>(null);
 	const [limitReached, setLimitReached] = useState(false);
 	const [failed, setFailed] = useState(false);
+	const [unavailable, setUnavailable] = useState(false);
 
 	const askMutation = api.ai.askAboutPlugin.useMutation({
 		onSuccess: (data) => {
@@ -38,6 +39,8 @@ export function AskAi({ pluginId, pluginName }: AskAiProps) {
 		onError: (error) => {
 			if (error.data?.code === "TOO_MANY_REQUESTS") {
 				setLimitReached(true);
+			} else if (error.data?.code === "SERVICE_UNAVAILABLE") {
+				setUnavailable(true);
 			} else {
 				setFailed(true);
 			}
@@ -55,6 +58,7 @@ export function AskAi({ pluginId, pluginName }: AskAiProps) {
 		if (!trimmed || askMutation.isPending) return;
 		setAnswer(null);
 		setFailed(false);
+		setUnavailable(false);
 		setLimitReached(false);
 		setQuestion(trimmed);
 		askMutation.mutate({ pluginId, question: trimmed.slice(0, 500), locale });
@@ -138,6 +142,12 @@ export function AskAi({ pluginId, pluginName }: AskAiProps) {
 					{limitReached && (
 						<p className="rounded-lg bg-warning/10 p-3 text-sm text-warning">
 							{t("ask_limit_note")}
+						</p>
+					)}
+
+					{unavailable && (
+						<p className="rounded-lg bg-muted p-3 text-muted-foreground text-sm">
+							{t("unavailable")}
 						</p>
 					)}
 

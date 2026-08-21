@@ -1479,7 +1479,8 @@
 		"suggest_loading": "Suggesting...",
 		"suggest_error": "Failed to suggest tags. Please try again later.",
 		"suggest_category_label": "Suggested category:",
-		"suggest_category_applied": "Category applied"
+		"suggest_category_applied": "Category applied",
+		"unavailable": "AI is temporarily unavailable, please try again later"
 	},
 	"AdminDashboard": {
 		"eyebrow": "Admin",

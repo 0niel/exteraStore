@@ -36,6 +36,7 @@ export function TextImprovementButton({
 	className,
 }: TextImprovementButtonProps) {
 	const t = useTranslations("TextImprovement");
+	const tAi = useTranslations("AI");
 	const locale = useLocale();
 	const [isImproving, setIsImproving] = useState(false);
 
@@ -46,6 +47,10 @@ export function TextImprovementButton({
 			setIsImproving(false);
 		},
 		onError: (error) => {
+			if (error.data?.code === "SERVICE_UNAVAILABLE") {
+				toast.info(tAi("unavailable"));
+				return;
+			}
 			toast.error(t("improvement_error", { error: error.message }));
 			setIsImproving(false);
 		},
