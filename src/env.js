@@ -34,6 +34,9 @@ export const env = createEnv({
 			.string()
 			.url()
 			.default("https://openrouter.ai/api/v1"),
+		AI_GATEWAY_BASE_URL: z.string().url().optional(),
+		AI_GATEWAY_API_KEY: z.string().optional(),
+		AI_GATEWAY_MODEL: z.string().optional(),
 		OPENROUTER_MODEL: z.string().default("google/gemini-3.6-flash"),
 		CRON_SECRET: z.string().min(32).optional(),
 		UPLOADTHING_SECRET: z.string().optional(),
@@ -66,6 +69,9 @@ export const env = createEnv({
 		TELEGRAM_POLLING: process.env.TELEGRAM_POLLING,
 		OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
 		OPENROUTER_BASE_URL: process.env.OPENROUTER_BASE_URL,
+		AI_GATEWAY_BASE_URL: process.env.AI_GATEWAY_BASE_URL,
+		AI_GATEWAY_API_KEY: process.env.AI_GATEWAY_API_KEY,
+		AI_GATEWAY_MODEL: process.env.AI_GATEWAY_MODEL,
 		OPENROUTER_MODEL: process.env.OPENROUTER_MODEL,
 		CRON_SECRET: process.env.CRON_SECRET,
 		UPLOADTHING_SECRET: process.env.UPLOADTHING_SECRET,
