@@ -63,20 +63,45 @@ function rethrow(error: unknown): never {
 	throw error;
 }
 
-function getModel() {
+const BROWSER_USER_AGENT =
+	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36";
+
+function getProvider() {
+	if (env.AI_GATEWAY_BASE_URL && env.AI_GATEWAY_API_KEY) {
+		return {
+			apiKey: env.AI_GATEWAY_API_KEY,
+			baseURL: env.AI_GATEWAY_BASE_URL,
+			model: env.AI_GATEWAY_MODEL ?? env.OPENROUTER_MODEL,
+		};
+	}
+
 	if (!env.OPENROUTER_API_KEY) {
-		throw new Error("OpenRouter API key is not configured");
+		return null;
+	}
+
+	return {
+		apiKey: env.OPENROUTER_API_KEY,
+		baseURL: env.OPENROUTER_BASE_URL,
+		model: env.OPENROUTER_MODEL,
+	};
+}
+
+function getModel() {
+	const provider = getProvider();
+	if (!provider) {
+		throw new AiUnavailableError();
 	}
 
 	const openrouter = createOpenRouter({
-		apiKey: env.OPENROUTER_API_KEY,
-		baseURL: env.OPENROUTER_BASE_URL,
+		apiKey: provider.apiKey,
+		baseURL: provider.baseURL,
 		compatibility: "strict",
 		appName: "exteraGram Plugin Store",
 		appUrl: env.NEXTAUTH_URL,
+		headers: { "User-Agent": BROWSER_USER_AGENT },
 	});
 
-	return openrouter.chat(env.OPENROUTER_MODEL);
+	return openrouter.chat(provider.model);
 }
 
 export async function generateAIObject<T>(
