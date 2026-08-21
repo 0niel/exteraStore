@@ -101,7 +101,7 @@ jobs:
           curl -sf -m 10 http://localhost:3000/api/health || echo "local health check failed"
           echo "=== outbound connectivity ==="
           APP_ID=$(sudo docker ps -qf "name=app" | head -1)
-          for host in https://openrouter.ai/api/v1/models https://api.telegram.org https://smartcaptcha.yandexcloud.net; do
+          for host in https://openrouter.ai/api/v1/models https://api.telegram.org https://generativelanguage.googleapis.com/v1beta/models https://api.groq.com/openai/v1/models https://api.deepseek.com/v1/models https://api.mistral.ai/v1/models https://api.together.xyz/v1/models https://llm.api.cloud.yandex.net https://openrouter-proxy.controlisanillusion08.workers.dev/api/v1/models https://gateway.ai.cloudflare.com/v1/921dffe6e25cf9e4b3d958ea33d83dac/exterastore/openrouter/models; do
             code=$(sudo docker exec "$APP_ID" node -e "fetch('$host',{signal:AbortSignal.timeout(8000)}).then(r=>console.log(r.status)).catch(e=>console.log('ERR '+e.cause?.code+' '+e.message))" 2>/dev/null || echo "exec-failed")
             echo "$host -> $code"
           done
