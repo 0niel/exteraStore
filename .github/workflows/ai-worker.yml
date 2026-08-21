@@ -1,0 +1,172 @@
+name: AI Worker
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: Max queue items to claim in one run
+        required: false
+        default: "3"
+
+concurrency:
+  group: ai-worker
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  process-queue:
+    name: Run pipeline AI checks
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 30
+    steps:
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Claim jobs, run checks and submit results
+        env:
+          WORKER_URL: https://exterastore.app/api/ai-worker
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
+          CLAIM_LIMIT: ${{ inputs.limit }}
+        run: |
+          cat > "$RUNNER_TEMP/ai-worker.mjs" <<'NODE'
+          const workerUrl = process.env.WORKER_URL;
+          const cronSecret = process.env.CRON_SECRET;
+          const apiKey = process.env.OPENROUTER_API_KEY;
+          const model = process.env.OPENROUTER_MODEL || "google/gemini-3.6-flash";
+          const limit = Number.parseInt(process.env.CLAIM_LIMIT || "", 10) || 3;
+
+          const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+          const MAX_ATTEMPTS = 3;
+
+          function fail(message) {
+            console.error(message);
+            process.exit(1);
+          }
+
+          if (!workerUrl) fail("WORKER_URL is not configured");
+          if (!cronSecret) fail("CRON_SECRET secret is not configured");
+          if (!apiKey) fail("OPENROUTER_API_KEY secret is not configured");
+
+          function reason(error) {
+            return error instanceof Error ? error.message : "unknown error";
+          }
+
+          async function callWorker(payload) {
+            const response = await fetch(workerUrl, {
+              method: "POST",
+              headers: {
+                authorization: `Bearer ${cronSecret}`,
+                "content-type": "application/json",
+              },
+              body: JSON.stringify(payload),
+              signal: AbortSignal.timeout(120000),
+            });
+            if (!response.ok) {
+              throw new Error(`worker responded ${response.status}`);
+            }
+            return await response.json();
+          }
+
+          async function completion(instructions, prompt) {
+            let lastError = "unknown error";
+            for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+              try {
+                const response = await fetch(OPENROUTER_URL, {
+                  method: "POST",
+                  headers: {
+                    authorization: `Bearer ${apiKey}`,
+                    "content-type": "application/json",
+                    "HTTP-Referer": "https://exterastore.app",
+                    "X-Title": "exteraGram Plugin Store",
+                  },
+                  body: JSON.stringify({
+                    model,
+                    messages: [
+                      { role: "system", content: instructions },
+                      { role: "user", content: prompt },
+                    ],
+                    max_tokens: 4000,
+                    temperature: 0.1,
+                  }),
+                  signal: AbortSignal.timeout(180000),
+                });
+
+                if (!response.ok) {
+                  lastError = `openrouter responded ${response.status}`;
+                } else {
+                  const data = await response.json();
+                  const content = data?.choices?.[0]?.message?.content;
+                  if (typeof content === "string" && content.trim()) {
+                    return content;
+                  }
+                  lastError = "openrouter returned an empty completion";
+                }
+              } catch (error) {
+                lastError = reason(error);
+              }
+
+              if (attempt < MAX_ATTEMPTS) {
+                await new Promise((resolve) => setTimeout(resolve, attempt * 5000));
+              }
+            }
+            throw new Error(lastError);
+          }
+
+          let claim;
+          try {
+            claim = await callWorker({ action: "claim", limit });
+          } catch (error) {
+            fail(`claim failed: ${reason(error)}`);
+          }
+
+          const jobs = Array.isArray(claim?.jobs) ? claim.jobs : [];
+          console.log(`claimed ${jobs.length} job(s), model ${model}`);
+          if (jobs.length === 0) {
+            process.exit(0);
+          }
+
+          const results = [];
+          for (const job of jobs) {
+            try {
+              const checks = [];
+              for (const check of job.checks ?? []) {
+                const responses = [];
+                for (const chunk of check.chunks ?? []) {
+                  responses.push(await completion(chunk.instructions, chunk.prompt));
+                }
+                if (responses.length === 0) {
+                  throw new Error(`no chunks for ${check.checkType}`);
+                }
+                checks.push({ checkType: check.checkType, responses });
+              }
+              if (checks.length === 0) {
+                throw new Error("job contained no checks");
+              }
+              console.log(`job ${job.queueId}: ${checks.length} check(s) done`);
+              results.push({ queueId: job.queueId, checks });
+            } catch (error) {
+              const message = reason(error).slice(0, 300);
+              console.log(`job ${job.queueId}: failed (${message})`);
+              results.push({ queueId: job.queueId, error: message });
+            }
+          }
+
+          try {
+            const submit = await callWorker({ action: "submit", results });
+            console.log(
+              `submitted ${results.length} result(s): completed ${submit?.completed ?? 0}, failed ${submit?.failed ?? 0}`,
+            );
+          } catch (error) {
+            console.error(`submit failed: ${reason(error)}`);
+          }
+          NODE
+          node "$RUNNER_TEMP/ai-worker.mjs"

@@ -298,7 +298,9 @@ export default function AdminPluginsPage() {
 
 	const runChecks = api.pluginPipeline.runChecks.useMutation({
 		onSuccess: (_result, variables) => {
-			toast.success(t("toast_checks_started"));
+			toast.success(t("toast_checks_started"), {
+				description: t("toast_checks_queued_description"),
+			});
 			setPendingCheckIds((ids) =>
 				ids.includes(variables.pluginId) ? ids : [...ids, variables.pluginId],
 			);
@@ -516,6 +518,12 @@ export default function AdminPluginsPage() {
 															)}
 														</Button>
 													</div>
+													{plugin.checksInProgress ||
+													pendingCheckIds.includes(plugin.id) ? (
+														<p className="rounded-lg border border-border/60 border-dashed bg-muted/30 px-3 py-2 text-muted-foreground text-xs">
+															{t("ai_queued_hint")}
+														</p>
+													) : null}
 													{CHECK_TYPE_META.map(({ type, icon }) => (
 														<AiCheckRow
 															key={type}

@@ -25,12 +25,12 @@ import { type AILocale, PluginAIChecker } from "./plugin-pipeline-ai";
 
 type PipelineContext = Awaited<ReturnType<typeof createTRPCContext>>;
 
-async function sendSecurityAlerts(
-	ctx: PipelineContext,
+export async function sendSecurityAlerts(
+	database: typeof import("~/server/db").db,
 	pluginId: number,
 	plugin: { name: string; slug: string },
 ) {
-	const subscribers = await ctx.db
+	const subscribers = await database
 		.select({
 			userId: userPluginSubscriptions.userId,
 			telegramChatId: userPluginSubscriptions.telegramChatId,
@@ -47,7 +47,7 @@ async function sendSecurityAlerts(
 		);
 
 	const allowedUserIds = await getAllowedNotificationUserIds(
-		ctx.db,
+		database,
 		subscribers.map((s: { userId: string }) => s.userId),
 		"security",
 	);
@@ -60,7 +60,7 @@ async function sendSecurityAlerts(
 			continue;
 		}
 
-		await ctx.db.insert(notifications).values({
+		await database.insert(notifications).values({
 			userId: subscriber.userId,
 			pluginId,
 			type: "security_alert",
@@ -233,7 +233,7 @@ export async function processQueueItem(
 		);
 
 		if (hasCriticalIssues) {
-			await sendSecurityAlerts(ctx, item.pluginId, plugin[0]);
+			await sendSecurityAlerts(ctx.db, item.pluginId, plugin[0]);
 		}
 
 		return { pluginId: item.pluginId, status: "completed" };
@@ -360,10 +360,6 @@ export const pluginPipelineRouter = createTRPCRouter({
 			if (!queueItem) {
 				throw new Error("Failed to enqueue pipeline checks");
 			}
-
-			processQueueItem(ctx, queueItem.id).catch(() => {
-				console.error("Error processing queue item in background");
-			});
 
 			return queueItem;
 		}),
@@ -573,7 +569,7 @@ export const pluginPipelineRouter = createTRPCRouter({
 					);
 
 					if (hasCriticalIssues) {
-						await sendSecurityAlerts(ctx, item.pluginId, plugin[0]);
+						await sendSecurityAlerts(ctx.db, item.pluginId, plugin[0]);
 					}
 
 					results.push({ pluginId: item.pluginId, status: "completed" });

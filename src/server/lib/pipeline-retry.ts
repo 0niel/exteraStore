@@ -1,5 +1,4 @@
 import { and, eq, inArray, lt, sql } from "drizzle-orm";
-import type { processQueueItem as ProcessQueueItem } from "~/server/api/routers/plugin-pipeline";
 import { db } from "~/server/db";
 import { pluginPipelineQueue } from "~/server/db/schema";
 
@@ -12,8 +11,6 @@ const EXHAUSTED_COOLDOWN_SECONDS = 6 * 3_600;
 const globalState = globalThis as typeof globalThis & {
 	__pipelineRetryStarted?: boolean;
 };
-
-type PipelineContext = Parameters<typeof ProcessQueueItem>[0];
 
 async function retryTick() {
 	const now = Math.floor(Date.now() / 1000);
@@ -80,21 +77,8 @@ async function retryTick() {
 		.where(inArray(pluginPipelineQueue.id, ids));
 
 	console.log(
-		`pipeline retry: requeued ${ids.length} failed item(s) (${stuck.length} were stuck in processing)`,
+		`pipeline retry: requeued ${ids.length} failed item(s) for the github worker (${stuck.length} were stuck in processing)`,
 	);
-
-	const { processQueueItem } = await import(
-		"~/server/api/routers/plugin-pipeline"
-	);
-	const ctx = { db, session: null, headers: new Headers() } as PipelineContext;
-
-	for (const id of ids) {
-		try {
-			await processQueueItem(ctx, id);
-		} catch {
-			console.error(`pipeline retry: queue item ${id} failed again`);
-		}
-	}
 }
 
 export function startPipelineRetryLoop() {

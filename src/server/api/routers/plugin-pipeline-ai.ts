@@ -31,10 +31,64 @@ const AICollectionResultSchema = z.object({
 type CheckResult = z.infer<typeof CheckResultSchema>;
 type AICollectionResult = z.infer<typeof AICollectionResultSchema>;
 
+export type CheckType = "security" | "performance";
+
+export type CheckPrompt = {
+	instructions: string;
+	prompt: string;
+};
+
+export type CheckPromptInput = {
+	name: string;
+	description?: string | null;
+	category?: string | null;
+	version?: string | null;
+	code: string;
+	locale?: AILocale;
+};
+
+export type ParsedCheckResult = {
+	status: "passed" | "failed";
+	classification: CheckResult["classification"];
+	score: number;
+	shortDescription: string;
+	details: string;
+};
+
+const RESPONSE_FORMAT_DIRECTIVE = `Верни ровно один JSON-объект без markdown-обёртки, без комментариев и без текста вокруг:
+{"status":"safe|warning|danger","classification":"safe|potentially_unsafe|unsafe|critical","shortDescription":"не длиннее 200 символов","issues":[{"type":"не длиннее 100 символов","severity":"low|medium|high|critical","description":"не длиннее 1000 символов","recommendation":"не длиннее 1000 символов"}]}
+Если проблем нет, верни пустой массив issues.`;
+
 export function languageDirective(locale: AILocale): string {
 	return locale === "en"
 		? "Write every user-facing text in English."
 		: "Пиши весь текст для пользователя на русском языке.";
+}
+
+function securityInstructions(locale: AILocale) {
+	return `Ты эксперт по безопасности плагинов ExteraGram. Анализируй код кратко и точно.
+
+Безопасными считаются официальные API ExteraGram: client_utils, TLRPC через send_request, HookStrategy, HookResult, AlertDialogBuilder, BulletinHelper, android_utils, запросы к GitHub и файлы в папке плагина или кеше.
+
+Критические признаки: eval, exec, os.system, кража или отправка паролей и токенов.
+Опасные признаки: неизвестные HTTP-серверы, доступ к SMS и контактам.
+Не придумывай поведение, которого нет в предоставленном фрагменте. ${languageDirective(locale)}`;
+}
+
+function performanceInstructions(locale: AILocale) {
+	return `Ты эксперт по производительности плагинов ExteraGram. Ищи бесконечные циклы, утечки памяти, блокировку UI, алгоритмы O(n²) и хуже, загрузку больших файлов целиком в память. Не придумывай поведение, которого нет в предоставленном фрагменте. Отвечай кратко. ${languageDirective(locale)}`;
+}
+
+function checkInstructions(checkType: CheckType, locale: AILocale) {
+	return checkType === "security"
+		? securityInstructions(locale)
+		: performanceInstructions(locale);
+}
+
+function checkTask(checkType: CheckType) {
+	return checkType === "security"
+		? "Проанализируй безопасность этого фрагмента."
+		: "Проанализируй производительность этого фрагмента.";
 }
 
 function splitCode(code: string): string[] {
@@ -107,21 +161,70 @@ function scoreFor(result: CheckResult) {
 	return result.status === "safe" ? 90 : result.status === "warning" ? 60 : 20;
 }
 
+export function buildCheckPrompts(
+	checkType: CheckType,
+	input: CheckPromptInput,
+): CheckPrompt[] {
+	const locale = input.locale ?? "ru";
+	const instructions = `${checkInstructions(checkType, locale)}\n\n${RESPONSE_FORMAT_DIRECTIVE}`;
+	const task = checkTask(checkType);
+	const chunks = splitCode(input.code);
+
+	const meta = [
+		`Плагин: ${input.name}`,
+		input.version ? `Version: ${input.version}` : null,
+		input.category ? `Категория: ${input.category}` : null,
+		input.description ? `Описание: ${input.description.slice(0, 2_000)}` : null,
+	].filter((line): line is string => line !== null);
+
+	return chunks.map((chunk, index) => ({
+		instructions,
+		prompt: `${meta.join("\n")}\nФрагмент ${index + 1} из ${chunks.length}\n\n${task}\n\nКод:\n${chunk}`,
+	}));
+}
+
+function extractJsonObject(raw: string): unknown {
+	const trimmed = raw.trim();
+	const fenced = /^```(?:json)?\s*([\s\S]*?)\s*```$/.exec(trimmed);
+	const body = (fenced?.[1] ?? trimmed).trim();
+
+	try {
+		return JSON.parse(body);
+	} catch {
+		const start = body.indexOf("{");
+		const end = body.lastIndexOf("}");
+		if (start === -1 || end <= start) {
+			throw new Error("AI response does not contain a JSON object");
+		}
+		return JSON.parse(body.slice(start, end + 1));
+	}
+}
+
+export function parseCheckResults(
+	checkType: CheckType,
+	rawResponses: string[],
+	locale: AILocale = "ru",
+): ParsedCheckResult {
+	if (rawResponses.length === 0) {
+		throw new Error(`No ${checkType} responses to parse`);
+	}
+
+	const results = rawResponses.map((raw) =>
+		CheckResultSchema.parse(extractJsonObject(raw)),
+	);
+	const details = mergeChunkResults(results, locale);
+	const score = scoreFor(details);
+
+	return {
+		status: score >= 70 ? "passed" : "failed",
+		classification: details.classification,
+		score,
+		shortDescription: details.shortDescription,
+		details: JSON.stringify(details),
+	};
+}
+
 export class PluginAIChecker {
-	private getSecurityPrompt(locale: AILocale) {
-		return `Ты эксперт по безопасности плагинов ExteraGram. Анализируй код кратко и точно.
-
-Безопасными считаются официальные API ExteraGram: client_utils, TLRPC через send_request, HookStrategy, HookResult, AlertDialogBuilder, BulletinHelper, android_utils, запросы к GitHub и файлы в папке плагина или кеше.
-
-Критические признаки: eval, exec, os.system, кража или отправка паролей и токенов.
-Опасные признаки: неизвестные HTTP-серверы, доступ к SMS и контактам.
-Не придумывай поведение, которого нет в предоставленном фрагменте. ${languageDirective(locale)}`;
-	}
-
-	private getPerformancePrompt(locale: AILocale) {
-		return `Ты эксперт по производительности плагинов ExteraGram. Ищи бесконечные циклы, утечки памяти, блокировку UI, алгоритмы O(n²) и хуже, загрузку больших файлов целиком в память. Не придумывай поведение, которого нет в предоставленном фрагменте. Отвечай кратко. ${languageDirective(locale)}`;
-	}
-
 	private getTextImprovementPrompt(
 		textType: "description" | "changelog",
 		locale: AILocale,
@@ -186,13 +289,7 @@ export class PluginAIChecker {
 		pluginName: string,
 		locale: AILocale = "ru",
 	): Promise<{ score: number; details: CheckResult; issues: string[] }> {
-		return this.runCheck(
-			pluginCode,
-			pluginName,
-			this.getSecurityPrompt(locale),
-			"Проанализируй безопасность этого фрагмента.",
-			locale,
-		);
+		return this.runCheck("security", pluginCode, pluginName, locale);
 	}
 
 	async checkPerformance(
@@ -200,30 +297,27 @@ export class PluginAIChecker {
 		pluginName: string,
 		locale: AILocale = "ru",
 	): Promise<{ score: number; details: CheckResult; issues: string[] }> {
-		return this.runCheck(
-			pluginCode,
-			pluginName,
-			this.getPerformancePrompt(locale),
-			"Проанализируй производительность этого фрагмента.",
-			locale,
-		);
+		return this.runCheck("performance", pluginCode, pluginName, locale);
 	}
 
 	private async runCheck(
+		checkType: CheckType,
 		pluginCode: string,
 		pluginName: string,
-		instructions: string,
-		task: string,
 		locale: AILocale,
 	) {
-		const chunks = splitCode(pluginCode);
+		const prompts = buildCheckPrompts(checkType, {
+			name: pluginName,
+			code: pluginCode,
+			locale,
+		});
 		const results: CheckResult[] = [];
 
-		for (const [index, chunk] of chunks.entries()) {
+		for (const { instructions, prompt } of prompts) {
 			const result = await generateAIObject(
 				CheckResultSchema,
 				instructions,
-				`Плагин: ${pluginName}\nФрагмент ${index + 1} из ${chunks.length}\n\n${task}\n\nКод:\n${chunk}`,
+				prompt,
 			);
 			results.push(result);
 		}
