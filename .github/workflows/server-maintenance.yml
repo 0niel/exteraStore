@@ -109,6 +109,10 @@ jobs:
           done
           ua_code=$(sudo docker exec "$APP_ID" node -e "fetch('https://openrouter.ai/api/v1/models',{headers:{'User-Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'},signal:AbortSignal.timeout(8000)}).then(r=>console.log(r.status)).catch(e=>console.log('ERR '+e.message))" 2>/dev/null || echo "exec-failed")
           echo "openrouter with browser UA -> $ua_code"
+          echo "=== cron secret fingerprint ==="
+          APP_ID=$(sudo docker ps -qf "name=app" | head -1)
+          echo "env file:  $(grep -m1 '^CRON_SECRET=' .env | cut -d= -f2- | tr -d '"' | sha256sum | cut -c1-12)"
+          echo "container: $(sudo docker exec "$APP_ID" printenv CRON_SECRET | sha256sum | cut -c1-12)"
           echo "=== public build vars ==="
           grep -E '^(NEXT_PUBLIC_[A-Z_]+|TELEGRAM_BOT_USERNAME|TELEGRAM_POLLING|OPENROUTER_MODEL|TELEGRAM_API_BASE_URL)=' .env || echo "none"
           REMOTE
