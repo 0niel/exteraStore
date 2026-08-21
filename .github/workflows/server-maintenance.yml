@@ -79,7 +79,20 @@ jobs:
           SERVER_PORT="${SERVER_PORT:-22}"
           ssh -p "$SERVER_PORT" -i ~/.ssh/deploy_key -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
             "$SERVER_USER@$SERVER_HOST" \
-            'cd ~/exterastore && ./scripts/docker-cmd.sh compose up -d --force-recreate app 2>/dev/null || sudo docker compose up -d --force-recreate app'
+            'bash -s' <<'REMOTE'
+          set -euo pipefail
+          cd ~/exterastore
+          export DEPLOY_ROOT="$PWD"
+          export APP_IMAGE=$(cat .deploy-state/current-image 2>/dev/null || true)
+          if [ -z "$APP_IMAGE" ]; then
+            echo "no recorded image, resolving from running container"
+            APP_ID=$(sudo docker ps -qf "name=app" | head -1)
+            export APP_IMAGE=$(sudo docker inspect --format '{{.Image}}' "$APP_ID")
+          fi
+          . scripts/docker-cmd.sh
+          docker_cmd compose up -d --no-deps --force-recreate app
+          echo "app recreated with image ${APP_IMAGE:0:60}"
+          REMOTE
 
       - name: Inspect server state
         env:
