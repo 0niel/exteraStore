@@ -13,6 +13,7 @@ function getModel() {
 
 	const openrouter = createOpenRouter({
 		apiKey: env.OPENROUTER_API_KEY,
+		baseURL: env.OPENROUTER_BASE_URL,
 		compatibility: "strict",
 		appName: "exteraGram Plugin Store",
 		appUrl: env.NEXTAUTH_URL,
