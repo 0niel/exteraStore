@@ -41,11 +41,12 @@ jobs:
           SERVER_PORT: ${{ secrets.SERVER_PORT }}
           SERVER_USER: ${{ secrets.SERVER_USER }}
           NEW_OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          NEW_OPENROUTER_BASE_URL: ${{ vars.OPENROUTER_BASE_URL }}
         run: |
           SERVER_PORT="${SERVER_PORT:-22}"
           ssh -p "$SERVER_PORT" -i ~/.ssh/deploy_key -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
             "$SERVER_USER@$SERVER_HOST" \
-            "NEW_KEY='$NEW_OPENROUTER_API_KEY' bash -s" <<'REMOTE'
+            "NEW_KEY='$NEW_OPENROUTER_API_KEY' NEW_OR_BASE='$NEW_OPENROUTER_BASE_URL' bash -s" <<'REMOTE'
           set -euo pipefail
           cd ~/exterastore
           touch .env
@@ -60,6 +61,7 @@ jobs:
           }
           update_var OPENROUTER_API_KEY "$NEW_KEY"
           update_var OPENROUTER_MODEL "google/gemini-3.6-flash"
+          update_var OPENROUTER_BASE_URL "$NEW_OR_BASE"
           update_var TELEGRAM_POLLING "true"
           update_var TELEGRAM_API_BASE_URL "https://tg-proxy.controlisanillusion08.workers.dev"
           echo "env updated: $(grep -cE '^(OPENROUTER|TELEGRAM_POLLING|TELEGRAM_API_BASE_URL)' .env) managed vars present"
