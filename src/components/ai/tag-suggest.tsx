@@ -39,7 +39,11 @@ export function TagSuggest({
 			setSuggestedTags(data.tags);
 			setSuggestedCategory(data.category);
 		},
-		onError: () => {
+		onError: (error) => {
+			if (error.data?.code === "SERVICE_UNAVAILABLE") {
+				toast.info(t("unavailable"));
+				return;
+			}
 			toast.error(t("suggest_error"));
 		},
 	});

@@ -1479,7 +1479,8 @@
 		"suggest_loading": "Подбираем...",
 		"suggest_error": "Не удалось подобрать теги. Попробуйте позже.",
 		"suggest_category_label": "Предложенная категория:",
-		"suggest_category_applied": "Категория применена"
+		"suggest_category_applied": "Категория применена",
+		"unavailable": "ИИ временно недоступен, попробуйте позже"
 	},
 	"AdminDashboard": {
 		"eyebrow": "Админка",

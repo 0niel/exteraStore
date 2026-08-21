@@ -38,9 +38,12 @@ export function DiffExplain({ pluginId, fromHash, toHash }: DiffExplainProps) {
 		},
 	);
 
+	const explanation = data?.available ? data : null;
+	const unavailable = data?.available === false;
+
 	return (
 		<div className="space-y-3">
-			{!data && (
+			{!explanation && !unavailable && (
 				<Button
 					variant="outline"
 					className="press-scale min-h-11 gap-2 border-primary/30 bg-primary/5 hover:bg-primary/10"
@@ -56,12 +59,14 @@ export function DiffExplain({ pluginId, fromHash, toHash }: DiffExplainProps) {
 				</Button>
 			)}
 
-			{isError && (
-				<p className="text-muted-foreground text-sm">{t("explain_error")}</p>
+			{(isError || unavailable) && (
+				<p className="text-muted-foreground text-sm">
+					{unavailable ? t("unavailable") : t("explain_error")}
+				</p>
 			)}
 
 			<AnimatePresence initial={false}>
-				{data && (
+				{explanation && (
 					<motion.div
 						initial={reduceMotion ? false : { opacity: 0, height: 0, y: 8 }}
 						animate={{ opacity: 1, height: "auto", y: 0 }}
@@ -75,10 +80,10 @@ export function DiffExplain({ pluginId, fromHash, toHash }: DiffExplainProps) {
 									<Sparkles className="h-3.5 w-3.5" />
 									{t("explain_chip")}
 								</span>
-								<p className="text-sm leading-relaxed">{data.summary}</p>
-								{data.changes.length > 0 && (
+								<p className="text-sm leading-relaxed">{explanation.summary}</p>
+								{explanation.changes.length > 0 && (
 									<ul className="space-y-2">
-										{data.changes.map((change) => (
+										{explanation.changes.map((change) => (
 											<li
 												key={`${change.type}-${change.description}`}
 												className="flex items-start gap-2 text-sm"
