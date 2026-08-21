@@ -49,7 +49,17 @@ const submitSchema = z.object({
 		.max(20),
 });
 
-const bodySchema = z.discriminatedUnion("action", [claimSchema, submitSchema]);
+const enqueueSchema = z.object({
+	action: z.literal("enqueue"),
+	pluginIds: z.array(z.number().int().positive()).max(50).optional(),
+	limit: z.number().int().min(1).max(50).default(10),
+});
+
+const bodySchema = z.discriminatedUnion("action", [
+	claimSchema,
+	submitSchema,
+	enqueueSchema,
+]);
 
 function isAuthorized(request: Request) {
 	const secret = env.CRON_SECRET;
@@ -322,6 +332,57 @@ async function handleSubmit(
 	return NextResponse.json({ ok: true, completed, failed });
 }
 
+async function handleEnqueue(pluginIds: number[] | undefined, limit: number) {
+	const now = nowSeconds();
+
+	const candidates = await db
+		.select({ id: plugins.id })
+		.from(plugins)
+		.where(
+			pluginIds?.length
+				? and(eq(plugins.status, "approved"), inArray(plugins.id, pluginIds))
+				: eq(plugins.status, "approved"),
+		)
+		.orderBy(desc(plugins.updatedAt))
+		.limit(limit);
+
+	if (candidates.length === 0) {
+		return NextResponse.json({ enqueued: 0, skipped: 0 });
+	}
+
+	const ids = candidates.map((row: { id: number }) => row.id);
+
+	const active = await db
+		.select({ pluginId: pluginPipelineQueue.pluginId })
+		.from(pluginPipelineQueue)
+		.where(
+			and(
+				inArray(pluginPipelineQueue.pluginId, ids),
+				sql`${pluginPipelineQueue.status} IN ('queued', 'processing')`,
+			),
+		);
+
+	const busy = new Set(active.map((row: { pluginId: number }) => row.pluginId));
+	const pending = ids.filter((id: number) => !busy.has(id));
+
+	if (pending.length === 0) {
+		return NextResponse.json({ enqueued: 0, skipped: ids.length });
+	}
+
+	await db.insert(pluginPipelineQueue).values(
+		pending.map((pluginId: number) => ({
+			pluginId,
+			priority: 5,
+			scheduledAt: now,
+		})),
+	);
+
+	return NextResponse.json({
+		enqueued: pending.length,
+		skipped: ids.length - pending.length,
+	});
+}
+
 export async function POST(request: Request) {
 	if (!isAuthorized(request)) {
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -337,6 +398,9 @@ export async function POST(request: Request) {
 	try {
 		if (body.action === "claim") {
 			return await handleClaim(body.limit);
+		}
+		if (body.action === "enqueue") {
+			return await handleEnqueue(body.pluginIds, body.limit);
 		}
 		return await handleSubmit(body.results);
 	} catch (error) {
