@@ -715,7 +715,9 @@
 		"severity_high": "High",
 		"severity_critical": "Critical",
 		"toast_checks_started": "AI checks started",
-		"toast_checks_error": "Failed to start AI checks"
+		"toast_checks_error": "Failed to start AI checks",
+		"ai_queued_hint": "Queued: the checks run on a GitHub Actions worker and usually finish within ~10 minutes.",
+		"toast_checks_queued_description": "The plugin was added to the queue. Results appear once the worker picks it up, usually within ~10 minutes."
 	},
 	"PluginVersionsPage": {
 		"back_to_plugin": "Back to plugin",

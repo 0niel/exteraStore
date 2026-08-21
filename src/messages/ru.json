@@ -715,7 +715,9 @@
 		"severity_high": "Высокая",
 		"severity_critical": "Критическая",
 		"toast_checks_started": "AI-проверки запущены",
-		"toast_checks_error": "Не удалось запустить AI-проверки"
+		"toast_checks_error": "Не удалось запустить AI-проверки",
+		"ai_queued_hint": "В очереди: проверки выполняет воркер GitHub Actions, обычно это занимает до 10 минут.",
+		"toast_checks_queued_description": "Плагин добавлен в очередь. Результаты появятся после обработки воркером, обычно в течение 10 минут."
 	},
 	"PluginVersionsPage": {
 		"back_to_plugin": "Назад к плагину",
