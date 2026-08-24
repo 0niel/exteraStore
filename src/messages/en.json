@@ -49,6 +49,7 @@
 		"security_details": "Security details",
 		"security_check_failed": "Failed security check",
 		"security_issues_short": "Issues found",
+		"security_ok": "Security check passed",
 		"developer": "Developer",
 		"unknown_author": "Unknown",
 		"rating_tooltip": "Average rating and number of reviews",
@@ -1097,6 +1098,9 @@
 		"prev_page": "Previous",
 		"next_page": "Next",
 		"page_of": "{page} of {total}",
+		"pagination_results": "Showing {from}–{to} of {total}",
+		"go_to_page": "Go to page {page}",
+		"current_page": "Current page, {page}",
 		"exteraless_only": "exteraless only"
 	},
 	"AdminUsers": {

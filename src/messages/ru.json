@@ -49,6 +49,7 @@
 		"security_details": "Подробности безопасности",
 		"security_check_failed": "Не прошел проверку безопасности",
 		"security_issues_short": "Есть проблемы",
+		"security_ok": "Проверка безопасности пройдена",
 		"developer": "Разработчик",
 		"unknown_author": "Неизвестен",
 		"rating_tooltip": "Средний рейтинг и число отзывов",
@@ -1097,6 +1098,9 @@
 		"prev_page": "Назад",
 		"next_page": "Дальше",
 		"page_of": "{page} из {total}",
+		"pagination_results": "Показаны {from}–{to} из {total}",
+		"go_to_page": "Перейти на страницу {page}",
+		"current_page": "Текущая страница, {page}",
 		"exteraless_only": "Только exteraless"
 	},
 	"AdminUsers": {

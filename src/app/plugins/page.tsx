@@ -1,18 +1,12 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import {
-	ChevronLeft,
-	ChevronRight,
-	Grid2X2,
-	List,
-	Search,
-	X,
-} from "lucide-react";
+import { Grid2X2, List, Search, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useDebounce } from "use-debounce";
+import { CatalogPagination } from "~/components/catalog-pagination";
 import { PageHeader } from "~/components/page-header";
 import { PluginCard } from "~/components/plugin-card";
 import { Button } from "~/components/ui/button";
@@ -42,6 +36,11 @@ const isSortOption = (value: string | null): value is SortOption =>
 	value === "rating" ||
 	value === "downloads";
 
+const parsePage = (value: string | null) => {
+	const parsed = Number(value);
+	return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
+};
+
 function CatalogSkeleton({ compact = false }: { compact?: boolean }) {
 	return (
 		<div
@@ -69,6 +68,7 @@ function PluginsContent() {
 	const searchParams = useSearchParams();
 	const router = useRouter();
 	const prefersReducedMotion = useReducedMotion();
+	const resultsRef = useRef<HTMLDivElement>(null);
 	const initialSort = searchParams.get("sort");
 	const featuredOnly = searchParams.get("featured") === "true";
 	const currentQuery = searchParams.toString();
@@ -81,7 +81,7 @@ function PluginsContent() {
 		searchParams.get("exteraless") === "1",
 	);
 	const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-	const [page, setPage] = useState(1);
+	const page = parsePage(searchParams.get("page"));
 	const [debouncedSearch] = useDebounce(search.trim(), 250);
 
 	const {
@@ -108,6 +108,12 @@ function PluginsContent() {
 		if (sortBy !== "newest") params.set("sort", sortBy);
 		if (featuredOnly) params.set("featured", "true");
 		if (exteralessOnly) params.set("exteraless", "1");
+		const filtersMatchUrl =
+			(searchParams.get("search") || "") === debouncedSearch &&
+			(searchParams.get("category") || "") === category &&
+			(searchParams.get("sort") || "newest") === sortBy &&
+			(searchParams.get("exteraless") === "1") === exteralessOnly;
+		if (filtersMatchUrl && page > 1) params.set("page", String(page));
 		const queryString = params.toString();
 		if (queryString !== currentQuery) {
 			router.replace(queryString ? `/plugins?${queryString}` : "/plugins", {
@@ -120,9 +126,21 @@ function PluginsContent() {
 		debouncedSearch,
 		exteralessOnly,
 		featuredOnly,
+		page,
 		router,
+		searchParams,
 		sortBy,
 	]);
+
+	useEffect(() => {
+		if (!pluginsData || pluginsData.totalPages < 1) return;
+		if (page <= pluginsData.totalPages) return;
+		const params = new URLSearchParams(currentQuery);
+		if (pluginsData.totalPages === 1) params.delete("page");
+		else params.set("page", String(pluginsData.totalPages));
+		const query = params.toString();
+		router.replace(query ? `/plugins?${query}` : "/plugins", { scroll: false });
+	}, [currentQuery, page, pluginsData, router]);
 
 	const hasFilters =
 		Boolean(search) ||
@@ -136,13 +154,28 @@ function PluginsContent() {
 		setCategory("");
 		setSortBy("newest");
 		setExteralessOnly(false);
-		setPage(1);
 		router.replace("/plugins", { scroll: false });
 	};
 
 	const selectCategory = (slug: string) => {
 		setCategory(slug);
-		setPage(1);
+	};
+
+	const getPageHref = (targetPage: number) => {
+		const params = new URLSearchParams(currentQuery);
+		if (targetPage <= 1) params.delete("page");
+		else params.set("page", String(targetPage));
+		const query = params.toString();
+		return query ? `/plugins?${query}` : "/plugins";
+	};
+
+	const handlePageNavigate = () => {
+		window.requestAnimationFrame(() => {
+			resultsRef.current?.scrollIntoView({
+				behavior: prefersReducedMotion ? "auto" : "smooth",
+				block: "start",
+			});
+		});
 	};
 
 	const sortOptions: Array<{ value: SortOption; label: string }> = [
@@ -151,6 +184,9 @@ function PluginsContent() {
 		{ value: "rating", label: t("sort_rating") },
 		{ value: "downloads", label: t("sort_downloads") },
 	];
+	const categoryNames = new Map(
+		categories?.map((item: PluginCategory) => [item.slug, item.name]) ?? [],
+	);
 
 	return (
 		<div className="min-h-[60dvh]">
@@ -180,7 +216,6 @@ function PluginsContent() {
 								value={search}
 								onChange={(event) => {
 									setSearch(event.target.value);
-									setPage(1);
 								}}
 								placeholder={t("search_placeholder")}
 								className="h-11 rounded-2xl bg-background/80 pr-11 pl-10"
@@ -190,7 +225,6 @@ function PluginsContent() {
 									type="button"
 									onClick={() => {
 										setSearch("");
-										setPage(1);
 									}}
 									className="press-scale absolute top-1/2 right-0 flex size-11 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 									aria-label={t("clear_search")}
@@ -204,7 +238,6 @@ function PluginsContent() {
 							value={sortBy}
 							onValueChange={(value) => {
 								setSortBy(value as SortOption);
-								setPage(1);
 							}}
 						>
 							<SelectTrigger
@@ -279,7 +312,6 @@ function PluginsContent() {
 							type="button"
 							onClick={() => {
 								setExteralessOnly((current) => !current);
-								setPage(1);
 							}}
 							className={cn(
 								"press-scale min-h-11 shrink-0 snap-start rounded-full border px-4 font-medium text-sm transition-all duration-200 ease-[var(--ease-spring)]",
@@ -294,7 +326,10 @@ function PluginsContent() {
 					</fieldset>
 				</div>
 
-				<div className="mb-5 flex min-h-11 items-center justify-between gap-3">
+				<div
+					ref={resultsRef}
+					className="mb-5 flex min-h-11 scroll-mt-28 items-center justify-between gap-3"
+				>
 					<div className="flex min-w-0 items-center gap-2">
 						<span className="eyebrow truncate" aria-live="polite">
 							{isLoading
@@ -385,6 +420,7 @@ function PluginsContent() {
 								>
 									<PluginCard
 										plugin={plugin}
+										categoryLabel={categoryNames.get(plugin.category)}
 										compact={viewMode === "list"}
 										className="h-full min-w-0 max-w-full"
 									/>
@@ -395,42 +431,14 @@ function PluginsContent() {
 				)}
 
 				{pluginsData && pluginsData.totalPages > 1 && (
-					<nav
-						className="mt-8 flex items-center justify-between gap-3 border-t pt-6"
-						aria-label={t("pagination_label")}
-					>
-						<Button
-							variant="outline"
-							className="press-scale min-h-11"
-							disabled={page === 1}
-							onClick={() => {
-								setPage((current) => Math.max(1, current - 1));
-								window.scrollTo({ top: 0, behavior: "smooth" });
-							}}
-							aria-label={t("prev_page")}
-						>
-							<ChevronLeft />
-							<span className="hidden sm:inline">{t("prev_page")}</span>
-						</Button>
-						<span className="text-center font-mono text-muted-foreground text-sm">
-							{t("page_of", { page, total: pluginsData.totalPages })}
-						</span>
-						<Button
-							variant="outline"
-							className="press-scale min-h-11"
-							disabled={page === pluginsData.totalPages}
-							onClick={() => {
-								setPage((current) =>
-									Math.min(pluginsData.totalPages, current + 1),
-								);
-								window.scrollTo({ top: 0, behavior: "smooth" });
-							}}
-							aria-label={t("next_page")}
-						>
-							<span className="hidden sm:inline">{t("next_page")}</span>
-							<ChevronRight />
-						</Button>
-					</nav>
+					<CatalogPagination
+						currentPage={page}
+						totalPages={pluginsData.totalPages}
+						totalItems={pluginsData.totalCount}
+						pageSize={12}
+						getHref={getPageHref}
+						onNavigate={handlePageNavigate}
+					/>
 				)}
 			</div>
 		</div>
