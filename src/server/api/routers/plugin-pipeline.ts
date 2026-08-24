@@ -28,6 +28,7 @@ import {
 	users,
 } from "~/server/db/schema";
 import { isAdminSessionUser } from "~/server/lib/admin";
+import { emitWebhookEvent } from "~/server/lib/developer-platform";
 import { sendTelegramMessage } from "~/server/lib/telegram-client";
 import { type AILocale, PluginAIChecker } from "./plugin-pipeline-ai";
 
@@ -260,6 +261,24 @@ export async function processQueueItem(
 			} catch (error) {
 				console.error("Failed to create pipeline notification:", error);
 			}
+			try {
+				await emitWebhookEvent(
+					ctx.db,
+					plugin[0].authorId,
+					"security.completed",
+					{
+						pluginId: item.pluginId,
+						name: plugin[0].name,
+						slug: plugin[0].slug,
+						checks: checkResults.map((check) => ({
+							type: check.checkType,
+							status: check.status,
+							score: check.score,
+							classification: check.classification,
+						})),
+					},
+				);
+			} catch {}
 		}
 
 		return { pluginId: item.pluginId, status: "completed" };
@@ -789,8 +808,9 @@ export const aiCollectionsRouter = createTRPCRouter({
 				collections.map(
 					async (collection: typeof aiPluginCollections.$inferSelect) => {
 						const pluginsInCollection = await ctx.db
-							.select()
+							.select({ plugin: plugins, authorImage: users.image })
 							.from(plugins)
+							.leftJoin(users, eq(plugins.authorId, users.id))
 							.where(
 								and(
 									inArray(plugins.id, collection.pluginIds),
@@ -800,7 +820,10 @@ export const aiCollectionsRouter = createTRPCRouter({
 
 						return {
 							...collection,
-							plugins: pluginsInCollection,
+							plugins: pluginsInCollection.map((row) => ({
+								...row.plugin,
+								authorImage: row.authorImage,
+							})),
 						};
 					},
 				),

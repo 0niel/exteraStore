@@ -39,6 +39,12 @@ export interface TelegramUpdate {
 	callback_query?: TelegramCallbackQuery;
 }
 
+function pluginRating(plugin: typeof Plugin.$inferSelect) {
+	return plugin.ratingCount > 0
+		? `⭐ ${plugin.rating.toFixed(1)} (${plugin.ratingCount})`
+		: "⭐ Нет оценок";
+}
+
 export async function processTelegramUpdate(
 	update: TelegramUpdate,
 ): Promise<void> {
@@ -739,7 +745,7 @@ async function handleSearch(
 			);
 			message += `${index + 1 + offset}. <b>${safeName}</b>\n`;
 			message += `   📝 ${safeDesc}...\n`;
-			message += `   ⭐ ${plugin.rating.toFixed(1)} (${plugin.ratingCount}) • ⬇️ ${plugin.downloadCount}\n\n`;
+			message += `   ${pluginRating(plugin)} • ⬇️ ${plugin.downloadCount}\n\n`;
 		});
 
 		const keyboard = {
@@ -919,7 +925,7 @@ async function showPluginsByCategory(
 			results.forEach((plugin: typeof Plugin.$inferSelect, index: number) => {
 				message += `${index + 1 + offset}. <b>${plugin.name}</b>\n`;
 				message += `   📝 ${plugin.shortDescription || plugin.description.substring(0, 50)}...\n`;
-				message += `   ⭐ ${plugin.rating.toFixed(1)} (${plugin.ratingCount}) • ⬇️ ${plugin.downloadCount}\n\n`;
+				message += `   ${pluginRating(plugin)} • ⬇️ ${plugin.downloadCount}\n\n`;
 			});
 		}
 
@@ -1001,7 +1007,7 @@ async function showPopularPlugins(
 			);
 			message += `${index + 1 + offset}. <b>${safeName}</b>\n`;
 			message += `   📝 ${safeDesc}...\n`;
-			message += `   ⭐ ${plugin.rating.toFixed(1)} (${plugin.ratingCount}) • ⬇️ ${plugin.downloadCount}\n\n`;
+			message += `   ${pluginRating(plugin)} • ⬇️ ${plugin.downloadCount}\n\n`;
 		});
 
 		const keyboard = {
@@ -1082,7 +1088,7 @@ async function showRecentPlugins(
 			);
 			message += `${index + 1 + offset}. <b>${safeName}</b>\n`;
 			message += `   📝 ${safeDesc}...\n`;
-			message += `   📅 ${createdDate} • ⭐ ${plugin.rating.toFixed(1)} • ⬇️ ${plugin.downloadCount}\n\n`;
+			message += `   📅 ${createdDate} • ${pluginRating(plugin)} • ⬇️ ${plugin.downloadCount}\n\n`;
 		});
 
 		const keyboard = {
@@ -1204,7 +1210,7 @@ async function showPluginDetails(
 		let message = `📦 <b>${safeName}</b>\n\n`;
 		message += `📝 <b>Описание:</b>\n${safeDesc}\n\n`;
 		message += `👤 <b>Автор:</b> ${safeAuthor}\n`;
-		message += `📊 <b>Рейтинг:</b> ⭐ ${p.rating.toFixed(1)}/5 (${p.ratingCount} отзывов)\n`;
+		message += `📊 <b>Рейтинг:</b> ${pluginRating(p)}\n`;
 		message += `⬇️ <b>Скачиваний:</b> ${p.downloadCount}\n`;
 		message += `📅 <b>Обновлен:</b> ${createValidDate(p.updatedAt || p.createdAt).toLocaleDateString("ru-RU")}\n`;
 

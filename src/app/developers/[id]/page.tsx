@@ -27,7 +27,6 @@ import type { DonationMethod } from "~/components/donations/donation-widget";
 import { DonationWidget } from "~/components/donations/donation-widget";
 import { GitHubIcon } from "~/components/icons/github-icon";
 import { PluginCard } from "~/components/plugin-card";
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
@@ -39,7 +38,8 @@ import {
 } from "~/components/ui/card";
 import { EmptyState } from "~/components/ui/empty-state";
 import { Skeleton } from "~/components/ui/skeleton";
-import { formatNumber, safeJsonParse } from "~/lib/utils";
+import { UserAvatar } from "~/components/user-avatar";
+import { cn, formatNumber, safeJsonParse } from "~/lib/utils";
 import { api, type RouterOutputs } from "~/trpc/react";
 
 type DeveloperPlugin =
@@ -288,16 +288,12 @@ export default function DeveloperProfilePage() {
 
 							<div className="flex flex-col items-center gap-8 md:flex-row md:items-start">
 								<div className="relative">
-									<Avatar className="h-32 w-32 ring-4 ring-primary/10 md:h-40 md:w-40">
-										<AvatarImage
-											src={developer.image || undefined}
-											alt={developer.name || ""}
-											className="object-cover"
-										/>
-										<AvatarFallback className="bg-primary/10 font-bold text-4xl text-primary">
-											{(developer.name || "??").slice(0, 2).toUpperCase()}
-										</AvatarFallback>
-									</Avatar>
+									<UserAvatar
+										name={developer.name}
+										src={developer.image}
+										className="h-32 w-32 ring-4 ring-primary/10 md:h-40 md:w-40"
+										fallbackClassName="text-4xl"
+									/>
 									<div className="absolute -right-2 -bottom-2 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground ring-4 ring-card">
 										<TierIcon className="h-7 w-7" />
 									</div>
@@ -350,8 +346,16 @@ export default function DeveloperProfilePage() {
 										</div>
 										<div className="rounded-xl bg-primary/5 p-3 text-center">
 											<div className="mb-1 flex items-center justify-center gap-1 font-bold font-mono text-3xl text-primary tabular-nums">
-												<Star className="h-6 w-6 fill-warning text-warning" />
-												{stats?.averageRating?.toFixed(1) || "0.0"}
+												<Star
+													className={cn(
+														"h-6 w-6",
+														(stats?.ratingCount ?? 0) > 0 &&
+															"fill-warning text-warning",
+													)}
+												/>
+												{(stats?.ratingCount ?? 0) > 0
+													? Number(stats?.averageRating).toFixed(1)
+													: t("not_rated")}
 											</div>
 											<div className="text-muted-foreground text-sm">
 												{t("rating_label")}
@@ -579,7 +583,9 @@ export default function DeveloperProfilePage() {
 												<span className="text-sm">{t("average_rating")}</span>
 											</div>
 											<span className="font-bold font-mono tabular-nums">
-												{stats?.averageRating?.toFixed(1) || "0.0"}
+												{(stats?.ratingCount ?? 0) > 0
+													? Number(stats?.averageRating).toFixed(1)
+													: t("not_rated")}
 											</span>
 										</div>
 									</div>

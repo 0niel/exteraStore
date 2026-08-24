@@ -146,9 +146,14 @@ export default function MyPluginsPage() {
 	const averageRating =
 		ratedPlugins.length > 0
 			? ratedPlugins.reduce(
-					(sum: number, p: typeof Plugin.$inferSelect) => sum + p.rating,
+					(sum: number, p: typeof Plugin.$inferSelect) =>
+						sum + p.rating * p.ratingCount,
 					0,
-				) / ratedPlugins.length
+				) /
+				ratedPlugins.reduce(
+					(sum: number, p: typeof Plugin.$inferSelect) => sum + p.ratingCount,
+					0,
+				)
 			: 0;
 
 	const statChips = [
@@ -162,7 +167,11 @@ export default function MyPluginsPage() {
 			icon: Download,
 			value: formatNumber(totalDownloads),
 		},
-		{ key: "stat_rating", icon: Star, value: averageRating.toFixed(1) },
+		{
+			key: "stat_rating",
+			icon: Star,
+			value: ratedPlugins.length > 0 ? averageRating.toFixed(1) : "—",
+		},
 	] as const;
 
 	const renderGrid = (plugins: (typeof Plugin.$inferSelect)[]) => (
@@ -343,7 +352,7 @@ function PluginCard({ plugin }: { plugin: typeof Plugin.$inferSelect }) {
 					</span>
 					<span className="flex items-center gap-1 font-mono">
 						<Star className="h-4 w-4 text-primary/70" />
-						{plugin.rating.toFixed(1)}
+						{plugin.ratingCount > 0 ? plugin.rating.toFixed(1) : "—"}
 					</span>
 				</div>
 

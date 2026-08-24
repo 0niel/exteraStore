@@ -88,6 +88,7 @@ interface AdminPlugin {
 	author: string;
 	downloadCount: number;
 	rating: number;
+	ratingCount: number;
 	status: string;
 	latestChecks: {
 		security: AiCheck | null;
@@ -461,7 +462,9 @@ export default function AdminPluginsPage() {
 													</span>
 													<span className="flex items-center gap-1 font-mono">
 														<Star className="h-4 w-4 text-primary/70" />
-														{plugin.rating.toFixed(1)}
+														{plugin.ratingCount > 0
+															? plugin.rating.toFixed(1)
+															: "—"}
 													</span>
 												</div>
 												<Badge

@@ -122,7 +122,7 @@ export const pluginReviews = pgTable(
 	(t) => [
 		index("review_plugin_idx").on(t.pluginId),
 		index("review_user_idx").on(t.userId),
-		index("review_unique_idx").on(t.pluginId, t.userId),
+		uniqueIndex("review_unique_idx").on(t.pluginId, t.userId),
 	],
 );
 
@@ -349,6 +349,8 @@ export const usersRelations = relations(users, ({ many }) => ({
 	createdVersions: many(pluginVersions),
 	favorites: many(pluginFavorites),
 	activities: many(pluginActivities),
+	apiKeys: many(apiKeys),
+	webhooks: many(webhooks),
 }));
 
 export const pluginsRelations = relations(plugins, ({ one, many }) => ({
@@ -725,4 +727,129 @@ export const aiPluginCollections = pgTable(
 		index("ai_collection_name_idx").on(t.name),
 		index("ai_collection_generated_at_idx").on(t.generatedAt),
 	],
+);
+
+export const apiKeys = pgTable(
+	"extera_plugins_api_key",
+	{
+		id: serial("id").primaryKey(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		name: varchar("name", { length: 80 }).notNull(),
+		prefix: varchar("prefix", { length: 24 }).notNull(),
+		secretHash: varchar("secret_hash", { length: 64 }).notNull(),
+		scopes: text("scopes").notNull(),
+		expiresAt: integer("expires_at"),
+		lastUsedAt: integer("last_used_at"),
+		lastIpHash: varchar("last_ip_hash", { length: 64 }),
+		revokedAt: integer("revoked_at"),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+	},
+	(t) => [
+		uniqueIndex("api_key_secret_hash_idx").on(t.secretHash),
+		index("api_key_user_idx").on(t.userId),
+		index("api_key_prefix_idx").on(t.prefix),
+		index("api_key_expiry_idx").on(t.expiresAt),
+	],
+);
+
+export const apiKeyUsage = pgTable(
+	"extera_plugins_api_key_usage",
+	{
+		id: serial("id").primaryKey(),
+		apiKeyId: integer("api_key_id")
+			.notNull()
+			.references(() => apiKeys.id, { onDelete: "cascade" }),
+		method: varchar("method", { length: 12 }).notNull(),
+		path: varchar("path", { length: 256 }).notNull(),
+		statusCode: integer("status_code").notNull(),
+		latencyMs: integer("latency_ms").notNull(),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+	},
+	(t) => [
+		index("api_key_usage_key_idx").on(t.apiKeyId),
+		index("api_key_usage_created_idx").on(t.createdAt),
+	],
+);
+
+export const webhooks = pgTable(
+	"extera_plugins_webhook",
+	{
+		id: serial("id").primaryKey(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => users.id, { onDelete: "cascade" }),
+		name: varchar("name", { length: 80 }).notNull(),
+		url: text("url").notNull(),
+		events: text("events").notNull(),
+		secretEncrypted: text("secret_encrypted").notNull(),
+		isActive: boolean("is_active").default(true).notNull(),
+		failureCount: integer("failure_count").default(0).notNull(),
+		lastDeliveryAt: integer("last_delivery_at"),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+		updatedAt: integer("updated_at"),
+	},
+	(t) => [
+		index("webhook_user_idx").on(t.userId),
+		index("webhook_active_idx").on(t.isActive),
+	],
+);
+
+export const webhookDeliveries = pgTable(
+	"extera_plugins_webhook_delivery",
+	{
+		id: serial("id").primaryKey(),
+		webhookId: integer("webhook_id")
+			.notNull()
+			.references(() => webhooks.id, { onDelete: "cascade" }),
+		event: varchar("event", { length: 80 }).notNull(),
+		payload: text("payload").notNull(),
+		status: varchar("status", { length: 24 }).notNull(),
+		responseStatus: integer("response_status"),
+		attemptCount: integer("attempt_count").default(1).notNull(),
+		errorMessage: text("error_message"),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+		deliveredAt: integer("delivered_at"),
+	},
+	(t) => [
+		index("webhook_delivery_webhook_idx").on(t.webhookId),
+		index("webhook_delivery_created_idx").on(t.createdAt),
+		index("webhook_delivery_status_idx").on(t.status),
+	],
+);
+
+export const apiKeysRelations = relations(apiKeys, ({ one, many }) => ({
+	user: one(users, { fields: [apiKeys.userId], references: [users.id] }),
+	usage: many(apiKeyUsage),
+}));
+
+export const apiKeyUsageRelations = relations(apiKeyUsage, ({ one }) => ({
+	apiKey: one(apiKeys, {
+		fields: [apiKeyUsage.apiKeyId],
+		references: [apiKeys.id],
+	}),
+}));
+
+export const webhooksRelations = relations(webhooks, ({ one, many }) => ({
+	user: one(users, { fields: [webhooks.userId], references: [users.id] }),
+	deliveries: many(webhookDeliveries),
+}));
+
+export const webhookDeliveriesRelations = relations(
+	webhookDeliveries,
+	({ one }) => ({
+		webhook: one(webhooks, {
+			fields: [webhookDeliveries.webhookId],
+			references: [webhooks.id],
+		}),
+	}),
 );

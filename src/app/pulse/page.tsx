@@ -599,7 +599,7 @@ export default function PulsePage() {
 										</span>
 										<span className="flex shrink-0 items-center gap-1 font-mono text-muted-foreground text-xs tabular-nums">
 											<Star className="size-3 fill-warning text-warning" />
-											{plugin.rating.toFixed(1)}
+											{plugin.ratingCount > 0 ? plugin.rating.toFixed(1) : "—"}
 										</span>
 									</Link>
 								))}

@@ -35,8 +35,11 @@ export const usersRouter = createTRPCRouter({
 		const stats = await ctx.db
 			.select({
 				totalPlugins: count(plugins.id),
-				totalDownloads: sql<number>`SUM(${plugins.downloadCount})`,
-				averageRating: sql<number>`AVG(${plugins.rating})`,
+				totalDownloads: sql<number>`COALESCE(SUM(${plugins.downloadCount}), 0)`,
+				ratingCount: sql<number>`COALESCE(SUM(${plugins.ratingCount}), 0)`,
+				averageRating: sql<
+					number | null
+				>`CASE WHEN SUM(${plugins.ratingCount}) > 0 THEN SUM(${plugins.rating} * ${plugins.ratingCount}) / SUM(${plugins.ratingCount}) ELSE NULL END`,
 			})
 			.from(plugins)
 			.where(eq(plugins.authorId, ctx.session.user.id));
@@ -47,6 +50,7 @@ export const usersRouter = createTRPCRouter({
 				totalPlugins: 0,
 				totalDownloads: 0,
 				averageRating: 0,
+				ratingCount: 0,
 			},
 		};
 	}),
@@ -112,8 +116,11 @@ export const usersRouter = createTRPCRouter({
 			const stats = await ctx.db
 				.select({
 					totalPlugins: count(plugins.id),
-					totalDownloads: sql<number>`SUM(${plugins.downloadCount})`,
-					averageRating: sql<number>`AVG(${plugins.rating})`,
+					totalDownloads: sql<number>`COALESCE(SUM(${plugins.downloadCount}), 0)`,
+					ratingCount: sql<number>`COALESCE(SUM(${plugins.ratingCount}), 0)`,
+					averageRating: sql<
+						number | null
+					>`CASE WHEN SUM(${plugins.ratingCount}) > 0 THEN SUM(${plugins.rating} * ${plugins.ratingCount}) / SUM(${plugins.ratingCount}) ELSE NULL END`,
 				})
 				.from(plugins)
 				.where(eq(plugins.authorId, input.id));
@@ -124,6 +131,7 @@ export const usersRouter = createTRPCRouter({
 					totalPlugins: 0,
 					totalDownloads: 0,
 					averageRating: 0,
+					ratingCount: 0,
 				},
 			};
 		}),

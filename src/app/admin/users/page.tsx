@@ -38,6 +38,7 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Textarea } from "~/components/ui/textarea";
+import { UserAvatar } from "~/components/user-avatar";
 import { env } from "~/env";
 import { api } from "~/trpc/react";
 
@@ -231,13 +232,20 @@ export default function AdminUsersPage() {
 										>
 											<CardHeader>
 												<div className="flex items-start justify-between gap-2">
-													<div className="min-w-0 flex-1">
-														<CardTitle className="line-clamp-1">
-															{user.name || t("no_name")}
-														</CardTitle>
-														<CardDescription className="mt-1 truncate">
-															{user.email || user.telegramUsername || "—"}
-														</CardDescription>
+													<div className="flex min-w-0 flex-1 items-center gap-3">
+														<UserAvatar
+															name={user.name}
+															src={user.image}
+															className="size-11 shrink-0"
+														/>
+														<div className="min-w-0">
+															<CardTitle className="line-clamp-1">
+																{user.name || t("no_name")}
+															</CardTitle>
+															<CardDescription className="mt-1 truncate">
+																{user.email || user.telegramUsername || "—"}
+															</CardDescription>
+														</div>
 													</div>
 													<div className="flex shrink-0 flex-col items-end gap-1">
 														{user.role === "admin" && (

@@ -59,6 +59,18 @@ export default function CollectionDetailPage() {
 
 	const collection = collections?.find((c) => c.id === collectionId);
 	const plugins = collection?.plugins || [];
+	const reviewCount = plugins.reduce(
+		(total: number, plugin: CollectionPlugin) => total + plugin.ratingCount,
+		0,
+	);
+	const averageRating =
+		reviewCount > 0
+			? plugins.reduce(
+					(total: number, plugin: CollectionPlugin) =>
+						total + plugin.rating * plugin.ratingCount,
+					0,
+				) / reviewCount
+			: null;
 
 	const initial = (collection?.name || "?").trim().charAt(0).toUpperCase();
 
@@ -185,14 +197,7 @@ export default function CollectionDetailPage() {
 								<Star className="h-4 w-4" />
 							</div>
 							<div className="font-bold font-mono text-xl tabular-nums">
-								{plugins.length > 0
-									? (
-											plugins.reduce(
-												(acc: number, p: CollectionPlugin) => acc + p.rating,
-												0,
-											) / plugins.length
-										).toFixed(1)
-									: "0.0"}
+								{averageRating === null ? "—" : averageRating.toFixed(1)}
 							</div>
 							<div className="text-muted-foreground text-xs">
 								{t("avg_rating")}

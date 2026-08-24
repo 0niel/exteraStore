@@ -3,6 +3,7 @@ import { adminStatsRouter } from "~/server/api/routers/admin-stats";
 import { adminUsersRouter } from "~/server/api/routers/admin-users";
 import { aiRouter } from "~/server/api/routers/ai";
 import { categoriesRouter } from "~/server/api/routers/categories";
+import { developerPlatformRouter } from "~/server/api/routers/developer-platform";
 import { developersRouter } from "~/server/api/routers/developers";
 import { favoritesRouter } from "~/server/api/routers/favorites";
 import {
@@ -30,6 +31,7 @@ export const appRouter = createTRPCRouter({
 	telegramNotifications: telegramNotificationsRouter,
 	favorites: favoritesRouter,
 	developers: developersRouter,
+	developerPlatform: developerPlatformRouter,
 	users: usersRouter,
 	adminPlugins: adminPluginsRouter,
 	adminStats: adminStatsRouter,

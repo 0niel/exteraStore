@@ -1,0 +1,34 @@
+name: Plugin Metadata
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: plugin-metadata
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  classify:
+    name: Classify plugins
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 20
+    steps:
+      - name: Update categories and tags
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          node --input-type=module <<'NODE'
+          const response = await fetch("https://exterastore.app/api/cron/classify-plugins", {
+            method: "POST",
+            headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
+            signal: AbortSignal.timeout(18 * 60 * 1000),
+          });
+          const body = await response.text();
+          console.log(`status ${response.status}`);
+          console.log(body);
+          if (!response.ok) process.exit(1);
+          NODE

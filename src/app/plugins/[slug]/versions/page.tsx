@@ -63,9 +63,23 @@ export default async function PluginVersionsPage({
 									{t("downloads")}
 								</span>
 								<span className="flex items-center gap-1.5">
-									<Star className="h-4 w-4 fill-warning text-warning" />
-									<span className="font-mono">{plugin.rating.toFixed(1)}</span>(
-									{plugin.ratingCount} {t("reviews")})
+									<Star
+										className={
+											plugin.ratingCount > 0
+												? "h-4 w-4 fill-warning text-warning"
+												: "h-4 w-4"
+										}
+									/>
+									{plugin.ratingCount > 0 ? (
+										<>
+											<span className="font-mono">
+												{plugin.rating.toFixed(1)}
+											</span>
+											({plugin.ratingCount} {t("reviews")})
+										</>
+									) : (
+										"—"
+									)}
 								</span>
 							</div>
 						</div>

@@ -29,6 +29,7 @@ import {
 	users,
 } from "~/server/db/schema";
 import { verifyCaptcha } from "~/server/lib/captcha";
+import { emitWebhookEvent } from "~/server/lib/developer-platform";
 import {
 	getDirectPluginDependencies,
 	getPluginInstallPlan,
@@ -81,10 +82,11 @@ export const pluginsRouter = createTRPCRouter({
 					orderBy = desc(plugins.createdAt);
 			}
 
-			const [pluginsList, totalCount] = await Promise.all([
+			const [pluginRows, totalCount] = await Promise.all([
 				ctx.db
-					.select()
+					.select({ plugin: plugins, authorImage: users.image })
 					.from(plugins)
+					.leftJoin(users, eq(plugins.authorId, users.id))
 					.where(whereConditions)
 					.orderBy(orderBy)
 					.limit(input.limit)
@@ -95,6 +97,10 @@ export const pluginsRouter = createTRPCRouter({
 					.where(whereConditions)
 					.then((result: { count: number }[]) => result[0]?.count ?? 0),
 			]);
+			const pluginsList = pluginRows.map((row) => ({
+				...row.plugin,
+				authorImage: row.authorImage,
+			}));
 
 			const pluginsWithSecurity = await Promise.all(
 				pluginsList.map(async (plugin: typeof plugins.$inferSelect) => {
@@ -433,8 +439,8 @@ export const pluginsRouter = createTRPCRouter({
 				await ctx.db
 					.update(plugins)
 					.set({
-						rating: avgRating[0].avg,
-						ratingCount: avgRating[0].count,
+						rating: Number(avgRating[0].avg),
+						ratingCount: Number(avgRating[0].count),
 					})
 					.where(eq(plugins.id, input.pluginId));
 			}
@@ -460,6 +466,31 @@ export const pluginsRouter = createTRPCRouter({
 			} catch (error) {
 				console.error("Failed to send review notifications:", error);
 			}
+
+			try {
+				const [reviewedPlugin] = await ctx.db
+					.select({
+						authorId: plugins.authorId,
+						name: plugins.name,
+						slug: plugins.slug,
+					})
+					.from(plugins)
+					.where(eq(plugins.id, input.pluginId))
+					.limit(1);
+				await emitWebhookEvent(
+					ctx.db,
+					reviewedPlugin?.authorId,
+					"review.created",
+					{
+						pluginId: input.pluginId,
+						name: reviewedPlugin?.name,
+						slug: reviewedPlugin?.slug,
+						reviewId: review.id,
+						rating: input.rating,
+						reviewer: ctx.session.user.name,
+					},
+				);
+			} catch {}
 
 			return review;
 		}),
@@ -538,10 +569,31 @@ export const pluginsRouter = createTRPCRouter({
 			}
 
 			const plugin = await ctx.db
-				.select({ telegramBotDeeplink: plugins.telegramBotDeeplink })
+				.select({
+					authorId: plugins.authorId,
+					name: plugins.name,
+					slug: plugins.slug,
+					telegramBotDeeplink: plugins.telegramBotDeeplink,
+				})
 				.from(plugins)
 				.where(eq(plugins.id, input.pluginId))
 				.limit(1);
+
+			if (isFirstDownload) {
+				try {
+					await emitWebhookEvent(
+						ctx.db,
+						plugin[0]?.authorId,
+						"download.recorded",
+						{
+							pluginId: input.pluginId,
+							name: plugin[0]?.name,
+							slug: plugin[0]?.slug,
+							userId: ctx.session?.user?.id ?? null,
+						},
+					);
+				} catch {}
+			}
 
 			return {
 				success: true,
@@ -561,12 +613,17 @@ export const pluginsRouter = createTRPCRouter({
 	getFeatured: publicProcedure
 		.input(z.object({ limit: z.number().min(1).max(20).default(6) }))
 		.query(async ({ ctx, input }) => {
-			return await ctx.db
-				.select()
+			const rows = await ctx.db
+				.select({ plugin: plugins, authorImage: users.image })
 				.from(plugins)
+				.leftJoin(users, eq(plugins.authorId, users.id))
 				.where(and(eq(plugins.featured, true), eq(plugins.status, "approved")))
 				.orderBy(desc(plugins.rating))
 				.limit(input.limit);
+			return rows.map((row) => ({
+				...row.plugin,
+				authorImage: row.authorImage,
+			}));
 		}),
 
 	getPopular: publicProcedure
@@ -603,9 +660,10 @@ export const pluginsRouter = createTRPCRouter({
 				),
 			);
 
-			const allPlugins = await ctx.db
-				.select()
+			const pluginRows = await ctx.db
+				.select({ plugin: plugins, authorImage: users.image })
 				.from(plugins)
+				.leftJoin(users, eq(plugins.authorId, users.id))
 				.where(
 					and(
 						eq(plugins.status, "approved"),
@@ -617,6 +675,10 @@ export const pluginsRouter = createTRPCRouter({
 						),
 					),
 				);
+			const allPlugins = pluginRows.map((row) => ({
+				...row.plugin,
+				authorImage: row.authorImage,
+			}));
 
 			const pluginsWithScore = allPlugins.map(
 				(plugin: typeof plugins.$inferSelect) => {
@@ -750,12 +812,17 @@ export const pluginsRouter = createTRPCRouter({
 
 			const pluginIds = Array.from(allPluginIds) as number[];
 
-			const allPlugins = await ctx.db
-				.select()
+			const pluginRows = await ctx.db
+				.select({ plugin: plugins, authorImage: users.image })
 				.from(plugins)
+				.leftJoin(users, eq(plugins.authorId, users.id))
 				.where(
 					and(eq(plugins.status, "approved"), inArray(plugins.id, pluginIds)),
 				);
+			const allPlugins = pluginRows.map((row) => ({
+				...row.plugin,
+				authorImage: row.authorImage,
+			}));
 
 			const pluginsWithTrendScore = allPlugins.map(
 				(plugin: typeof plugins.$inferSelect) => {
@@ -914,6 +981,23 @@ export const pluginsRouter = createTRPCRouter({
 					actorUserId: ctx.session.user.id,
 					dependencyPluginIds: dependencyChanges.addedIds,
 				});
+			}
+
+			if (updatedPlugin) {
+				try {
+					await emitWebhookEvent(
+						ctx.db,
+						updatedPlugin.authorId,
+						"plugin.updated",
+						{
+							pluginId: updatedPlugin.id,
+							name: updatedPlugin.name,
+							slug: updatedPlugin.slug,
+							version: updatedPlugin.version,
+							metadataOnly: true,
+						},
+					);
+				} catch {}
 			}
 
 			revalidatePath(`/plugins/${finalSlug}`);

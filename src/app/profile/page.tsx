@@ -17,6 +17,7 @@ import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { DeveloperPlatform } from "~/components/developer-platform";
 import { DonationRequisitesEditor } from "~/components/donations/donation-requisites-editor";
 import type { DonationMethod } from "~/components/donations/donation-widget";
 import { DonationWidget } from "~/components/donations/donation-widget";
@@ -258,7 +259,10 @@ export default function ProfilePage() {
 		{
 			key: "average_rating",
 			icon: Star,
-			value: userProfile?.stats?.averageRating?.toFixed(1) || "0.0",
+			value:
+				(userProfile?.stats?.ratingCount ?? 0) > 0
+					? Number(userProfile?.stats?.averageRating).toFixed(1)
+					: t("not_rated"),
 		},
 	] as const;
 
@@ -272,7 +276,7 @@ export default function ProfilePage() {
 				>
 					<motion.div
 						variants={fadeUp}
-						className="relative mb-6 overflow-hidden rounded-2xl border bg-card shadow-soft sm:mb-8"
+						className="relative mb-6 overflow-hidden rounded-2xl bg-surface/70 sm:mb-8"
 					>
 						<div className="absolute inset-x-0 top-0 h-1 bg-linear-to-r from-primary via-primary/50 to-transparent" />
 						<div className="dot-grid absolute inset-0" aria-hidden="true" />
@@ -283,7 +287,7 @@ export default function ProfilePage() {
 						<div className="relative flex flex-col items-center gap-4 p-6 text-center sm:flex-row sm:gap-6 sm:p-8 sm:text-left">
 							<Avatar className="h-20 w-20 shrink-0 ring-2 ring-primary/40 ring-offset-4 ring-offset-card sm:h-24 sm:w-24">
 								<AvatarImage
-									src={session.user.image || undefined}
+									src={userProfile?.image || session.user.image || undefined}
 									alt={session.user.name || ""}
 								/>
 								<AvatarFallback className="bg-primary/10 font-semibold text-lg text-primary">
@@ -316,12 +320,24 @@ export default function ProfilePage() {
 
 					<motion.div variants={fadeUp}>
 						<Tabs defaultValue="profile" className="space-y-6">
-							<TabsList className="grid w-full grid-cols-2 sm:inline-flex sm:w-auto">
-								<TabsTrigger value="profile" className="min-h-9">
+							<TabsList className="grid w-full grid-cols-3 sm:inline-flex sm:w-auto">
+								<TabsTrigger
+									value="profile"
+									className="min-h-10 px-2 text-xs sm:text-sm"
+								>
 									{t("profile_tab")}
 								</TabsTrigger>
-								<TabsTrigger value="stats" className="min-h-9">
+								<TabsTrigger
+									value="stats"
+									className="min-h-10 px-2 text-xs sm:text-sm"
+								>
 									{t("stats_tab")}
+								</TabsTrigger>
+								<TabsTrigger
+									value="api"
+									className="min-h-10 px-2 text-xs sm:text-sm"
+								>
+									{t("api_tab")}
 								</TabsTrigger>
 							</TabsList>
 
@@ -647,6 +663,10 @@ export default function ProfilePage() {
 										</motion.div>
 									))}
 								</motion.div>
+							</TabsContent>
+
+							<TabsContent value="api">
+								<DeveloperPlatform />
 							</TabsContent>
 						</Tabs>
 					</motion.div>

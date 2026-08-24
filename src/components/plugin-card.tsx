@@ -8,7 +8,6 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
-import { Avatar, AvatarFallback } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
@@ -18,6 +17,7 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "~/components/ui/tooltip";
+import { UserAvatar } from "~/components/user-avatar";
 import { cn, formatDate, formatNumber, safeJsonParse } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
@@ -30,6 +30,7 @@ interface Plugin {
 	version: string;
 	author?: string | null;
 	authorId?: string | null;
+	authorImage?: string | null;
 	category: string;
 	tags: string | null;
 	downloadCount: number;
@@ -274,9 +275,16 @@ export function PluginCard({
 							</div>
 							<div className="hidden shrink-0 items-center gap-2 sm:flex">
 								<span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5">
-									<Star className="size-3.5 fill-warning text-warning" />
+									<Star
+										className={cn(
+											"size-3.5",
+											plugin.ratingCount > 0 && "fill-warning text-warning",
+										)}
+									/>
 									<span className="font-medium text-sm">
-										{plugin.rating.toFixed(1)}
+										{plugin.ratingCount > 0
+											? plugin.rating.toFixed(1)
+											: t("no_ratings")}
 									</span>
 								</span>
 								<CategoryChip category={plugin.category} />
@@ -397,11 +405,12 @@ export function PluginCard({
 
 						{showAuthor && (
 							<div className="mt-3 flex items-center gap-3">
-								<Avatar className="h-8 w-8 rounded-xl">
-									<AvatarFallback className="rounded-xl bg-primary/10 font-medium text-primary text-xs">
-										{authorName.slice(0, 2).toUpperCase()}
-									</AvatarFallback>
-								</Avatar>
+								<UserAvatar
+									name={authorName}
+									src={plugin.authorImage}
+									className="h-8 w-8 rounded-xl"
+									fallbackClassName="rounded-xl text-xs"
+								/>
 								<div className="min-w-0 flex-1">
 									<p className="truncate font-medium text-sm">{authorName}</p>
 									<p className="text-muted-foreground text-xs">
@@ -435,13 +444,22 @@ export function PluginCard({
 								<Tooltip>
 									<TooltipTrigger asChild>
 										<div className="flex cursor-default items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5">
-											<Star className="h-4 w-4 fill-warning text-warning" />
+											<Star
+												className={cn(
+													"h-4 w-4",
+													plugin.ratingCount > 0 && "fill-warning text-warning",
+												)}
+											/>
 											<span className="font-medium">
-												{plugin.rating.toFixed(1)}
+												{plugin.ratingCount > 0
+													? plugin.rating.toFixed(1)
+													: t("no_ratings")}
 											</span>
-											<span className="text-muted-foreground">
-												({plugin.ratingCount})
-											</span>
+											{plugin.ratingCount > 0 && (
+												<span className="text-muted-foreground">
+													({plugin.ratingCount})
+												</span>
+											)}
 										</div>
 									</TooltipTrigger>
 									<TooltipContent>{t("rating_tooltip")}</TooltipContent>

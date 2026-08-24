@@ -369,7 +369,7 @@ export function SearchDialog({
 										</span>
 										<span className="flex shrink-0 items-center gap-1 text-muted-foreground text-xs">
 											<Star className="size-3.5 fill-warning text-warning" />
-											{plugin.rating.toFixed(1)}
+											{plugin.ratingCount > 0 ? plugin.rating.toFixed(1) : "—"}
 										</span>
 										<span className="hidden shrink-0 items-center gap-1 text-muted-foreground text-xs sm:flex">
 											<Download className="size-3.5" />
@@ -473,7 +473,7 @@ export function SearchDialog({
 										</span>
 										<span className="flex shrink-0 items-center gap-1 text-muted-foreground text-xs">
 											<Star className="size-3.5 fill-warning text-warning" />
-											{plugin.rating.toFixed(1)}
+											{plugin.ratingCount > 0 ? plugin.rating.toFixed(1) : "—"}
 										</span>
 									</button>
 								))}

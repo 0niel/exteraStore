@@ -102,7 +102,9 @@ function CollectionPreview({
 								</div>
 								<div className="flex items-center gap-1 text-muted-foreground text-xs">
 									<Star className="h-3 w-3 fill-warning text-warning" />
-									<span>{plugin.rating.toFixed(1)}</span>
+									<span>
+										{plugin.ratingCount > 0 ? plugin.rating.toFixed(1) : "—"}
+									</span>
 								</div>
 							</div>
 						</Link>

@@ -32,7 +32,10 @@ export const developersRouter = createTRPCRouter({
 					githubUsername: users.githubUsername,
 					isVerified: users.isVerified,
 					pluginCount: count(plugins.id),
-					averageRating: sql<number>`AVG(${plugins.rating})`,
+					ratingCount: sql<number>`COALESCE(SUM(${plugins.ratingCount}), 0)`,
+					averageRating: sql<
+						number | null
+					>`CASE WHEN SUM(${plugins.ratingCount}) > 0 THEN SUM(${plugins.rating} * ${plugins.ratingCount}) / SUM(${plugins.ratingCount}) ELSE NULL END`,
 					totalDownloads: sql<number>`SUM(${plugins.downloadCount})`,
 				})
 				.from(users)
@@ -124,8 +127,10 @@ export const developersRouter = createTRPCRouter({
 					verified: plugins.verified,
 					screenshots: plugins.screenshots,
 					createdAt: plugins.createdAt,
+					authorImage: users.image,
 				})
 				.from(plugins)
+				.leftJoin(users, eq(plugins.authorId, users.id))
 				.where(
 					and(eq(plugins.authorId, input.id), eq(plugins.status, "approved")),
 				)
@@ -135,7 +140,10 @@ export const developersRouter = createTRPCRouter({
 				.select({
 					totalPlugins: count(plugins.id),
 					totalDownloads: sql<number>`COALESCE(SUM(${plugins.downloadCount}), 0)`,
-					averageRating: sql<number>`COALESCE(AVG(${plugins.rating}), 0)`,
+					ratingCount: sql<number>`COALESCE(SUM(${plugins.ratingCount}), 0)`,
+					averageRating: sql<
+						number | null
+					>`CASE WHEN SUM(${plugins.ratingCount}) > 0 THEN SUM(${plugins.rating} * ${plugins.ratingCount}) / SUM(${plugins.ratingCount}) ELSE NULL END`,
 				})
 				.from(plugins)
 				.where(
@@ -149,6 +157,7 @@ export const developersRouter = createTRPCRouter({
 					totalPlugins: 0,
 					totalDownloads: 0,
 					averageRating: 0,
+					ratingCount: 0,
 				},
 			};
 		}),

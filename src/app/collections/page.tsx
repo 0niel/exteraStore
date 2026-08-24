@@ -123,7 +123,9 @@ function CollectionCard({
 								</div>
 								<div className="flex items-center gap-1 font-mono text-muted-foreground text-xs tabular-nums">
 									<Star className="h-3 w-3 fill-warning text-warning" />
-									<span>{plugin.rating.toFixed(1)}</span>
+									<span>
+										{plugin.ratingCount > 0 ? plugin.rating.toFixed(1) : "—"}
+									</span>
 								</div>
 							</div>
 						</Link>

@@ -557,11 +557,20 @@ export default function PluginDetailPage() {
 						<div className="grid grid-cols-3 gap-2 sm:gap-3">
 							<div className="min-w-0 rounded-2xl bg-primary/[0.07] p-3 text-center sm:p-4">
 								<div className="flex items-center justify-center gap-1 font-bold font-mono text-xl sm:text-2xl">
-									<Star className="h-4 w-4 shrink-0 fill-warning text-warning" />
-									{plugin.rating.toFixed(1)}
+									<Star
+										className={cn(
+											"h-4 w-4 shrink-0",
+											plugin.ratingCount > 0 && "fill-warning text-warning",
+										)}
+									/>
+									{plugin.ratingCount > 0
+										? plugin.rating.toFixed(1)
+										: t("not_rated")}
 								</div>
 								<div className="mt-1 truncate text-muted-foreground text-xs">
-									{plugin.ratingCount} · {t("stats_reviews")}
+									{plugin.ratingCount > 0
+										? `${plugin.ratingCount} · ${t("stats_reviews")}`
+										: t("not_rated")}
 								</div>
 							</div>
 							<div className="min-w-0 rounded-2xl bg-primary/[0.07] p-3 text-center sm:p-4">
@@ -760,11 +769,11 @@ export default function PluginDetailPage() {
 																	<div>
 																		<div className="flex items-center justify-center gap-1 font-semibold text-sm">
 																			<Star className="h-3.5 w-3.5 fill-warning text-warning" />
-																			{(
-																				Number(
-																					authorData.stats.averageRating,
-																				) || 0
-																			).toFixed(1)}
+																			{authorData.stats.ratingCount > 0
+																				? Number(
+																						authorData.stats.averageRating,
+																					).toFixed(1)
+																				: t("not_rated")}
 																		</div>
 																		<div className="text-muted-foreground text-xs">
 																			{t("author_rating")}

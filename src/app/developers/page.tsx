@@ -21,13 +21,13 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { GitHubIcon } from "~/components/icons/github-icon";
 import { PageHeader } from "~/components/page-header";
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { EmptyState } from "~/components/ui/empty-state";
 import { Input } from "~/components/ui/input";
 import { Skeleton } from "~/components/ui/skeleton";
+import { UserAvatar } from "~/components/user-avatar";
 import { cn, formatNumber } from "~/lib/utils";
 import { api, type RouterOutputs } from "~/trpc/react";
 
@@ -269,18 +269,12 @@ export default function DevelopersPage() {
 											<CardContent className="relative flex h-full flex-col p-6">
 												<div className="mb-4 flex items-start gap-4">
 													<div className="relative">
-														<Avatar className="h-14 w-14 ring-2 ring-primary/10 transition-colors duration-300 group-hover:ring-primary/40">
-															<AvatarImage
-																src={developer.image || undefined}
-																alt={developer.name || ""}
-																className="object-cover"
-															/>
-															<AvatarFallback className="bg-primary/10 font-medium text-primary text-sm">
-																{(developer.name || "??")
-																	.slice(0, 2)
-																	.toUpperCase()}
-															</AvatarFallback>
-														</Avatar>
+														<UserAvatar
+															name={developer.name}
+															src={developer.image}
+															className="h-14 w-14 ring-2 ring-primary/10 transition-colors duration-300 group-hover:ring-primary/40"
+															fallbackClassName="text-sm"
+														/>
 														<div className="absolute -right-1 -bottom-1 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground ring-2 ring-background">
 															<TierIcon className="h-3.5 w-3.5" />
 														</div>
@@ -363,7 +357,9 @@ export default function DevelopersPage() {
 														<div className="flex items-center justify-center gap-1">
 															<Star className="h-3 w-3 text-primary" />
 															<span className="font-bold font-mono text-sm tabular-nums">
-																{developer.averageRating?.toFixed(1) || "0.0"}
+																{developer.ratingCount > 0
+																	? Number(developer.averageRating).toFixed(1)
+																	: t("not_rated")}
 															</span>
 														</div>
 														<div className="text-muted-foreground text-xs">

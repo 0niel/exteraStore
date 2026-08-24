@@ -12,6 +12,7 @@ import {
 	pluginVersions,
 } from "~/server/db/schema";
 import { verifyCaptcha } from "~/server/lib/captcha";
+import { emitWebhookEvent } from "~/server/lib/developer-platform";
 import {
 	notifyDependencyAuthors,
 	replacePluginDependencies,
@@ -188,6 +189,16 @@ export const pluginUploadRouter = createTRPCRouter({
 			} catch {}
 
 			try {
+				await emitWebhookEvent(ctx.db, plugin.authorId, "plugin.created", {
+					pluginId: plugin.id,
+					name: plugin.name,
+					slug: finalSlug,
+					version: input.version,
+					status: plugin.status,
+				});
+			} catch {}
+
+			try {
 				const { pluginPipelineRouter } = await import(
 					"~/server/api/routers/plugin-pipeline"
 				);
@@ -286,6 +297,17 @@ export const pluginUploadRouter = createTRPCRouter({
 					}
 				} catch (error) {
 					console.error("Failed to send notifications:", error);
+				}
+
+				if (input.isStable) {
+					try {
+						await emitWebhookEvent(ctx.db, plugin.authorId, "plugin.updated", {
+							pluginId: plugin.id,
+							name: plugin.name,
+							slug: plugin.slug,
+							version: input.version,
+						});
+					} catch {}
 				}
 
 				try {

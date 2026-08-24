@@ -1,7 +1,7 @@
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
-import { pluginFavorites, plugins } from "~/server/db/schema";
+import { pluginFavorites, plugins, users } from "~/server/db/schema";
 
 export const favoritesRouter = createTRPCRouter({
 	add: protectedProcedure
@@ -139,10 +139,12 @@ export const favoritesRouter = createTRPCRouter({
 						screenshots: plugins.screenshots,
 						tags: plugins.tags,
 						createdAt: plugins.createdAt,
+						authorImage: users.image,
 					},
 				})
 				.from(pluginFavorites)
 				.innerJoin(plugins, eq(pluginFavorites.pluginId, plugins.id))
+				.leftJoin(users, eq(plugins.authorId, users.id))
 				.where(eq(pluginFavorites.userId, ctx.session.user.id))
 				.orderBy(desc(pluginFavorites.createdAt))
 				.limit(input.limit)

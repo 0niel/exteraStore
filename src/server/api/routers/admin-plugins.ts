@@ -25,6 +25,7 @@ import {
 	plugins,
 	users,
 } from "~/server/db/schema";
+import { emitWebhookEvent } from "~/server/lib/developer-platform";
 
 const ADMINS = (env.INITIAL_ADMINS ?? "i_am_oniel")
 	.split(",")
@@ -191,6 +192,20 @@ export const adminPluginsRouter = createTRPCRouter({
 				}
 			}
 
+			try {
+				await emitWebhookEvent(
+					ctx.db,
+					updatedPlugin.authorId,
+					"plugin.approved",
+					{
+						pluginId: updatedPlugin.id,
+						name: updatedPlugin.name,
+						slug: updatedPlugin.slug,
+						version: updatedPlugin.version,
+					},
+				);
+			} catch {}
+
 			revalidatePath(`/plugins/${updatedPlugin.slug}`);
 			return updatedPlugin;
 		}),
@@ -245,6 +260,20 @@ export const adminPluginsRouter = createTRPCRouter({
 					console.error("Failed to send rejection notification:", error);
 				}
 			}
+
+			try {
+				await emitWebhookEvent(
+					ctx.db,
+					updatedPlugin.authorId,
+					"plugin.rejected",
+					{
+						pluginId: updatedPlugin.id,
+						name: updatedPlugin.name,
+						slug: updatedPlugin.slug,
+						reason: input.reason ?? null,
+					},
+				);
+			} catch {}
 
 			revalidatePath(`/plugins/${updatedPlugin.slug}`);
 			return updatedPlugin;
