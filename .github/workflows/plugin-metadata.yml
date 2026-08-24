@@ -43,13 +43,14 @@ jobs:
           let offset = 0;
           const limit = 10;
           let total = Infinity;
+          let preferAi = true;
 
           while (offset < total) {
             let completed = false;
 
             for (let attempt = 1; attempt <= 3 && !completed; attempt += 1) {
               const response = await fetch(
-                `http://127.0.0.1:3000/api/cron/classify-plugins?offset=${offset}&limit=${limit}`,
+                `http://127.0.0.1:3000/api/cron/classify-plugins?offset=${offset}&limit=${limit}&ai=${preferAi ? "1" : "0"}`,
                 {
                   method: "POST",
                   headers: { authorization: `Bearer ${process.env.CRON_SECRET}` },
@@ -70,6 +71,7 @@ jobs:
               if (!result.success || result.failed > 0) process.exit(1);
               total = result.total;
               offset = result.nextOffset;
+              preferAi = preferAi && result.source === "ai";
               completed = true;
             }
           }

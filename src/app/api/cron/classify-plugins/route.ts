@@ -25,7 +25,8 @@ export async function POST(request: Request) {
 		const limit = Number.isFinite(rawLimit)
 			? Math.min(10, Math.max(1, rawLimit))
 			: 10;
-		const result = await classifyPluginBatch(db, { offset, limit });
+		const preferAi = url.searchParams.get("ai") !== "0";
+		const result = await classifyPluginBatch(db, { offset, limit, preferAi });
 		return NextResponse.json(
 			{
 				success: result.updated === result.processed && result.failed === 0,
