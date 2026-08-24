@@ -1187,7 +1187,13 @@ export default function PluginDetailPage() {
 								)}
 
 								{activeTab === "pipeline" && (
-									<PluginPipeline pluginId={plugin.id} />
+									<PluginPipeline
+										pluginId={plugin.id}
+										canRunChecks={
+											session?.user?.id === plugin.authorId ||
+											session?.user?.role === "admin"
+										}
+									/>
 								)}
 							</motion.div>
 						</AnimatePresence>

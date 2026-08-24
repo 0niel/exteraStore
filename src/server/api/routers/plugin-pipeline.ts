@@ -340,7 +340,12 @@ export const pluginPipelineRouter = createTRPCRouter({
 					and(
 						eq(pluginPipelineChecks.pluginId, input.pluginId),
 						like(pluginPipelineChecks.llmPrompt, versionTag),
-						inArray(pluginPipelineChecks.status, ["passed", "failed", "error"]),
+						inArray(pluginPipelineChecks.status, [
+							"passed",
+							"failed",
+							"error",
+							"completed",
+						]),
 					),
 				)
 				.limit(1);

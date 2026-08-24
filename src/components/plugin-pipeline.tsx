@@ -28,11 +28,13 @@ import { Card } from "./ui/card";
 
 interface PluginPipelineProps {
 	pluginId: number;
+	canRunChecks?: boolean;
 }
 
 interface PipelineCheck {
 	checkType: string;
 	status: string;
+	score: number | null;
 	createdAt: Date | number | string;
 	shortDescription?: string | null;
 	classification?: string | null;
@@ -47,7 +49,10 @@ const checkTypeIcons = {
 	performance: Zap,
 };
 
-export function PluginPipeline({ pluginId }: PluginPipelineProps) {
+export function PluginPipeline({
+	pluginId,
+	canRunChecks = false,
+}: PluginPipelineProps) {
 	const t = useTranslations("PluginPipeline");
 	const locale = useLocale();
 	const [isRunning, setIsRunning] = useState(false);
@@ -196,7 +201,7 @@ export function PluginPipeline({ pluginId }: PluginPipelineProps) {
 						{t("ai_powered_analysis")}
 					</p>
 				</div>
-				{!isRunning && latestChecks.length > 0 && (
+				{canRunChecks && !isRunning && latestChecks.length > 0 && (
 					<Button
 						variant="outline"
 						onClick={handleRunChecks}
@@ -208,7 +213,7 @@ export function PluginPipeline({ pluginId }: PluginPipelineProps) {
 						{t("rerun_jobs")}
 					</Button>
 				)}
-				{!isRunning && latestChecks.length === 0 && (
+				{canRunChecks && !isRunning && latestChecks.length === 0 && (
 					<Button
 						onClick={handleRunChecks}
 						disabled={runChecksMutation.isPending}
@@ -237,11 +242,20 @@ export function PluginPipeline({ pluginId }: PluginPipelineProps) {
 							statusColor = "bg-warning";
 							statusText = t("in_progress");
 							statusIcon = RefreshCw;
-						} else if (check?.status === "passed") {
+						} else if (
+							check?.status === "passed" ||
+							(check?.status === "completed" &&
+								(check.score === null || check.score >= 70))
+						) {
 							statusColor = "bg-success";
 							statusText = t("success");
 							statusIcon = CheckCircle;
-						} else if (check?.status === "failed") {
+						} else if (
+							check?.status === "failed" ||
+							(check?.status === "completed" &&
+								check.score !== null &&
+								check.score < 70)
+						) {
 							statusColor = "bg-destructive";
 							statusText = t("failed");
 							statusIcon = XCircle;
