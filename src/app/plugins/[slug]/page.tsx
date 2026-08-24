@@ -16,13 +16,12 @@ import {
 	Shield,
 	Star,
 	Tag,
-	Trash2,
 	TriangleAlert,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import React, { useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
@@ -35,6 +34,7 @@ import { GitHubIcon } from "~/components/icons/github-icon";
 import { ImageGallery } from "~/components/image-gallery";
 import { PluginInstallDialog } from "~/components/plugin-install-dialog";
 import { PluginPipeline } from "~/components/plugin-pipeline";
+import { PluginReviewList } from "~/components/plugin-review-list";
 import { PluginSubscription } from "~/components/plugin-subscription";
 import { PluginVersions } from "~/components/plugin-versions";
 import { TelegramBotIntegration } from "~/components/telegram-bot-integration";
@@ -50,7 +50,7 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "~/components/ui/tooltip";
-import { cn, formatDate, formatNumber, safeJsonParse } from "~/lib/utils";
+import { cn, formatNumber, safeJsonParse } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
 type TabId = "description" | "versions" | "reviews" | "changelog" | "pipeline";
@@ -61,7 +61,6 @@ export default function PluginDetailPage() {
 	const slug = params.slug as string;
 	const { data: session } = useSession();
 	const t = useTranslations("PluginDetailPage");
-	const locale = useLocale();
 	const reduceMotion = useReducedMotion();
 
 	const [activeTab, setActiveTab] = useState<TabId>("description");
@@ -69,9 +68,6 @@ export default function PluginDetailPage() {
 	const [reviewComment, setReviewComment] = useState("");
 	const [reviewCaptchaToken, setReviewCaptchaToken] = useState("");
 	const [isFavorited, setIsFavorited] = useState(false);
-	const [editingReviewId, setEditingReviewId] = useState<number | null>(null);
-	const [editingRating, setEditingRating] = useState<number>(5);
-	const [editingComment, setEditingComment] = useState("");
 	const [downloadPulse, setDownloadPulse] = useState(0);
 	const [isInstallDialogOpen, setIsInstallDialogOpen] = useState(false);
 	const reviewTextareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -82,11 +78,6 @@ export default function PluginDetailPage() {
 		isError,
 		refetch: refetchPlugin,
 	} = api.plugins.getBySlug.useQuery({ slug });
-	const { data: reviewsData, refetch: refetchReviews } =
-		api.plugins.getReviews.useQuery(
-			{ pluginId: plugin?.id ?? 0, page: 1, limit: 10 },
-			{ enabled: !!plugin?.id },
-		);
 	const { data: favoriteData } = api.favorites.check.useQuery(
 		{ pluginId: plugin?.id ?? 0 },
 		{ enabled: !!plugin?.id && !!session },
@@ -100,6 +91,7 @@ export default function PluginDetailPage() {
 		{ id: plugin?.authorId || "" },
 		{ enabled: !!plugin?.authorId },
 	);
+	const utils = api.useUtils();
 
 	const downloadMutation = api.plugins.download.useMutation({
 		onSuccess: (data) => {
@@ -142,31 +134,11 @@ export default function PluginDetailPage() {
 			toast.success(t("review_added"));
 			setReviewComment("");
 			setReviewRating(5);
-			refetchReviews();
+			void utils.plugins.getReviews.invalidate();
+			void utils.plugins.getBySlug.invalidate({ slug });
 		},
 		onError: (error) => {
 			toast.error(t("review_add_error", { error: error.message }));
-		},
-	});
-
-	const updateReviewMutation = api.plugins.updateReview.useMutation({
-		onSuccess: () => {
-			toast.success(t("review_updated"));
-			setEditingReviewId(null);
-			refetchReviews();
-		},
-		onError: (error) => {
-			toast.error(t("review_update_error", { error: error.message }));
-		},
-	});
-
-	const deleteReviewMutation = api.plugins.deleteReview.useMutation({
-		onSuccess: () => {
-			toast.success(t("review_deleted"));
-			refetchReviews();
-		},
-		onError: (error) => {
-			toast.error(t("review_delete_error", { error: error.message }));
 		},
 	});
 
@@ -973,22 +945,22 @@ export default function PluginDetailPage() {
 									<div className="space-y-6">
 										<ReviewSummary pluginId={plugin.id} />
 										{session && (
-											<Card className="border-primary/20 bg-linear-to-br from-primary/5 to-transparent">
-												<CardContent className="p-4">
+											<Card className="border-0 bg-surface/70 py-0 sm:py-0">
+												<CardContent className="p-4 sm:p-6">
 													<div className="space-y-4">
 														<div className="flex items-center gap-3">
-															<Avatar className="h-8 w-8 rounded-xl">
+															<Avatar className="size-11 rounded-2xl">
 																<AvatarImage
 																	src={session.user?.image || undefined}
 																/>
-																<AvatarFallback className="rounded-xl bg-primary/10 font-medium text-primary">
+																<AvatarFallback className="rounded-2xl bg-primary/10 font-medium text-primary">
 																	{session.user?.name
 																		?.slice(0, 2)
 																		.toUpperCase() || "??"}
 																</AvatarFallback>
 															</Avatar>
 															<div className="flex-1">
-																<p className="font-medium text-sm">
+																<p className="font-semibold">
 																	{session.user?.name}
 																</p>
 																<div className="mt-1 flex gap-1">
@@ -997,14 +969,14 @@ export default function PluginDetailPage() {
 																			key={star}
 																			type="button"
 																			onClick={() => setReviewRating(star)}
-																			className="tap-highlight-none flex h-11 w-8 items-center justify-center transition-colors md:h-6 md:w-6"
+																			className="tap-highlight-none flex size-11 items-center justify-center rounded-xl bg-background/70 transition-colors hover:bg-warning/10"
 																			aria-label={t("rate_star_aria", {
 																				star,
 																			})}
 																		>
 																			<Star
 																				className={cn(
-																					"h-4 w-4",
+																					"size-6",
 																					star <= reviewRating
 																						? "fill-warning text-warning"
 																						: "text-muted-foreground",
@@ -1021,13 +993,13 @@ export default function PluginDetailPage() {
 															onChange={(e) => setReviewComment(e.target.value)}
 															placeholder={t("review_placeholder")}
 															rows={3}
-															className="resize-none"
+															className="min-h-28 resize-none border-0 bg-background/75 text-base"
 														/>
 														<SmartCaptcha
 															onSuccess={setReviewCaptchaToken}
 															onError={() => setReviewCaptchaToken("")}
 														/>
-														<div className="flex justify-end">
+														<div className="flex justify-stretch sm:justify-end">
 															<Button
 																onClick={handleAddReview}
 																disabled={
@@ -1036,7 +1008,7 @@ export default function PluginDetailPage() {
 																	!reviewCaptchaToken
 																}
 																size="sm"
-																className="min-h-11 md:min-h-8"
+																className="min-h-11 w-full sm:w-auto"
 															>
 																{addReviewMutation.isPending
 																	? t("sending")
@@ -1048,184 +1020,15 @@ export default function PluginDetailPage() {
 											</Card>
 										)}
 
-										{reviewsData && reviewsData.reviews.length === 0 ? (
-											<div className="rounded-2xl border border-dashed bg-primary/5 p-8 text-center">
-												<div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-primary">
-													<MessageSquare className="h-7 w-7" />
-												</div>
-												<h4 className="mb-2 font-medium">
-													{t("no_reviews_title")}
-												</h4>
-												<p className="mx-auto mb-4 max-w-sm text-muted-foreground text-sm">
-													{t("no_reviews_description")}
-												</p>
-												<Button
-													onClick={handleWriteFirstReview}
-													className="min-h-11"
-												>
-													<Star className="mr-2 h-4 w-4" />
-													{t("write_first_review")}
-												</Button>
-											</div>
-										) : (
-											<div className="space-y-4">
-												{reviewsData?.reviews.map((review) => (
-													<Card key={review.id} className="w-full">
-														<CardContent className="p-4">
-															<div className="flex items-start gap-3">
-																<Avatar className="h-8 w-8 rounded-xl">
-																	<AvatarImage
-																		src={review.user?.image || undefined}
-																	/>
-																	<AvatarFallback className="rounded-xl bg-primary/10 font-medium text-primary">
-																		{review.user?.name
-																			?.slice(0, 2)
-																			.toUpperCase() || "??"}
-																	</AvatarFallback>
-																</Avatar>
-																<div className="min-w-0 flex-1 space-y-2">
-																	<div className="flex flex-wrap items-center justify-between gap-2">
-																		<div className="flex flex-wrap items-center gap-2">
-																			<span className="font-medium text-sm">
-																				{review.user?.name}
-																			</span>
-																			<div className="flex">
-																				{[1, 2, 3, 4, 5].map((star) => (
-																					<Star
-																						key={star}
-																						className={cn(
-																							"h-3 w-3",
-																							star <= review.rating
-																								? "fill-warning text-warning"
-																								: "text-muted-foreground",
-																						)}
-																					/>
-																				))}
-																			</div>
-																			<span className="text-muted-foreground text-xs">
-																				{formatDate(review.createdAt, locale)}
-																			</span>
-																		</div>
-																		{(session?.user?.id === review.userId ||
-																			session?.user?.role === "admin") && (
-																			<div className="flex items-center gap-2">
-																				<Button
-																					variant="outline"
-																					size="sm"
-																					className="min-h-11 md:min-h-8"
-																					onClick={() => {
-																						setEditingReviewId(review.id);
-																						setEditingRating(review.rating);
-																						setEditingComment(
-																							review.comment ?? "",
-																						);
-																					}}
-																				>
-																					<Edit className="mr-2 h-3.5 w-3.5" />{" "}
-																					{t("edit")}
-																				</Button>
-																				<Button
-																					variant="outline"
-																					size="sm"
-																					className="min-h-11 md:min-h-8"
-																					onClick={() => {
-																						if (
-																							confirm(
-																								t("confirm_delete_review"),
-																							)
-																						) {
-																							deleteReviewMutation.mutate({
-																								reviewId: review.id,
-																							});
-																						}
-																					}}
-																				>
-																					<Trash2 className="mr-2 h-3.5 w-3.5" />{" "}
-																					{t("delete")}
-																				</Button>
-																			</div>
-																		)}
-																	</div>
-																	{editingReviewId === review.id ? (
-																		<div className="space-y-2">
-																			<div className="flex gap-1">
-																				{[1, 2, 3, 4, 5].map((star) => (
-																					<button
-																						key={star}
-																						type="button"
-																						onClick={() =>
-																							setEditingRating(star)
-																						}
-																						className="tap-highlight-none flex h-11 w-8 items-center justify-center md:h-6 md:w-6"
-																						aria-label={t("edit_rating_aria", {
-																							star,
-																						})}
-																					>
-																						<Star
-																							className={cn(
-																								"h-4 w-4",
-																								star <= editingRating
-																									? "fill-warning text-warning"
-																									: "text-muted-foreground",
-																							)}
-																						/>
-																					</button>
-																				))}
-																			</div>
-																			<Textarea
-																				value={editingComment}
-																				onChange={(e) =>
-																					setEditingComment(e.target.value)
-																				}
-																				rows={3}
-																				className="resize-none"
-																			/>
-																			<div className="flex gap-2">
-																				<Button
-																					size="sm"
-																					className="min-h-11 md:min-h-8"
-																					onClick={() => {
-																						updateReviewMutation.mutate({
-																							reviewId: review.id,
-																							rating: editingRating,
-																							comment: editingComment,
-																						});
-																					}}
-																					disabled={
-																						updateReviewMutation.isPending
-																					}
-																				>
-																					{t("save")}
-																				</Button>
-																				<Button
-																					variant="outline"
-																					size="sm"
-																					className="min-h-11 md:min-h-8"
-																					onClick={() =>
-																						setEditingReviewId(null)
-																					}
-																				>
-																					{t("cancel")}
-																				</Button>
-																			</div>
-																		</div>
-																	) : (
-																		review.comment && (
-																			<p className="text-muted-foreground text-sm">
-																				{review.comment}
-																			</p>
-																		)
-																	)}
-																</div>
-															</div>
-														</CardContent>
-													</Card>
-												))}
-											</div>
-										)}
+										<PluginReviewList
+											pluginId={plugin.id}
+											pluginSlug={plugin.slug}
+											pluginRating={plugin.rating}
+											pluginRatingCount={plugin.ratingCount}
+											onWriteReview={handleWriteFirstReview}
+										/>
 									</div>
 								)}
-
 								{activeTab === "changelog" && (
 									<div className="space-y-6">
 										{latestChangelog ? (

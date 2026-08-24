@@ -320,7 +320,7 @@ export function PluginCard({
 		return (
 			<Card
 				className={cn(
-					"card-lift group relative w-full min-w-0 max-w-full gap-0 overflow-hidden bg-card py-0 focus-within:ring-2 focus-within:ring-ring/40",
+					"card-lift group relative w-full min-w-0 max-w-full gap-0 overflow-hidden bg-card py-0 focus-within:ring-2 focus-within:ring-ring/40 sm:py-0",
 					className,
 				)}
 			>
@@ -413,7 +413,7 @@ export function PluginCard({
 	return (
 		<Card
 			className={cn(
-				"card-lift group relative flex h-full w-full min-w-0 max-w-full flex-col gap-0 overflow-hidden rounded-[1.5rem] bg-card py-0 focus-within:ring-2 focus-within:ring-ring/40",
+				"card-lift group relative flex h-full w-full min-w-0 max-w-full flex-col gap-0 overflow-hidden rounded-[1.5rem] bg-card py-0 focus-within:ring-2 focus-within:ring-ring/40 sm:py-0",
 				plugin.featured && "bg-primary/[0.055]",
 				className,
 			)}

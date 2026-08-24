@@ -1,9 +1,7 @@
 "use client";
 
 import { AlertTriangle, CheckCircle2, Sparkles } from "lucide-react";
-import { useLocale, useTranslations } from "next-intl";
-import { Badge } from "~/components/ui/badge";
-import { Card, CardContent } from "~/components/ui/card";
+import { useTranslations } from "next-intl";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
@@ -13,11 +11,9 @@ interface ReviewSummaryProps {
 
 export function ReviewSummary({ pluginId }: ReviewSummaryProps) {
 	const t = useTranslations("AI");
-	const rawLocale = useLocale();
-	const locale = rawLocale === "en" ? ("en" as const) : ("ru" as const);
 
 	const { data, isLoading, isError } = api.ai.summarizeReviews.useQuery(
-		{ pluginId, locale },
+		{ pluginId },
 		{
 			enabled: pluginId > 0,
 			staleTime: 5 * 60 * 1000,
@@ -27,17 +23,15 @@ export function ReviewSummary({ pluginId }: ReviewSummaryProps) {
 
 	if (isLoading) {
 		return (
-			<Card className="border-primary/25 bg-linear-to-br from-primary/10 via-card to-card">
-				<CardContent className="space-y-3 p-4">
-					<div className="skeleton-shimmer h-6 w-32 rounded-full" />
-					<div className="skeleton-shimmer h-4 w-full rounded-md" />
-					<div className="skeleton-shimmer h-4 w-3/4 rounded-md" />
-					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-						<div className="skeleton-shimmer h-16 rounded-lg" />
-						<div className="skeleton-shimmer h-16 rounded-lg" />
-					</div>
-				</CardContent>
-			</Card>
+			<section className="space-y-5 rounded-3xl bg-surface/70 p-5 sm:p-7">
+				<div className="skeleton-shimmer h-12 w-52 rounded-2xl" />
+				<div className="skeleton-shimmer h-6 w-full rounded-md" />
+				<div className="skeleton-shimmer h-6 w-4/5 rounded-md" />
+				<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+					<div className="skeleton-shimmer h-24 rounded-2xl" />
+					<div className="skeleton-shimmer h-24 rounded-2xl" />
+				</div>
+			</section>
 		);
 	}
 
@@ -52,58 +46,69 @@ export function ReviewSummary({ pluginId }: ReviewSummaryProps) {
 	};
 
 	return (
-		<Card className="animate-fade-up border-primary/25 bg-linear-to-br from-primary/10 via-card to-card">
-			<CardContent className="space-y-4 p-4">
-				<div className="flex flex-wrap items-center justify-between gap-2">
-					<span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 font-medium text-primary text-xs">
-						<Sparkles className="h-3.5 w-3.5" />
-						{t("summary_chip")}
+		<section className="animate-fade-up space-y-6 overflow-hidden rounded-3xl bg-linear-to-br from-primary/10 via-surface/80 to-surface/60 p-5 sm:p-7">
+			<div className="flex flex-wrap items-center justify-between gap-3">
+				<div className="flex min-w-0 items-center gap-3">
+					<span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+						<Sparkles className="size-5" />
 					</span>
-					<Badge
-						className={cn(
-							"border-transparent text-xs",
-							sentimentStyles[data.sentiment],
-						)}
-					>
-						{t(`sentiment_${data.sentiment}`)}
-					</Badge>
+					<div className="min-w-0">
+						<h3 className="font-semibold text-base sm:text-lg">
+							{t("summary_chip")}
+						</h3>
+						<p className="text-muted-foreground text-sm">
+							{t("summary_based_on", { count: data.reviewCount })}
+						</p>
+					</div>
 				</div>
-
-				<p className="text-sm leading-relaxed">{data.verdict}</p>
-
-				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-					{data.pros.length > 0 && (
-						<div className="space-y-2">
-							<h4 className="font-medium font-mono text-muted-foreground text-xs uppercase tracking-wide">
-								{t("pros")}
-							</h4>
-							<ul className="space-y-1.5">
-								{data.pros.map((pro) => (
-									<li key={pro} className="flex items-start gap-2 text-sm">
-										<CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-										<span>{pro}</span>
-									</li>
-								))}
-							</ul>
-						</div>
+				<span
+					className={cn(
+						"inline-flex rounded-full px-3 py-1.5 font-semibold text-sm",
+						sentimentStyles[data.sentiment],
 					)}
-					{data.cons.length > 0 && (
-						<div className="space-y-2">
-							<h4 className="font-medium font-mono text-muted-foreground text-xs uppercase tracking-wide">
-								{t("cons")}
-							</h4>
-							<ul className="space-y-1.5">
-								{data.cons.map((con) => (
-									<li key={con} className="flex items-start gap-2 text-sm">
-										<AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-										<span>{con}</span>
-									</li>
-								))}
-							</ul>
-						</div>
-					)}
-				</div>
-			</CardContent>
-		</Card>
+				>
+					{t(`sentiment_${data.sentiment}`)}
+				</span>
+			</div>
+
+			<p className="max-w-4xl text-base leading-7 sm:text-lg sm:leading-8">
+				{data.verdict}
+			</p>
+
+			<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+				{data.pros.length > 0 && (
+					<div className="space-y-3 rounded-2xl bg-background/55 p-4 sm:p-5">
+						<h4 className="font-semibold text-sm">{t("pros")}</h4>
+						<ul className="space-y-2.5">
+							{data.pros.map((pro) => (
+								<li
+									key={pro}
+									className="flex items-start gap-2.5 text-sm leading-6"
+								>
+									<CheckCircle2 className="mt-0.5 size-4 shrink-0 text-success" />
+									<span className="text-foreground/90">{pro}</span>
+								</li>
+							))}
+						</ul>
+					</div>
+				)}
+				{data.cons.length > 0 && (
+					<div className="space-y-3 rounded-2xl bg-background/55 p-4 sm:p-5">
+						<h4 className="font-semibold text-sm">{t("cons")}</h4>
+						<ul className="space-y-2.5">
+							{data.cons.map((con) => (
+								<li
+									key={con}
+									className="flex items-start gap-2.5 text-sm leading-6"
+								>
+									<AlertTriangle className="mt-0.5 size-4 shrink-0 text-warning" />
+									<span className="text-foreground/90">{con}</span>
+								</li>
+							))}
+						</ul>
+					</div>
+				)}
+			</div>
+		</section>
 	);
 }

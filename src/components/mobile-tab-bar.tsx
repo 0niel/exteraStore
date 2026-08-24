@@ -1,6 +1,5 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
 import { Activity, Home, Package, Sparkles, User } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -12,7 +11,6 @@ import { cn } from "~/lib/utils";
 export function MobileTabBar() {
 	const pathname = usePathname();
 	const { data: session } = useSession();
-	const reduceMotion = useReducedMotion();
 	const t = useTranslations("Navigation");
 
 	if (
@@ -59,30 +57,24 @@ export function MobileTabBar() {
 						<Link
 							key={tab.href}
 							href={tab.href}
+							prefetch={false}
 							aria-current={active ? "page" : undefined}
 							className={cn(
 								"tap-highlight-none relative flex min-w-14 flex-1 flex-col items-center justify-center gap-1 rounded-2xl transition-colors",
 								active ? "text-primary" : "text-muted-foreground",
 							)}
 						>
-							{active && (
-								<motion.span
-									layoutId="mobile-tab-indicator"
-									className="absolute inset-x-1.5 inset-y-1.5 -z-10 rounded-2xl bg-primary/10"
-									transition={
-										reduceMotion
-											? { duration: 0 }
-											: { type: "spring", stiffness: 500, damping: 35 }
-									}
-								/>
-							)}
-							<motion.span
-								whileTap={reduceMotion ? undefined : { scale: 0.85 }}
-								animate={
-									reduceMotion ? undefined : { scale: active ? 1.08 : 1 }
-								}
-								transition={{ type: "spring", stiffness: 400, damping: 25 }}
-								className="flex flex-col items-center gap-1"
+							<span
+								className={cn(
+									"absolute inset-x-1.5 inset-y-1.5 -z-10 rounded-2xl bg-primary/10 transition-opacity duration-150",
+									active ? "opacity-100" : "opacity-0",
+								)}
+							/>
+							<span
+								className={cn(
+									"flex flex-col items-center gap-1 transition-transform duration-150 active:scale-90",
+									active && "scale-105",
+								)}
 							>
 								{isProfile ? (
 									<Avatar
@@ -111,7 +103,7 @@ export function MobileTabBar() {
 								<span className="font-medium text-[10px] leading-none">
 									{tab.name}
 								</span>
-							</motion.span>
+							</span>
 						</Link>
 					);
 				})}

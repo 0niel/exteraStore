@@ -612,7 +612,9 @@
 
 html[data-telegram-mini-app="true"] {
 	scroll-behavior: auto;
-	overscroll-behavior-y: none;
+	overflow-y: auto;
+	touch-action: pan-y;
+	-webkit-overflow-scrolling: touch;
 }
 
 html[data-telegram-mini-app="true"] body,
@@ -624,7 +626,9 @@ html[data-telegram-mini-app="true"] .min-h-dvh {
 }
 
 html[data-telegram-mini-app="true"] body {
-	overscroll-behavior-y: none;
+	height: auto;
+	overflow-y: visible;
+	touch-action: pan-y;
 }
 
 html[data-telegram-mini-app="true"] .glass,

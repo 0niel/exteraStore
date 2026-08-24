@@ -14,6 +14,7 @@ import { ThemeProvider } from "next-themes";
 import { Footer } from "~/components/footer";
 import { MobileTabBar } from "~/components/mobile-tab-bar";
 import { Navigation } from "~/components/navigation";
+import { TelegramMotionProvider } from "~/components/telegram-motion-provider";
 import { TelegramWebAppAuth } from "~/components/telegram-web-app-auth";
 import { Toaster } from "~/components/ui/sonner";
 import { type Locale, locales } from "~/lib/i18n-config";
@@ -123,20 +124,22 @@ export default async function RootLayout({
 								enableSystem
 								disableTransitionOnChange
 							>
-								<TelegramWebAppAuth />
-								<div className="flex min-h-dvh flex-col overflow-x-hidden pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
-									<Navigation />
-									<main
-										id="main-content"
-										tabIndex={-1}
-										className="w-full max-w-full flex-1 overflow-x-hidden focus:outline-none"
-									>
-										{children}
-									</main>
-									<Footer />
-								</div>
-								<MobileTabBar />
-								<Toaster />
+								<TelegramMotionProvider>
+									<TelegramWebAppAuth />
+									<div className="flex min-h-dvh flex-col overflow-x-hidden pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
+										<Navigation />
+										<main
+											id="main-content"
+											tabIndex={-1}
+											className="w-full max-w-full flex-1 overflow-x-hidden focus:outline-none"
+										>
+											{children}
+										</main>
+										<Footer />
+									</div>
+									<MobileTabBar />
+									<Toaster />
+								</TelegramMotionProvider>
 							</ThemeProvider>
 						</TRPCReactProvider>
 					</SessionProvider>
