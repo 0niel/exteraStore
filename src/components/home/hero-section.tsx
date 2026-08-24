@@ -159,11 +159,11 @@ export function HeroSection() {
 						</Button>
 					</motion.div>
 
-					<div className="scrollbar-hide -mx-4 mt-10 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 text-left sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 sm:pb-0">
+					<div className="mt-10 grid gap-3 text-left sm:grid-cols-3">
 						{features.map(({ icon: Icon, title, text }) => (
 							<div
 								key={title}
-								className="flex min-h-24 w-[82vw] max-w-sm shrink-0 snap-center items-center gap-3 rounded-2xl border bg-card/85 p-4 shadow-soft transition-colors hover:border-primary/30 sm:w-auto sm:max-w-none sm:shrink"
+								className="flex min-h-24 items-center gap-3 rounded-2xl bg-card/85 p-4"
 							>
 								<div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
 									<Icon className="size-5" />
@@ -177,7 +177,7 @@ export function HeroSection() {
 					</div>
 
 					{stats && (
-						<div className="mx-auto mt-12 grid max-w-2xl grid-cols-3 gap-4 border-t pt-8">
+						<div className="mx-auto mt-12 grid max-w-2xl grid-cols-3 gap-4 pt-8">
 							<StatCounter
 								value={stats.totalPlugins}
 								label={t("hero.statsPlugins")}
@@ -195,7 +195,7 @@ export function HeroSection() {
 				</div>
 			</div>
 
-			<div className="relative border-t py-4 [mask-image:linear-gradient(to_right,transparent,black_12%,black_88%,transparent)]">
+			<div className="relative py-4 [mask-image:linear-gradient(to_right,transparent,black_12%,black_88%,transparent)]">
 				<div className="flex w-max animate-marquee gap-3">
 					{[...tags, ...tags].map((tag, index) => (
 						<span

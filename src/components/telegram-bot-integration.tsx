@@ -85,7 +85,7 @@ export function TelegramBotIntegration({
 
 	return (
 		<>
-			<Card className="border-primary/25 bg-linear-to-br from-primary/10 to-primary/5 transition-colors hover:border-primary/40">
+			<Card className="gap-0 bg-primary/[0.07] py-0 sm:py-0">
 				<CardHeader className="pb-3">
 					<div className="flex items-center gap-2">
 						<div className="rounded-xl bg-primary/10 p-2 text-primary">
@@ -101,7 +101,7 @@ export function TelegramBotIntegration({
 				</CardHeader>
 				<CardContent className="space-y-4">
 					<div className="flex items-center justify-center">
-						<Badge variant="outline" className="text-xs">
+						<Badge variant="secondary" className="bg-background/70 text-xs">
 							<Shield className="mr-1 h-3 w-3" />
 							{t("verified")}
 						</Badge>
@@ -235,7 +235,7 @@ export function BotIntegrationStatus({
 export function BotIntegrationPromo() {
 	const t = useTranslations("TelegramBotIntegration");
 	return (
-		<Card className="border-primary/25 bg-linear-to-br from-primary/10 to-primary/5 transition-colors hover:border-primary/40">
+		<Card className="bg-primary/[0.07]">
 			<CardContent className="pt-6">
 				<div className="space-y-4 text-center">
 					<div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">

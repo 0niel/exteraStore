@@ -451,7 +451,7 @@ export default function PluginDetailPage() {
 							aria-hidden="true"
 						/>
 						<div className="flex items-start gap-4">
-							<div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary/10 font-bold text-2xl text-primary shadow-soft">
+							<div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary/10 font-bold text-2xl text-primary">
 								{plugin.name.slice(0, 1).toUpperCase()}
 							</div>
 							<div className="min-w-0 flex-1">
@@ -466,11 +466,11 @@ export default function PluginDetailPage() {
 									</div>
 									<div className="hidden items-center gap-2 lg:flex">
 										<Button
-											variant="outline"
+											variant="secondary"
 											size="icon"
 											onClick={handleToggleFavorite}
 											className={cn(
-												isFavorited && "border-primary text-primary",
+												isFavorited && "bg-primary/10 text-primary",
 											)}
 											aria-label={t("favorite_aria")}
 										>
@@ -479,7 +479,7 @@ export default function PluginDetailPage() {
 											/>
 										</Button>
 										<Button
-											variant="outline"
+											variant="secondary"
 											size="icon"
 											onClick={handleShare}
 											aria-label={t("share_aria")}
@@ -565,7 +565,7 @@ export default function PluginDetailPage() {
 						</div>
 
 						<div className="grid grid-cols-3 gap-2 sm:gap-3">
-							<div className="min-w-0 rounded-2xl border border-primary/10 bg-primary/5 p-3 text-center sm:p-4">
+							<div className="min-w-0 rounded-2xl bg-primary/[0.07] p-3 text-center sm:p-4">
 								<div className="flex items-center justify-center gap-1 font-bold font-mono text-xl sm:text-2xl">
 									<Star className="h-4 w-4 shrink-0 fill-warning text-warning" />
 									{plugin.rating.toFixed(1)}
@@ -574,7 +574,7 @@ export default function PluginDetailPage() {
 									{plugin.ratingCount} · {t("stats_reviews")}
 								</div>
 							</div>
-							<div className="min-w-0 rounded-2xl border border-primary/10 bg-primary/5 p-3 text-center sm:p-4">
+							<div className="min-w-0 rounded-2xl bg-primary/[0.07] p-3 text-center sm:p-4">
 								<div className="font-bold font-mono text-xl sm:text-2xl">
 									{formatNumber(plugin.downloadCount)}
 								</div>
@@ -582,7 +582,7 @@ export default function PluginDetailPage() {
 									{t("stats_downloads")}
 								</div>
 							</div>
-							<div className="min-w-0 rounded-2xl border border-primary/10 bg-primary/5 p-3 text-center sm:p-4">
+							<div className="min-w-0 rounded-2xl bg-primary/[0.07] p-3 text-center sm:p-4">
 								<div className="font-bold font-mono text-xl sm:text-2xl">
 									{versions?.length || 1}
 								</div>
@@ -671,10 +671,10 @@ export default function PluginDetailPage() {
 									aria-selected={activeTab === tab.id}
 									onClick={() => setActiveTab(tab.id)}
 									className={cn(
-										"press-scale tap-highlight-none min-h-11 shrink-0 snap-start whitespace-nowrap rounded-full border px-4 font-medium text-sm transition-all duration-200 ease-[var(--ease-spring)]",
+										"press-scale tap-highlight-none min-h-11 shrink-0 snap-start whitespace-nowrap rounded-full px-4 font-medium text-sm transition-all duration-200 ease-[var(--ease-spring)]",
 										activeTab === tab.id
-											? "border-primary bg-primary text-primary-foreground"
-											: "border-border bg-card text-muted-foreground hover:border-primary/40 hover:bg-primary/5 hover:text-foreground",
+											? "bg-primary text-primary-foreground"
+											: "bg-surface text-muted-foreground hover:bg-primary/10 hover:text-foreground",
 									)}
 								>
 									{tab.label}

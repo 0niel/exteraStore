@@ -42,14 +42,14 @@ function CollectionPreview({
 	const Icon = collectionIcons[index % collectionIcons.length] ?? Sparkles;
 
 	return (
-		<Card className="group card-lift h-full overflow-hidden border bg-card">
-			<div className="relative h-28 border-b bg-primary/5 sm:h-24">
-				<div className="dot-grid absolute inset-0" />
-				<div className="relative flex h-full flex-col justify-between p-4">
+		<Card className="group card-lift h-full gap-0 overflow-hidden bg-card py-0 sm:py-0">
+			<div className="relative min-h-36 bg-primary/[0.07] p-5">
+				<div className="dot-grid absolute inset-0 opacity-40" />
+				<div className="relative flex h-full min-h-26 flex-col justify-between gap-6">
 					<div className="flex min-w-0 items-start justify-between gap-2">
 						<Badge
 							variant="secondary"
-							className="border-primary/15 bg-primary/10 font-medium text-primary text-xs"
+							className="bg-primary/10 font-medium text-primary text-xs"
 						>
 							<Sparkles className="mr-1 h-3 w-3" />
 							{t("collections.aiBadge")}
@@ -60,12 +60,12 @@ function CollectionPreview({
 						</div>
 					</div>
 
-					<div className="flex items-center gap-3">
-						<div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+					<div className="flex items-start gap-3">
+						<div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">
 							<Icon className="h-4 w-4" />
 						</div>
 						<div className="min-w-0 flex-1">
-							<h3 className="truncate font-bold text-lg leading-tight">
+							<h3 className="line-clamp-2 font-bold text-lg leading-tight">
 								{collection.name}
 							</h3>
 							<div className="text-muted-foreground text-sm">
@@ -78,17 +78,17 @@ function CollectionPreview({
 				</div>
 			</div>
 
-			<CardContent className="p-5">
-				<p className="mb-4 line-clamp-2 text-muted-foreground text-sm leading-relaxed">
+			<CardContent className="flex flex-1 flex-col p-5">
+				<p className="mb-4 line-clamp-2 min-h-11 text-muted-foreground text-sm leading-relaxed">
 					{collection.description}
 				</p>
 
-				<div className="mb-5 space-y-3">
+				<div className="mb-5 space-y-2">
 					{collection.plugins.slice(0, 2).map((plugin: Plugin) => (
 						<Link
 							key={plugin.id}
 							href={`/plugins/${plugin.slug}`}
-							className="block rounded-xl border bg-surface p-3 transition-colors hover:border-primary/30 hover:bg-primary/5"
+							className="block rounded-xl bg-surface/80 p-3 transition-colors hover:bg-primary/10"
 						>
 							<div className="flex items-center gap-3">
 								<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -109,7 +109,12 @@ function CollectionPreview({
 					))}
 				</div>
 
-				<Button variant="ghost" size="sm" className="group/link w-full" asChild>
+				<Button
+					variant="secondary"
+					size="sm"
+					className="group/link mt-auto w-full"
+					asChild
+				>
 					<Link href={`/collections/${collection.id}`}>
 						<span>
 							{t("collections.viewCollection", {
@@ -152,46 +157,55 @@ export function AiCollections() {
 			className="section-band relative overflow-hidden py-16 sm:py-24"
 			aria-labelledby="collections-title"
 		>
-			<div className="absolute -top-32 right-0 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
 			<div className="container relative mx-auto px-4">
 				<motion.div
 					initial={reduceMotion ? false : { opacity: 0, y: 16 }}
 					whileInView={{ opacity: 1, y: 0 }}
 					viewport={{ once: true, margin: "-80px" }}
 					transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-					className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end"
+					className="mb-10 sm:mb-12"
 				>
-					<div>
-						<div className="mb-3 flex items-center gap-3">
+					<div className="mb-4 flex items-center justify-between gap-4">
+						<div className="flex items-center gap-3">
 							<span className="eyebrow">{t("collections.eyebrow")}</span>
 							<span className="font-mono font-semibold text-primary text-xs">
 								02
 							</span>
 						</div>
-						<h2
-							id="collections-title"
-							className="font-bold text-3xl tracking-tight sm:text-4xl"
+						<Button
+							variant="ghost"
+							asChild
+							className="group hidden sm:inline-flex"
 						>
-							{t("collections.title")}
-						</h2>
-						<p className="mt-2 max-w-2xl text-muted-foreground">
-							{t("collections.description")}
-						</p>
+							<Link href="/collections">
+								{t("collections.viewAll")}
+								<ArrowRight className="transition-transform group-hover:translate-x-1" />
+							</Link>
+						</Button>
 					</div>
-					<Button variant="ghost" asChild className="group">
+					<h2
+						id="collections-title"
+						className="max-w-3xl text-balance font-bold text-3xl tracking-tight sm:text-4xl"
+					>
+						{t("collections.title")}
+					</h2>
+					<p className="mt-2 max-w-2xl text-muted-foreground">
+						{t("collections.description")}
+					</p>
+					<Button variant="secondary" asChild className="mt-5 w-full sm:hidden">
 						<Link href="/collections">
 							{t("collections.viewAll")}
-							<ArrowRight className="transition-transform group-hover:translate-x-1" />
+							<ArrowRight />
 						</Link>
 					</Button>
 				</motion.div>
 
 				{isLoading ? (
-					<div className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-6 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pb-0 lg:grid-cols-3">
+					<div className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pb-0 lg:grid-cols-3">
 						{Array.from({ length: 3 }).map((_, i) => (
 							<Card
 								key={i}
-								className="w-[min(86vw,23rem)] shrink-0 snap-center overflow-hidden border bg-card/50 md:w-auto md:shrink md:snap-start"
+								className="w-[min(86vw,23rem)] shrink-0 snap-center gap-0 overflow-hidden bg-card/50 py-0 sm:py-0 md:w-auto md:shrink md:snap-start"
 							>
 								<Skeleton className="h-24 w-full" />
 								<div className="space-y-3 p-4">
@@ -213,7 +227,7 @@ export function AiCollections() {
 						initial="hidden"
 						whileInView="show"
 						viewport={{ once: true, margin: "-80px" }}
-						className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-6 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pb-0 lg:grid-cols-3"
+						className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pb-0 lg:grid-cols-3"
 					>
 						{collections.map((collection: AICollection, index: number) => (
 							<motion.div

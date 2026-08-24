@@ -21,7 +21,7 @@
 		"build:webpack": "next build --webpack",
 		"preview": "next build --webpack && next start",
 		"start": "next start",
-		"test:unit": "node --import tsx --test src/server/lib/telegram-mini-app-auth.test.ts",
+		"test:unit": "node --import tsx --test src/server/lib/*.test.ts",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {

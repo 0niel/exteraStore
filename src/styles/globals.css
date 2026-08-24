@@ -181,8 +181,11 @@
 
 .container {
 	width: 100%;
-	max-width: 90rem;
 	margin-inline: auto;
+}
+
+:where(.container:not([class*="max-w-"])) {
+	max-width: 80rem;
 }
 
 @keyframes fade-up {
@@ -289,17 +292,10 @@
 }
 
 @utility card-lift {
-	transition:
-		transform 0.35s var(--ease-out-expo),
-		box-shadow 0.35s var(--ease-out-expo),
-		border-color 0.35s var(--ease-out-expo);
+	transition: transform 0.35s var(--ease-out-expo);
 	@media (hover: hover) {
 		&:hover {
-			transform: translateY(-4px);
-			box-shadow:
-				0 12px 32px -12px color-mix(in oklch, var(--primary) 22%, transparent),
-				0 4px 12px -6px oklch(0 0 0 / 0.08);
-			border-color: color-mix(in oklch, var(--primary) 35%, var(--border));
+			transform: translateY(-2px);
 		}
 	}
 	&:active {
@@ -363,8 +359,6 @@
 
 @utility section-band {
 	background: var(--surface);
-	border-top: 1px solid var(--border);
-	border-bottom: 1px solid var(--border);
 }
 
 @utility eyebrow {

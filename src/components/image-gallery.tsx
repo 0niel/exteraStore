@@ -97,7 +97,7 @@ export function ImageGallery({
 						<button
 							key={`${image}-${index}`}
 							type="button"
-							className="group tap-highlight-none relative block aspect-[4/3] w-[calc(100vw-2.5rem)] max-w-full shrink-0 snap-center overflow-hidden rounded-2xl border bg-black/[0.035] text-left shadow-soft sm:aspect-video md:w-full md:snap-start dark:bg-white/[0.035]"
+							className="group tap-highlight-none relative block aspect-[4/3] w-[calc(100vw-2.5rem)] max-w-full shrink-0 snap-center overflow-hidden rounded-2xl bg-black/[0.035] text-left sm:aspect-video md:w-full md:snap-start dark:bg-white/[0.035]"
 							onClick={() => openModal(index)}
 							aria-label={t("open_image", { index: index + 1 })}
 						>
@@ -111,7 +111,7 @@ export function ImageGallery({
 
 							<div className="absolute inset-0 bg-linear-to-t from-black/35 via-transparent to-black/5 opacity-70 transition-opacity group-hover:opacity-100">
 								<div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100">
-									<span className="flex size-12 items-center justify-center rounded-full bg-white/90 text-black shadow-xl backdrop-blur-sm">
+									<span className="flex size-12 items-center justify-center rounded-full bg-white/90 text-black backdrop-blur-sm">
 										<ZoomIn className="size-5" />
 									</span>
 								</div>
