@@ -67,3 +67,19 @@ test("keeps a valid category when metadata has no strong signals", () => {
 	assert.equal(metadata.category, "development");
 	assert.equal(metadata.tags.length, 3);
 });
+
+test("classifies TikTok image tools as media without inventing API support", () => {
+	const metadata = buildFallbackPluginMetadata(
+		{
+			name: "tiktok frame",
+			description: "создает рамку из тиктока",
+			shortDescription: "рамка для сообщения",
+			category: "fun",
+			tags: "[]",
+		},
+		new Set(["media", "integrations", "fun"]),
+	);
+
+	assert.equal(metadata.category, "media");
+	assert.equal(metadata.tags.includes("api"), false);
+});

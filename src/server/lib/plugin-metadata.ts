@@ -72,6 +72,7 @@ const CATEGORY_RULES = [
 			"файл",
 			"скачив",
 			"download",
+			"tiktok",
 		],
 	},
 	{
@@ -110,8 +111,9 @@ const CATEGORY_RULES = [
 			"github",
 			"spotify",
 			"youtube",
-			"tiktok",
 			"вконтакте",
+			"steam",
+			"стим",
 			"external service",
 			"api",
 			"webhook",
@@ -203,7 +205,7 @@ const CATEGORY_TAGS: Record<string, string[]> = {
 	media: ["медиа", "файлы", "контент"],
 	stickers: ["стикеры", "эмодзи", "реакции"],
 	customization: ["кастомизация", "настройки", "поведение"],
-	integrations: ["интеграции", "сервисы", "api"],
+	integrations: ["интеграции", "внешние-сервисы", "подключение"],
 	development: ["разработка", "отладка", "инструменты"],
 	fun: ["развлечения", "игры", "мемы"],
 };
