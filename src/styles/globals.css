@@ -612,6 +612,7 @@
 
 html[data-telegram-mini-app="true"] {
 	scroll-behavior: auto;
+	overflow-x: clip;
 	overflow-y: auto;
 	touch-action: pan-y;
 	-webkit-overflow-scrolling: touch;
@@ -627,8 +628,21 @@ html[data-telegram-mini-app="true"] .min-h-dvh {
 
 html[data-telegram-mini-app="true"] body {
 	height: auto;
+	overflow-x: clip;
 	overflow-y: visible;
 	touch-action: pan-y;
+}
+
+html[data-telegram-mini-app="true"] .overflow-x-hidden {
+	overflow-x: clip;
+	overflow-y: visible;
+}
+
+html[data-telegram-mini-app="true"] .card-lift,
+html[data-telegram-mini-app="true"] [class*="transition-"],
+html[data-telegram-mini-app="true"] [class*="animate-"] {
+	animation: none;
+	transition-duration: 0.01ms;
 }
 
 html[data-telegram-mini-app="true"] .glass,
@@ -643,6 +657,11 @@ html[data-telegram-mini-app="true"] .extera-lightbox .yarl__counter {
 html[data-telegram-mini-app="true"] [class*="blur-3xl"],
 html[data-telegram-mini-app="true"] .route-progress {
 	display: none;
+}
+
+html[data-telegram-mini-app="true"] .route-motion {
+	opacity: 1 !important;
+	transform: none !important;
 }
 
 html[data-telegram-mini-app="true"] [data-plugin-artwork-backdrop="true"] {

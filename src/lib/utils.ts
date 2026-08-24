@@ -54,6 +54,81 @@ export function createValidDate(dateInput: Date | number | string): Date {
 	}
 }
 
+function russianPlural(value: number, forms: [string, string, string]) {
+	const lastTwo = value % 100;
+	const last = value % 10;
+	if (lastTwo >= 11 && lastTwo <= 19) return forms[2];
+	if (last === 1) return forms[0];
+	if (last >= 2 && last <= 4) return forms[1];
+	return forms[2];
+}
+
+export function formatRelativeTime(
+	date: Date | number | string,
+	now: Date = new Date(),
+	locale = "ru",
+) {
+	const deltaSeconds = Math.round(
+		(createValidDate(date).getTime() - now.getTime()) / 1000,
+	);
+	const absoluteSeconds = Math.abs(deltaSeconds);
+	const isFuture = deltaSeconds > 0;
+
+	if (absoluteSeconds < 45) {
+		return locale.startsWith("ru") ? "только что" : "just now";
+	}
+
+	const units = [
+		{
+			limit: 60,
+			seconds: 1,
+			en: "second",
+			ru: ["секунду", "секунды", "секунд"],
+		},
+		{
+			limit: 3600,
+			seconds: 60,
+			en: "minute",
+			ru: ["минуту", "минуты", "минут"],
+		},
+		{
+			limit: 86400,
+			seconds: 3600,
+			en: "hour",
+			ru: ["час", "часа", "часов"],
+		},
+		{
+			limit: 2592000,
+			seconds: 86400,
+			en: "day",
+			ru: ["день", "дня", "дней"],
+		},
+		{
+			limit: 31536000,
+			seconds: 2592000,
+			en: "month",
+			ru: ["месяц", "месяца", "месяцев"],
+		},
+		{
+			limit: Number.POSITIVE_INFINITY,
+			seconds: 31536000,
+			en: "year",
+			ru: ["год", "года", "лет"],
+		},
+	] as const;
+	const unit =
+		units.find((candidate) => absoluteSeconds < candidate.limit) ?? units[5];
+	const value = Math.max(1, Math.round(absoluteSeconds / unit.seconds));
+
+	if (locale.startsWith("ru")) {
+		const phrase = `${value} ${russianPlural(value, [...unit.ru])}`;
+		return isFuture ? `через ${phrase}` : `${phrase} назад`;
+	}
+
+	const phrase = `${value} ${unit.en}${value === 1 ? "" : "s"}`;
+	return isFuture ? `in ${phrase}` : `${phrase} ago`;
+}
+
 export function generateSlug(text: string): string {
 	const translitMap: Record<string, string> = {
 		а: "a",

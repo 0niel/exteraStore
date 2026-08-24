@@ -14,13 +14,18 @@ import {
 	Users,
 } from "lucide-react";
 import Link from "next/link";
-import { useFormatter, useNow, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useNow, useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Button } from "~/components/ui/button";
 import { EmptyState } from "~/components/ui/empty-state";
 import { Skeleton } from "~/components/ui/skeleton";
-import { cn, formatNumber, safeJsonParse } from "~/lib/utils";
+import {
+	cn,
+	formatNumber,
+	formatRelativeTime,
+	safeJsonParse,
+} from "~/lib/utils";
 import { api, type RouterOutputs } from "~/trpc/react";
 
 type PulseItem = RouterOutputs["pulse"]["get"]["items"][number];
@@ -192,6 +197,7 @@ function RatingStars({ rating }: { rating: number }) {
 export default function PulsePage() {
 	const t = useTranslations("PulsePage");
 	const format = useFormatter();
+	const locale = useLocale();
 	const now = useNow({ updateInterval: 60_000 });
 	const reduceMotion = useReducedMotion();
 	const [page, setPage] = useState(1);
@@ -537,9 +543,10 @@ export default function PulsePage() {
 																		</AvatarFallback>
 																	</Avatar>
 																	<span className="whitespace-nowrap">
-																		{format.relativeTime(
-																			new Date(it.createdAt * 1000),
+																		{formatRelativeTime(
+																			it.createdAt,
 																			now,
+																			locale,
 																		)}
 																	</span>
 																</div>

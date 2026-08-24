@@ -20,7 +20,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { useFormatter, useNow, useTranslations } from "next-intl";
+import { useLocale, useNow, useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { TelegramIcon } from "~/components/icons/telegram-icon";
@@ -39,7 +39,7 @@ import {
 	DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "~/components/ui/sheet";
-import { cn, createValidDate } from "~/lib/utils";
+import { cn, formatRelativeTime } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
 function LogoMark({ size = "size-9" }: { size?: string }) {
@@ -57,7 +57,7 @@ function LogoMark({ size = "size-9" }: { size?: string }) {
 
 function NotificationsBell() {
 	const t = useTranslations("Navigation");
-	const format = useFormatter();
+	const locale = useLocale();
 	const now = useNow({ updateInterval: 60_000 });
 	const utils = api.useUtils();
 	const knownNotificationIds = useRef<Set<number> | null>(null);
@@ -186,9 +186,10 @@ function NotificationsBell() {
 										<NotificationRow
 											title={notification.title}
 											message={notification.message}
-											time={format.relativeTime(
-												createValidDate(notification.createdAt),
+											time={formatRelativeTime(
+												notification.createdAt,
 												now,
+												locale,
 											)}
 											isRead={notification.isRead}
 										/>
@@ -205,9 +206,10 @@ function NotificationsBell() {
 									<NotificationRow
 										title={notification.title}
 										message={notification.message}
-										time={format.relativeTime(
-											createValidDate(notification.createdAt),
+										time={formatRelativeTime(
+											notification.createdAt,
 											now,
+											locale,
 										)}
 										isRead={notification.isRead}
 									/>

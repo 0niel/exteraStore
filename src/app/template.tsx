@@ -19,7 +19,7 @@ export default function Template({ children }: { children: React.ReactNode }) {
 				transition={{ duration: 0.7, times: [0, 0.55, 1], ease: "easeOut" }}
 			/>
 			<motion.div
-				className="min-h-full origin-top"
+				className="route-motion min-h-full origin-top"
 				initial={{ opacity: 0, y: 8, scale: 0.997 }}
 				animate={{ opacity: 1, y: 0, scale: 1 }}
 				transition={{ duration: 0.32, ease: [0.16, 1, 0.3, 1] }}

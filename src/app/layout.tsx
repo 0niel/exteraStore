@@ -109,6 +109,9 @@ export default async function RootLayout({
 					src="https://telegram.org/js/telegram-web-app.js"
 					strategy="beforeInteractive"
 				/>
+				<Script id="telegram-mini-app-bootstrap" strategy="beforeInteractive">
+					{`if(window.Telegram?.WebApp?.initData){document.documentElement.dataset.telegramMiniApp="true"}`}
+				</Script>
 				<a
 					href="#main-content"
 					className="fixed top-[max(.5rem,env(safe-area-inset-top))] left-2 z-100 -translate-y-24 rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground shadow-lg transition-transform focus:translate-y-0"

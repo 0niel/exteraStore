@@ -3,6 +3,12 @@
 import { MotionConfig } from "framer-motion";
 import { useEffect, useState } from "react";
 
+function detectTelegramMode() {
+	return (
+		typeof window !== "undefined" && Boolean(window.Telegram?.WebApp?.initData)
+	);
+}
+
 export function TelegramMotionProvider({
 	children,
 }: {
@@ -12,7 +18,7 @@ export function TelegramMotionProvider({
 
 	useEffect(() => {
 		const sync = () => {
-			setIsTelegram(Boolean(window.Telegram?.WebApp?.initData));
+			setIsTelegram(detectTelegramMode());
 		};
 		sync();
 		const interval = window.setInterval(sync, 100);
