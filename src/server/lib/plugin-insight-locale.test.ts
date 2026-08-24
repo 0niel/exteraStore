@@ -27,3 +27,29 @@ test("rejects mixed-language plugin insight fields", () => {
 		false,
 	);
 });
+
+test("accepts language-neutral technical requirements", () => {
+	assert.equal(
+		isRussianPluginInsight({
+			summary: "Создаёт изображение из сообщения в стиле TikTok.",
+			bestFor: ["Тем, кто публикует оформленные цитаты"],
+			requirements: ["Android 5.0+", "Telegram 7.0+"],
+			caveats: ["Для работы требуется подключение к интернету"],
+			privacyReason: "Обработка выполняется локально на устройстве.",
+		}),
+		true,
+	);
+});
+
+test("rejects English requirement prose", () => {
+	assert.equal(
+		isRussianPluginInsight({
+			summary: "Создаёт изображение из сообщения в стиле TikTok.",
+			bestFor: ["Тем, кто публикует оформленные цитаты"],
+			requirements: ["Android 5.0 or higher"],
+			caveats: ["Для работы требуется подключение к интернету"],
+			privacyReason: "Обработка выполняется локально на устройстве.",
+		}),
+		false,
+	);
+});

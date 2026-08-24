@@ -1527,6 +1527,7 @@
 		"insight_privacy_unknown": "Not enough evidence",
 		"insight_disclaimer": "This explanation supports your decision but does not replace a security or source-code review.",
 		"retry": "Try again",
+		"close": "Close",
 		"suggest_button": "Suggest with AI",
 		"suggest_loading": "Suggesting...",
 		"suggest_error": "Failed to suggest tags. Please try again later.",

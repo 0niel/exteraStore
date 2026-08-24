@@ -83,7 +83,7 @@ export function PluginInsight({ pluginId, pluginName }: PluginInsightProps) {
 					{t("insight_button")}
 				</Button>
 			</DialogTrigger>
-			<DialogContent className="sm:max-w-2xl">
+			<DialogContent className="sm:max-w-2xl" closeLabel={t("close")}>
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-3 pr-8">
 						<span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground">

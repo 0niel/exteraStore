@@ -7,13 +7,23 @@ export interface PluginInsightText {
 }
 
 const CYRILLIC_TEXT = /[а-яё]/i;
+const ENGLISH_REQUIREMENT_PROSE =
+	/\b(?:and|or|higher|lower|requires?|connection|internet|may|not|work|with|all|devices?|support|installed|version)\b/i;
+
+function isLocalizedRequirement(text: string): boolean {
+	return CYRILLIC_TEXT.test(text) || !ENGLISH_REQUIREMENT_PROSE.test(text);
+}
 
 export function isRussianPluginInsight(insight: PluginInsightText): boolean {
-	return [
+	const explanatoryText = [
 		insight.summary,
 		...insight.bestFor,
-		...insight.requirements,
 		...insight.caveats,
 		insight.privacyReason,
-	].every((text) => CYRILLIC_TEXT.test(text));
+	];
+
+	return (
+		explanatoryText.every((text) => CYRILLIC_TEXT.test(text)) &&
+		insight.requirements.every(isLocalizedRequirement)
+	);
 }
