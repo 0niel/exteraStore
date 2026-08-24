@@ -252,10 +252,27 @@ export function Navigation() {
 	const t = useTranslations("Navigation");
 
 	useEffect(() => {
-		const onScroll = () => setScrolled(window.scrollY > 8);
+		let frameId: number | null = null;
+		let current = window.scrollY > 8;
+		const syncScrollState = () => {
+			frameId = null;
+			const next = window.scrollY > 8;
+			if (next !== current) {
+				current = next;
+				setScrolled(next);
+			}
+		};
+		const onScroll = () => {
+			if (frameId === null) {
+				frameId = window.requestAnimationFrame(syncScrollState);
+			}
+		};
 		onScroll();
 		window.addEventListener("scroll", onScroll, { passive: true });
-		return () => window.removeEventListener("scroll", onScroll);
+		return () => {
+			window.removeEventListener("scroll", onScroll);
+			if (frameId !== null) window.cancelAnimationFrame(frameId);
+		};
 	}, []);
 
 	const navigation = [

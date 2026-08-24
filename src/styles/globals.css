@@ -610,6 +610,33 @@
 	-webkit-overflow-scrolling: touch;
 }
 
+html[data-telegram-mini-app="true"] {
+	scroll-behavior: auto;
+}
+
+html[data-telegram-mini-app="true"] body,
+html[data-telegram-mini-app="true"] .min-h-dvh {
+	min-height: var(--tg-viewport-stable-height, 100dvh);
+}
+
+html[data-telegram-mini-app="true"] .glass,
+html[data-telegram-mini-app="true"] [class*="backdrop-blur"],
+html[data-telegram-mini-app="true"] .extera-lightbox .yarl__button,
+html[data-telegram-mini-app="true"] .extera-lightbox .yarl__counter {
+	background-color: var(--background);
+	-webkit-backdrop-filter: none;
+	backdrop-filter: none;
+}
+
+html[data-telegram-mini-app="true"] [class*="blur-3xl"],
+html[data-telegram-mini-app="true"] .route-progress {
+	display: none;
+}
+
+html[data-telegram-mini-app="true"] .overflow-x-auto {
+	scroll-behavior: auto;
+}
+
 @media (max-width: 768px) {
 	.container {
 		padding-left: 1rem;

@@ -13,7 +13,7 @@ export default function Template({ children }: { children: React.ReactNode }) {
 		<>
 			<motion.div
 				aria-hidden="true"
-				className="pointer-events-none fixed inset-x-0 top-[calc(4rem+env(safe-area-inset-top))] z-40 h-0.5 origin-left bg-linear-to-r from-transparent via-primary to-transparent"
+				className="route-progress pointer-events-none fixed inset-x-0 top-[calc(4rem+env(safe-area-inset-top))] z-40 h-0.5 origin-left bg-linear-to-r from-transparent via-primary to-transparent"
 				initial={{ scaleX: 0, opacity: 0 }}
 				animate={{ scaleX: [0, 1, 1], opacity: [0, 1, 0] }}
 				transition={{ duration: 0.7, times: [0, 0.55, 1], ease: "easeOut" }}
