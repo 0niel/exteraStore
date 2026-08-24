@@ -22,10 +22,13 @@ interface TelegramWebApp {
 	};
 	isExpanded?: boolean;
 	viewportHeight?: number;
+	viewportStableHeight?: number;
+	isVerticalSwipesEnabled?: boolean;
 	colorScheme?: "light" | "dark";
 	ready: () => void;
 	expand: () => void;
 	close: () => void;
+	disableVerticalSwipes?: () => void;
 	onEvent?: (
 		event: "themeChanged" | "viewportChanged",
 		callback: () => void,
@@ -85,6 +88,19 @@ function applyTelegramTheme(webApp: TelegramWebApp) {
 	}
 }
 
+function applyTelegramViewport(webApp: TelegramWebApp) {
+	const height = webApp.viewportHeight;
+	const stableHeight = webApp.viewportStableHeight ?? height;
+	const root = document.documentElement;
+
+	if (typeof height === "number" && height > 0) {
+		root.style.setProperty("--app-viewport-height", `${height}px`);
+	}
+	if (typeof stableHeight === "number" && stableHeight > 0) {
+		root.style.setProperty("--app-viewport-stable-height", `${stableHeight}px`);
+	}
+}
+
 export function useTelegramWebApp() {
 	const [status, setStatus] = useState<TelegramStatus>("loading");
 	const [webApp, setWebApp] = useState<TelegramWebApp | null>(null);
@@ -105,6 +121,9 @@ export function useTelegramWebApp() {
 		const syncTheme = () => {
 			if (connected) applyTelegramTheme(connected);
 		};
+		const syncViewport = () => {
+			if (connected) applyTelegramViewport(connected);
+		};
 
 		const connect = () => {
 			if (connected) return true;
@@ -115,13 +134,18 @@ export function useTelegramWebApp() {
 			stopWaiting();
 			if (candidate.initData) {
 				applyTelegramTheme(candidate);
+				applyTelegramViewport(candidate);
 				try {
 					candidate.ready();
 				} catch {}
 				try {
 					candidate.expand();
 				} catch {}
+				try {
+					candidate.disableVerticalSwipes?.();
+				} catch {}
 				candidate.onEvent?.("themeChanged", syncTheme);
+				candidate.onEvent?.("viewportChanged", syncViewport);
 			}
 			setWebApp(candidate);
 			setStatus("ready");
@@ -151,6 +175,7 @@ export function useTelegramWebApp() {
 			script?.removeEventListener("load", handleScriptLoad);
 			script?.removeEventListener("error", handleScriptError);
 			connected?.offEvent?.("themeChanged", syncTheme);
+			connected?.offEvent?.("viewportChanged", syncViewport);
 		};
 	}, []);
 

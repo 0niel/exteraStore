@@ -20,7 +20,7 @@ import {
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { useFormatter, useTranslations } from "next-intl";
+import { useFormatter, useNow, useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { TelegramIcon } from "~/components/icons/telegram-icon";
@@ -58,6 +58,7 @@ function LogoMark({ size = "size-9" }: { size?: string }) {
 function NotificationsBell() {
 	const t = useTranslations("Navigation");
 	const format = useFormatter();
+	const now = useNow({ updateInterval: 60_000 });
 	const utils = api.useUtils();
 	const knownNotificationIds = useRef<Set<number> | null>(null);
 
@@ -187,6 +188,7 @@ function NotificationsBell() {
 											message={notification.message}
 											time={format.relativeTime(
 												createValidDate(notification.createdAt),
+												now,
 											)}
 											isRead={notification.isRead}
 										/>
@@ -205,6 +207,7 @@ function NotificationsBell() {
 										message={notification.message}
 										time={format.relativeTime(
 											createValidDate(notification.createdAt),
+											now,
 										)}
 										isRead={notification.isRead}
 									/>

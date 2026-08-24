@@ -113,6 +113,7 @@ function PluginArtwork({
 					<Image
 						src={src}
 						alt=""
+						data-plugin-artwork-backdrop="true"
 						fill
 						sizes={sizes}
 						quality={75}

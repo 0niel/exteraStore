@@ -612,11 +612,19 @@
 
 html[data-telegram-mini-app="true"] {
 	scroll-behavior: auto;
+	overscroll-behavior-y: none;
 }
 
 html[data-telegram-mini-app="true"] body,
 html[data-telegram-mini-app="true"] .min-h-dvh {
-	min-height: var(--tg-viewport-stable-height, 100dvh);
+	min-height: var(
+		--app-viewport-stable-height,
+		var(--tg-viewport-stable-height, 100dvh)
+	);
+}
+
+html[data-telegram-mini-app="true"] body {
+	overscroll-behavior-y: none;
 }
 
 html[data-telegram-mini-app="true"] .glass,
@@ -630,6 +638,10 @@ html[data-telegram-mini-app="true"] .extera-lightbox .yarl__counter {
 
 html[data-telegram-mini-app="true"] [class*="blur-3xl"],
 html[data-telegram-mini-app="true"] .route-progress {
+	display: none;
+}
+
+html[data-telegram-mini-app="true"] [data-plugin-artwork-backdrop="true"] {
 	display: none;
 }
 
