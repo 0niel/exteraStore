@@ -113,7 +113,7 @@ export function Footer() {
 
 					<div className="grid grid-cols-2 gap-x-5 gap-y-7 lg:col-span-8 lg:grid-cols-4 lg:gap-x-6 lg:gap-y-10">
 						<div className="space-y-4">
-							<h3 className="eyebrow">{t("quick_links")}</h3>
+							<p className="eyebrow">{t("quick_links")}</p>
 							<ul className="space-y-2">
 								{quickLinks.map((link) => (
 									<li key={link.href}>
@@ -124,7 +124,7 @@ export function Footer() {
 						</div>
 
 						<div className="space-y-4">
-							<h3 className="eyebrow">{t("resources")}</h3>
+							<p className="eyebrow">{t("resources")}</p>
 							<ul className="space-y-2">
 								{resources.map((link) => (
 									<li key={link.href}>
@@ -137,7 +137,7 @@ export function Footer() {
 						</div>
 
 						<div className="space-y-4">
-							<h3 className="eyebrow">{t("legal")}</h3>
+							<p className="eyebrow">{t("legal")}</p>
 							<ul className="space-y-2">
 								{legal.map((link) => (
 									<li key={link.href}>
@@ -148,7 +148,7 @@ export function Footer() {
 						</div>
 
 						<div className="space-y-4">
-							<h3 className="eyebrow">{t("settings")}</h3>
+							<p className="eyebrow">{t("settings")}</p>
 							<div className="space-y-3">
 								<div>
 									<div className="mb-1 font-mono text-[0.65rem] text-muted-foreground uppercase tracking-wider">
