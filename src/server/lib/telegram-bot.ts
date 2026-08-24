@@ -293,7 +293,10 @@ async function handlePluginDownload(
 			const role = item.plugin.isRequestedPlugin
 				? "Основной плагин"
 				: "Обязательная зависимость";
-			const caption = `📦 <b>${index + 1}/${packages.length} · ${role}</b>\n\n🔌 <b>${safeName}</b> v${item.version.version}\n📝 ${safeDesc}\n👤 Автор: ${safeAuthor}\n\nУстановите этот файл перед переходом к следующему.`;
+			const platform = item.plugin.exteralessCompatible
+				? "exteraGram или exteraless"
+				: "exteraGram";
+			const caption = `📦 <b>${index + 1}/${packages.length} · ${role}</b>\n\n🔌 <b>${safeName}</b> v${item.version.version}\n📝 ${safeDesc}\n👤 Автор: ${safeAuthor}\n📱 Клиент: ${platform}\n\nУстановите этот файл перед переходом к следующему.`;
 			const fileName = `${item.plugin.slug}-v${item.version.version}.plugin`;
 			await sendDocument(
 				chatId,
@@ -310,11 +313,16 @@ async function handlePluginDownload(
 			await ensureUpdateSubscription(item.plugin.id, internalUserId, chatId);
 		}
 
+		const requestedPlugin = packages.find(
+			(item) => item.plugin.isRequestedPlugin,
+		)?.plugin;
 		await sendMessage(
 			chatId,
 			packages.length > 1
 				? `✅ Все файлы отправлены. Установите их по порядку от 1 до ${packages.length}.`
-				: "✅ Файл отправлен. Откройте его в exteraGram для установки.",
+				: requestedPlugin?.exteralessCompatible
+					? "✅ Файл отправлен. Откройте его в exteraGram или exteraless для установки."
+					: "✅ Файл отправлен. Откройте его в exteraGram для установки.",
 		);
 	} catch (error) {
 		console.error("Plugin download error:", error);
@@ -449,9 +457,9 @@ async function showMainMenu(
 	};
 
 	const message = `
-🔌 <b>exteraGram Plugins Store</b>
+🔌 <b>exteraStore</b>
 
-Добро пожаловать в магазин плагинов для exteraGram!
+Добро пожаловать в каталог плагинов для exteraGram и совместимых расширений exteraless!
 
 📊 <b>Статистика:</b>
 • Всего плагинов: ${await getPluginsCount()}
@@ -1149,7 +1157,8 @@ async function showUserProfile(
 		message += `⬇️ Скачано плагинов: ${downloadCount}\n\n`;
 
 		message += "🔗 <b>Полезные ссылки:</b>\n";
-		message += "• Сайт: https://exteragram.app\n";
+		message += "• Каталог: https://exterastore.app\n";
+		message += "• exteraless: https://github.com/exteraless/exteraless\n";
 		message += "• Документация: https://plugins.exteragram.app/\n";
 
 		const keyboard = {
@@ -1203,6 +1212,12 @@ async function showPluginDetails(
 			message += `🏷️ <b>Теги:</b> ${safeTags}\n`;
 		}
 
+		message += p.exteralessCompatible
+			? "✅ <b>exteraless:</b> совместим\n"
+			: p.exteralessCompatible === false
+				? "⛔ <b>exteraless:</b> не совместим\n"
+				: "❔ <b>exteraless:</b> совместимость не указана\n";
+
 		if (p.price > 0) {
 			message += `💰 <b>Цена:</b> $${p.price}\n`;
 		} else {
@@ -1229,7 +1244,7 @@ async function showPluginDetails(
 
 async function showHelp(chatId: string, messageId?: number) {
 	const message = `
-📖 <b>Справка по боту exteraGram Plugins</b>
+📖 <b>Справка по боту exteraStore</b>
 
 <b>🔍 Поиск плагинов:</b>
 • Используйте кнопку "Поиск" в главном меню
@@ -1251,10 +1266,11 @@ async function showHelp(chatId: string, messageId?: number) {
 <b>📥 Скачивание:</b>
 • Нажмите кнопку "Скачать" у любого плагина
 • Файл .plugin будет отправлен в чат
-• Установите его в exteraGram
+• Установите его в exteraGram или exteraless, если плагин отмечен совместимым
 
 <b>🔗 Полезные ссылки:</b>
 • Разработчик: https://github.com/0niel
+• exteraless: https://github.com/exteraless/exteraless
 • Документация: http://plugins.exteragram.app
 	`;
 

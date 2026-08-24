@@ -683,6 +683,7 @@ export async function generateAndSaveAICollections(
 			tags: plugins.tags,
 			rating: plugins.rating,
 			downloadCount: plugins.downloadCount,
+			exteralessCompatible: plugins.exteralessCompatible,
 		})
 		.from(plugins)
 		.where(eq(plugins.status, "approved"));
@@ -692,6 +693,9 @@ export async function generateAndSaveAICollections(
 	}
 
 	const aiChecker = new PluginAIChecker();
+	const generatedCollections: {
+		collection: Awaited<ReturnType<PluginAIChecker["generateAICollection"]>>;
+	}[] = [];
 	const results: {
 		theme: string;
 		status: string;
@@ -706,20 +710,10 @@ export async function generateAndSaveAICollections(
 				theme,
 				locale,
 			);
-
-			const [savedCollection] = await database
-				.insert(aiPluginCollections)
-				.values({
-					name: collection.collectionName,
-					description: collection.collectionDescription,
-					pluginIds: collection.pluginIds,
-				})
-				.returning();
-
+			generatedCollections.push({ collection });
 			results.push({
 				theme,
-				status: "success",
-				collection: savedCollection,
+				status: "generated",
 			});
 		} catch {
 			results.push({
@@ -731,6 +725,31 @@ export async function generateAndSaveAICollections(
 	}
 
 	aiChecker.cleanup();
+
+	if (generatedCollections.length > 0) {
+		const savedCollections = await database.transaction(async (transaction) => {
+			await transaction.delete(aiPluginCollections);
+			return transaction
+				.insert(aiPluginCollections)
+				.values(
+					generatedCollections.map(({ collection }) => ({
+						name: collection.collectionName,
+						description: collection.collectionDescription,
+						pluginIds: collection.pluginIds,
+					})),
+				)
+				.returning();
+		});
+
+		let savedIndex = 0;
+		for (const result of results) {
+			if (result.status !== "generated") continue;
+			result.status = "success";
+			result.collection = savedCollections[savedIndex];
+			savedIndex += 1;
+		}
+	}
+
 	return results;
 }
 

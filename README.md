@@ -1,6 +1,6 @@
 # exteraStore
 
-Community plugin catalog for [exteraGram](https://exteragram.app) — discover, publish and install plugins for the most flexible Telegram client.
+Community plugin catalog for [exteraGram](https://exteragram.app) and compatible extensions for the open-source [exteraless](https://github.com/exteraless/exteraless) client — discover, publish and install Telegram plugins.
 
 **Live:** [exterastore.app](https://exterastore.app)
 

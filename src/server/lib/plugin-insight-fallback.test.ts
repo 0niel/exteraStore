@@ -46,3 +46,21 @@ test("omits unknown English prose from the Russian fallback", () => {
 	assert.equal(isRussianPluginInsight(insight), true);
 	assert.equal(insight.summary.includes("Creates a frame"), false);
 });
+
+test("includes confirmed exteraless compatibility", () => {
+	const insight = buildFallbackPluginInsight(
+		{
+			name: "Frame",
+			category: "Оформление",
+			description: "Создаёт рамку для сообщения.",
+			shortDescription: null,
+			requirements: null,
+			minExteraVersion: null,
+			exteralessCompatible: true,
+			minExteralessVersion: "1.2.0",
+		},
+		"ru",
+	);
+
+	assert.deepEqual(insight.requirements, ["exteraless 1.2.0 или новее"]);
+});

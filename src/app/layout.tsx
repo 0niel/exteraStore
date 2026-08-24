@@ -26,11 +26,12 @@ export const metadata: Metadata = {
 		template: "%s · exteraStore",
 	},
 	description:
-		"Независимый каталог плагинов сообщества exteraGram: находите, проверяйте и публикуйте расширения.",
+		"Независимый каталог плагинов для exteraGram и совместимых расширений exteraless: находите, проверяйте и публикуйте дополнения.",
 	icons: [{ rel: "icon", url: "/favicon.svg", type: "image/svg+xml" }],
 	keywords: [
 		"exteraStore",
 		"exteraGram",
+		"exteraless",
 		"Telegram",
 		"plugins",
 		"Python",
@@ -41,7 +42,7 @@ export const metadata: Metadata = {
 	authors: [{ name: "exteraStore community" }],
 	openGraph: {
 		title: "exteraStore",
-		description: "Независимый каталог плагинов сообщества exteraGram",
+		description: "Каталог плагинов для exteraGram и exteraless",
 		type: "website",
 		locale: "en_US",
 		alternateLocale: "ru_RU",

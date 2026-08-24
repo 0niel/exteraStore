@@ -214,6 +214,7 @@ export async function getDirectPluginDependencies(
 			shortDescription: plugins.shortDescription,
 			version: plugins.version,
 			author: plugins.author,
+			exteralessCompatible: plugins.exteralessCompatible,
 		})
 		.from(pluginDependencies)
 		.innerJoin(plugins, eq(pluginDependencies.dependencyPluginId, plugins.id))
@@ -242,6 +243,7 @@ export async function getPluginInstallPlan(
 			description: plugins.description,
 			version: plugins.version,
 			author: plugins.author,
+			exteralessCompatible: plugins.exteralessCompatible,
 		})
 		.from(plugins)
 		.where(

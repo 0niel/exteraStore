@@ -475,11 +475,14 @@ export const telegramNotificationsRouter = createTRPCRouter({
 							"",
 					);
 					const safeAuthor = escapeHtml(updatedPlugin[0]?.author || "");
+					const installClient = updatedPlugin[0]?.exteralessCompatible
+						? "exteraGram или exteraless"
+						: "exteraGram";
 
 					const caption =
 						`🔌 <b>${safeName}</b> v${version_data[0].version}\n\n` +
 						`📝 ${safeDesc}...\n\n` +
-						`👤 Автор: ${safeAuthor}\n📊 Рейтинг: ${updatedPlugin[0]?.rating.toFixed(1)}/5 (${updatedPlugin[0]?.ratingCount} отзывов)\n⬇️ Скачиваний: ${updatedPlugin[0]?.downloadCount}\n\nУстановите этот плагин в exteraGram!`;
+						`👤 Автор: ${safeAuthor}\n📊 Рейтинг: ${updatedPlugin[0]?.rating.toFixed(1)}/5 (${updatedPlugin[0]?.ratingCount} отзывов)\n⬇️ Скачиваний: ${updatedPlugin[0]?.downloadCount}\n\nУстановите этот плагин в ${installClient}!`;
 
 					await sendTelegramDocument(
 						input.chatId,

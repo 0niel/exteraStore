@@ -128,7 +128,7 @@ export const telegramBotRouter = createTRPCRouter({
 				success: true,
 				plugin: null,
 				message: {
-					text: "🎉 Добро пожаловать в exteraGram Plugins!\n\n🔌 Здесь вы можете скачать плагины для exteraGram\n\n📱 Используйте команды:\n/plugins - Показать популярные плагины\n/search <название> - Поиск плагинов\n/help - Помощь",
+					text: "🎉 Добро пожаловать в exteraStore!\n\n🔌 Здесь можно скачать плагины для exteraGram и совместимые расширения exteraless\n\n📱 Используйте команды:\n/plugins - Показать популярные плагины\n/search <название> - Поиск плагинов\n/help - Помощь",
 					reply_markup: {
 						inline_keyboard: [
 							[
@@ -306,7 +306,7 @@ export const telegramBotRouter = createTRPCRouter({
 							show_alert: false,
 						},
 						message: {
-							text: `📦 *Установка плагина ${plugin.name}*\n\n🔧 Инструкция по установке:\n\n1️⃣ Скачайте файл плагина\n2️⃣ Откройте exteraGram\n3️⃣ Перейдите в Настройки → Плагины\n4️⃣ Нажмите "Установить плагин"\n5️⃣ Выберите скачанный файл\n\n✅ Готово! Плагин установлен.`,
+							text: `📦 *Установка плагина ${plugin.name}*\n\n🔧 Инструкция по установке:\n\n1️⃣ Скачайте файл плагина\n2️⃣ Откройте ${plugin.exteralessCompatible ? "exteraGram или exteraless" : "exteraGram"}\n3️⃣ Перейдите в Настройки → Плагины\n4️⃣ Нажмите "Установить плагин"\n5️⃣ Выберите скачанный файл\n\n✅ Готово! Плагин установлен.`,
 							reply_markup: {
 								inline_keyboard: [
 									[

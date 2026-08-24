@@ -53,6 +53,10 @@ export function Footer() {
 	const resources = [
 		{ href: "https://plugins.exteragram.app", label: t("documentation") },
 		{
+			href: "https://github.com/exteraless/exteraless",
+			label: t("exteraless_project"),
+		},
+		{
 			href: "https://github.com/0niel/exteraStore/issues",
 			label: t("report_issue"),
 		},

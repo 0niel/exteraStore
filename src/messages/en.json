@@ -205,7 +205,7 @@
 		"telegram_sent_title": "Version sent to Telegram",
 		"telegram_sent_description": "Follow the bot instructions to install",
 		"downloaded_title": "Version downloaded successfully",
-		"downloaded_description": "Install the plugin via exteraGram settings",
+		"downloaded_description": "Install through exteraGram or exteraless settings when compatible",
 		"download_error_title": "Failed to download version",
 		"load_error_title": "Failed to load versions",
 		"retry": "Retry"
@@ -266,7 +266,7 @@
 		"favorite_error": "Error: {error}",
 		"sign_in_to_favorite": "Sign in to add to favorites",
 		"captcha_required": "Please complete the captcha check.",
-		"share_title": "{name} — plugin for exteraGram",
+		"share_title": "{name} — plugin on exteraStore",
 		"share_text": "Check out this awesome plugin: {description}",
 		"share_success": "Link shared!",
 		"link_copied": "Link copied to clipboard!",
@@ -591,7 +591,7 @@
 		"retry": "Try again",
 		"badge": "Community",
 		"title": "Developers",
-		"description": "Meet the talented developers who create amazing plugins for exteraGram",
+		"description": "Meet the developers building plugins for exteraGram and exteraless",
 		"search_placeholder": "Search developers...",
 		"no_results": "No developers found",
 		"no_developers": "No developers yet",
@@ -823,7 +823,7 @@
 		"dashboard": "Dashboard"
 	},
 	"Footer": {
-		"description": "An independent community catalog for exteraGram plugins. Discover, review, and share extensions for your Telegram experience.",
+		"description": "An independent catalog for exteraGram plugins and exteraless-compatible extensions.",
 		"contact_developer": "Contact Developer",
 		"view_source": "View Source Code",
 		"quick_links": "Quick Links",
@@ -833,6 +833,7 @@
 		"upload_plugin": "Upload Plugin",
 		"resources": "Resources",
 		"documentation": "Documentation",
+		"exteraless_project": "Open-source exteraless client",
 		"report_issue": "Report Issue",
 		"community": "Community",
 		"legal": "Legal",
@@ -887,7 +888,7 @@
 		},
 		"services": {
 			"title": "Description of Services",
-			"content": "exteraStore is a platform for discovering, sharing, and managing plugins for exteraGram. We provide tools for developers to publish their plugins and for users to discover and install them."
+			"content": "exteraStore is a platform for discovering, publishing, and managing exteraGram plugins and exteraless-compatible extensions."
 		},
 		"user_accounts": {
 			"title": "User Accounts",
@@ -987,10 +988,10 @@
 		},
 		"viewAll": "View All",
 		"hero": {
-			"badge": "Community plugin catalog for exteraGram",
+			"badge": "Plugins for exteraGram and exteraless",
 			"titleLine1": "Your Telegram.",
 			"titleLine2": "Without limits.",
-			"subtitle": "Discover trusted plugins, reshape the interface, and automate routine in the most flexible Telegram client.",
+			"subtitle": "Discover exteraGram plugins and compatible extensions for the open-source exteraless client, reshape the interface, and automate routine.",
 			"searchPlaceholder": "What do you want to add to Telegram?",
 			"searchDialogPlaceholder": "Search plugins...",
 			"searchAria": "Search plugins",
@@ -1040,7 +1041,7 @@
 		"developer": {
 			"eyebrow": "For developers",
 			"title": "Build what you're missing",
-			"description": "Python API, documentation, and publishing in the exteraGram catalog.",
+			"description": "Python API, documentation, and publishing for exteraGram and exteraless users.",
 			"start": "Start building",
 			"github": "GitHub"
 		}
@@ -1057,7 +1058,7 @@
 		"loading": "Loading page"
 	},
 	"PluginsPage": {
-		"badge": "exteraGram catalog",
+		"badge": "exteraGram + exteraless",
 		"title": "Find a plugin for your task",
 		"subtitle": "Search by name, pick a category, and sort by real community ratings.",
 		"search_label": "Catalog search",
@@ -1131,7 +1132,7 @@
 		"retry": "Try again",
 		"badge": "Categories",
 		"title": "Plugin Categories",
-		"description": "Browse plugins by category to extend exteraGram's functionality",
+		"description": "Browse exteraGram plugins and exteraless-compatible extensions by category",
 		"plugin_count": "{count, plural, one {# plugin} other {# plugins}}",
 		"no_description": "No description yet",
 		"empty_title": "No categories found",
@@ -1367,7 +1368,7 @@
 		"login_required_description": "You need to sign in to upload a plugin.",
 		"login": "Sign in",
 		"title": "Upload plugin",
-		"subtitle": "Share your creation with the exteraGram community",
+		"subtitle": "Publish your plugin for the exteraGram and exteraless community",
 		"step_details": "Details",
 		"step_file": "Plugin file",
 		"step_publish": "Publish",

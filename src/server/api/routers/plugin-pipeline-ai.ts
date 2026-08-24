@@ -237,7 +237,7 @@ export class PluginAIChecker {
 	}
 
 	private getAICollectionPrompt(locale: AILocale) {
-		return `Создай полезную тематическую подборку из 8–12 одобренных плагинов ExteraGram. Выбирай только идентификаторы из предоставленного списка, учитывай релевантность, качество, популярность и разнообразие. ${languageDirective(locale)} Название и описание подборки должны быть на этом языке.`;
+		return `Создай полезную тематическую подборку из 8–12 одобренных плагинов для exteraGram и exteraless. Поле exteralessCompatible показывает подтверждённую совместимость с exteraless. Не называй несовместимый или непроверенный плагин подходящим для exteraless. Выбирай только идентификаторы из предоставленного списка, учитывай релевантность, качество, популярность и разнообразие. ${languageDirective(locale)} Название и описание подборки должны быть на этом языке.`;
 	}
 
 	async generateAICollection(
@@ -249,6 +249,7 @@ export class PluginAIChecker {
 			tags: string | null;
 			rating: number;
 			downloadCount: number;
+			exteralessCompatible: boolean | null;
 		}[],
 		theme: string,
 		locale: AILocale = "ru",

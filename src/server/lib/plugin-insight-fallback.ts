@@ -45,7 +45,7 @@ function localizeRussianRequirement(requirement: string): string | null {
 		return "Совместимость со всеми устройствами не гарантирована";
 	}
 	const versionMatch = normalized.match(
-		/^(Android|Telegram|exteraGram)\s+(.+?)\s+or higher$/i,
+		/^(Android|Telegram|exteraGram|exteraless)\s+(.+?)\s+or higher$/i,
 	);
 	if (versionMatch?.[1] && versionMatch[2]) {
 		return `${versionMatch[1]} ${versionMatch[2]} или новее`;
@@ -62,6 +62,8 @@ export function buildFallbackPluginInsight(
 		shortDescription: string | null;
 		requirements: string | null;
 		minExteraVersion: string | null;
+		exteralessCompatible?: boolean | null;
+		minExteralessVersion?: string | null;
 	},
 	locale: "en" | "ru",
 ): PluginInsightFallback {
@@ -83,6 +85,13 @@ export function buildFallbackPluginInsight(
 			requirements: [
 				...(plugin.minExteraVersion
 					? [`exteraGram ${plugin.minExteraVersion} or newer`]
+					: []),
+				...(plugin.exteralessCompatible
+					? [
+							plugin.minExteralessVersion
+								? `exteraless ${plugin.minExteralessVersion} or newer`
+								: "Compatible with exteraless",
+						]
 					: []),
 				...declaredRequirements,
 			].slice(0, 5),
@@ -110,7 +119,7 @@ export function buildFallbackPluginInsight(
 		verdict: "specialized",
 		summary: russianDescription
 			? `«${plugin.name}» ${russianDescription.charAt(0).toLowerCase()}${russianDescription.slice(1)}. Подробный автоматический разбор временно недоступен, поэтому перед установкой проверьте заявленные требования.`
-			: `«${plugin.name}» — расширение для exteraGram. Подробный автоматический разбор временно недоступен, поэтому перед установкой сопоставьте описание автора и заявленные требования со своим сценарием.`,
+			: `«${plugin.name}» — плагин из каталога exteraStore. Подробный автоматический разбор временно недоступен, поэтому перед установкой сопоставьте описание автора и заявленные требования со своим сценарием.`,
 		bestFor: [
 			russianDescription
 				? `Тем, кому нужна заявленная функция: ${russianDescription}`
@@ -120,6 +129,13 @@ export function buildFallbackPluginInsight(
 		requirements: [
 			...(plugin.minExteraVersion
 				? [`exteraGram ${plugin.minExteraVersion} или новее`]
+				: []),
+			...(plugin.exteralessCompatible
+				? [
+						plugin.minExteralessVersion
+							? `exteraless ${plugin.minExteralessVersion} или новее`
+							: "Совместим с exteraless",
+					]
 				: []),
 			...localizedRequirements,
 		].slice(0, 5),

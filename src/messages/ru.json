@@ -205,7 +205,7 @@
 		"telegram_sent_title": "Версия отправлена в Telegram",
 		"telegram_sent_description": "Следуйте инструкциям в боте для установки",
 		"downloaded_title": "Версия успешно скачана",
-		"downloaded_description": "Установите плагин через настройки exteraGram",
+		"downloaded_description": "Установите плагин через настройки exteraGram или exteraless, если он совместим",
 		"download_error_title": "Ошибка при скачивании версии",
 		"load_error_title": "Не удалось загрузить версии",
 		"retry": "Повторить"
@@ -266,7 +266,7 @@
 		"favorite_error": "Ошибка: {error}",
 		"sign_in_to_favorite": "Войдите в систему, чтобы добавить в избранное",
 		"captcha_required": "Пожалуйста, пройдите проверку капчи.",
-		"share_title": "{name} — плагин для exteraGram",
+		"share_title": "{name} — плагин в exteraStore",
 		"share_text": "Посмотрите на этот потрясающий плагин: {description}",
 		"share_success": "Ссылка отправлена!",
 		"link_copied": "Ссылка скопирована в буфер обмена!",
@@ -591,7 +591,7 @@
 		"retry": "Повторить",
 		"badge": "Сообщество",
 		"title": "Разработчики",
-		"description": "Познакомьтесь с талантливыми разработчиками, которые создают удивительные плагины для exteraGram",
+		"description": "Познакомьтесь с разработчиками плагинов для exteraGram и exteraless",
 		"search_placeholder": "Поиск разработчиков...",
 		"no_results": "Разработчики не найдены",
 		"no_developers": "Пока нет разработчиков",
@@ -823,7 +823,7 @@
 		"dashboard": "Дашборд"
 	},
 	"Footer": {
-		"description": "Независимый каталог плагинов сообщества exteraGram. Находите, оценивайте и публикуйте расширения для Telegram.",
+		"description": "Независимый каталог плагинов для exteraGram и совместимых расширений exteraless.",
 		"contact_developer": "Связаться с разработчиком",
 		"view_source": "Исходный код",
 		"quick_links": "Быстрые ссылки",
@@ -833,6 +833,7 @@
 		"upload_plugin": "Загрузить плагин",
 		"resources": "Ресурсы",
 		"documentation": "Документация",
+		"exteraless_project": "Открытый клиент exteraless",
 		"report_issue": "Сообщить о проблеме",
 		"community": "Сообщество",
 		"legal": "Правовая информация",
@@ -887,7 +888,7 @@
 		},
 		"services": {
 			"title": "Описание услуг",
-			"content": "exteraStore - это платформа для поиска, обмена и управления плагинами для exteraGram. Мы предоставляем инструменты для разработчиков для публикации их плагинов и для пользователей для их поиска и установки."
+			"content": "exteraStore — платформа для поиска, публикации и управления плагинами для exteraGram и совместимыми расширениями exteraless."
 		},
 		"user_accounts": {
 			"title": "Аккаунты пользователей",
@@ -987,10 +988,10 @@
 		},
 		"viewAll": "Смотреть все",
 		"hero": {
-			"badge": "Каталог плагинов сообщества exteraGram",
+			"badge": "Плагины для exteraGram и exteraless",
 			"titleLine1": "Ваш Telegram.",
 			"titleLine2": "Без ограничений.",
-			"subtitle": "Находите проверенные плагины, меняйте интерфейс и автоматизируйте рутину в самом гибком клиенте Telegram.",
+			"subtitle": "Находите плагины для exteraGram и совместимые расширения открытого клиента exteraless, меняйте интерфейс и автоматизируйте рутину.",
 			"searchPlaceholder": "Что хотите добавить в Telegram?",
 			"searchDialogPlaceholder": "Поиск плагинов...",
 			"searchAria": "Поиск плагинов",
@@ -1040,7 +1041,7 @@
 		"developer": {
 			"eyebrow": "Для разработчиков",
 			"title": "Создайте то, чего вам не хватает",
-			"description": "Python API, документация и публикация в каталоге exteraGram.",
+			"description": "Python API, документация и публикация для пользователей exteraGram и exteraless.",
 			"start": "Начать разработку",
 			"github": "GitHub"
 		}
@@ -1057,7 +1058,7 @@
 		"loading": "Загрузка страницы"
 	},
 	"PluginsPage": {
-		"badge": "Каталог exteraGram",
+		"badge": "exteraGram + exteraless",
 		"title": "Найдите плагин под свою задачу",
 		"subtitle": "Ищите по названию, выбирайте категорию и сортируйте по реальным оценкам сообщества.",
 		"search_label": "Поиск по каталогу",
@@ -1131,7 +1132,7 @@
 		"retry": "Повторить",
 		"badge": "Категории",
 		"title": "Категории плагинов",
-		"description": "Найдите плагины по категориям для расширения функциональности exteraGram",
+		"description": "Найдите плагины по категориям для exteraGram и совместимые расширения exteraless",
 		"plugin_count": "{count, plural, one {# плагин} few {# плагина} many {# плагинов} other {# плагина}}",
 		"no_description": "Описание пока не добавлено",
 		"empty_title": "Категории не найдены",
@@ -1367,7 +1368,7 @@
 		"login_required_description": "Вам необходимо войти в систему для загрузки плагина.",
 		"login": "Войти",
 		"title": "Загрузить плагин",
-		"subtitle": "Поделитесь своим творением с сообществом exteraGram",
+		"subtitle": "Опубликуйте плагин для сообщества exteraGram и exteraless",
 		"step_details": "Информация",
 		"step_file": "Файл плагина",
 		"step_publish": "Публикация",
