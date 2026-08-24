@@ -5,11 +5,11 @@
 
 @theme {
 	--font-sans:
-		var(--font-inter), ui-sans-serif, system-ui, sans-serif,
+		var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif,
 		"Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 	--font-mono:
-		ui-monospace, "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas,
-		"Liberation Mono", "Courier New", monospace;
+		var(--font-geist-mono), ui-monospace, "SF Mono", SFMono-Regular, Menlo,
+		Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
 	--ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
 	--ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 	--ease-snap: cubic-bezier(0.87, 0, 0.13, 1);
@@ -129,7 +129,9 @@
 	}
 	html {
 		overflow-x: hidden;
+		min-width: 20rem;
 		scroll-padding-top: calc(5rem + env(safe-area-inset-top));
+		scroll-behavior: smooth;
 		-webkit-text-size-adjust: 100%;
 		text-size-adjust: 100%;
 	}
@@ -144,6 +146,26 @@
 		-webkit-font-smoothing: antialiased;
 		-webkit-tap-highlight-color: transparent;
 	}
+	img,
+	video,
+	canvas,
+	svg {
+		max-width: 100%;
+	}
+	p,
+	h1,
+	h2,
+	h3,
+	h4,
+	h5,
+	h6 {
+		overflow-wrap: anywhere;
+	}
+	input,
+	select,
+	textarea {
+		font-size: 1rem;
+	}
 	button,
 	a,
 	input,
@@ -155,6 +177,12 @@
 		background: color-mix(in oklch, var(--primary) 85%, transparent);
 		color: var(--primary-foreground);
 	}
+}
+
+.container {
+	width: 100%;
+	max-width: 90rem;
+	margin-inline: auto;
 }
 
 @keyframes fade-up {
@@ -287,7 +315,7 @@
 }
 
 @utility glass {
-	background: color-mix(in oklch, var(--background) 78%, transparent);
+	background: color-mix(in oklch, var(--background) 90%, transparent);
 	backdrop-filter: blur(16px) saturate(1.4);
 	-webkit-backdrop-filter: blur(16px) saturate(1.4);
 }
@@ -355,6 +383,52 @@
 		height: 0.5rem;
 		border-radius: 2px;
 		background: var(--primary);
+	}
+}
+
+.extera-lightbox {
+	--yarl__color_backdrop: oklch(0.08 0.01 25 / 96%);
+	--yarl__color_button: white;
+	--yarl__color_button_active: white;
+	--yarl__color_button_disabled: rgb(255 255 255 / 30%);
+	--yarl__navigation_button_padding: 0.75rem;
+	--yarl__toolbar_padding: max(0.75rem, env(safe-area-inset-top))
+		max(0.75rem, env(safe-area-inset-right)) 0.75rem
+		max(0.75rem, env(safe-area-inset-left));
+}
+
+.extera-lightbox .yarl__button {
+	min-width: 2.75rem;
+	min-height: 2.75rem;
+	border-radius: 999px;
+	background: rgb(0 0 0 / 42%);
+	backdrop-filter: blur(14px);
+}
+
+.extera-lightbox .yarl__counter {
+	top: max(0.75rem, env(safe-area-inset-top));
+	left: max(0.75rem, env(safe-area-inset-left));
+	padding: 0.55rem 0.8rem;
+	border-radius: 999px;
+	background: rgb(0 0 0 / 42%);
+	font-family: var(--font-geist-mono);
+	font-size: 0.75rem;
+	backdrop-filter: blur(14px);
+}
+
+@media (max-width: 767px) {
+	.extera-lightbox {
+		--yarl__navigation_button_padding: 0.35rem;
+	}
+
+	.extera-lightbox .yarl__navigation_prev,
+	.extera-lightbox .yarl__navigation_next {
+		display: none;
+	}
+
+	.extera-lightbox .yarl__slide {
+		padding-top: env(safe-area-inset-top);
+		padding-bottom: env(safe-area-inset-bottom);
 	}
 }
 
@@ -533,6 +607,10 @@
 	.container {
 		padding-left: 1rem;
 		padding-right: 1rem;
+	}
+
+	.card-lift:active {
+		transform: scale(0.99);
 	}
 }
 

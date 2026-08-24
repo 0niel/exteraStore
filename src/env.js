@@ -29,6 +29,7 @@ export const env = createEnv({
 			.regex(/^[A-Za-z0-9_-]+$/)
 			.optional(),
 		TELEGRAM_POLLING: z.enum(["true", "false"]).default("true"),
+		PIPELINE_RETRY: z.enum(["true", "false"]).default("true"),
 		OPENROUTER_API_KEY: z.string().optional(),
 		OPENROUTER_BASE_URL: z
 			.string()
@@ -67,6 +68,7 @@ export const env = createEnv({
 		TELEGRAM_API_BASE_URL: process.env.TELEGRAM_API_BASE_URL,
 		TELEGRAM_WEBHOOK_SECRET: process.env.TELEGRAM_WEBHOOK_SECRET,
 		TELEGRAM_POLLING: process.env.TELEGRAM_POLLING,
+		PIPELINE_RETRY: process.env.PIPELINE_RETRY,
 		OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
 		OPENROUTER_BASE_URL: process.env.OPENROUTER_BASE_URL,
 		AI_GATEWAY_BASE_URL: process.env.AI_GATEWAY_BASE_URL,

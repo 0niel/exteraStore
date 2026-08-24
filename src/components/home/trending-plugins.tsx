@@ -78,7 +78,7 @@ export function TrendingPlugins() {
 						{Array.from({ length: 4 }).map((_, i) => (
 							<Skeleton
 								key={i}
-								className="h-28 w-[75vw] shrink-0 snap-start rounded-2xl md:w-full md:shrink"
+								className="h-28 w-[min(86vw,23rem)] shrink-0 snap-center rounded-2xl md:w-full md:shrink md:snap-start"
 							/>
 						))}
 					</div>
@@ -94,7 +94,7 @@ export function TrendingPlugins() {
 							<motion.div
 								key={plugin.id}
 								variants={item}
-								className="w-[75vw] shrink-0 snap-start md:w-auto md:shrink"
+								className="w-[min(86vw,23rem)] shrink-0 snap-center md:w-auto md:shrink md:snap-start"
 							>
 								<PluginCard plugin={plugin} compact />
 							</motion.div>

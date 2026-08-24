@@ -256,7 +256,7 @@ async function handlePluginDownload(
 				.limit(1);
 		}
 
-		if (!pluginVersion || !pluginVersion[0]) {
+		if (!pluginVersion?.[0]) {
 			await sendMessage(chatId, "❌ Версия плагина не найдена.");
 			return;
 		}

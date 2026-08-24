@@ -40,11 +40,6 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "~/components/ui/sheet";
 import { cn, createValidDate } from "~/lib/utils";
 import { api } from "~/trpc/react";
-import { TelegramLoginButton } from "./auth/telegram-login";
-
-type NavigationProps = {
-	telegramBotUsername?: string;
-};
 
 function LogoMark({ size = "size-9" }: { size?: string }) {
 	return (
@@ -183,9 +178,7 @@ function NotificationRow({
 	);
 }
 
-export function Navigation({ telegramBotUsername }: NavigationProps) {
-	const resolvedBotUsername =
-		telegramBotUsername ?? process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
+export function Navigation() {
 	const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 	const [scrolled, setScrolled] = useState(false);
 	const pathname = usePathname();
@@ -376,7 +369,16 @@ export function Navigation({ telegramBotUsername }: NavigationProps) {
 								</DropdownMenu>
 							</>
 						) : (
-							<TelegramLoginButton botUsername={resolvedBotUsername} />
+							<Button
+								asChild
+								variant="outline"
+								className="press-scale hidden min-h-11 border-primary/25 bg-primary/5 text-primary hover:bg-primary/10 sm:inline-flex"
+							>
+								<Link href="/auth/signin">
+									<TelegramIcon className="size-4" />
+									{t("sign_in")}
+								</Link>
+							</Button>
 						)}
 
 						<Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
@@ -544,9 +546,15 @@ export function Navigation({ telegramBotUsername }: NavigationProps) {
 												<p className="text-center text-muted-foreground text-sm">
 													{t("sign_in_hint")}
 												</p>
-												<TelegramLoginButton
-													botUsername={resolvedBotUsername}
-												/>
+												<Button asChild className="w-full">
+													<Link
+														href="/auth/signin"
+														onClick={() => setMobileMenuOpen(false)}
+													>
+														<TelegramIcon className="size-4" />
+														{t("sign_in")}
+													</Link>
+												</Button>
 											</div>
 										)}
 									</div>

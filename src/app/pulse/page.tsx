@@ -208,11 +208,12 @@ export default function PulsePage() {
 				: tab === "plugin.created"
 					? ["plugin.created", "plugin.approved"]
 					: [tab];
-	const { data, isLoading, isFetching } = api.pulse.get.useQuery({
-		page,
-		limit: 20,
-		types: activeTypes,
-	});
+	const { data, isLoading, isFetching, isError, refetch } =
+		api.pulse.get.useQuery({
+			page,
+			limit: 20,
+			types: activeTypes,
+		});
 	const { data: stats } = api.pulse.stats.useQuery();
 	const { data: trending } = api.plugins.getTrending.useQuery({ limit: 5 });
 
@@ -380,7 +381,7 @@ export default function PulsePage() {
 			</section>
 
 			<div className="container mx-auto px-4 py-8 sm:py-10">
-				<div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+				<div className="mb-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
 					<StatTile
 						icon={Activity}
 						value={stats?.today ?? 0}
@@ -444,6 +445,14 @@ export default function PulsePage() {
 									</div>
 								))}
 							</div>
+						) : isError ? (
+							<EmptyState
+								icon="↻"
+								title={t("load_error_title")}
+								description={t("load_error_description")}
+								actionLabel={t("retry")}
+								onAction={() => void refetch()}
+							/>
 						) : feed.length === 0 ? (
 							<EmptyState
 								icon="~"

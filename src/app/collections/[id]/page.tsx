@@ -50,8 +50,12 @@ export default function CollectionDetailPage() {
 	const router = useRouter();
 	const collectionId = Number.parseInt(params.id as string, 10);
 
-	const { data: collections, isLoading } =
-		api.aiCollections.getAICollections.useQuery({ limit: 20 });
+	const {
+		data: collections,
+		isLoading,
+		isError,
+		refetch,
+	} = api.aiCollections.getAICollections.useQuery({ limit: 20 });
 
 	const collection = collections?.find((c) => c.id === collectionId);
 	const plugins = collection?.plugins || [];
@@ -65,6 +69,18 @@ export default function CollectionDetailPage() {
 					<CollectionSkeleton />
 				</div>
 			</div>
+		);
+	}
+
+	if (isError) {
+		return (
+			<EmptyState
+				icon="↻"
+				title={t("load_error_title")}
+				description={t("load_error_description")}
+				actionLabel={t("retry")}
+				onAction={() => void refetch()}
+			/>
 		);
 	}
 

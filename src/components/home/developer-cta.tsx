@@ -1,9 +1,10 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, Github } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { GitHubIcon } from "~/components/icons/github-icon";
 import { Button } from "~/components/ui/button";
 
 export function DeveloperCTA() {
@@ -51,7 +52,7 @@ export function DeveloperCTA() {
 									className="border-contrast-foreground/20 bg-transparent text-contrast-foreground hover:bg-contrast-foreground/10 hover:text-contrast-foreground"
 								>
 									<Link href="https://github.com/0niel/exteraStore">
-										<Github />
+										<GitHubIcon className="size-4" />
 										{t("developer.github")}
 									</Link>
 								</Button>

@@ -56,11 +56,16 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      - name: Unit tests
+        run: pnpm test:unit
+
       - name: Build
         run: pnpm build
         env:
           SKIP_ENV_VALIDATION: "1"
           DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
+          TELEGRAM_POLLING: "false"
+          PIPELINE_RETRY: "false"
 
   docker:
     name: Docker build and image scan

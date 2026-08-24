@@ -88,4 +88,4 @@ function AvatarFallback({
 	);
 }
 
-export { Avatar, AvatarImage, AvatarFallback };
+export { Avatar, AvatarFallback, AvatarImage };

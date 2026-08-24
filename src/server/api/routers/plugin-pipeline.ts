@@ -100,7 +100,7 @@ export async function processQueueItem(
 		.where(eq(pluginPipelineQueue.id, queueItemId))
 		.limit(1);
 
-	if (!queueItem[0] || queueItem[0].status !== "queued") {
+	if (queueItem[0]?.status !== "queued") {
 		return;
 	}
 

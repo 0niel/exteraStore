@@ -5,9 +5,9 @@
 	"type": "module",
 	"scripts": {
 		"build": "next build --webpack",
-		"check": "biome check .",
-		"check:unsafe": "biome check --write --unsafe .",
-		"check:write": "biome check --write .",
+		"check": "biome check src scripts infra next.config.js postcss.config.js drizzle.config.ts package.json tsconfig.json components.json biome.jsonc",
+		"check:unsafe": "biome check --write --unsafe src scripts infra next.config.js postcss.config.js drizzle.config.ts package.json tsconfig.json components.json biome.jsonc",
+		"check:write": "biome check --write src scripts infra next.config.js postcss.config.js drizzle.config.ts package.json tsconfig.json components.json biome.jsonc",
 		"db:cleanup": "tsx scripts/cleanup-only.ts",
 		"db:fix-slugs": "tsx scripts/fix-plugin-slugs.ts",
 		"db:generate": "drizzle-kit generate",
@@ -21,12 +21,13 @@
 		"build:webpack": "next build --webpack",
 		"preview": "next build --webpack && next start",
 		"start": "next start",
+		"test:unit": "node --import tsx --test src/server/lib/telegram-mini-app-auth.test.ts",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@auth/drizzle-adapter": "^1.11.3",
-		"@aws-sdk/client-s3": "^3.1114.0",
-		"@aws-sdk/s3-request-presigner": "^3.1114.0",
+		"@aws-sdk/client-s3": "^3.1116.0",
+		"@aws-sdk/s3-request-presigner": "^3.1116.0",
 		"@hookform/resolvers": "^5.9.1",
 		"@libsql/client": "^0.17.4",
 		"@openrouter/ai-sdk-provider": "^3.0.0",
@@ -46,25 +47,27 @@
 		"@radix-ui/react-tooltip": "^1.2.16",
 		"@t3-oss/env-nextjs": "^0.13.11",
 		"@tailwindcss/typography": "^0.5.20",
-		"@tanstack/react-query": "^5.101.4",
+		"@tanstack/react-query": "^5.102.0",
 		"@telegram-auth/react": "^1.0.5",
 		"@telegram-auth/server": "^1.0.5",
+		"@tma.js/init-data-node": "^2.0.8",
 		"@trpc/client": "^11.18.0",
 		"@trpc/react-query": "^11.18.0",
 		"@trpc/server": "^11.18.0",
 		"@uploadthing/react": "^7.3.3",
-		"ai": "^7.0.70",
+		"ai": "^7.0.77",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",
 		"cmdk": "^1.1.1",
-		"diff": "^8.0.4",
+		"diff": "^9.0.0",
 		"dotenv": "^17.4.2",
 		"drizzle-orm": "^0.45.2",
-		"framer-motion": "^12.43.0",
+		"framer-motion": "^13.1.1",
 		"fuse.js": "^7.5.0",
-		"lucide-react": "^0.562.0",
+		"geist": "^1.7.2",
+		"lucide-react": "^1.33.0",
 		"multer": "^2.2.0",
-		"next": "^16.3.1",
+		"next": "^16.3.2",
 		"next-auth": "5.0.0-beta.32",
 		"next-intl": "^4.13.7",
 		"next-themes": "^0.4.6",
@@ -72,8 +75,8 @@
 		"postgres": "^3.4.9",
 		"react": "^19.2.8",
 		"react-dom": "^19.2.8",
-		"react-dropzone": "^14.4.1",
-		"react-hook-form": "^7.85.0",
+		"react-dropzone": "^20.1.1",
+		"react-hook-form": "^7.86.0",
 		"react-markdown": "^10.1.0",
 		"remark-gfm": "^4.0.1",
 		"server-only": "^0.0.1",
@@ -82,10 +85,11 @@
 		"tailwind-merge": "^3.6.0",
 		"uploadthing": "^7.7.4",
 		"use-debounce": "^10.1.1",
+		"yet-another-react-lightbox": "^3.32.2",
 		"zod": "^4.4.3"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.3.11",
+		"@biomejs/biome": "2.5.10",
 		"@tailwindcss/postcss": "^4.3.3",
 		"@types/node": "^25.9.5",
 		"@types/pg": "^8.23.1",
@@ -101,12 +105,5 @@
 	"ct3aMetadata": {
 		"initVersion": "7.39.3"
 	},
-	"packageManager": "pnpm@10.25.0",
-	"pnpm": {
-		"overrides": {
-			"effect": "^3.20.0",
-			"ws": "^8.21.0",
-			"tar": "7.5.19"
-		}
-	}
+	"packageManager": "pnpm@10.25.0"
 }

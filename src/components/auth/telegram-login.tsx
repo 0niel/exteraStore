@@ -53,12 +53,14 @@ export function TelegramLoginButton({ botUsername }: { botUsername?: string }) {
 	}
 
 	return (
-		<LoginButton
-			botUsername={botUsername}
-			onAuthCallback={handleAuth}
-			buttonSize="large"
-			cornerRadius={5}
-			showAvatar={false}
-		/>
+		<div className="flex min-h-12 w-full items-center justify-center overflow-hidden rounded-xl [&>iframe]:max-w-full">
+			<LoginButton
+				botUsername={botUsername}
+				onAuthCallback={handleAuth}
+				buttonSize="large"
+				cornerRadius={10}
+				showAvatar={false}
+			/>
+		</div>
 	);
 }

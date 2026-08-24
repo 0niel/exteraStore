@@ -53,7 +53,6 @@ async function pollLoop() {
 
 export function startTelegramPolling() {
 	if (!env.TELEGRAM_BOT_TOKEN || env.TELEGRAM_POLLING !== "true") {
-		console.log("telegram polling disabled");
 		return;
 	}
 

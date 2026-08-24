@@ -18,12 +18,28 @@ const s3Client = new S3Client({
 });
 
 const BUCKET_NAME = env.YANDEX_STORAGE_BUCKET || "exteragram-plugins";
+const SUPPORTED_IMAGE_TYPES = new Set([
+	"image/jpeg",
+	"image/png",
+	"image/gif",
+	"image/webp",
+]);
 
-console.log("Yandex Storage initialized:", {
-	bucket: BUCKET_NAME,
-	hasAccessKey: !!env.YANDEX_STORAGE_ACCESS_KEY,
-	hasSecretKey: !!env.YANDEX_STORAGE_SECRET_KEY,
-});
+function getObjectKey(fileUrl: string): string {
+	const url = new URL(fileUrl);
+	if (url.hostname === `${BUCKET_NAME}.storage.yandexcloud.net`) {
+		return decodeURIComponent(url.pathname.replace(/^\/+/, ""));
+	}
+
+	if (url.hostname === "storage.yandexcloud.net") {
+		const prefix = `/${BUCKET_NAME}/`;
+		if (url.pathname.startsWith(prefix)) {
+			return decodeURIComponent(url.pathname.slice(prefix.length));
+		}
+	}
+
+	throw new Error("Unsupported storage URL");
+}
 
 export async function uploadFile(
 	file: Buffer,
@@ -39,10 +55,6 @@ export async function uploadFile(
 		const safeName = fileName.replace(/[^a-zA-Z0-9.-]/g, "_");
 		const key = `images/${timestamp}-${safeName}`;
 
-		console.log(`Uploading file to Yandex Storage: ${key}`);
-		console.log(`Bucket: ${BUCKET_NAME}`);
-		console.log(`Content-Type: ${contentType}`);
-
 		const command = new PutObjectCommand({
 			Bucket: BUCKET_NAME,
 			Key: key,
@@ -50,20 +62,11 @@ export async function uploadFile(
 			ContentType: contentType,
 		});
 
-		const result = await s3Client.send(command);
-		console.log("Upload successful:", result);
+		await s3Client.send(command);
 
-		return `https://exteragram-plugins.storage.yandexcloud.net/images/${timestamp}-${safeName}`;
-	} catch (error) {
-		console.error("Error uploading file to Yandex Storage:", error);
-		console.error("Error details:", {
-			name: error instanceof Error ? error.name : "Unknown",
-			message: error instanceof Error ? error.message : "Unknown error",
-			stack: error instanceof Error ? error.stack : undefined,
-		});
-		throw new Error(
-			`Failed to upload file: ${error instanceof Error ? error.message : "Unknown error"}`,
-		);
+		return `https://${BUCKET_NAME}.storage.yandexcloud.net/${key}`;
+	} catch {
+		throw new Error("Failed to upload file");
 	}
 }
 
@@ -76,18 +79,14 @@ export async function uploadFiles(
 		);
 
 		return await Promise.all(uploadPromises);
-	} catch (error) {
-		console.error("Error uploading files to Yandex Storage:", error);
+	} catch {
 		throw new Error("Failed to upload files");
 	}
 }
 
 export async function deleteFile(fileUrl: string): Promise<void> {
 	try {
-		const key = fileUrl.replace(
-			`https://storage.yandexcloud.net/${BUCKET_NAME}/`,
-			"",
-		);
+		const key = getObjectKey(fileUrl);
 
 		const command = new DeleteObjectCommand({
 			Bucket: BUCKET_NAME,
@@ -95,8 +94,7 @@ export async function deleteFile(fileUrl: string): Promise<void> {
 		});
 
 		await s3Client.send(command);
-	} catch (error) {
-		console.error("Error deleting file from Yandex Storage:", error);
+	} catch {
 		throw new Error("Failed to delete file");
 	}
 }
@@ -106,10 +104,7 @@ export async function getSignedUrl(
 	expiresIn = 3600,
 ): Promise<string> {
 	try {
-		const key = fileUrl.replace(
-			`https://storage.yandexcloud.net/${BUCKET_NAME}/`,
-			"",
-		);
+		const key = getObjectKey(fileUrl);
 
 		const command = new GetObjectCommand({
 			Bucket: BUCKET_NAME,
@@ -117,8 +112,7 @@ export async function getSignedUrl(
 		});
 
 		return await getS3SignedUrl(s3Client, command, { expiresIn });
-	} catch (error) {
-		console.error("Error generating signed URL:", error);
+	} catch {
 		throw new Error("Failed to generate signed URL");
 	}
 }
@@ -149,9 +143,7 @@ export async function deletePluginImages(imageUrls: string[]): Promise<void> {
 	try {
 		const deletePromises = imageUrls.map((url) => deleteFile(url));
 		await Promise.all(deletePromises);
-	} catch (error) {
-		console.error("Error deleting plugin images:", error);
-	}
+	} catch {}
 }
 
 export async function storageHealthCheck(): Promise<boolean> {
@@ -167,13 +159,12 @@ export async function storageHealthCheck(): Promise<boolean> {
 		if (error instanceof Error && error.name === "NoSuchKey") {
 			return true;
 		}
-		console.error("Yandex Storage health check failed:", error);
 		return false;
 	}
 }
 
 export function isImage(contentType: string): boolean {
-	return contentType?.startsWith("image/") ?? false;
+	return SUPPORTED_IMAGE_TYPES.has(contentType.toLowerCase());
 }
 
 export function getExtensionFromMimeType(mimeType: string): string {

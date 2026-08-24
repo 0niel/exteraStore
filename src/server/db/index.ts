@@ -43,4 +43,4 @@ if (isPostgres && env.DATABASE_URL) {
 	db = null as unknown as Database;
 }
 
-export { db, client, postgresClient };
+export { client, db, postgresClient };

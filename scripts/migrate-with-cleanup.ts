@@ -23,7 +23,6 @@ async function main() {
 	console.log("✅ Connected to database");
 
 	try {
-		// Очистка битых записей (скрипт сам проверит существование таблиц)
 		console.log("\n🧹 Cleaning up orphaned records (if any)...");
 		const cleanupSQL = fs.readFileSync(
 			path.join(__dirname, "cleanup-orphaned-records.sql"),
@@ -33,7 +32,6 @@ async function main() {
 		await client.query(cleanupSQL);
 		console.log("✅ Orphaned records cleanup completed");
 
-		// Запускаем миграции
 		console.log("\n🚀 Running migrations...");
 		const db = drizzle(client);
 		await migrate(db, { migrationsFolder: "./drizzle" });

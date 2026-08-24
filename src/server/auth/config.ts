@@ -13,6 +13,10 @@ import {
 	users,
 	verificationTokens,
 } from "~/server/db/schema";
+import {
+	type TelegramMiniAppUser,
+	validateTelegramMiniAppInitData,
+} from "~/server/lib/telegram-mini-app-auth";
 
 type AdapterSchema = NonNullable<
 	Parameters<typeof DrizzleAdapter<Database>>[1]
@@ -22,6 +26,49 @@ const ADMINS = (env.INITIAL_ADMINS ?? "i_am_oniel")
 	.split(",")
 	.map((a) => a.trim().toLowerCase())
 	.filter(Boolean);
+
+async function persistTelegramUser(identity: TelegramMiniAppUser) {
+	const existingUser = await db.query.users.findFirst({
+		where: eq(users.telegramId, identity.id),
+	});
+	const name = [identity.firstName, identity.lastName]
+		.filter(Boolean)
+		.join(" ");
+	const role = ADMINS.includes(identity.username?.toLowerCase() ?? "")
+		? "admin"
+		: (existingUser?.role ?? "user");
+	const values = {
+		name,
+		image: identity.photoUrl ?? null,
+		telegramUsername: identity.username,
+		telegramFirstName: identity.firstName,
+		telegramLastName: identity.lastName,
+		role,
+		isVerified: true,
+	};
+
+	if (existingUser) {
+		const [updatedUser] = await db
+			.update(users)
+			.set(values)
+			.where(eq(users.id, existingUser.id))
+			.returning();
+
+		return updatedUser ?? { ...existingUser, ...values };
+	}
+
+	const [newUser] = await db
+		.insert(users)
+		.values({
+			id: identity.id,
+			telegramId: identity.id,
+			email: `${identity.id}@telegram.user`,
+			...values,
+		})
+		.returning();
+
+	return newUser ?? null;
+}
 
 declare module "next-auth" {
 	interface Session extends DefaultSession {
@@ -52,6 +99,7 @@ export const authConfig = {
 			id: "telegram",
 			name: "Telegram",
 			credentials: {
+				initData: { label: "Mini App init data", type: "text" },
 				id: { label: "ID", type: "text" },
 				first_name: { label: "First Name", type: "text" },
 				last_name: { label: "Last Name", type: "text" },
@@ -65,16 +113,25 @@ export const authConfig = {
 					return null;
 				}
 
-				if (!process.env.TELEGRAM_BOT_TOKEN) {
-					console.error("TELEGRAM_BOT_TOKEN is not set");
+				const botToken = process.env.TELEGRAM_BOT_TOKEN;
+				if (!botToken) {
 					return null;
 				}
 
 				const validator = new AuthDataValidator({
-					botToken: process.env.TELEGRAM_BOT_TOKEN,
+					botToken,
 				});
 
 				try {
+					const initData = (credentials as Record<string, unknown>).initData;
+					if (typeof initData === "string" && initData.length > 0) {
+						const identity = validateTelegramMiniAppInitData(
+							initData,
+							botToken,
+						);
+						return await persistTelegramUser(identity);
+					}
+
 					const allowedKeys = [
 						"id",
 						"first_name",
@@ -100,61 +157,17 @@ export const authConfig = {
 					const telegramId = validatedUser.id?.toString();
 					if (!telegramId) return null;
 
-					const existingUser = await db.query.users.findFirst({
-						where: eq(users.telegramId, telegramId),
+					return persistTelegramUser({
+						id: telegramId,
+						firstName: validatedUser.first_name ?? "Telegram user",
+						lastName: validatedUser.last_name,
+						username: validatedUser.username,
+						photoUrl:
+							typeof validatedUser.photo_url === "string"
+								? validatedUser.photo_url
+								: undefined,
 					});
-
-					const fullName = `${validatedUser.first_name ?? ""}${validatedUser.last_name ? ` ${validatedUser.last_name}` : ""}`;
-					const avatar =
-						typeof validatedUser.photo_url === "string"
-							? validatedUser.photo_url
-							: null;
-
-					const userIsAdmin = ADMINS.includes(
-						(validatedUser.username ?? "").toLowerCase(),
-					);
-
-					if (existingUser) {
-						await db
-							.update(users)
-							.set({
-								name: fullName,
-								image: avatar,
-								telegramUsername: validatedUser.username as string | undefined,
-								telegramFirstName: validatedUser.first_name as
-									| string
-									| undefined,
-								telegramLastName: validatedUser.last_name as string | undefined,
-								role: userIsAdmin ? "admin" : existingUser.role,
-							})
-							.where(eq(users.id, existingUser.id));
-
-						return {
-							...existingUser,
-							role: userIsAdmin ? "admin" : existingUser.role,
-						};
-					}
-
-					const inserted = await db
-						.insert(users)
-						.values({
-							id: telegramId,
-							telegramId: telegramId,
-							name: fullName,
-							email: `${telegramId}@telegram.user`,
-							image: avatar,
-							telegramUsername: validatedUser.username as string | undefined,
-							telegramFirstName: validatedUser.first_name as string | undefined,
-							telegramLastName: validatedUser.last_name as string | undefined,
-							role: userIsAdmin ? "admin" : "user",
-							isVerified: true,
-						})
-						.returning();
-
-					const newUser = inserted[0] ?? null;
-					return newUser;
-				} catch (e) {
-					console.error("[Auth] Failed to authorize telegram user", e);
+				} catch {
 					return null;
 				}
 			},
@@ -193,10 +206,5 @@ export const authConfig = {
 			return session;
 		},
 		signIn: async () => true,
-	},
-	logger: {
-		error: (error: Error) => {
-			console.error("[EVENT] error", error);
-		},
 	},
 } satisfies NextAuthConfig;

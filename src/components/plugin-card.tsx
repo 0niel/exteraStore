@@ -337,15 +337,15 @@ export function PluginCard({
 			</Link>
 			<div className="pointer-events-none relative z-10 flex h-full flex-col">
 				<div className="flex h-full flex-col p-5">
-					<div className="relative mb-4 overflow-hidden rounded-xl">
-						<div className="relative aspect-video">
+					<div className="relative mb-4 overflow-hidden rounded-xl border bg-surface">
+						<div className="relative aspect-[16/10] sm:aspect-video">
 							{coverImage ? (
 								<Image
 									src={coverImage}
 									alt={plugin.name}
 									fill
 									sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-									className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+									className="object-contain transition-transform duration-500 ease-[var(--ease-out-expo)] group-hover:scale-[1.015]"
 									priority={false}
 								/>
 							) : (

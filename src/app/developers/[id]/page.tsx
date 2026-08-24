@@ -9,7 +9,6 @@ import {
 	Crown,
 	Download,
 	ExternalLink,
-	Github,
 	Globe,
 	Mail,
 	Package,
@@ -26,6 +25,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import type { DonationMethod } from "~/components/donations/donation-widget";
 import { DonationWidget } from "~/components/donations/donation-widget";
+import { GitHubIcon } from "~/components/icons/github-icon";
 import { PluginCard } from "~/components/plugin-card";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
@@ -111,10 +111,14 @@ export default function DeveloperProfilePage() {
 	const reduceMotion = useReducedMotion();
 	const [copied, setCopied] = useState(false);
 
-	const { data: developerData, isLoading } =
-		api.developers.getDeveloper.useQuery({
-			id: id,
-		});
+	const {
+		data: developerData,
+		isLoading,
+		isError,
+		refetch,
+	} = api.developers.getDeveloper.useQuery({
+		id: id,
+	});
 
 	const handleCopyLink = async () => {
 		try {
@@ -177,6 +181,18 @@ export default function DeveloperProfilePage() {
 					</div>
 				</div>
 			</div>
+		);
+	}
+
+	if (isError) {
+		return (
+			<EmptyState
+				icon="↻"
+				title={t("load_error_title")}
+				description={t("load_error_description")}
+				actionLabel={t("retry")}
+				onAction={() => void refetch()}
+			/>
 		);
 	}
 
@@ -488,7 +504,7 @@ export default function DeveloperProfilePage() {
 												target="_blank"
 												rel="noopener noreferrer"
 											>
-												<Github className="mr-2 h-4 w-4" />
+												<GitHubIcon className="mr-2 size-4" />
 												{t("github_profile")}
 											</a>
 										</Button>

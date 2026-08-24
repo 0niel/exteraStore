@@ -11,6 +11,7 @@
 		"profile": "Profile",
 		"my_plugins": "My Plugins",
 		"sign_out": "Sign Out",
+		"sign_in": "Sign in",
 		"language": "Language",
 		"theme": "Theme",
 		"pulse": "Pulse",
@@ -232,6 +233,9 @@
 		"badge": "Workspace"
 	},
 	"PluginDetailPage": {
+		"load_error_title": "Could not load the plugin",
+		"load_error_description": "Check your connection and try again.",
+		"retry": "Try again",
 		"description": "Description",
 		"versions": "Versions",
 		"reviews": "Reviews",
@@ -546,6 +550,9 @@
 		"webhook_hint": "Public HTTPS URL that will receive bot updates."
 	},
 	"Developers": {
+		"load_error_title": "Could not load developers",
+		"load_error_description": "Check your connection and try again.",
+		"retry": "Try again",
 		"badge": "Community",
 		"title": "Developers",
 		"description": "Meet the talented developers who create amazing plugins for exteraGram",
@@ -579,6 +586,9 @@
 		"page_of": "Page {page} of {total}"
 	},
 	"DeveloperProfile": {
+		"load_error_title": "Could not load the profile",
+		"load_error_description": "Check your connection and try again.",
+		"retry": "Try again",
 		"not_found": "Developer Not Found",
 		"not_found_description": "The developer you're looking for doesn't exist or has been removed.",
 		"back_to_developers": "Back to Developers",
@@ -777,7 +787,7 @@
 		"dashboard": "Dashboard"
 	},
 	"Footer": {
-		"description": "The revolutionary plugin store for exteraGram. Discover, create, and share plugins to enhance your Telegram experience.",
+		"description": "An independent community catalog for exteraGram plugins. Discover, review, and share extensions for your Telegram experience.",
 		"contact_developer": "Contact Developer",
 		"view_source": "View Source Code",
 		"quick_links": "Quick Links",
@@ -1080,6 +1090,9 @@
 		"eyebrow": "Community"
 	},
 	"CategoriesPage": {
+		"load_error_title": "Could not load the category",
+		"load_error_description": "Check your connection and try again.",
+		"retry": "Try again",
 		"badge": "Categories",
 		"title": "Plugin Categories",
 		"description": "Browse plugins by category to extend exteraGram's functionality",
@@ -1098,6 +1111,9 @@
 		"section_all": "All categories"
 	},
 	"CollectionsPage": {
+		"load_error_title": "Could not load the collection",
+		"load_error_description": "Check your connection and try again.",
+		"retry": "Try again",
 		"badge": "AI Collections",
 		"title": "AI Plugin Collections",
 		"description": "Weekly updated collections of the best plugins, curated by artificial intelligence just for you",
@@ -1138,6 +1154,9 @@
 		"section_collections": "Collections"
 	},
 	"PulsePage": {
+		"load_error_title": "Could not load the activity feed",
+		"load_error_description": "Check your connection and try again.",
+		"retry": "Try again",
 		"badge": "Activity",
 		"title": "exteraGram Pulse",
 		"description": "A live feed of events: plugin publications, version releases and reviews",
@@ -1475,6 +1494,36 @@
 		"ask_suggestion_what": "What does this plugin do?",
 		"ask_suggestion_safe": "Is it safe to use?",
 		"ask_suggestion_setup": "How do I set it up?",
+		"ask_suggestion_privacy": "What data can it access?",
+		"ask_suggestion_fit": "Who is it for and not for?",
+		"ask_remaining": "Questions remaining: {count}",
+		"ask_copy": "Copy answer",
+		"ask_copied": "Answer copied",
+		"ask_copy_failed": "Could not copy the answer",
+		"ask_new": "New question",
+		"ask_sign_in_title": "Sign in to ask a question",
+		"ask_sign_in_description": "This keeps request limits fair and the service reliable.",
+		"ask_sign_in": "Sign in with Telegram",
+		"insight_button": "AI fit card",
+		"insight_title": "AI fit card: {name}",
+		"insight_description": "A concise review of purpose, requirements, limitations, and privacy based on the description and code.",
+		"insight_loading": "Building a practical plugin assessment...",
+		"insight_verdict_recommended": "Broadly useful",
+		"insight_verdict_conditional": "Useful with caveats",
+		"insight_verdict_specialized": "Built for specific tasks",
+		"insight_setup_simple": "Simple setup",
+		"insight_setup_moderate": "Moderate setup",
+		"insight_setup_advanced": "Advanced setup",
+		"insight_best_for": "Best for",
+		"insight_requirements": "What you need",
+		"insight_caveats": "Things to consider",
+		"insight_privacy": "Privacy",
+		"insight_privacy_low": "Low impact",
+		"insight_privacy_medium": "Medium impact",
+		"insight_privacy_high": "High impact",
+		"insight_privacy_unknown": "Not enough evidence",
+		"insight_disclaimer": "This explanation supports your decision but does not replace a security or source-code review.",
+		"retry": "Try again",
 		"suggest_button": "Suggest with AI",
 		"suggest_loading": "Suggesting...",
 		"suggest_error": "Failed to suggest tags. Please try again later.",

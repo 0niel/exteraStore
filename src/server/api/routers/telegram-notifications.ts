@@ -112,7 +112,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 					.limit(1);
 			}
 
-			if (!version || !version[0]) {
+			if (!version?.[0]) {
 				throw new Error("Версия не найдена");
 			}
 
@@ -399,7 +399,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 							.limit(1);
 					}
 
-					if (!version_data || !version_data[0]) {
+					if (!version_data?.[0]) {
 						throw new Error("Версия не найдена");
 					}
 
@@ -578,7 +578,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 				.where(eq(users.telegramUsername, input.username.replace("@", "")))
 				.limit(1);
 
-			if (!user[0] || !user[0].telegramId) {
+			if (!user[0]?.telegramId) {
 				throw new Error("User not found or has no Telegram ID");
 			}
 

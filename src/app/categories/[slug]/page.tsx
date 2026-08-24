@@ -22,6 +22,7 @@ import { useTranslations } from "next-intl";
 import { PluginCard } from "~/components/plugin-card";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
+import { EmptyState } from "~/components/ui/empty-state";
 import { Skeleton } from "~/components/ui/skeleton";
 import type { plugins as Plugin } from "~/server/db/schema";
 import { api } from "~/trpc/react";
@@ -88,9 +89,12 @@ export default function CategoryPage() {
 	const params = useParams();
 	const slug = params.slug as string;
 
-	const { data: category, isLoading } = api.categories.getBySlug.useQuery({
-		slug,
-	});
+	const {
+		data: category,
+		isLoading,
+		isError,
+		refetch,
+	} = api.categories.getBySlug.useQuery({ slug });
 
 	if (isLoading) {
 		return (
@@ -106,6 +110,18 @@ export default function CategoryPage() {
 					</div>
 				</section>
 			</div>
+		);
+	}
+
+	if (isError) {
+		return (
+			<EmptyState
+				icon="↻"
+				title={t("load_error_title")}
+				description={t("load_error_description")}
+				actionLabel={t("retry")}
+				onAction={() => void refetch()}
+			/>
 		);
 	}
 

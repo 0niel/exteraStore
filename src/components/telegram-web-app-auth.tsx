@@ -1,68 +1,68 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { signIn, useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { useTelegramWebApp } from "~/hooks/use-telegram-web-app";
 
 export function TelegramWebAppAuth() {
-	const { isTelegramWebApp, webApp, user } = useTelegramWebApp();
-	const { data: session } = useSession();
+	const { isTelegramWebApp, initData } = useTelegramWebApp();
+	const { status, update } = useSession();
+	const router = useRouter();
 	const t = useTranslations("Auth");
-	const [authAttempted, setAuthAttempted] = useState(false);
+	const attemptedInitData = useRef<string | null>(null);
 
 	useEffect(() => {
 		if (
 			!isTelegramWebApp ||
-			!webApp ||
-			!user ||
-			authAttempted ||
-			session?.user
+			!initData ||
+			status !== "unauthenticated" ||
+			attemptedInitData.current === initData
 		) {
 			return;
 		}
 
+		attemptedInitData.current = initData;
+		let cancelled = false;
+
 		const authenticateWithTelegram = async () => {
-			try {
-				setAuthAttempted(true);
+			for (let attempt = 0; attempt < 2; attempt += 1) {
+				try {
+					const result = await signIn("telegram", {
+						initData,
+						redirect: false,
+						callbackUrl: window.location.href,
+					});
 
-				const initDataUnsafe = webApp.initDataUnsafe;
-
-				const credentials = {
-					id: user.id.toString(),
-					first_name: user.first_name,
-					last_name: user.last_name || "",
-					username: user.username || "",
-					photo_url: user.photo_url || "",
-					auth_date: initDataUnsafe.auth_date?.toString() || "",
-					hash: initDataUnsafe.hash,
-				};
-
-				const result = await signIn("telegram", {
-					...credentials,
-					redirect: false,
-					callbackUrl: window.location.pathname,
-				});
-
-				if (result?.ok) {
-					toast.success(t("webapp_welcome"));
-				} else if (result?.error) {
-					console.error("Auth error:", result.error);
-					toast.error("Ошибка входа через Telegram Web App");
+					if (cancelled) return;
+					if (result?.ok) {
+						await update();
+						router.refresh();
+						toast.success(t("webapp_welcome"));
+						return;
+					}
+				} catch {
+					if (cancelled) return;
 				}
-			} catch (error) {
-				console.error("Telegram WebApp auth error:", error);
-				toast.error("Не удалось войти через Telegram Web App");
+
+				if (attempt === 0) {
+					await new Promise((resolve) => window.setTimeout(resolve, 500));
+				}
+			}
+
+			if (!cancelled) {
+				toast.error(t("webapp_failed"));
 			}
 		};
 
-		const timer = setTimeout(() => {
-			authenticateWithTelegram();
-		}, 800);
+		void authenticateWithTelegram();
 
-		return () => clearTimeout(timer);
-	}, [isTelegramWebApp, webApp, user, authAttempted, session, t]);
+		return () => {
+			cancelled = true;
+		};
+	}, [initData, isTelegramWebApp, router, status, t, update]);
 
 	return null;
 }

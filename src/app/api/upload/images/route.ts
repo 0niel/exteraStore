@@ -16,15 +16,26 @@ export async function POST(request: NextRequest) {
 		}
 
 		const formData = await request.formData();
-		const files = formData.getAll("files") as File[];
-		const pluginSlug = formData.get("pluginSlug") as string;
-		const imageType = (formData.get("imageType") as string) || "screenshot";
+		const fileEntries = formData.getAll("files");
+		const files = fileEntries.filter(
+			(entry): entry is File => entry instanceof File,
+		);
+		const pluginSlugEntry = formData.get("pluginSlug");
+		const pluginSlug =
+			typeof pluginSlugEntry === "string" ? pluginSlugEntry.trim() : "";
+		const imageTypeEntry = formData.get("imageType");
+		const requestedImageType =
+			typeof imageTypeEntry === "string" ? imageTypeEntry : "screenshot";
+		const imageType = requestedImageType === "icon" ? "icon" : "screenshot";
 
-		if (!files || files.length === 0) {
+		if (files.length === 0 || files.length !== fileEntries.length) {
 			return NextResponse.json({ error: "No files provided" }, { status: 400 });
 		}
+		if (files.length > 10) {
+			return NextResponse.json({ error: "Too many files" }, { status: 400 });
+		}
 
-		if (!pluginSlug) {
+		if (!pluginSlug || pluginSlug.length > 160) {
 			return NextResponse.json(
 				{ error: "Plugin slug is required" },
 				{ status: 400 },
@@ -40,10 +51,6 @@ export async function POST(request: NextRequest) {
 			if (!file) continue;
 
 			try {
-				console.log(
-					`Processing file: ${file.name}, type: ${file.type}, size: ${file.size}`,
-				);
-
 				if (!isImage(file.type)) {
 					errors.push(`File ${file.name} is not an image`);
 					continue;
@@ -61,39 +68,15 @@ export async function POST(request: NextRequest) {
 					file.name,
 					`${pluginSlug}-${imageType}`,
 				);
-				console.log(`Generated safe filename: ${safeFileName}`);
-
-				let uploadedUrl: string;
-
-				if (imageType === "screenshot") {
-					uploadedUrl = await uploadFile(
-						buffer,
-						safeFileName,
-						file.type || "image/jpeg",
-					);
-				} else {
-					uploadedUrl = await uploadFile(
-						buffer,
-						safeFileName,
-						file.type || "image/jpeg",
-					);
-				}
+				const uploadedUrl = await uploadFile(
+					buffer,
+					safeFileName,
+					file.type || "image/jpeg",
+				);
 
 				uploadedUrls.push(uploadedUrl);
-			} catch (error) {
-				console.error(`Error uploading file ${file.name}:`, error);
-
-				let errorMessage = "Unknown error";
-				if (error instanceof Error) {
-					errorMessage = error.message;
-					console.error(`Upload error details for ${file.name}:`, {
-						name: error.name,
-						message: error.message,
-						stack: error.stack,
-					});
-				}
-
-				errors.push(`Error uploading file ${file.name}: ${errorMessage}`);
+			} catch {
+				errors.push(`Error uploading file ${file.name}`);
 			}
 		}
 
@@ -102,8 +85,7 @@ export async function POST(request: NextRequest) {
 			uploadedUrls,
 			errors: errors.length > 0 ? errors : undefined,
 		});
-	} catch (error) {
-		console.error("Upload error:", error);
+	} catch {
 		return NextResponse.json(
 			{ error: "Internal server error" },
 			{ status: 500 },
@@ -131,8 +113,7 @@ export async function GET(request: NextRequest) {
 		return NextResponse.json({
 			images: [],
 		});
-	} catch (error) {
-		console.error("Get images error:", error);
+	} catch {
 		return NextResponse.json(
 			{ error: "Internal server error" },
 			{ status: 500 },
@@ -162,8 +143,7 @@ export async function DELETE(request: NextRequest) {
 			success: true,
 			message: "Image deleted successfully",
 		});
-	} catch (error) {
-		console.error("Delete image error:", error);
+	} catch {
 		return NextResponse.json(
 			{ error: "Failed to delete image" },
 			{ status: 500 },

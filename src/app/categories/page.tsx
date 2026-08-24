@@ -58,7 +58,12 @@ function CategorySkeleton() {
 export default function CategoriesPage() {
 	const t = useTranslations("CategoriesPage");
 	const reduceMotion = useReducedMotion();
-	const { data: categories, isLoading } = api.categories.getAll.useQuery();
+	const {
+		data: categories,
+		isLoading,
+		isError,
+		refetch,
+	} = api.categories.getAll.useQuery();
 
 	return (
 		<div className="bg-background">
@@ -90,6 +95,14 @@ export default function CategoriesPage() {
 								<CategorySkeleton key={i} />
 							))}
 						</div>
+					) : isError ? (
+						<EmptyState
+							icon="↻"
+							title={t("load_error_title")}
+							description={t("load_error_description")}
+							actionLabel={t("retry")}
+							onAction={() => void refetch()}
+						/>
 					) : (
 						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 							{categories?.map((category, index) => {
@@ -150,13 +163,15 @@ export default function CategoriesPage() {
 						</div>
 					)}
 
-					{!isLoading && (!categories || categories.length === 0) && (
-						<EmptyState
-							icon="#"
-							title={t("empty_title")}
-							description={t("empty_description")}
-						/>
-					)}
+					{!isLoading &&
+						!isError &&
+						(!categories || categories.length === 0) && (
+							<EmptyState
+								icon="#"
+								title={t("empty_title")}
+								description={t("empty_description")}
+							/>
+						)}
 				</div>
 			</div>
 		</div>

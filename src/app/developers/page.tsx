@@ -6,7 +6,6 @@ import {
 	Crown,
 	Download,
 	ExternalLink,
-	Github,
 	Globe,
 	Package,
 	Search,
@@ -20,6 +19,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { GitHubIcon } from "~/components/icons/github-icon";
 import { PageHeader } from "~/components/page-header";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
@@ -92,12 +92,16 @@ export default function DevelopersPage() {
 		return () => clearTimeout(timer);
 	}, [searchQuery]);
 
-	const { data: developersData, isLoading } =
-		api.developers.getDevelopers.useQuery({
-			page,
-			limit: 12,
-			search: debouncedQuery,
-		});
+	const {
+		data: developersData,
+		isLoading,
+		isError,
+		refetch,
+	} = api.developers.getDevelopers.useQuery({
+		page,
+		limit: 12,
+		search: debouncedQuery,
+	});
 
 	const filteredDevelopers = developersData?.developers || [];
 	const totalDevelopers =
@@ -172,6 +176,14 @@ export default function DevelopersPage() {
 							</Card>
 						))}
 					</div>
+				) : isError ? (
+					<EmptyState
+						icon="↻"
+						title={t("load_error_title")}
+						description={t("load_error_description")}
+						actionLabel={t("retry")}
+						onAction={() => void refetch()}
+					/>
 				) : filteredDevelopers.length === 0 ? (
 					<div>
 						<EmptyState
@@ -376,7 +388,7 @@ export default function DevelopersPage() {
 																	);
 																}}
 															>
-																<Github className="h-4 w-4" />
+																<GitHubIcon className="size-4" />
 															</Button>
 														)}
 														{developer.website && (

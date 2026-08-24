@@ -1,12 +1,13 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Shield, X, ZoomIn } from "lucide-react";
+import { Shield, ZoomIn } from "lucide-react";
 import Image from "next/image";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import Lightbox from "yet-another-react-lightbox";
+import Counter from "yet-another-react-lightbox/plugins/counter";
+import Zoom from "yet-another-react-lightbox/plugins/zoom";
 import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
 
 interface ImageGalleryProps {
@@ -25,40 +26,19 @@ export function ImageGallery({
 	verified,
 }: ImageGalleryProps) {
 	const t = useTranslations("ImageGallery");
-	const reduceMotion = useReducedMotion();
 	const [selectedImage, setSelectedImage] = useState(0);
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const scrollRef = useRef<HTMLDivElement | null>(null);
+	const slides = useMemo(
+		() =>
+			images.map((src, index) => ({
+				src,
+				alt: `${alt} ${index + 1}`,
+			})),
+		[alt, images],
+	);
 
-	const nextImage = useCallback(() => {
-		setSelectedImage((prev) => (prev + 1) % images.length);
-	}, [images.length]);
-
-	const prevImage = useCallback(() => {
-		setSelectedImage((prev) => (prev - 1 + images.length) % images.length);
-	}, [images.length]);
-
-	useEffect(() => {
-		if (!isModalOpen) return;
-		const handleKeyDown = (e: KeyboardEvent) => {
-			if (e.key === "ArrowRight") nextImage();
-			if (e.key === "ArrowLeft") prevImage();
-			if (e.key === "Escape") setIsModalOpen(false);
-		};
-		window.addEventListener("keydown", handleKeyDown);
-		return () => window.removeEventListener("keydown", handleKeyDown);
-	}, [isModalOpen, nextImage, prevImage]);
-
-	useEffect(() => {
-		if (!isModalOpen) return;
-		const previous = document.body.style.overflow;
-		document.body.style.overflow = "hidden";
-		return () => {
-			document.body.style.overflow = previous;
-		};
-	}, [isModalOpen]);
-
-	if (!images || images.length === 0) {
+	if (images.length === 0) {
 		return null;
 	}
 
@@ -70,40 +50,54 @@ export function ImageGallery({
 	const handleScroll = () => {
 		const container = scrollRef.current;
 		if (!container) return;
-		const slide = container.firstElementChild as HTMLElement | null;
-		if (!slide) return;
-		const index = Math.round(container.scrollLeft / slide.offsetWidth);
-		const clamped = Math.min(Math.max(index, 0), images.length - 1);
-		if (clamped !== selectedImage) {
-			setSelectedImage(clamped);
-		}
+
+		const viewportCenter = container.scrollLeft + container.clientWidth / 2;
+		const nearestIndex = Array.from(container.children).reduce(
+			(bestIndex, child, index) => {
+				const slide = child as HTMLElement;
+				const best = container.children[bestIndex] as HTMLElement | undefined;
+				const distance = Math.abs(
+					slide.offsetLeft + slide.offsetWidth / 2 - viewportCenter,
+				);
+				const bestDistance = best
+					? Math.abs(best.offsetLeft + best.offsetWidth / 2 - viewportCenter)
+					: Number.POSITIVE_INFINITY;
+
+				return distance < bestDistance ? index : bestIndex;
+			},
+			0,
+		);
+
+		setSelectedImage(nearestIndex);
 	};
 
 	const scrollToIndex = (index: number) => {
 		setSelectedImage(index);
 		const container = scrollRef.current;
-		const slide = container?.firstElementChild as HTMLElement | null;
+		const slide = container?.children[index] as HTMLElement | undefined;
+
 		if (container && slide) {
 			container.scrollTo({
-				left: index * slide.offsetWidth,
-				behavior: reduceMotion ? "auto" : "smooth",
+				left:
+					slide.offsetLeft - (container.clientWidth - slide.offsetWidth) / 2,
+				behavior: "smooth",
 			});
 		}
 	};
 
 	return (
 		<>
-			<div className={cn("space-y-3", className)}>
+			<div className={cn("min-w-0 space-y-3", className)}>
 				<div
 					ref={scrollRef}
 					onScroll={handleScroll}
-					className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 md:mx-0 md:px-0"
+					className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-4 [scroll-padding-inline:1rem] md:mx-0 md:px-0 md:[scroll-padding-inline:0]"
 				>
 					{images.map((image, index) => (
 						<button
-							key={index}
+							key={`${image}-${index}`}
 							type="button"
-							className="group tap-highlight-none relative block aspect-video w-[86%] shrink-0 snap-center overflow-hidden rounded-xl border text-left md:w-full md:snap-start"
+							className="group tap-highlight-none relative block aspect-[4/3] w-[calc(100vw-2.5rem)] max-w-full shrink-0 snap-center overflow-hidden rounded-2xl border bg-black/[0.035] text-left shadow-soft sm:aspect-video md:w-full md:snap-start dark:bg-white/[0.035]"
 							onClick={() => openModal(index)}
 							aria-label={t("open_image", { index: index + 1 })}
 						>
@@ -111,61 +105,64 @@ export function ImageGallery({
 								src={image}
 								alt={`${alt} ${index + 1}`}
 								fill
-								className="object-cover transition-transform duration-300 group-hover:scale-105"
-								sizes="(max-width: 768px) 86vw, 66vw"
+								className="object-contain transition-transform duration-500 ease-[var(--ease-out-expo)] group-hover:scale-[1.015]"
+								sizes="(max-width: 768px) calc(100vw - 40px), 66vw"
 							/>
 
-							<div className="absolute inset-0 bg-black/0 transition-all duration-300 group-hover:bg-black/20">
-								<div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-									<div className="rounded-full bg-white/90 p-3 backdrop-blur-sm">
-										<ZoomIn className="h-6 w-6 text-black" />
-									</div>
+							<div className="absolute inset-0 bg-linear-to-t from-black/35 via-transparent to-black/5 opacity-70 transition-opacity group-hover:opacity-100">
+								<div className="absolute inset-0 flex items-center justify-center opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100">
+									<span className="flex size-12 items-center justify-center rounded-full bg-white/90 text-black shadow-xl backdrop-blur-sm">
+										<ZoomIn className="size-5" />
+									</span>
 								</div>
 							</div>
 
 							{images.length > 1 && (
-								<div className="absolute right-4 bottom-4">
-									<div className="rounded-full bg-black/60 px-3 py-1 text-sm text-white backdrop-blur-sm">
-										{index + 1} / {images.length}
-									</div>
-								</div>
+								<span className="absolute right-3 bottom-3 rounded-full bg-black/70 px-3 py-1 font-mono text-white text-xs backdrop-blur-md">
+									{index + 1} / {images.length}
+								</span>
 							)}
 
 							{(category || verified) && (
-								<div className="absolute bottom-4 left-4 flex gap-2">
+								<span className="absolute bottom-3 left-3 flex max-w-[70%] gap-2">
 									{category && (
-										<Badge className="border-0 bg-black/60 text-white backdrop-blur-sm">
+										<Badge className="max-w-full truncate border-0 bg-black/70 text-white backdrop-blur-md">
 											{category}
 										</Badge>
 									)}
 									{verified && (
-										<Badge className="border-0 bg-contrast text-contrast-foreground backdrop-blur-sm">
-											<Shield className="mr-1 h-3 w-3" />
+										<Badge className="shrink-0 border-0 bg-white text-black">
+											<Shield className="mr-1 size-3" />
 											{t("verified")}
 										</Badge>
 									)}
-								</div>
+								</span>
 							)}
 						</button>
 					))}
 				</div>
 
 				{images.length > 1 && (
-					<div className="flex items-center justify-center gap-2">
-						{images.map((_, index) => (
+					<div
+						className="flex items-center justify-center gap-1"
+						role="tablist"
+					>
+						{images.map((image, index) => (
 							<button
-								key={index}
+								key={`${image}-${index}`}
 								type="button"
 								onClick={() => scrollToIndex(index)}
 								aria-label={t("open_image", { index: index + 1 })}
-								className="tap-highlight-none flex h-11 w-6 items-center justify-center md:h-6"
+								aria-selected={selectedImage === index}
+								role="tab"
+								className="tap-highlight-none flex size-11 items-center justify-center rounded-full"
 							>
 								<span
 									className={cn(
-										"h-1.5 rounded-full transition-all duration-300",
+										"h-1.5 rounded-full transition-[width,background-color] duration-300",
 										selectedImage === index
-											? "w-5 bg-primary"
-											: "w-1.5 bg-muted-foreground/40",
+											? "w-6 bg-primary"
+											: "w-1.5 bg-muted-foreground/35",
 									)}
 								/>
 							</button>
@@ -174,91 +171,40 @@ export function ImageGallery({
 				)}
 			</div>
 
-			<AnimatePresence>
-				{isModalOpen && (
-					<motion.div
-						className="fixed inset-0 z-[100] flex items-center justify-center bg-black/95"
-						initial={reduceMotion ? false : { opacity: 0 }}
-						animate={{ opacity: 1 }}
-						exit={reduceMotion ? undefined : { opacity: 0 }}
-						transition={{ duration: 0.2 }}
-						role="dialog"
-						aria-modal="true"
-						aria-label={t("viewer_title", {
-							current: selectedImage + 1,
-							total: images.length,
-						})}
-					>
-						<Button
-							variant="ghost"
-							size="icon"
-							className="absolute top-4 right-4 z-10 h-11 w-11 rounded-full bg-black/50 text-white hover:bg-black/70 hover:text-white"
-							onClick={() => setIsModalOpen(false)}
-							aria-label={t("close")}
-						>
-							<X className="h-5 w-5" />
-						</Button>
-
-						{images.length > 1 && (
-							<Button
-								variant="ghost"
-								size="icon"
-								className="absolute top-1/2 left-4 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-black/50 text-white hover:bg-black/70 hover:text-white"
-								onClick={prevImage}
-								aria-label={t("previous")}
-							>
-								<ChevronLeft className="h-6 w-6" />
-							</Button>
-						)}
-
-						<motion.div
-							key={selectedImage}
-							className="relative max-h-full max-w-full px-4"
-							initial={reduceMotion ? false : { opacity: 0, scale: 0.96 }}
-							animate={{ opacity: 1, scale: 1 }}
-							transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-						>
-							<Image
-								src={images[selectedImage] ?? ""}
-								alt={`${alt} ${selectedImage + 1}`}
-								width={1200}
-								height={800}
-								className="max-h-[90vh] max-w-full object-contain"
-								sizes="95vw"
-								priority
-							/>
-						</motion.div>
-
-						{images.length > 1 && (
-							<Button
-								variant="ghost"
-								size="icon"
-								className="absolute top-1/2 right-4 z-10 h-12 w-12 -translate-y-1/2 rounded-full bg-black/50 text-white hover:bg-black/70 hover:text-white"
-								onClick={nextImage}
-								aria-label={t("next")}
-							>
-								<ChevronRight className="h-6 w-6" />
-							</Button>
-						)}
-
-						<div className="absolute bottom-4 left-1/2 -translate-x-1/2 pb-safe">
-							<div className="rounded-full bg-black/60 px-4 py-2 text-white backdrop-blur-sm">
-								<span className="text-sm">
-									{t("viewer_title", {
-										current: selectedImage + 1,
-										total: images.length,
-									})}
-								</span>
-								{images.length > 1 && (
-									<span className="ml-2 hidden text-xs opacity-70 md:inline">
-										{t("keyboard_hint")}
-									</span>
-								)}
-							</div>
-						</div>
-					</motion.div>
-				)}
-			</AnimatePresence>
+			<Lightbox
+				open={isModalOpen}
+				close={() => setIsModalOpen(false)}
+				index={selectedImage}
+				slides={slides}
+				plugins={[Counter, Zoom]}
+				className="extera-lightbox"
+				carousel={{ finite: images.length < 2, padding: 0, spacing: 16 }}
+				controller={{
+					closeOnBackdropClick: true,
+					closeOnPullDown: true,
+					closeOnPullUp: true,
+				}}
+				zoom={{
+					maxZoomPixelRatio: 4,
+					doubleClickMaxStops: 3,
+					pinchZoomV4: true,
+					scrollToZoom: true,
+				}}
+				animation={{ fade: 220, swipe: 360, zoom: 240 }}
+				on={{ view: ({ index }) => setSelectedImage(index) }}
+				labels={{
+					Close: t("close"),
+					Previous: t("previous"),
+					Next: t("next"),
+					Lightbox: t("viewer_title", {
+						current: selectedImage + 1,
+						total: images.length,
+					}),
+				}}
+				styles={{
+					container: { backgroundColor: "rgba(4, 3, 3, 0.96)" },
+				}}
+			/>
 		</>
 	);
 }

@@ -7,7 +7,6 @@ import {
 	Edit,
 	ExternalLink,
 	FileText,
-	Github,
 	Globe,
 	Heart,
 	MessageSquare,
@@ -25,9 +24,11 @@ import React, { useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import { AskAi } from "~/components/ai/ask-ai";
+import { PluginInsight } from "~/components/ai/plugin-insight";
 import { ReviewSummary } from "~/components/ai/review-summary";
 import { SmartCaptcha } from "~/components/captcha/smart-captcha";
 import { DonationWidget } from "~/components/donations/donation-widget";
+import { GitHubIcon } from "~/components/icons/github-icon";
 import { ImageGallery } from "~/components/image-gallery";
 import { PluginPipeline } from "~/components/plugin-pipeline";
 import { PluginSubscription } from "~/components/plugin-subscription";
@@ -37,6 +38,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
+import { EmptyState } from "~/components/ui/empty-state";
 import { SecurityWarning } from "~/components/ui/security-warning";
 import { Textarea } from "~/components/ui/textarea";
 import {
@@ -70,7 +72,12 @@ export default function PluginDetailPage() {
 	const [downloadPulse, setDownloadPulse] = useState(0);
 	const reviewTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-	const { data: plugin, isLoading } = api.plugins.getBySlug.useQuery({ slug });
+	const {
+		data: plugin,
+		isLoading,
+		isError,
+		refetch: refetchPlugin,
+	} = api.plugins.getBySlug.useQuery({ slug });
 	const { data: reviewsData, refetch: refetchReviews } =
 		api.plugins.getReviews.useQuery(
 			{ pluginId: plugin?.id ?? 0, page: 1, limit: 10 },
@@ -326,6 +333,18 @@ export default function PluginDetailPage() {
 					</div>
 				</div>
 			</div>
+		);
+	}
+
+	if (isError) {
+		return (
+			<EmptyState
+				icon="↻"
+				title={t("load_error_title")}
+				description={t("load_error_description")}
+				actionLabel={t("retry")}
+				onAction={() => void refetchPlugin()}
+			/>
 		);
 	}
 
@@ -674,7 +693,11 @@ export default function PluginDetailPage() {
 							>
 								{activeTab === "description" && (
 									<div>
-										<div className="mb-4 flex justify-end">
+										<div className="mb-5 flex flex-wrap justify-end gap-2">
+											<PluginInsight
+												pluginId={plugin.id}
+												pluginName={plugin.name}
+											/>
 											<AskAi pluginId={plugin.id} pluginName={plugin.name} />
 										</div>
 										<div className="prose prose-neutral dark:prose-invert max-w-none">
@@ -778,7 +801,7 @@ export default function PluginDetailPage() {
 																	rel="noopener noreferrer"
 																	className="inline-flex items-center gap-2"
 																>
-																	<Github className="h-4 w-4" /> GitHub
+																	<GitHubIcon className="size-4" /> GitHub
 																</a>
 															</Button>
 														)}
@@ -839,7 +862,7 @@ export default function PluginDetailPage() {
 																				rel="noopener noreferrer"
 																				className="inline-flex items-center gap-2"
 																			>
-																				<Github className="h-4 w-4" />{" "}
+																				<GitHubIcon className="size-4" />{" "}
 																				{t("source_code")}{" "}
 																				<ExternalLink className="h-3 w-3" />
 																			</a>

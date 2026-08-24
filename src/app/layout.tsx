@@ -1,8 +1,12 @@
 import "~/styles/globals.css";
+import "yet-another-react-lightbox/plugins/counter.css";
+import "yet-another-react-lightbox/styles.css";
 
+import { GeistMono } from "geist/font/mono";
+import { GeistSans } from "geist/font/sans";
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
 import { cookies, headers } from "next/headers";
+import Script from "next/script";
 import { SessionProvider } from "next-auth/react";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, getTranslations } from "next-intl/server";
@@ -16,16 +20,13 @@ import { type Locale, locales } from "~/lib/i18n-config";
 import { auth } from "~/server/auth";
 import { TRPCReactProvider } from "~/trpc/react";
 
-const inter = Inter({
-	subsets: ["latin"],
-	variable: "--font-inter",
-	display: "swap",
-});
-
 export const metadata: Metadata = {
-	title: "exteraStore - A revolutionary plugin store for Telegram",
+	title: {
+		default: "exteraStore — плагины для Telegram",
+		template: "%s · exteraStore",
+	},
 	description:
-		"Discover new Telegram features with exteraStore. Create, share, and install plugins for exteraGram — the most powerful Telegram client.",
+		"Независимый каталог плагинов сообщества exteraGram: находите, проверяйте и публикуйте расширения.",
 	icons: [{ rel: "icon", url: "/favicon.svg", type: "image/svg+xml" }],
 	keywords: [
 		"exteraStore",
@@ -37,10 +38,10 @@ export const metadata: Metadata = {
 		"modifications",
 		"store",
 	],
-	authors: [{ name: "exteraStore Team" }],
+	authors: [{ name: "exteraStore community" }],
 	openGraph: {
 		title: "exteraStore",
-		description: "A revolutionary plugin store for Telegram",
+		description: "Независимый каталог плагинов сообщества exteraGram",
 		type: "website",
 		locale: "en_US",
 		alternateLocale: "ru_RU",
@@ -53,8 +54,8 @@ export const viewport: Viewport = {
 	viewportFit: "cover",
 	userScalable: true,
 	themeColor: [
-		{ media: "(prefers-color-scheme: light)", color: "#ffffff" },
-		{ media: "(prefers-color-scheme: dark)", color: "#171717" },
+		{ media: "(prefers-color-scheme: light)", color: "#f8f6f4" },
+		{ media: "(prefers-color-scheme: dark)", color: "#0b0909" },
 	],
 };
 
@@ -95,16 +96,17 @@ export default async function RootLayout({
 	const messages = await getMessages();
 	const locale = await getServerLocale();
 	const t = await getTranslations("Navigation");
-	const telegramBotUsername =
-		process.env.TELEGRAM_BOT_USERNAME ??
-		process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
-
 	return (
-		<html lang={locale} className={inter.variable} suppressHydrationWarning>
-			<head>
-				<script src="https://telegram.org/js/telegram-web-app.js" async />
-			</head>
+		<html
+			lang={locale}
+			className={`${GeistSans.variable} ${GeistMono.variable}`}
+			suppressHydrationWarning
+		>
 			<body className="overflow-x-hidden bg-background font-sans antialiased">
+				<Script
+					src="https://telegram.org/js/telegram-web-app.js"
+					strategy="beforeInteractive"
+				/>
 				<a
 					href="#main-content"
 					className="fixed top-[max(.5rem,env(safe-area-inset-top))] left-2 z-100 -translate-y-24 rounded-lg bg-primary px-4 py-3 font-medium text-primary-foreground shadow-lg transition-transform focus:translate-y-0"
@@ -121,8 +123,8 @@ export default async function RootLayout({
 								disableTransitionOnChange
 							>
 								<TelegramWebAppAuth />
-								<div className="flex min-h-dvh flex-col overflow-x-hidden pb-16 md:pb-0">
-									<Navigation telegramBotUsername={telegramBotUsername} />
+								<div className="flex min-h-dvh flex-col overflow-x-hidden pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
+									<Navigation />
 									<main
 										id="main-content"
 										tabIndex={-1}

@@ -3,7 +3,7 @@
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { Badge } from "~/components/ui/badge";
 import { Input } from "~/components/ui/input";
 
@@ -22,8 +22,6 @@ export function TagInput({
 	const t = useTranslations("TagInput");
 	const reduceMotion = useReducedMotion();
 	const [inputValue, setInputValue] = useState("");
-	const inputRef = useRef<HTMLInputElement>(null);
-
 	const handleAddTag = useCallback(
 		(tagToAdd: string) => {
 			const newTag = tagToAdd.trim();
@@ -49,12 +47,7 @@ export function TagInput({
 	};
 
 	return (
-		// biome-ignore lint/a11y/useKeyWithClickEvents: click only delegates focus to the inner input, which stays keyboard-accessible
-		// biome-ignore lint/a11y/noStaticElementInteractions: click only delegates focus to the inner input, which stays keyboard-accessible
-		<div
-			className="flex min-h-11 cursor-text flex-wrap items-center gap-2 rounded-xl border bg-transparent px-3 py-2 transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 dark:bg-input/30"
-			onClick={() => inputRef.current?.focus()}
-		>
+		<div className="flex min-h-11 flex-wrap items-center gap-2 rounded-xl border bg-transparent px-3 py-2 transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 dark:bg-input/30">
 			<AnimatePresence initial={false}>
 				{tags.map((tag) => (
 					<motion.span
@@ -84,7 +77,6 @@ export function TagInput({
 				))}
 			</AnimatePresence>
 			<Input
-				ref={inputRef}
 				value={inputValue}
 				onChange={(e) => setInputValue(e.target.value)}
 				onKeyDown={handleKeyDown}

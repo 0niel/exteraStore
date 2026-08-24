@@ -11,6 +11,7 @@
 		"profile": "Профиль",
 		"my_plugins": "Мои плагины",
 		"sign_out": "Выйти",
+		"sign_in": "Войти",
 		"language": "Язык",
 		"theme": "Тема",
 		"pulse": "Пульс",
@@ -232,6 +233,9 @@
 		"badge": "Мастерская"
 	},
 	"PluginDetailPage": {
+		"load_error_title": "Не удалось загрузить плагин",
+		"load_error_description": "Проверьте соединение и попробуйте ещё раз.",
+		"retry": "Повторить",
 		"description": "Описание",
 		"versions": "Версии",
 		"reviews": "Отзывы",
@@ -546,6 +550,9 @@
 		"webhook_hint": "Публичный HTTPS-URL, на который будут приходить обновления бота."
 	},
 	"Developers": {
+		"load_error_title": "Не удалось загрузить разработчиков",
+		"load_error_description": "Проверьте соединение и попробуйте ещё раз.",
+		"retry": "Повторить",
 		"badge": "Сообщество",
 		"title": "Разработчики",
 		"description": "Познакомьтесь с талантливыми разработчиками, которые создают удивительные плагины для exteraGram",
@@ -579,6 +586,9 @@
 		"page_of": "Страница {page} из {total}"
 	},
 	"DeveloperProfile": {
+		"load_error_title": "Не удалось загрузить профиль",
+		"load_error_description": "Проверьте соединение и попробуйте ещё раз.",
+		"retry": "Повторить",
 		"not_found": "Разработчик не найден",
 		"not_found_description": "Разработчик, которого вы ищете, не существует или был удален.",
 		"back_to_developers": "Назад к разработчикам",
@@ -777,7 +787,7 @@
 		"dashboard": "Дашборд"
 	},
 	"Footer": {
-		"description": "Революционный магазин плагинов для exteraGram. Открывайте, создавайте и делитесь плагинами для улучшения вашего Telegram.",
+		"description": "Независимый каталог плагинов сообщества exteraGram. Находите, оценивайте и публикуйте расширения для Telegram.",
 		"contact_developer": "Связаться с разработчиком",
 		"view_source": "Исходный код",
 		"quick_links": "Быстрые ссылки",
@@ -1080,6 +1090,9 @@
 		"eyebrow": "Сообщество"
 	},
 	"CategoriesPage": {
+		"load_error_title": "Не удалось загрузить категорию",
+		"load_error_description": "Проверьте соединение и попробуйте ещё раз.",
+		"retry": "Повторить",
 		"badge": "Категории",
 		"title": "Категории плагинов",
 		"description": "Найдите плагины по категориям для расширения функциональности exteraGram",
@@ -1098,6 +1111,9 @@
 		"section_all": "Все категории"
 	},
 	"CollectionsPage": {
+		"load_error_title": "Не удалось загрузить подборку",
+		"load_error_description": "Проверьте соединение и попробуйте ещё раз.",
+		"retry": "Повторить",
 		"badge": "ИИ-подборки",
 		"title": "Подборки плагинов от ИИ",
 		"description": "Еженедельно обновляемые коллекции лучших плагинов, подобранные искусственным интеллектом специально для вас",
@@ -1138,6 +1154,9 @@
 		"section_collections": "Подборки"
 	},
 	"PulsePage": {
+		"load_error_title": "Не удалось загрузить ленту",
+		"load_error_description": "Проверьте соединение и попробуйте ещё раз.",
+		"retry": "Повторить",
 		"badge": "Активность",
 		"title": "Пульс экстератора",
 		"description": "Живая лента событий: публикации плагинов, релизы версий и отзывы",
@@ -1475,6 +1494,36 @@
 		"ask_suggestion_what": "Что делает этот плагин?",
 		"ask_suggestion_safe": "Безопасно ли им пользоваться?",
 		"ask_suggestion_setup": "Как его настроить?",
+		"ask_suggestion_privacy": "Какие данные он может видеть?",
+		"ask_suggestion_fit": "Кому он подходит, а кому нет?",
+		"ask_remaining": "Осталось вопросов: {count}",
+		"ask_copy": "Копировать ответ",
+		"ask_copied": "Ответ скопирован",
+		"ask_copy_failed": "Не удалось скопировать ответ",
+		"ask_new": "Новый вопрос",
+		"ask_sign_in_title": "Войдите, чтобы задать вопрос",
+		"ask_sign_in_description": "Так сохраняется честный лимит запросов и стабильная работа сервиса.",
+		"ask_sign_in": "Войти через Telegram",
+		"insight_button": "ИИ-паспорт",
+		"insight_title": "ИИ-паспорт: {name}",
+		"insight_description": "Краткий разбор назначения, требований, ограничений и приватности по описанию и коду.",
+		"insight_loading": "Собираем практический разбор плагина...",
+		"insight_verdict_recommended": "Широкое применение",
+		"insight_verdict_conditional": "Подойдёт с оговорками",
+		"insight_verdict_specialized": "Для конкретных задач",
+		"insight_setup_simple": "Простая настройка",
+		"insight_setup_moderate": "Средняя сложность",
+		"insight_setup_advanced": "Продвинутая настройка",
+		"insight_best_for": "Кому пригодится",
+		"insight_requirements": "Что потребуется",
+		"insight_caveats": "Что учесть",
+		"insight_privacy": "Приватность",
+		"insight_privacy_low": "Низкое влияние",
+		"insight_privacy_medium": "Среднее влияние",
+		"insight_privacy_high": "Высокое влияние",
+		"insight_privacy_unknown": "Недостаточно данных",
+		"insight_disclaimer": "Это объяснение помогает с выбором, но не заменяет проверку безопасности и исходного кода.",
+		"retry": "Повторить",
 		"suggest_button": "Подобрать с ИИ",
 		"suggest_loading": "Подбираем...",
 		"suggest_error": "Не удалось подобрать теги. Попробуйте позже.",

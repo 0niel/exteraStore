@@ -80,7 +80,7 @@ export function FeaturedPlugins() {
 						{Array.from({ length: 3 }).map((_, i) => (
 							<Skeleton
 								key={i}
-								className="h-104 w-[75vw] shrink-0 snap-start rounded-2xl sm:w-auto sm:shrink"
+								className="h-104 w-[min(86vw,23rem)] shrink-0 snap-center rounded-2xl sm:w-auto sm:shrink sm:snap-start"
 							/>
 						))}
 					</div>
@@ -96,7 +96,7 @@ export function FeaturedPlugins() {
 							<motion.div
 								key={plugin.id}
 								variants={item}
-								className="w-[75vw] shrink-0 snap-start sm:w-auto sm:shrink"
+								className="w-[min(86vw,23rem)] shrink-0 snap-center sm:w-auto sm:shrink sm:snap-start"
 							>
 								<PluginCard plugin={plugin} />
 							</motion.div>

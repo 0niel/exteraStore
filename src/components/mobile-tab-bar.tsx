@@ -44,8 +44,9 @@ export function MobileTabBar() {
 	return (
 		<nav
 			aria-label={t("home")}
-			className="glass fixed inset-x-0 bottom-0 z-50 border-t pb-safe md:hidden"
+			className="fixed inset-x-0 bottom-0 isolate z-50 border-t bg-background/96 pb-safe shadow-[0_-10px_35px_-22px_rgba(0,0,0,.45)] backdrop-blur-xl md:hidden"
 		>
+			<span className="pointer-events-none absolute inset-x-6 top-0 h-px bg-linear-to-r from-transparent via-primary/60 to-transparent" />
 			<div className="mx-auto flex h-16 max-w-lg items-stretch justify-around px-2">
 				{tabs.map((tab) => {
 					const active = tab.exact
@@ -60,14 +61,14 @@ export function MobileTabBar() {
 							href={tab.href}
 							aria-current={active ? "page" : undefined}
 							className={cn(
-								"tap-highlight-none relative flex min-w-14 flex-1 flex-col items-center justify-center gap-1 rounded-xl transition-colors",
+								"tap-highlight-none relative flex min-w-14 flex-1 flex-col items-center justify-center gap-1 rounded-2xl transition-colors",
 								active ? "text-primary" : "text-muted-foreground",
 							)}
 						>
 							{active && (
 								<motion.span
 									layoutId="mobile-tab-indicator"
-									className="absolute bottom-1 size-1 rounded-full bg-primary shadow-[0_0_8px_2px] shadow-primary/50"
+									className="absolute inset-x-1.5 inset-y-1.5 -z-10 rounded-2xl border border-primary/15 bg-primary/8"
 									transition={
 										reduceMotion
 											? { duration: 0 }
@@ -81,7 +82,7 @@ export function MobileTabBar() {
 									reduceMotion ? undefined : { scale: active ? 1.08 : 1 }
 								}
 								transition={{ type: "spring", stiffness: 400, damping: 25 }}
-								className="flex flex-col items-center gap-0.5"
+								className="flex flex-col items-center gap-1"
 							>
 								{isProfile ? (
 									<Avatar

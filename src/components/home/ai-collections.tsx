@@ -43,10 +43,10 @@ function CollectionPreview({
 
 	return (
 		<Card className="group card-lift h-full overflow-hidden border bg-card">
-			<div className="relative h-24 border-b bg-primary/5">
+			<div className="relative h-28 border-b bg-primary/5 sm:h-24">
 				<div className="dot-grid absolute inset-0" />
 				<div className="relative flex h-full flex-col justify-between p-4">
-					<div className="flex items-start justify-between">
+					<div className="flex min-w-0 items-start justify-between gap-2">
 						<Badge
 							variant="secondary"
 							className="border-primary/15 bg-primary/10 font-medium text-primary text-xs"
@@ -54,7 +54,7 @@ function CollectionPreview({
 							<Sparkles className="mr-1 h-3 w-3" />
 							{t("collections.aiBadge")}
 						</Badge>
-						<div className="flex items-center gap-1 font-mono text-muted-foreground text-xs">
+						<div className="hidden shrink-0 items-center gap-1 font-mono text-muted-foreground text-xs sm:flex">
 							<Calendar className="h-3 w-3" />
 							<span>{formatDate(collection.generatedAt, locale)}</span>
 						</div>
@@ -191,7 +191,7 @@ export function AiCollections() {
 						{Array.from({ length: 3 }).map((_, i) => (
 							<Card
 								key={i}
-								className="w-[80vw] shrink-0 snap-start overflow-hidden border bg-card/50 md:w-auto md:shrink"
+								className="w-[min(86vw,23rem)] shrink-0 snap-center overflow-hidden border bg-card/50 md:w-auto md:shrink md:snap-start"
 							>
 								<Skeleton className="h-24 w-full" />
 								<div className="space-y-3 p-4">
@@ -219,7 +219,7 @@ export function AiCollections() {
 							<motion.div
 								key={collection.id}
 								variants={item}
-								className="w-[80vw] shrink-0 snap-start md:w-auto md:shrink"
+								className="w-[min(86vw,23rem)] shrink-0 snap-center md:w-auto md:shrink md:snap-start"
 							>
 								<CollectionPreview collection={collection} index={index} />
 							</motion.div>

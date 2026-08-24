@@ -157,8 +157,12 @@ export default function CollectionsPage() {
 	const reduceMotion = useReducedMotion();
 	const [activeTab, setActiveTab] = useState<CollectionTab>("all");
 
-	const { data: collections, isLoading } =
-		api.aiCollections.getAICollections.useQuery({ limit: 20 });
+	const {
+		data: collections,
+		isLoading,
+		isError,
+		refetch,
+	} = api.aiCollections.getAICollections.useQuery({ limit: 20 });
 
 	const filteredCollections =
 		collections?.filter((collection) => {
@@ -237,23 +241,25 @@ export default function CollectionsPage() {
 					icon={Sparkles}
 				/>
 
-				<div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+				<div className="mb-8 grid grid-cols-3 gap-2 sm:gap-4">
 					{stats.map((stat) => (
 						<Card key={stat.label} className="border bg-card">
-							<CardContent className="flex items-center gap-3 p-4">
-								<div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+							<CardContent className="flex h-full flex-col items-start gap-2 p-3 sm:flex-row sm:items-center sm:gap-3 sm:p-4">
+								<div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary sm:size-11">
 									<stat.icon className="h-5 w-5" />
 								</div>
-								<div>
+								<div className="min-w-0">
 									<p
 										className={cn(
-											"font-bold text-2xl leading-tight",
+											"truncate font-bold text-base leading-tight sm:text-2xl",
 											stat.mono && "font-mono tabular-nums",
 										)}
 									>
 										{stat.value}
 									</p>
-									<p className="text-muted-foreground text-sm">{stat.label}</p>
+									<p className="line-clamp-2 text-[11px] text-muted-foreground leading-tight sm:text-sm">
+										{stat.label}
+									</p>
 								</div>
 							</CardContent>
 						</Card>
@@ -294,6 +300,14 @@ export default function CollectionsPage() {
 							<CollectionSkeleton key={i} />
 						))}
 					</div>
+				) : isError ? (
+					<EmptyState
+						icon="↻"
+						title={t("load_error_title")}
+						description={t("load_error_description")}
+						actionLabel={t("retry")}
+						onAction={() => void refetch()}
+					/>
 				) : filteredCollections.length === 0 ? (
 					<EmptyState
 						icon={emptyByTab[activeTab].icon}

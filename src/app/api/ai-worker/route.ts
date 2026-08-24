@@ -175,7 +175,7 @@ async function handleClaim(limit: number) {
 		}
 
 		const latestVersion = await loadLatestVersion(candidate.pluginId);
-		if (!latestVersion || !latestVersion.fileContent) {
+		if (!latestVersion?.fileContent) {
 			await failQueueItem(candidate.id, "Plugin version or source not found");
 			continue;
 		}

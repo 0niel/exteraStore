@@ -21,7 +21,7 @@ export function PageHeader({
 
 	return (
 		<div
-			className={`relative isolate mb-8 animate-fade-up sm:mb-10 md:mb-14 ${
+			className={`relative isolate mb-7 animate-fade-up sm:mb-10 md:mb-14 ${
 				centered ? "text-center" : "text-left"
 			}`}
 		>
@@ -34,7 +34,7 @@ export function PageHeader({
 					{badge}
 				</span>
 			</div>
-			<h1 className="mb-3 text-balance font-bold text-3xl tracking-tighter sm:mb-4 sm:text-4xl md:text-5xl">
+			<h1 className="mb-3 text-balance font-bold text-[clamp(2rem,9vw,3rem)] leading-[1.02] tracking-[-0.045em] sm:mb-4 sm:text-4xl md:text-5xl">
 				{title}
 			</h1>
 			<p

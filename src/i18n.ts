@@ -2,7 +2,7 @@ import { cookies, headers } from "next/headers";
 import { getRequestConfig } from "next-intl/server";
 import { type Locale, locales } from "~/lib/i18n-config";
 
-export { locales, type Locale };
+export { type Locale, locales };
 
 async function getServerLocale(): Promise<Locale> {
 	const cookieStore = await cookies();

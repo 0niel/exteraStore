@@ -74,8 +74,12 @@ export function ScreenshotUploader({
 			if (result.errors && result.errors.length > 0) {
 				throw new Error(result.errors[0]);
 			}
+			const uploadedUrl = result.uploadedUrls?.[0];
+			if (typeof uploadedUrl !== "string" || uploadedUrl.length === 0) {
+				throw new Error(t("upload_failed"));
+			}
 
-			return result.uploadedUrls[0];
+			return uploadedUrl;
 		},
 		[pluginSlug, t],
 	);
@@ -148,8 +152,7 @@ export function ScreenshotUploader({
 						t("upload_success", { count: successfulUploads.length }),
 					);
 				}
-			} catch (error) {
-				console.error("Upload error:", error);
+			} catch {
 				toast.error(t("upload_error"));
 			} finally {
 				setIsUploading(false);
@@ -181,21 +184,24 @@ export function ScreenshotUploader({
 
 	const removeScreenshot = async (index: number) => {
 		const screenshotUrl = screenshots[index];
+		if (!screenshotUrl) return;
 
 		try {
-			await fetch("/api/upload/images", {
+			const response = await fetch("/api/upload/images", {
 				method: "DELETE",
 				headers: {
 					"Content-Type": "application/json",
 				},
 				body: JSON.stringify({ imageUrl: screenshotUrl }),
 			});
+			if (!response.ok) {
+				throw new Error(t("delete_error"));
+			}
 
 			const newScreenshots = screenshots.filter((_, i) => i !== index);
 			onScreenshotsChange(newScreenshots);
 			toast.success(t("screenshot_deleted"));
-		} catch (error) {
-			console.error("Delete error:", error);
+		} catch {
 			toast.error(t("delete_error"));
 		}
 	};

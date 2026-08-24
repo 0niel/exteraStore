@@ -48,6 +48,5 @@ export function setLocaleCookie(locale: Locale) {
 		return;
 	}
 
-	// biome-ignore lint/suspicious/noDocumentCookie: fallback for browsers without the Cookie Store API
 	document.cookie = `locale=${locale}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
 }

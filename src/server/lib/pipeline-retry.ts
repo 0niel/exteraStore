@@ -1,4 +1,5 @@
 import { and, eq, inArray, lt, sql } from "drizzle-orm";
+import { env } from "~/env";
 import { db } from "~/server/db";
 import { pluginPipelineQueue } from "~/server/db/schema";
 
@@ -82,6 +83,10 @@ async function retryTick() {
 }
 
 export function startPipelineRetryLoop() {
+	if (env.PIPELINE_RETRY !== "true") {
+		return;
+	}
+
 	if (globalState.__pipelineRetryStarted) {
 		return;
 	}
