@@ -76,7 +76,7 @@ export function FeaturedPlugins() {
 				</motion.div>
 
 				{isLoading ? (
-					<div className="grid min-w-0 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
+					<div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
 						{Array.from({ length: 3 }).map((_, i) => (
 							<Skeleton key={i} className="h-104 w-full min-w-0 rounded-2xl" />
 						))}
@@ -87,7 +87,7 @@ export function FeaturedPlugins() {
 						initial="hidden"
 						whileInView="show"
 						viewport={{ once: true, margin: "-80px" }}
-						className="grid min-w-0 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3"
+						className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3"
 					>
 						{featuredPlugins?.map((plugin: typeof Plugin.$inferSelect) => (
 							<motion.div

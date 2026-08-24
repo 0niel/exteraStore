@@ -159,7 +159,7 @@ export function HeroSection() {
 						</Button>
 					</motion.div>
 
-					<div className="mt-10 grid gap-3 text-left sm:grid-cols-3">
+					<div className="mt-10 grid grid-cols-1 gap-3 text-left sm:grid-cols-3">
 						{features.map(({ icon: Icon, title, text }) => (
 							<div
 								key={title}

@@ -138,7 +138,7 @@ export function PluginInsight({ pluginId, pluginName }: PluginInsightProps) {
 							</p>
 						</div>
 
-						<div className="grid gap-3 sm:grid-cols-2">
+						<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
 							<section className="rounded-2xl bg-surface/80 p-4">
 								<h3 className="mb-3 flex items-center gap-2 font-semibold text-sm">
 									<CheckCircle2 className="size-4 text-success" />

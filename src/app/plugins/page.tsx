@@ -170,7 +170,7 @@ function PluginsContent() {
 
 			<div className="container mx-auto px-4 py-6 sm:py-8">
 				<div className="sticky top-[calc(4rem+env(safe-area-inset-top))] z-20 -mx-4 mb-7 max-w-full overflow-hidden bg-background/96 px-4 py-3 backdrop-blur-xl sm:mx-0 sm:rounded-2xl sm:bg-surface sm:p-4">
-					<div className="grid gap-3 lg:grid-cols-[minmax(16rem,1fr)_13rem_auto]">
+					<div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(16rem,1fr)_13rem_auto]">
 						<label className="relative block">
 							<span className="sr-only">{t("search_label")}</span>
 							<Search className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-muted-foreground" />

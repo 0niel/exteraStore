@@ -32,7 +32,7 @@ export function ReviewSummary({ pluginId }: ReviewSummaryProps) {
 					<div className="skeleton-shimmer h-6 w-32 rounded-full" />
 					<div className="skeleton-shimmer h-4 w-full rounded-md" />
 					<div className="skeleton-shimmer h-4 w-3/4 rounded-md" />
-					<div className="grid gap-3 sm:grid-cols-2">
+					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
 						<div className="skeleton-shimmer h-16 rounded-lg" />
 						<div className="skeleton-shimmer h-16 rounded-lg" />
 					</div>
@@ -71,7 +71,7 @@ export function ReviewSummary({ pluginId }: ReviewSummaryProps) {
 
 				<p className="text-sm leading-relaxed">{data.verdict}</p>
 
-				<div className="grid gap-4 sm:grid-cols-2">
+				<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 					{data.pros.length > 0 && (
 						<div className="space-y-2">
 							<h4 className="font-medium font-mono text-muted-foreground text-xs uppercase tracking-wide">

@@ -403,7 +403,7 @@ export default function PulsePage() {
 					/>
 				</div>
 
-				<div className="grid gap-8 lg:grid-cols-[1fr_20rem]">
+				<div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_20rem]">
 					<div className="min-w-0">
 						<div className="scrollbar-hide -mx-4 mb-6 flex snap-x gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
 							{tabItems.map((item) => {

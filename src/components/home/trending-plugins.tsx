@@ -74,7 +74,7 @@ export function TrendingPlugins() {
 				</motion.div>
 
 				{isLoading ? (
-					<div className="grid min-w-0 gap-3 md:grid-cols-2">
+					<div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2">
 						{Array.from({ length: 4 }).map((_, i) => (
 							<Skeleton key={i} className="h-28 w-full min-w-0 rounded-2xl" />
 						))}
@@ -85,7 +85,7 @@ export function TrendingPlugins() {
 						initial="hidden"
 						whileInView="show"
 						viewport={{ once: true, margin: "-80px" }}
-						className="grid min-w-0 gap-3 md:grid-cols-2"
+						className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2"
 					>
 						{trending.map((plugin: Plugin) => (
 							<motion.div
