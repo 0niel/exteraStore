@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 
 import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import {
@@ -27,7 +27,7 @@ import { api } from "~/trpc/react";
 import { Card } from "./ui/card";
 
 interface PluginPipelineProps {
-	pluginSlug: string;
+	pluginId: number;
 }
 
 interface PipelineCheck {
@@ -47,42 +47,45 @@ const checkTypeIcons = {
 	performance: Zap,
 };
 
-export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
+export function PluginPipeline({ pluginId }: PluginPipelineProps) {
 	const t = useTranslations("PluginPipeline");
 	const locale = useLocale();
 	const [isRunning, setIsRunning] = useState(false);
+	const wasRunningRef = useRef(false);
 
 	const checkTypeNames = {
 		security: t("security_check"),
 		performance: t("performance_analysis"),
 	};
 
-	const { data: plugin } = api.plugins.getBySlug.useQuery({ slug: pluginSlug });
-
 	const {
 		data: checks,
 		isLoading,
 		refetch,
 	} = api.pluginPipeline.getChecks.useQuery(
-		{ pluginSlug },
-		{ refetchInterval: isRunning ? 2000 : false },
+		{ pluginId },
+		{
+			refetchInterval: isRunning ? 2500 : false,
+			staleTime: isRunning ? 0 : 30_000,
+		},
 	);
-
-	api.pluginPipeline.getQueueStatus.useQuery(undefined, {
-		refetchInterval: isRunning ? 2000 : false,
-	});
 
 	const { data: pluginQueueStatus } =
 		api.pluginPipeline.getPluginQueueStatus.useQuery(
-			{ pluginSlug },
-			{ refetchInterval: isRunning ? 2000 : false },
+			{ pluginId },
+			{
+				refetchInterval: isRunning ? 2500 : false,
+				staleTime: isRunning ? 0 : 15_000,
+			},
 		);
 
 	const runChecksMutation = api.pluginPipeline.runChecks.useMutation({
 		onSuccess: () => {
-			toast.success(t("run_checks"));
+			toast.success(t("toast_checks_started"), {
+				description: t("toast_checks_started_description"),
+			});
 			setIsRunning(true);
-			refetch();
+			void refetch();
 		},
 		onError: (error) => {
 			toast.error(`${t("check_error")}: ${error.message}`);
@@ -90,11 +93,7 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 	});
 
 	const handleRunChecks = () => {
-		if (!plugin?.id) {
-			toast.error(t("check_error"));
-			return;
-		}
-		runChecksMutation.mutate({ pluginId: plugin.id });
+		runChecksMutation.mutate({ pluginId });
 	};
 
 	const groupedChecks: Record<string, PipelineCheck[]> =
@@ -130,12 +129,20 @@ export function PluginPipeline({ pluginSlug }: PluginPipelineProps) {
 			pluginQueueStatus.status === "processing");
 
 	useEffect(() => {
-		if ((hasRunningChecks || isPluginInQueue) && !isRunning) {
-			setIsRunning(true);
-		} else if (!hasRunningChecks && !isPluginInQueue && isRunning) {
-			setIsRunning(false);
+		const runningNow = Boolean(hasRunningChecks || isPluginInQueue);
+		if (runningNow) {
+			wasRunningRef.current = true;
+			if (!isRunning) setIsRunning(true);
+			return;
 		}
-	}, [hasRunningChecks, isPluginInQueue, isRunning]);
+		if (wasRunningRef.current) {
+			toast.success(t("toast_checks_completed"), {
+				description: t("toast_checks_completed_description"),
+			});
+			wasRunningRef.current = false;
+			if (isRunning) setIsRunning(false);
+		}
+	}, [hasRunningChecks, isPluginInQueue, isRunning, t]);
 
 	if (isLoading) {
 		return (

@@ -1,10 +1,10 @@
 "use client";
 
-import { Bot, Download, ExternalLink, Shield, Zap } from "lucide-react";
+import { Blocks, Bot, Download, Shield, Zap } from "lucide-react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
-import { toast } from "sonner";
 import { TelegramIcon } from "~/components/icons/telegram-icon";
+import type { PluginDependencySummary } from "~/components/plugin-dependency-picker";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
@@ -14,199 +14,90 @@ import {
 	CardHeader,
 	CardTitle,
 } from "~/components/ui/card";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogHeader,
-	DialogTitle,
-} from "~/components/ui/dialog";
-import { env } from "~/env";
-import { api } from "~/trpc/react";
 
 interface TelegramBotIntegrationProps {
-	pluginId: number;
-	pluginName: string;
-	pluginSlug?: string;
-	telegramBotDeeplink?: string | null;
-	price: number;
-	onDownload?: () => void;
+	dependencies?: PluginDependencySummary[];
+	onRequestInstall: () => void;
+	isDownloading?: boolean;
 }
 
 export function TelegramBotIntegration({
-	pluginId,
-	pluginName,
-	pluginSlug,
-	telegramBotDeeplink,
-	price: _price,
-	onDownload,
+	dependencies = [],
+	onRequestInstall,
+	isDownloading = false,
 }: TelegramBotIntegrationProps) {
 	const t = useTranslations("TelegramBotIntegration");
-	const [isDialogOpen, setIsDialogOpen] = useState(false);
-	const [isDownloading, setIsDownloading] = useState(false);
-
-	const { data: serverDeepLink } =
-		api.telegramNotifications.createDeepLink.useQuery(
-			{ pluginSlug: pluginSlug ?? "" },
-			{ enabled: !!pluginSlug, retry: false },
-		);
-
-	const resolveBotLink = () => {
-		if (serverDeepLink?.deepLink) {
-			return serverDeepLink.deepLink;
-		}
-		if (telegramBotDeeplink) {
-			return telegramBotDeeplink;
-		}
-		const botUsername =
-			env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "exterastore_bot";
-		return `https://t.me/${botUsername}?start=plugin_${pluginSlug ?? pluginId}`;
-	};
-
-	const handleTelegramDownload = async () => {
-		setIsDownloading(true);
-
-		try {
-			if (onDownload) {
-				onDownload();
-			}
-
-			setIsDialogOpen(true);
-
-			setTimeout(() => {
-				window.open(resolveBotLink(), "_blank");
-			}, 500);
-		} catch (_error) {
-			toast.error(t("bot_open_error"));
-		} finally {
-			setTimeout(() => setIsDownloading(false), 1000);
-		}
-	};
 
 	return (
-		<>
-			<Card className="gap-0 bg-primary/[0.07] py-0 sm:py-0">
-				<CardHeader className="pb-3">
-					<div className="flex items-center gap-2">
-						<div className="rounded-xl bg-primary/10 p-2 text-primary">
-							<Bot className="h-5 w-5 animate-pulse-dot text-primary" />
+		<Card className="gap-0 bg-primary/[0.07] py-0 sm:py-0">
+			<CardHeader className="pb-3">
+				<div className="flex items-center gap-2">
+					<div className="rounded-xl bg-primary/10 p-2 text-primary">
+						<Bot className="h-5 w-5 animate-pulse-dot text-primary" />
+					</div>
+					<div>
+						<CardTitle className="text-lg">
+							{t("download_via_telegram")}
+						</CardTitle>
+						<CardDescription>{t("fast_installation")}</CardDescription>
+					</div>
+				</div>
+			</CardHeader>
+			<CardContent className="space-y-4">
+				{dependencies.length > 0 && (
+					<div className="rounded-2xl bg-background/70 p-3">
+						<div className="flex items-center gap-2 text-sm">
+							<Blocks className="size-4 text-primary" />
+							<span className="font-medium">
+								{t("dependencies_required", {
+									count: dependencies.length,
+								})}
+							</span>
 						</div>
-						<div>
-							<CardTitle className="text-lg">
-								{t("download_via_telegram")}
-							</CardTitle>
-							<CardDescription>{t("fast_installation")}</CardDescription>
+						<div className="mt-2 flex flex-wrap gap-1.5">
+							{dependencies.map((dependency) => (
+								<Link
+									key={dependency.id}
+									href={`/plugins/${dependency.slug}`}
+									className="rounded-full bg-muted px-2.5 py-1 font-medium text-foreground text-xs transition-colors hover:bg-primary/10 hover:text-primary"
+								>
+									{dependency.name}
+								</Link>
+							))}
 						</div>
 					</div>
-				</CardHeader>
-				<CardContent className="space-y-4">
-					<div className="flex items-center justify-center">
-						<Badge variant="secondary" className="bg-background/70 text-xs">
-							<Shield className="mr-1 h-3 w-3" />
-							{t("verified")}
-						</Badge>
-					</div>
+				)}
+				<div className="flex items-center justify-center">
+					<Badge variant="secondary" className="bg-background/70 text-xs">
+						<Shield className="mr-1 h-3 w-3" />
+						{t("verified")}
+					</Badge>
+				</div>
 
-					<Button
-						onClick={handleTelegramDownload}
-						disabled={isDownloading}
-						className="press-scale min-h-11 w-full"
-						size="lg"
-					>
-						{isDownloading ? (
-							<>
-								<div className="mr-2 h-4 w-4 animate-spin rounded-full border-primary-foreground border-b-2" />
-								{t("opening_bot")}
-							</>
-						) : (
-							<>
-								<TelegramIcon className="mr-2 h-4 w-4" />
-								{t("download_in_telegram")}
-							</>
-						)}
-					</Button>
+				<Button
+					onClick={onRequestInstall}
+					disabled={isDownloading}
+					className="press-scale min-h-11 w-full"
+					size="lg"
+				>
+					{isDownloading ? (
+						<>
+							<div className="mr-2 h-4 w-4 animate-spin rounded-full border-primary-foreground border-b-2" />
+							{t("opening_bot")}
+						</>
+					) : (
+						<>
+							<TelegramIcon className="mr-2 h-4 w-4" />
+							{t("download_in_telegram")}
+						</>
+					)}
+				</Button>
 
-					<div className="text-center text-muted-foreground text-xs">
-						{t("redirect_notice")}
-					</div>
-				</CardContent>
-			</Card>
-
-			<Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-				<DialogContent className="sm:max-w-md">
-					<DialogHeader>
-						<DialogTitle className="flex items-center gap-2">
-							<Bot className="h-5 w-5 text-primary" />
-							{t("installation_via_telegram")}
-						</DialogTitle>
-						<DialogDescription>{t("follow_instructions")}</DialogDescription>
-					</DialogHeader>
-					<div className="space-y-4">
-						<div className="space-y-3 rounded-xl bg-primary/5 p-4">
-							<div className="flex items-start gap-3">
-								<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary/10 font-medium font-mono text-primary text-xs">
-									01
-								</div>
-								<div>
-									<p className="font-medium">{t("open_bot")}</p>
-									<p className="text-muted-foreground text-sm">
-										{t("bot_auto_open")}
-									</p>
-								</div>
-							</div>
-
-							<div className="flex items-start gap-3">
-								<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary/10 font-medium font-mono text-primary text-xs">
-									02
-								</div>
-								<div>
-									<p className="font-medium">{t("press_start")}</p>
-									<p className="text-muted-foreground text-sm">
-										{t("bot_will_start_installation", { pluginName })}
-									</p>
-								</div>
-							</div>
-
-							<div className="flex items-start gap-3">
-								<div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl bg-primary/10 font-medium font-mono text-primary text-xs">
-									03
-								</div>
-								<div>
-									<p className="font-medium">{t("follow_bot_instructions")}</p>
-									<p className="text-muted-foreground text-sm">
-										{t("bot_will_guide")}
-									</p>
-								</div>
-							</div>
-						</div>
-
-						<div className="flex items-center gap-2 rounded-lg bg-success/10 p-3">
-							<Shield className="h-4 w-4 shrink-0 text-success" />
-							<p className="text-sm text-success">{t("plugins_verified")}</p>
-						</div>
-
-						<div className="flex gap-2">
-							<Button
-								variant="outline"
-								onClick={() => setIsDialogOpen(false)}
-								className="min-h-11 flex-1"
-							>
-								{t("close")}
-							</Button>
-							<Button
-								onClick={() => {
-									window.open(resolveBotLink(), "_blank");
-								}}
-								className="min-h-11 flex-1"
-							>
-								<ExternalLink className="mr-2 h-4 w-4" />
-								{t("open_bot_button")}
-							</Button>
-						</div>
-					</div>
-				</DialogContent>
-			</Dialog>
-		</>
+				<div className="text-center text-muted-foreground text-xs">
+					{t("redirect_notice")}
+				</div>
+			</CardContent>
+		</Card>
 	);
 }
 

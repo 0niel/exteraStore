@@ -23,6 +23,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { MarkdownEditor } from "~/components/markdown-editor";
 import { PageHeader } from "~/components/page-header";
+import { PluginDependencyPicker } from "~/components/plugin-dependency-picker";
 import { PluginManageVersions } from "~/components/plugin-manage-versions";
 import { ScreenshotUploader } from "~/components/screenshot-uploader";
 import { TagInput } from "~/components/tag-input";
@@ -111,6 +112,7 @@ export default function PluginManagePage() {
 	const { data: session } = useSession();
 	const t = useTranslations("ManagePlugin");
 	const reduceMotion = useReducedMotion();
+	const utils = api.useUtils();
 	const slug = params.slug as string;
 
 	const {
@@ -133,6 +135,7 @@ export default function PluginManagePage() {
 		minExteralessVersion: "",
 	});
 	const [screenshots, setScreenshots] = useState<string[]>([]);
+	const [dependencyPluginIds, setDependencyPluginIds] = useState<number[]>([]);
 
 	useEffect(() => {
 		if (plugin) {
@@ -152,17 +155,26 @@ export default function PluginManagePage() {
 				minExteralessVersion: plugin.minExteralessVersion ?? "",
 			});
 			setScreenshots(safeJsonParse<string[]>(plugin.screenshots ?? "", []));
+			setDependencyPluginIds(
+				plugin.dependencies.map((dependency) => dependency.id),
+			);
 		}
 	}, [plugin]);
 
 	const updatePlugin = api.plugins.update.useMutation({
 		onSuccess: (updatedPlugin) => {
 			if (!updatedPlugin) return;
-			toast.success(t("toast_updated"));
-			router.push(`/my-plugins/${updatedPlugin.slug}/manage`);
+			toast.success(t("toast_updated"), {
+				id: "plugin-update",
+				description: t("toast_updated_description"),
+			});
+			void utils.plugins.getBySlug.invalidate();
+			router.replace(`/my-plugins/${updatedPlugin.slug}/manage`);
 		},
 		onError: (mutationError) => {
-			toast.error(t("toast_update_error", { error: mutationError.message }));
+			toast.error(t("toast_update_error", { error: mutationError.message }), {
+				id: "plugin-update",
+			});
 		},
 	});
 
@@ -178,11 +190,16 @@ export default function PluginManagePage() {
 
 	const handleSave = () => {
 		if (!plugin) return;
+		toast.loading(t("toast_saving"), {
+			id: "plugin-update",
+			description: t("toast_saving_description"),
+		});
 		updatePlugin.mutate({
 			id: plugin.id,
 			...formData,
 			tags: JSON.stringify(formData.tags),
 			screenshots: JSON.stringify(screenshots),
+			dependencyPluginIds,
 			minExteraVersion: formData.minExteraVersion.trim() || null,
 			exteralessCompatible:
 				formData.exteralessCompatible === "unspecified"
@@ -416,6 +433,13 @@ export default function PluginManagePage() {
 										</div>
 									</CardContent>
 								</Card>
+								<PluginDependencyPicker
+									selectedIds={dependencyPluginIds}
+									onChange={setDependencyPluginIds}
+									selectedPlugins={plugin.dependencies}
+									excludePluginId={plugin.id}
+									disabled={updatePlugin.isPending}
+								/>
 								<Card>
 									<CardHeader>
 										<CardTitle className="flex items-center gap-3">

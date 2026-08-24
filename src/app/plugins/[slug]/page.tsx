@@ -30,6 +30,7 @@ import { SmartCaptcha } from "~/components/captcha/smart-captcha";
 import { DonationWidget } from "~/components/donations/donation-widget";
 import { GitHubIcon } from "~/components/icons/github-icon";
 import { ImageGallery } from "~/components/image-gallery";
+import { PluginInstallDialog } from "~/components/plugin-install-dialog";
 import { PluginPipeline } from "~/components/plugin-pipeline";
 import { PluginSubscription } from "~/components/plugin-subscription";
 import { PluginVersions } from "~/components/plugin-versions";
@@ -46,7 +47,6 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "~/components/ui/tooltip";
-import { env } from "~/env";
 import { cn, formatDate, formatNumber, safeJsonParse } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
@@ -70,6 +70,7 @@ export default function PluginDetailPage() {
 	const [editingRating, setEditingRating] = useState<number>(5);
 	const [editingComment, setEditingComment] = useState("");
 	const [downloadPulse, setDownloadPulse] = useState(0);
+	const [isInstallDialogOpen, setIsInstallDialogOpen] = useState(false);
 	const reviewTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
 	const {
@@ -185,17 +186,6 @@ export default function PluginDetailPage() {
 			pluginId: plugin.id,
 			userAgent: navigator.userAgent,
 		});
-	};
-
-	const handleMobileDownload = () => {
-		if (!plugin) return;
-		handleDownload();
-		const botUsername =
-			env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || "exterastore_bot";
-		const botLink =
-			plugin.telegramBotDeeplink ||
-			`https://t.me/${botUsername}?start=plugin_${plugin.id}`;
-		window.open(botLink, "_blank");
 	};
 
 	const handleAddReview = () => {
@@ -594,12 +584,9 @@ export default function PluginDetailPage() {
 
 						<div className="space-y-3">
 							<TelegramBotIntegration
-								pluginId={plugin.id}
-								pluginName={plugin.name}
-								pluginSlug={plugin.slug}
-								telegramBotDeeplink={plugin.telegramBotDeeplink}
-								price={0}
-								onDownload={handleDownload}
+								dependencies={plugin.dependencies}
+								onRequestInstall={() => setIsInstallDialogOpen(true)}
+								isDownloading={downloadMutation.isPending}
 							/>
 							{session?.user?.id === plugin.authorId && (
 								<Button
@@ -1200,7 +1187,7 @@ export default function PluginDetailPage() {
 								)}
 
 								{activeTab === "pipeline" && (
-									<PluginPipeline pluginSlug={plugin.slug} />
+									<PluginPipeline pluginId={plugin.id} />
 								)}
 							</motion.div>
 						</AnimatePresence>
@@ -1231,7 +1218,7 @@ export default function PluginDetailPage() {
 					>
 						<Button
 							className="press-scale min-h-11 w-full"
-							onClick={handleMobileDownload}
+							onClick={() => setIsInstallDialogOpen(true)}
 							disabled={downloadMutation.isPending}
 						>
 							<Download className="mr-2 h-4 w-4" />
@@ -1240,6 +1227,16 @@ export default function PluginDetailPage() {
 					</motion.div>
 				</div>
 			</div>
+
+			<PluginInstallDialog
+				open={isInstallDialogOpen}
+				onOpenChange={setIsInstallDialogOpen}
+				pluginId={plugin.id}
+				pluginName={plugin.name}
+				pluginSlug={plugin.slug}
+				telegramBotDeeplink={plugin.telegramBotDeeplink}
+				onDownload={handleDownload}
+			/>
 		</div>
 	);
 }

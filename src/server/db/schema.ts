@@ -74,6 +74,32 @@ export const plugins = pgTable(
 	],
 );
 
+export const pluginDependencies = pgTable(
+	"extera_plugins_plugin_dependency",
+	{
+		id: serial("id").primaryKey(),
+		pluginId: integer("plugin_id")
+			.notNull()
+			.references(() => plugins.id, { onDelete: "cascade" }),
+		dependencyPluginId: integer("dependency_plugin_id")
+			.notNull()
+			.references(() => plugins.id, { onDelete: "cascade" }),
+		dependencyType: text("dependency_type").default("required").notNull(),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+	},
+	(t) => [
+		uniqueIndex("plugin_dependency_unique_idx").on(
+			t.pluginId,
+			t.dependencyPluginId,
+		),
+		index("plugin_dependency_plugin_idx").on(t.pluginId),
+		index("plugin_dependency_target_idx").on(t.dependencyPluginId),
+		index("plugin_dependency_type_idx").on(t.dependencyType),
+	],
+);
+
 export const pluginReviews = pgTable(
 	"extera_plugins_plugin_review",
 	{
@@ -334,7 +360,29 @@ export const pluginsRelations = relations(plugins, ({ one, many }) => ({
 	gitRepo: one(pluginGitRepos),
 	favorites: many(pluginFavorites),
 	activities: many(pluginActivities),
+	dependencies: many(pluginDependencies, {
+		relationName: "plugin_dependency_source",
+	}),
+	dependents: many(pluginDependencies, {
+		relationName: "plugin_dependency_target",
+	}),
 }));
+
+export const pluginDependenciesRelations = relations(
+	pluginDependencies,
+	({ one }) => ({
+		plugin: one(plugins, {
+			fields: [pluginDependencies.pluginId],
+			references: [plugins.id],
+			relationName: "plugin_dependency_source",
+		}),
+		dependency: one(plugins, {
+			fields: [pluginDependencies.dependencyPluginId],
+			references: [plugins.id],
+			relationName: "plugin_dependency_target",
+		}),
+	}),
+);
 
 export const pluginVersionsRelations = relations(
 	pluginVersions,
@@ -540,6 +588,11 @@ export const pluginPipelineChecks = pgTable(
 		index("pipeline_plugin_idx").on(t.pluginId),
 		index("pipeline_status_idx").on(t.status),
 		index("pipeline_type_idx").on(t.checkType),
+		index("pipeline_plugin_type_created_idx").on(
+			t.pluginId,
+			t.checkType,
+			t.createdAt,
+		),
 	],
 );
 
@@ -566,6 +619,11 @@ export const pluginPipelineQueue = pgTable(
 		index("queue_status_idx").on(t.status),
 		index("queue_priority_idx").on(t.priority),
 		index("queue_scheduled_idx").on(t.scheduledAt),
+		index("queue_plugin_status_created_idx").on(
+			t.pluginId,
+			t.status,
+			t.createdAt,
+		),
 	],
 );
 

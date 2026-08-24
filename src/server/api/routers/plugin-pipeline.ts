@@ -1,4 +1,12 @@
-import { and, desc, eq, inArray, like, sql } from "drizzle-orm";
+import {
+	and,
+	desc,
+	eq,
+	getTableColumns,
+	inArray,
+	like,
+	sql,
+} from "drizzle-orm";
 import { z } from "zod";
 import { env } from "~/env";
 import { getAllowedNotificationUserIds } from "~/lib/telegram-notifications";
@@ -94,27 +102,23 @@ export async function processQueueItem(
 	ctx: PipelineContext,
 	queueItemId: number,
 ) {
-	const queueItem = await ctx.db
-		.select()
-		.from(pluginPipelineQueue)
-		.where(eq(pluginPipelineQueue.id, queueItemId))
-		.limit(1);
+	const [item] = await ctx.db
+		.update(pluginPipelineQueue)
+		.set({
+			status: "processing",
+			startedAt: Math.floor(Date.now() / 1000),
+		})
+		.where(
+			and(
+				eq(pluginPipelineQueue.id, queueItemId),
+				eq(pluginPipelineQueue.status, "queued"),
+			),
+		)
+		.returning();
 
-	if (queueItem[0]?.status !== "queued") {
-		return;
-	}
-
-	const item = queueItem[0];
+	if (!item) return;
 
 	try {
-		await ctx.db
-			.update(pluginPipelineQueue)
-			.set({
-				status: "processing",
-				startedAt: Math.floor(Date.now() / 1000),
-			})
-			.where(eq(pluginPipelineQueue.id, item.id));
-
 		const plugin = await ctx.db
 			.select()
 			.from(plugins)
@@ -152,18 +156,26 @@ export async function processQueueItem(
 					aiChecker.checkPerformance(code, name),
 			},
 		];
+		const checkIds: number[] = [];
 
 		for (const check of checks) {
 			const startTime = Date.now();
+			let checkId: number | null = null;
 
 			try {
-				await ctx.db.insert(pluginPipelineChecks).values({
-					pluginId: item.pluginId,
-					checkType: check.type,
-					status: "running",
-					llmModel: env.OPENROUTER_MODEL,
-					llmPrompt: `Version: ${latestVersion[0].version}`,
-				});
+				const [createdCheck] = await ctx.db
+					.insert(pluginPipelineChecks)
+					.values({
+						pluginId: item.pluginId,
+						checkType: check.type,
+						status: "running",
+						llmModel: env.OPENROUTER_MODEL,
+						llmPrompt: `Version: ${latestVersion[0].version}`,
+					})
+					.returning({ id: pluginPipelineChecks.id });
+				if (!createdCheck) throw new Error("Failed to create pipeline check");
+				checkId = createdCheck.id;
+				checkIds.push(createdCheck.id);
 
 				const result = await check.checker(
 					latestVersion[0].fileContent,
@@ -182,28 +194,18 @@ export async function processQueueItem(
 						executionTime,
 						completedAt: Math.floor(Date.now() / 1000),
 					})
-					.where(
-						and(
-							eq(pluginPipelineChecks.pluginId, item.pluginId),
-							eq(pluginPipelineChecks.checkType, check.type),
-							eq(pluginPipelineChecks.status, "running"),
-						),
-					);
+					.where(eq(pluginPipelineChecks.id, createdCheck.id));
 			} catch {
-				await ctx.db
-					.update(pluginPipelineChecks)
-					.set({
-						status: "error",
-						errorMessage: "AI check failed",
-						completedAt: Math.floor(Date.now() / 1000),
-					})
-					.where(
-						and(
-							eq(pluginPipelineChecks.pluginId, item.pluginId),
-							eq(pluginPipelineChecks.checkType, check.type),
-							eq(pluginPipelineChecks.status, "running"),
-						),
-					);
+				if (checkId !== null) {
+					await ctx.db
+						.update(pluginPipelineChecks)
+						.set({
+							status: "error",
+							errorMessage: "AI check failed",
+							completedAt: Math.floor(Date.now() / 1000),
+						})
+						.where(eq(pluginPipelineChecks.id, checkId));
+				}
 			}
 		}
 
@@ -217,15 +219,13 @@ export async function processQueueItem(
 			})
 			.where(eq(pluginPipelineQueue.id, item.id));
 
-		const checkResults = await ctx.db
-			.select()
-			.from(pluginPipelineChecks)
-			.where(
-				and(
-					eq(pluginPipelineChecks.pluginId, item.pluginId),
-					sql`${pluginPipelineChecks.createdAt} > ${item.createdAt}`,
-				),
-			);
+		const checkResults =
+			checkIds.length > 0
+				? await ctx.db
+						.select()
+						.from(pluginPipelineChecks)
+						.where(inArray(pluginPipelineChecks.id, checkIds))
+				: [];
 
 		const hasCriticalIssues = checkResults.some(
 			(check: typeof pluginPipelineChecks.$inferSelect) =>
@@ -233,7 +233,33 @@ export async function processQueueItem(
 		);
 
 		if (hasCriticalIssues) {
-			await sendSecurityAlerts(ctx.db, item.pluginId, plugin[0]);
+			try {
+				await sendSecurityAlerts(ctx.db, item.pluginId, plugin[0]);
+			} catch (error) {
+				console.error("Failed to send security alerts:", error);
+			}
+		}
+
+		if (plugin[0].authorId) {
+			const failedChecks = checkResults.filter(
+				(check: typeof pluginPipelineChecks.$inferSelect) =>
+					check.status === "failed" || check.status === "error",
+			).length;
+			try {
+				await ctx.db.insert(notifications).values({
+					userId: plugin[0].authorId,
+					pluginId: item.pluginId,
+					type: "pipeline_completed",
+					title: "Проверки плагина завершены",
+					message:
+						failedChecks > 0
+							? `Для ${plugin[0].name} завершены проверки. Требуют внимания: ${failedChecks}.`
+							: `${plugin[0].name} успешно прошёл автоматические проверки.`,
+					data: JSON.stringify({ failedChecks, queueItemId: item.id }),
+				});
+			} catch (error) {
+				console.error("Failed to create pipeline notification:", error);
+			}
 		}
 
 		return { pluginId: item.pluginId, status: "completed" };
@@ -254,30 +280,20 @@ export async function processQueueItem(
 
 export const pluginPipelineRouter = createTRPCRouter({
 	getChecks: publicProcedure
-		.input(z.object({ pluginSlug: z.string() }))
+		.input(z.object({ pluginId: z.number() }))
 		.query(async ({ ctx, input }) => {
-			const plugin = await ctx.db
-				.select({ id: plugins.id })
-				.from(plugins)
+			return ctx.db
+				.select({ ...getTableColumns(pluginPipelineChecks) })
+				.from(pluginPipelineChecks)
+				.innerJoin(plugins, eq(pluginPipelineChecks.pluginId, plugins.id))
 				.where(
 					and(
-						eq(plugins.slug, input.pluginSlug),
+						eq(pluginPipelineChecks.pluginId, input.pluginId),
 						eq(plugins.status, "approved"),
 					),
 				)
-				.limit(1);
-
-			if (!plugin[0]) {
-				throw new Error("Plugin not found");
-			}
-
-			const checks = await ctx.db
-				.select()
-				.from(pluginPipelineChecks)
-				.where(eq(pluginPipelineChecks.pluginId, plugin[0].id))
-				.orderBy(desc(pluginPipelineChecks.createdAt));
-
-			return checks;
+				.orderBy(desc(pluginPipelineChecks.createdAt))
+				.limit(12);
 		}),
 
 	runChecks: protectedProcedure
@@ -318,19 +334,19 @@ export const pluginPipelineRouter = createTRPCRouter({
 
 			const versionTag = `%Version: ${latestVersion[0].version}%`;
 			const existingChecks = await ctx.db
-				.select()
+				.select({ id: pluginPipelineChecks.id })
 				.from(pluginPipelineChecks)
 				.where(
 					and(
 						eq(pluginPipelineChecks.pluginId, input.pluginId),
 						like(pluginPipelineChecks.llmPrompt, versionTag),
-						eq(pluginPipelineChecks.status, "completed"),
+						inArray(pluginPipelineChecks.status, ["passed", "failed", "error"]),
 					),
 				)
 				.limit(1);
 
 			if (existingChecks.length > 0 && !isAdminSessionUser(ctx.session.user)) {
-				throw new Error("Checks already performed for the latest version");
+				throw new Error("Последняя версия уже проверена");
 			}
 
 			const activeQueue = await ctx.db
@@ -345,7 +361,7 @@ export const pluginPipelineRouter = createTRPCRouter({
 				.limit(1);
 
 			if (activeQueue.length > 0 && !isAdminSessionUser(ctx.session.user)) {
-				throw new Error("Checks are already in progress for this plugin");
+				throw new Error("Проверки этого плагина уже выполняются");
 			}
 
 			const [queueItem] = await ctx.db
@@ -385,32 +401,20 @@ export const pluginPipelineRouter = createTRPCRouter({
 	}),
 
 	getPluginQueueStatus: publicProcedure
-		.input(z.object({ pluginSlug: z.string() }))
+		.input(z.object({ pluginId: z.number() }))
 		.query(async ({ ctx, input }) => {
-			const plugin = await ctx.db
-				.select({ id: plugins.id })
-				.from(plugins)
-				.where(
-					and(
-						eq(plugins.slug, input.pluginSlug),
-						eq(plugins.status, "approved"),
-					),
-				)
-				.limit(1);
-
-			if (!plugin[0]) {
-				return null;
-			}
-
 			const queueItem = await ctx.db
-				.select()
+				.select({ ...getTableColumns(pluginPipelineQueue) })
 				.from(pluginPipelineQueue)
+				.innerJoin(plugins, eq(pluginPipelineQueue.pluginId, plugins.id))
 				.where(
 					and(
-						eq(pluginPipelineQueue.pluginId, plugin[0].id),
+						eq(pluginPipelineQueue.pluginId, input.pluginId),
+						eq(plugins.status, "approved"),
 						sql`${pluginPipelineQueue.status} IN ('queued', 'processing')`,
 					),
 				)
+				.orderBy(desc(pluginPipelineQueue.createdAt))
 				.limit(1);
 
 			return queueItem[0] || null;
@@ -441,150 +445,9 @@ export const pluginPipelineRouter = createTRPCRouter({
 
 			for (const item of queueItems) {
 				try {
-					await ctx.db
-						.update(pluginPipelineQueue)
-						.set({
-							status: "processing",
-							startedAt: Math.floor(Date.now() / 1000),
-						})
-						.where(eq(pluginPipelineQueue.id, item.id));
-
-					const plugin = await ctx.db
-						.select()
-						.from(plugins)
-						.where(eq(plugins.id, item.pluginId))
-						.limit(1);
-
-					if (!plugin[0]) {
-						throw new Error("Plugin not found");
-					}
-
-					const latestVersion = await ctx.db
-						.select({
-							fileContent: pluginVersions.fileContent,
-							version: pluginVersions.version,
-						})
-						.from(pluginVersions)
-						.where(eq(pluginVersions.pluginId, item.pluginId))
-						.orderBy(desc(pluginVersions.createdAt))
-						.limit(1);
-
-					if (!latestVersion[0]) {
-						throw new Error("Plugin version not found");
-					}
-
-					const aiChecker = new PluginAIChecker();
-					const checks = [
-						{
-							type: "security",
-							checker: (code: string, name: string) =>
-								aiChecker.checkSecurity(code, name),
-						},
-						{
-							type: "performance",
-							checker: (code: string, name: string) =>
-								aiChecker.checkPerformance(code, name),
-						},
-					];
-
-					for (const check of checks) {
-						const startTime = Date.now();
-
-						try {
-							await ctx.db.insert(pluginPipelineChecks).values({
-								pluginId: item.pluginId,
-								checkType: check.type,
-								status: "running",
-								llmModel: env.OPENROUTER_MODEL,
-								llmPrompt: `Version: ${latestVersion[0].version}`,
-							});
-
-							const result = await check.checker(
-								latestVersion[0].fileContent,
-								plugin[0].name,
-							);
-							const executionTime = Date.now() - startTime;
-
-							await ctx.db
-								.update(pluginPipelineChecks)
-								.set({
-									status: result.score >= 70 ? "passed" : "failed",
-									score: result.score,
-									details: JSON.stringify(result.details),
-									classification: result.details.classification,
-									shortDescription: result.details.shortDescription,
-									executionTime,
-									completedAt: Math.floor(Date.now() / 1000),
-								})
-								.where(
-									and(
-										eq(pluginPipelineChecks.pluginId, item.pluginId),
-										eq(pluginPipelineChecks.checkType, check.type),
-										eq(pluginPipelineChecks.status, "running"),
-									),
-								);
-						} catch {
-							await ctx.db
-								.update(pluginPipelineChecks)
-								.set({
-									status: "error",
-									errorMessage: "AI check failed",
-									completedAt: Math.floor(Date.now() / 1000),
-								})
-								.where(
-									and(
-										eq(pluginPipelineChecks.pluginId, item.pluginId),
-										eq(pluginPipelineChecks.checkType, check.type),
-										eq(pluginPipelineChecks.status, "running"),
-									),
-								);
-						}
-					}
-
-					aiChecker.cleanup();
-
-					await ctx.db
-						.update(pluginPipelineQueue)
-						.set({
-							status: "completed",
-							completedAt: Math.floor(Date.now() / 1000),
-						})
-						.where(eq(pluginPipelineQueue.id, item.id));
-
-					const checkResults = await ctx.db
-						.select()
-						.from(pluginPipelineChecks)
-						.where(
-							and(
-								eq(pluginPipelineChecks.pluginId, item.pluginId),
-								sql`${pluginPipelineChecks.createdAt} > ${item.createdAt}`,
-							),
-						);
-
-					const hasCriticalIssues = checkResults.some(
-						(check: typeof pluginPipelineChecks.$inferSelect) =>
-							check.status === "failed" &&
-							check.score !== null &&
-							check.score < 50,
-					);
-
-					if (hasCriticalIssues) {
-						await sendSecurityAlerts(ctx.db, item.pluginId, plugin[0]);
-					}
-
-					results.push({ pluginId: item.pluginId, status: "completed" });
+					const result = await processQueueItem(ctx, item.id);
+					if (result) results.push(result);
 				} catch (error) {
-					await ctx.db
-						.update(pluginPipelineQueue)
-						.set({
-							status: "failed",
-							errorMessage:
-								error instanceof Error ? error.message : "Unknown error",
-							retryCount: item.retryCount + 1,
-							completedAt: Math.floor(Date.now() / 1000),
-						})
-						.where(eq(pluginPipelineQueue.id, item.id));
-
 					results.push({
 						pluginId: item.pluginId,
 						status: "failed",

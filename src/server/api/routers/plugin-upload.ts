@@ -12,6 +12,11 @@ import {
 	pluginVersions,
 } from "~/server/db/schema";
 import { verifyCaptcha } from "~/server/lib/captcha";
+import {
+	notifyDependencyAuthors,
+	replacePluginDependencies,
+	validatePluginDependencyIds,
+} from "~/server/lib/plugin-dependencies";
 
 const createPluginSchema = z.object({
 	name: z.string().min(1).max(256),
@@ -37,6 +42,7 @@ const createPluginSchema = z.object({
 		.max(20)
 		.regex(/^\d+(\.\d+)*$/)
 		.optional(),
+	dependencyPluginIds: z.array(z.number()).max(20).default([]),
 	captchaToken: z.string().min(1),
 });
 
@@ -85,6 +91,10 @@ export const pluginUploadRouter = createTRPCRouter({
 					"Плагин с таким названием уже существует. Пожалуйста, проверьте похожие плагины и выберите уникальное имя.",
 				);
 			}
+			const dependencyPluginIds = await validatePluginDependencyIds(
+				ctx.db,
+				input.dependencyPluginIds,
+			);
 			const baseSlug = generateSlug(input.name);
 			const fileHash = crypto
 				.createHash("sha256")
@@ -152,6 +162,18 @@ export const pluginUploadRouter = createTRPCRouter({
 				content: input.fileContent,
 				size: fileSize,
 				hash: fileHash,
+			});
+
+			const dependencyChanges = await replacePluginDependencies(
+				ctx.db,
+				plugin.id,
+				dependencyPluginIds,
+			);
+			await notifyDependencyAuthors(ctx.db, {
+				pluginId: plugin.id,
+				pluginName: plugin.name,
+				actorUserId: ctx.session.user.id,
+				dependencyPluginIds: dependencyChanges.addedIds,
 			});
 
 			try {

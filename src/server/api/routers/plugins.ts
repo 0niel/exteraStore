@@ -1,4 +1,15 @@
-import { and, asc, count, desc, eq, inArray, like, sql } from "drizzle-orm";
+import {
+	and,
+	asc,
+	count,
+	desc,
+	eq,
+	ilike,
+	inArray,
+	like,
+	or,
+	sql,
+} from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { notifyReviewSubscribers } from "~/lib/telegram-notifications";
@@ -18,6 +29,13 @@ import {
 	users,
 } from "~/server/db/schema";
 import { verifyCaptcha } from "~/server/lib/captcha";
+import {
+	getDirectPluginDependencies,
+	getPluginInstallPlan,
+	notifyDependencyAuthors,
+	replacePluginDependencies,
+	validatePluginDependencyIds,
+} from "~/server/lib/plugin-dependencies";
 import { checkDownloadRateLimit, hashIp } from "~/server/lib/rate-limiter";
 
 export const pluginsRouter = createTRPCRouter({
@@ -120,22 +138,71 @@ export const pluginsRouter = createTRPCRouter({
 				throw new Error("Plugin not found");
 			}
 
-			const latestSecurityCheck = await ctx.db
-				.select()
-				.from(pluginPipelineChecks)
-				.where(
-					and(
-						eq(pluginPipelineChecks.pluginId, plugin[0].id),
-						eq(pluginPipelineChecks.checkType, "security"),
-					),
-				)
-				.orderBy(desc(pluginPipelineChecks.createdAt))
-				.limit(1);
+			const [latestSecurityCheck, dependencies] = await Promise.all([
+				ctx.db
+					.select()
+					.from(pluginPipelineChecks)
+					.where(
+						and(
+							eq(pluginPipelineChecks.pluginId, plugin[0].id),
+							eq(pluginPipelineChecks.checkType, "security"),
+						),
+					)
+					.orderBy(desc(pluginPipelineChecks.createdAt))
+					.limit(1),
+				getDirectPluginDependencies(ctx.db, plugin[0].id),
+			]);
 
 			return {
 				...plugin[0],
 				latestSecurityCheck: latestSecurityCheck[0] || null,
+				dependencies,
 			};
+		}),
+
+	dependencyOptions: publicProcedure
+		.input(
+			z.object({
+				search: z.string().max(100).default(""),
+				excludePluginId: z.number().optional(),
+				limit: z.number().min(1).max(30).default(20),
+			}),
+		)
+		.query(async ({ ctx, input }) => {
+			const search = input.search.trim();
+			return ctx.db
+				.select({
+					id: plugins.id,
+					name: plugins.name,
+					slug: plugins.slug,
+					shortDescription: plugins.shortDescription,
+					version: plugins.version,
+					author: plugins.author,
+				})
+				.from(plugins)
+				.where(
+					and(
+						eq(plugins.status, "approved"),
+						input.excludePluginId
+							? sql`${plugins.id} <> ${input.excludePluginId}`
+							: undefined,
+						search
+							? or(
+									ilike(plugins.name, `%${search}%`),
+									ilike(plugins.slug, `%${search}%`),
+									ilike(plugins.author, `%${search}%`),
+								)
+							: undefined,
+					),
+				)
+				.orderBy(desc(plugins.downloadCount), asc(plugins.name))
+				.limit(input.limit);
+		}),
+
+	getInstallPlan: publicProcedure
+		.input(z.object({ pluginId: z.number() }))
+		.query(async ({ ctx, input }) => {
+			return getPluginInstallPlan(ctx.db, input.pluginId);
 		}),
 
 	getReviews: publicProcedure
@@ -781,6 +848,7 @@ export const pluginsRouter = createTRPCRouter({
 					.nullable()
 					.optional(),
 				exteralessCompatible: z.boolean().nullable().optional(),
+				dependencyPluginIds: z.array(z.number()).max(20).optional(),
 				minExteralessVersion: z
 					.string()
 					.max(20)
@@ -799,6 +867,14 @@ export const pluginsRouter = createTRPCRouter({
 			if (!plugin[0] || plugin[0].authorId !== ctx.session.user.id) {
 				throw new Error("Unauthorized or plugin not found");
 			}
+
+			const dependencyPluginIds = input.dependencyPluginIds
+				? await validatePluginDependencyIds(
+						ctx.db,
+						input.dependencyPluginIds,
+						input.id,
+					)
+				: undefined;
 
 			const baseSlug = generateSlug(input.name);
 			const finalSlug = `${baseSlug}.${input.id}`;
@@ -823,6 +899,22 @@ export const pluginsRouter = createTRPCRouter({
 				})
 				.where(eq(plugins.id, input.id))
 				.returning();
+
+			const dependencyChanges = dependencyPluginIds
+				? await replacePluginDependencies(ctx.db, input.id, dependencyPluginIds)
+				: null;
+			if (
+				updatedPlugin &&
+				dependencyChanges &&
+				dependencyChanges.addedIds.length > 0
+			) {
+				await notifyDependencyAuthors(ctx.db, {
+					pluginId: input.id,
+					pluginName: updatedPlugin.name,
+					actorUserId: ctx.session.user.id,
+					dependencyPluginIds: dependencyChanges.addedIds,
+				});
+			}
 
 			revalidatePath(`/plugins/${finalSlug}`);
 			revalidatePath(`/my-plugins/${finalSlug}/manage`);

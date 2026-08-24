@@ -30,6 +30,7 @@ import { TagSuggest } from "~/components/ai/tag-suggest";
 import { SmartCaptcha } from "~/components/captcha/smart-captcha";
 import { MarkdownEditor } from "~/components/markdown-editor";
 import { PageHeader } from "~/components/page-header";
+import { PluginDependencyPicker } from "~/components/plugin-dependency-picker";
 import { ScreenshotUploader } from "~/components/screenshot-uploader";
 import { TagInput } from "~/components/tag-input";
 import { Button } from "~/components/ui/button";
@@ -130,6 +131,7 @@ export default function UploadPluginPage() {
 	const [screenshots, setScreenshots] = useState<string[]>([]);
 	const [captchaToken, setCaptchaToken] = useState<string>("");
 	const [isSuccess, setIsSuccess] = useState(false);
+	const [dependencyPluginIds, setDependencyPluginIds] = useState<number[]>([]);
 
 	const { data: categories, isLoading: areCategoriesLoading } =
 		api.categories.getAll.useQuery();
@@ -167,7 +169,10 @@ export default function UploadPluginPage() {
 	const createPlugin = api.pluginUpload.create.useMutation({
 		onSuccess: (plugin) => {
 			setIsSuccess(true);
-			toast.success(t("toast_success"));
+			toast.success(t("toast_success"), {
+				id: "plugin-upload",
+				description: t("toast_success_description"),
+			});
 			setTimeout(() => {
 				router.push(`/plugins/${plugin.slug}`);
 			}, 1600);
@@ -198,12 +203,16 @@ export default function UploadPluginPage() {
 						},
 					);
 
-					toast.error(`${t("form_errors")}\n${fieldErrors.join("\n")}`);
+					toast.error(`${t("form_errors")}\n${fieldErrors.join("\n")}`, {
+						id: "plugin-upload",
+					});
 					return;
 				}
 			} catch (_e) {}
 
-			toast.error(t("toast_error", { error: error.message }));
+			toast.error(t("toast_error", { error: error.message }), {
+				id: "plugin-upload",
+			});
 		},
 	});
 
@@ -241,9 +250,14 @@ export default function UploadPluginPage() {
 			screenshots: JSON.stringify(screenshots),
 			fileContent,
 			filename: fileName || undefined,
+			dependencyPluginIds,
 			captchaToken,
 		};
 
+		toast.loading(t("toast_saving"), {
+			id: "plugin-upload",
+			description: t("toast_saving_description"),
+		});
 		createPlugin.mutate(cleanedData);
 	};
 
@@ -695,6 +709,12 @@ export default function UploadPluginPage() {
 										/>
 									</CardContent>
 								</Card>
+
+								<PluginDependencyPicker
+									selectedIds={dependencyPluginIds}
+									onChange={setDependencyPluginIds}
+									disabled={createPlugin.isPending}
+								/>
 
 								<Card>
 									<CardHeader>

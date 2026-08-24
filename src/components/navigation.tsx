@@ -21,7 +21,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { useFormatter, useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { TelegramIcon } from "~/components/icons/telegram-icon";
 import { LanguageSwitcher } from "~/components/language-switcher";
 import { SearchDialog } from "~/components/search-dialog";
@@ -58,17 +59,28 @@ function NotificationsBell() {
 	const t = useTranslations("Navigation");
 	const format = useFormatter();
 	const utils = api.useUtils();
+	const knownNotificationIds = useRef<Set<number> | null>(null);
 
 	const { data: notifications } =
-		api.telegramNotifications.getNotifications.useQuery({
-			page: 1,
-			limit: 10,
-			unreadOnly: false,
-		});
+		api.telegramNotifications.getNotifications.useQuery(
+			{
+				page: 1,
+				limit: 10,
+				unreadOnly: false,
+			},
+			{
+				refetchInterval: 30_000,
+				refetchOnWindowFocus: true,
+				staleTime: 15_000,
+			},
+		);
 
 	const markAsRead = api.telegramNotifications.markAsRead.useMutation({
 		onSuccess: () => {
 			void utils.telegramNotifications.getNotifications.invalidate();
+		},
+		onError: () => {
+			toast.error(t("notifications_read_error"));
 		},
 	});
 
@@ -76,14 +88,42 @@ function NotificationsBell() {
 		.filter((notification) => !notification.isRead)
 		.map((notification) => notification.id);
 
-	const handleOpenChange = (open: boolean) => {
-		if (open && unreadIds.length > 0 && !markAsRead.isPending) {
-			markAsRead.mutate({ notificationIds: unreadIds });
+	useEffect(() => {
+		if (!notifications) return;
+		const currentIds = new Set(
+			notifications.map((notification) => notification.id),
+		);
+		if (knownNotificationIds.current) {
+			const newestUnread = notifications.find(
+				(notification) =>
+					!notification.isRead &&
+					!knownNotificationIds.current?.has(notification.id),
+			);
+			if (newestUnread) {
+				toast.info(newestUnread.title, { description: newestUnread.message });
+			}
+		}
+		knownNotificationIds.current = currentIds;
+	}, [notifications]);
+
+	const markOneAsRead = (notificationId: number, isRead: boolean) => {
+		if (!isRead) {
+			markAsRead.mutate({ notificationIds: [notificationId] });
 		}
 	};
 
+	const markAllAsRead = () => {
+		if (unreadIds.length === 0 || markAsRead.isPending) return;
+		markAsRead.mutate(
+			{ notificationIds: unreadIds },
+			{
+				onSuccess: () => toast.success(t("notifications_all_read")),
+			},
+		);
+	};
+
 	return (
-		<DropdownMenu onOpenChange={handleOpenChange}>
+		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
 				<Button
 					variant="ghost"
@@ -99,8 +139,27 @@ function NotificationsBell() {
 					)}
 				</Button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent className="w-80" align="end">
-				<DropdownMenuLabel>{t("notifications")}</DropdownMenuLabel>
+			<DropdownMenuContent
+				className="w-[min(22rem,calc(100vw-1rem))]"
+				align="end"
+			>
+				<DropdownMenuLabel className="flex items-center justify-between gap-3">
+					<span>{t("notifications")}</span>
+					{unreadIds.length > 0 && (
+						<Button
+							variant="ghost"
+							size="sm"
+							className="h-8 px-2 text-xs"
+							onClick={(event) => {
+								event.preventDefault();
+								markAllAsRead();
+							}}
+							disabled={markAsRead.isPending}
+						>
+							{t("notifications_mark_all")}
+						</Button>
+					)}
+				</DropdownMenuLabel>
 				<DropdownMenuSeparator />
 				{!notifications || notifications.length === 0 ? (
 					<div className="flex flex-col items-center gap-2 px-4 py-6 text-center">
@@ -119,6 +178,9 @@ function NotificationsBell() {
 									<Link
 										href={`/plugins/${notification.plugin.slug}`}
 										className="flex flex-col items-start gap-1 py-2"
+										onClick={() =>
+											markOneAsRead(notification.id, notification.isRead)
+										}
 									>
 										<NotificationRow
 											title={notification.title}
@@ -134,6 +196,9 @@ function NotificationsBell() {
 								<DropdownMenuItem
 									key={notification.id}
 									className="flex flex-col items-start gap-1 py-2"
+									onClick={() =>
+										markOneAsRead(notification.id, notification.isRead)
+									}
 								>
 									<NotificationRow
 										title={notification.title}

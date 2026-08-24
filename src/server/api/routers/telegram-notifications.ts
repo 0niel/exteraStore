@@ -27,15 +27,15 @@ const ADMINS = (env.INITIAL_ADMINS ?? "i_am_oniel")
 	.map((a) => a.trim().toLowerCase())
 	.filter(Boolean);
 
-function createDeepLink(pluginSlug: string, version?: string): string {
+function createDeepLink(pluginIdentifier: string, version?: string): string {
 	const botUsername = env.TELEGRAM_BOT_USERNAME;
 	if (!botUsername) {
 		throw new Error("Telegram bot username not configured");
 	}
 
 	const params = version
-		? `plugin_${pluginSlug}_v${version}`
-		: `plugin_${pluginSlug}`;
+		? `plugin_${pluginIdentifier}_v${version}`
+		: `plugin_${pluginIdentifier}`;
 	return `https://t.me/${botUsername}?start=${params}`;
 }
 
@@ -180,7 +180,7 @@ export const telegramNotificationsRouter = createTRPCRouter({
 				throw new Error("Плагин не найден");
 			}
 
-			const deepLink = createDeepLink(input.pluginSlug, input.version);
+			const deepLink = createDeepLink(String(plugin[0].id), input.version);
 
 			return { deepLink };
 		}),

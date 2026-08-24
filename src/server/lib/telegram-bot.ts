@@ -11,6 +11,7 @@ import {
 	userPluginSubscriptions,
 	users,
 } from "~/server/db/schema";
+import { getPluginInstallPlan } from "~/server/lib/plugin-dependencies";
 import { checkDownloadRateLimit, hashIp } from "~/server/lib/rate-limiter";
 import {
 	answerTelegramCallback,
@@ -218,145 +219,210 @@ async function handlePluginDownload(
 			.limit(1);
 		const internalUserId = telegramUser[0]?.id;
 		const rateLimitIp = internalUserId ? null : `telegram:${userId}`;
-		const rateLimit = await checkDownloadRateLimit(
-			db,
-			plugin[0].id,
-			internalUserId,
-			rateLimitIp,
+		const installPlan = await getPluginInstallPlan(db, plugin[0].id);
+		const packages = await Promise.all(
+			installPlan.map(async (planPlugin) => {
+				const requestedVersion = planPlugin.isRequestedPlugin
+					? version
+					: undefined;
+				const versionRows = requestedVersion
+					? await db
+							.select()
+							.from(pluginVersions)
+							.where(
+								and(
+									eq(pluginVersions.pluginId, planPlugin.id),
+									eq(pluginVersions.version, requestedVersion),
+								),
+							)
+							.limit(1)
+					: await db
+							.select()
+							.from(pluginVersions)
+							.where(
+								and(
+									eq(pluginVersions.pluginId, planPlugin.id),
+									eq(pluginVersions.isStable, true),
+								),
+							)
+							.orderBy(desc(pluginVersions.createdAt))
+							.limit(1);
+				if (!versionRows[0]) {
+					throw new Error(`Версия для ${planPlugin.name} не найдена`);
+				}
+				return { plugin: planPlugin, version: versionRows[0] };
+			}),
 		);
 
-		if (rateLimit.limited) {
-			await sendMessage(chatId, `❌ ${rateLimit.reason}`);
-			return;
-		}
-
-		let pluginVersion: (typeof pluginVersions.$inferSelect)[];
-		if (version) {
-			pluginVersion = await db
-				.select()
-				.from(pluginVersions)
-				.where(
-					and(
-						eq(pluginVersions.pluginId, plugin[0].id),
-						eq(pluginVersions.version, version),
-					),
-				)
-				.limit(1);
-		} else {
-			pluginVersion = await db
-				.select()
-				.from(pluginVersions)
-				.where(
-					and(
-						eq(pluginVersions.pluginId, plugin[0].id),
-						eq(pluginVersions.isStable, true),
-					),
-				)
-				.orderBy(desc(pluginVersions.createdAt))
-				.limit(1);
-		}
-
-		if (!pluginVersion?.[0]) {
-			await sendMessage(chatId, "❌ Версия плагина не найдена.");
-			return;
-		}
-
-		const fileName = `${plugin[0].slug}-v${pluginVersion[0].version}.plugin`;
-		const fileContent = Buffer.from(pluginVersion[0].fileContent, "utf-8");
-		const safeName = escapeHtml(plugin[0].name);
-		const safeDesc = escapeHtml(
-			plugin[0].shortDescription || plugin[0].description.substring(0, 100),
-		);
-		const safeAuthor = escapeHtml(plugin[0].author);
-		const caption = `🔌 <b>${safeName}</b> v${pluginVersion[0].version}\n\n📝 ${safeDesc}...\n\n👤 Автор: ${safeAuthor}\n📊 Рейтинг: ${plugin[0].rating.toFixed(1)}/5 (${plugin[0].ratingCount} отзывов)\n⬇️ Скачиваний: ${plugin[0].downloadCount}\n\nУстановите плагин в exteraGram!`;
-
-		await sendDocument(chatId, fileContent, fileName, caption);
-
-		const downloadIdentity = internalUserId
-			? {
-					condition: eq(pluginDownloads.userId, internalUserId),
-					ipHash: null,
-				}
-			: (() => {
-					const ipHash = hashIp(`telegram:${userId}`);
-					if (!ipHash) {
-						throw new Error("Download identity is unavailable");
-					}
-					return {
-						condition: eq(pluginDownloads.ipHash, ipHash),
-						ipHash,
-					};
-				})();
-		const existingDownload = await db
-			.select({ id: pluginDownloads.id })
-			.from(pluginDownloads)
-			.where(
-				and(
-					eq(pluginDownloads.versionId, pluginVersion[0].id),
-					downloadIdentity.condition,
-				),
-			)
-			.limit(1);
-
-		await db.insert(pluginDownloads).values({
-			pluginId: plugin[0].id,
-			versionId: pluginVersion[0].id,
-			userId: internalUserId,
-			ipHash: downloadIdentity.ipHash,
-			userAgent: `Telegram Bot User ${userId}`,
-		});
-
-		if (!existingDownload[0]) {
-			await db
-				.update(plugins)
-				.set({ downloadCount: sql`${plugins.downloadCount} + 1` })
-				.where(eq(plugins.id, plugin[0].id));
-			await db
-				.update(pluginVersions)
-				.set({
-					downloadCount: sql`${pluginVersions.downloadCount} + 1`,
-				})
-				.where(eq(pluginVersions.id, pluginVersion[0].id));
-		}
-
-		try {
-			if (internalUserId) {
-				const existingSubscription = await db
-					.select()
-					.from(userPluginSubscriptions)
-					.where(
-						and(
-							eq(userPluginSubscriptions.userId, internalUserId),
-							eq(userPluginSubscriptions.pluginId, plugin[0].id),
-							eq(userPluginSubscriptions.subscriptionType, "updates"),
-						),
-					)
-					.limit(1);
-
-				if (!existingSubscription[0]) {
-					await db.insert(userPluginSubscriptions).values({
-						userId: internalUserId,
-						pluginId: plugin[0].id,
-						subscriptionType: "updates",
-						telegramChatId: chatId,
-						isActive: true,
-					});
-				} else if (!existingSubscription[0].isActive) {
-					await db
-						.update(userPluginSubscriptions)
-						.set({ isActive: true, telegramChatId: chatId })
-						.where(eq(userPluginSubscriptions.id, existingSubscription[0].id));
-				}
+		for (const item of packages) {
+			const rateLimit = await checkDownloadRateLimit(
+				db,
+				item.plugin.id,
+				internalUserId,
+				rateLimitIp,
+			);
+			if (rateLimit.limited) {
+				await sendMessage(
+					chatId,
+					`❌ ${escapeHtml(item.plugin.name)}: ${escapeHtml(rateLimit.reason)}`,
+				);
+				return;
 			}
-		} catch (error) {
-			console.error("Error handling user subscription:", error);
 		}
+
+		if (packages.length > 1) {
+			const orderedNames = packages
+				.map(
+					(item, index) =>
+						`${index + 1}. <b>${escapeHtml(item.plugin.name)}</b>${item.plugin.isRequestedPlugin ? " — основной плагин" : " — зависимость"}`,
+				)
+				.join("\n");
+			await sendMessage(
+				chatId,
+				`📦 <b>Нужно установить несколько плагинов: ${packages.length}</b>\n\nУстанавливайте файлы в этом порядке:\n\n${orderedNames}\n\nСейчас отправлю их по очереди.`,
+			);
+		}
+
+		for (const [index, item] of packages.entries()) {
+			const safeName = escapeHtml(item.plugin.name);
+			const safeDesc = escapeHtml(
+				item.plugin.shortDescription ||
+					item.plugin.description.substring(0, 100),
+			);
+			const safeAuthor = escapeHtml(item.plugin.author);
+			const role = item.plugin.isRequestedPlugin
+				? "Основной плагин"
+				: "Обязательная зависимость";
+			const caption = `📦 <b>${index + 1}/${packages.length} · ${role}</b>\n\n🔌 <b>${safeName}</b> v${item.version.version}\n📝 ${safeDesc}\n👤 Автор: ${safeAuthor}\n\nУстановите этот файл перед переходом к следующему.`;
+			const fileName = `${item.plugin.slug}-v${item.version.version}.plugin`;
+			await sendDocument(
+				chatId,
+				Buffer.from(item.version.fileContent, "utf-8"),
+				fileName,
+				caption,
+			);
+			await recordTelegramDownload(
+				item.plugin.id,
+				item.version,
+				internalUserId,
+				userId,
+			);
+			await ensureUpdateSubscription(item.plugin.id, internalUserId, chatId);
+		}
+
+		await sendMessage(
+			chatId,
+			packages.length > 1
+				? `✅ Все файлы отправлены. Установите их по порядку от 1 до ${packages.length}.`
+				: "✅ Файл отправлен. Откройте его в exteraGram для установки.",
+		);
 	} catch (error) {
 		console.error("Plugin download error:", error);
 		await sendMessage(
 			chatId,
 			"❌ Произошла ошибка при скачивании плагина. Попробуйте позже.",
 		);
+	}
+}
+
+async function recordTelegramDownload(
+	pluginId: number,
+	pluginVersion: typeof pluginVersions.$inferSelect,
+	internalUserId: string | undefined,
+	telegramUserId: string,
+) {
+	const downloadIdentity = internalUserId
+		? {
+				condition: eq(pluginDownloads.userId, internalUserId),
+				ipHash: null,
+			}
+		: (() => {
+				const ipHash = hashIp(`telegram:${telegramUserId}`);
+				if (!ipHash) throw new Error("Download identity is unavailable");
+				return {
+					condition: eq(pluginDownloads.ipHash, ipHash),
+					ipHash,
+				};
+			})();
+	const existingPluginDownload = await db
+		.select({ id: pluginDownloads.id })
+		.from(pluginDownloads)
+		.where(
+			and(eq(pluginDownloads.pluginId, pluginId), downloadIdentity.condition),
+		)
+		.limit(1);
+	const existingVersionDownload = await db
+		.select({ id: pluginDownloads.id })
+		.from(pluginDownloads)
+		.where(
+			and(
+				eq(pluginDownloads.versionId, pluginVersion.id),
+				downloadIdentity.condition,
+			),
+		)
+		.limit(1);
+
+	await db.insert(pluginDownloads).values({
+		pluginId,
+		versionId: pluginVersion.id,
+		userId: internalUserId,
+		ipHash: downloadIdentity.ipHash,
+		userAgent: `Telegram Bot User ${telegramUserId}`,
+	});
+
+	await Promise.all([
+		!existingPluginDownload[0]
+			? db
+					.update(plugins)
+					.set({ downloadCount: sql`${plugins.downloadCount} + 1` })
+					.where(eq(plugins.id, pluginId))
+			: Promise.resolve(),
+		!existingVersionDownload[0]
+			? db
+					.update(pluginVersions)
+					.set({
+						downloadCount: sql`${pluginVersions.downloadCount} + 1`,
+					})
+					.where(eq(pluginVersions.id, pluginVersion.id))
+			: Promise.resolve(),
+	]);
+}
+
+async function ensureUpdateSubscription(
+	pluginId: number,
+	internalUserId: string | undefined,
+	chatId: string,
+) {
+	if (!internalUserId) return;
+	try {
+		const existingSubscription = await db
+			.select()
+			.from(userPluginSubscriptions)
+			.where(
+				and(
+					eq(userPluginSubscriptions.userId, internalUserId),
+					eq(userPluginSubscriptions.pluginId, pluginId),
+					eq(userPluginSubscriptions.subscriptionType, "updates"),
+				),
+			)
+			.limit(1);
+
+		if (!existingSubscription[0]) {
+			await db.insert(userPluginSubscriptions).values({
+				userId: internalUserId,
+				pluginId,
+				subscriptionType: "updates",
+				telegramChatId: chatId,
+				isActive: true,
+			});
+		} else if (!existingSubscription[0].isActive) {
+			await db
+				.update(userPluginSubscriptions)
+				.set({ isActive: true, telegramChatId: chatId })
+				.where(eq(userPluginSubscriptions.id, existingSubscription[0].id));
+		}
+	} catch (error) {
+		console.error("Error handling user subscription:", error);
 	}
 }
 
