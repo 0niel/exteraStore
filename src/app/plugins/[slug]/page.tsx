@@ -706,7 +706,7 @@ export default function PluginDetailPage() {
 
 										<div
 											className={cn(
-												"mt-8 grid gap-4",
+												"mt-8 grid min-w-0 grid-cols-1 gap-4",
 												hasLinks ? "sm:grid-cols-2" : "sm:grid-cols-1",
 											)}
 										>
@@ -728,9 +728,9 @@ export default function PluginDetailPage() {
 														</Avatar>
 														<div className="min-w-0 flex-1">
 															<div className="flex items-center gap-2">
-																<h3 className="truncate font-semibold">
+																<p className="truncate font-semibold">
 																	{authorData?.name || plugin.author}
-																</h3>
+																</p>
 																{authorData?.isVerified && (
 																	<Badge className="border-transparent bg-contrast text-contrast-foreground text-xs">
 																		<Shield className="mr-1 h-3 w-3" />
