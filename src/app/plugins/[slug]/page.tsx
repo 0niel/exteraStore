@@ -381,7 +381,7 @@ export default function PluginDetailPage() {
 
 	return (
 		<div className="bg-background">
-			<div className="glass sticky top-[calc(4rem+env(safe-area-inset-top))] z-40 lg:hidden">
+			<div className="glass sticky top-0 z-40 lg:hidden">
 				<div className="flex items-center justify-between px-4 py-2">
 					<Button
 						variant="ghost"
