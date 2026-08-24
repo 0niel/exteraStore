@@ -46,7 +46,9 @@ function CatalogSkeleton({ compact = false }: { compact?: boolean }) {
 	return (
 		<div
 			className={cn(
-				compact ? "space-y-3" : "grid gap-5 sm:grid-cols-2 xl:grid-cols-3",
+				compact
+					? "space-y-3"
+					: "grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3",
 			)}
 		>
 			{Array.from({ length: compact ? 6 : 9 }).map((_, index) => (
@@ -359,7 +361,7 @@ function PluginsContent() {
 						layout={!prefersReducedMotion}
 						className={cn(
 							viewMode === "grid"
-								? "grid gap-5 sm:grid-cols-2 sm:gap-6 xl:grid-cols-3"
+								? "grid min-w-0 grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 xl:grid-cols-3"
 								: "space-y-3",
 						)}
 					>
