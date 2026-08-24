@@ -5,10 +5,13 @@ import {
 	CheckCircle2,
 	Gauge,
 	Loader2,
+	LogIn,
 	ShieldAlert,
 	TriangleAlert,
 	Wrench,
 } from "lucide-react";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { Badge } from "~/components/ui/badge";
@@ -60,10 +63,15 @@ function InsightList({
 export function PluginInsight({ pluginId, pluginName }: PluginInsightProps) {
 	const t = useTranslations("AI");
 	const locale = useLocale() === "en" ? ("en" as const) : ("ru" as const);
+	const { status } = useSession();
 	const [open, setOpen] = useState(false);
 	const { data, isLoading, isError, refetch } = api.ai.pluginInsight.useQuery(
 		{ pluginId, locale },
-		{ enabled: open, staleTime: 30 * 60 * 1000, retry: false },
+		{
+			enabled: open && status === "authenticated",
+			staleTime: 30 * 60 * 1000,
+			retry: false,
+		},
 	);
 
 	const verdictStyles = {
@@ -71,6 +79,29 @@ export function PluginInsight({ pluginId, pluginName }: PluginInsightProps) {
 		conditional: "bg-warning/10 text-warning",
 		specialized: "bg-primary/10 text-primary",
 	};
+
+	if (status !== "authenticated") {
+		return (
+			<Button
+				variant="secondary"
+				className="press-scale min-h-11 gap-2 bg-contrast/5 hover:bg-contrast/10"
+				asChild={status === "unauthenticated"}
+				disabled={status === "loading"}
+			>
+				{status === "unauthenticated" ? (
+					<Link href="/auth/signin">
+						<LogIn className="size-4 text-primary" />
+						{t("auth_action")}
+					</Link>
+				) : (
+					<span>
+						<Loader2 className="size-4 animate-spin text-primary" />
+						{t("insight_button")}
+					</span>
+				)}
+			</Button>
+		);
+	}
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>

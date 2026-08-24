@@ -6,6 +6,8 @@ import { sendSecurityAlerts } from "~/server/api/routers/plugin-pipeline";
 import {
 	buildCheckPrompts,
 	type CheckType,
+	getAiCheckRequestCost,
+	MAX_AI_CHECK_REQUESTS_PER_PLUGIN,
 	parseCheckResults,
 } from "~/server/api/routers/plugin-pipeline-ai";
 import { db } from "~/server/db";
@@ -15,6 +17,8 @@ import {
 	plugins,
 	pluginVersions,
 } from "~/server/db/schema";
+import { consumeAiRateLimit } from "~/server/lib/ai-rate-limiter";
+import { isCronAuthorized } from "~/server/lib/cron-auth";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -60,26 +64,6 @@ const bodySchema = z.discriminatedUnion("action", [
 	submitSchema,
 	enqueueSchema,
 ]);
-
-function isAuthorized(request: Request) {
-	const secret = env.CRON_SECRET;
-	if (!secret) {
-		return false;
-	}
-
-	const provided = request.headers.get("authorization") ?? "";
-	const expected = `Bearer ${secret}`;
-	if (provided.length !== expected.length) {
-		return false;
-	}
-
-	let mismatch = 0;
-	for (let index = 0; index < expected.length; index += 1) {
-		mismatch |= provided.charCodeAt(index) ^ expected.charCodeAt(index);
-	}
-
-	return mismatch === 0;
-}
 
 function nowSeconds() {
 	return Math.floor(Date.now() / 1000);
@@ -177,6 +161,15 @@ async function handleClaim(limit: number) {
 		const latestVersion = await loadLatestVersion(candidate.pluginId);
 		if (!latestVersion?.fileContent) {
 			await failQueueItem(candidate.id, "Plugin version or source not found");
+			continue;
+		}
+		try {
+			getAiCheckRequestCost(latestVersion.fileContent);
+		} catch (error) {
+			await failQueueItem(
+				candidate.id,
+				error instanceof Error ? error.message : "Plugin source is too large",
+			);
 			continue;
 		}
 
@@ -384,7 +377,7 @@ async function handleEnqueue(pluginIds: number[] | undefined, limit: number) {
 }
 
 export async function POST(request: Request) {
-	if (!isAuthorized(request)) {
+	if (!isCronAuthorized(request)) {
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
@@ -400,6 +393,16 @@ export async function POST(request: Request) {
 			return await handleClaim(body.limit);
 		}
 		if (body.action === "enqueue") {
+			const requested = body.pluginIds?.length ?? body.limit;
+			const rateLimit = await consumeAiRateLimit(
+				db,
+				"system:ai-worker-enqueue",
+				"worker_pipeline",
+				requested * MAX_AI_CHECK_REQUESTS_PER_PLUGIN,
+			);
+			if (rateLimit.limited) {
+				return NextResponse.json({ error: "AI_RATE_LIMITED" }, { status: 429 });
+			}
 			return await handleEnqueue(body.pluginIds, body.limit);
 		}
 		return await handleSubmit(body.results);

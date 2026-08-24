@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
-import { env } from "~/env";
 import { db } from "~/server/db";
+import {
+	type AiBudgetGrant,
+	consumeAiRateLimit,
+} from "~/server/lib/ai-rate-limiter";
+import { isCronAuthorized } from "~/server/lib/cron-auth";
 import { classifyPluginBatch } from "~/server/lib/plugin-categorization";
 
 export const maxDuration = 900;
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-	if (
-		!env.CRON_SECRET ||
-		request.headers.get("authorization") !== `Bearer ${env.CRON_SECRET}`
-	) {
+	if (!isCronAuthorized(request)) {
 		return new Response("Unauthorized", { status: 401 });
 	}
 
@@ -26,7 +27,26 @@ export async function POST(request: Request) {
 			? Math.min(10, Math.max(1, rawLimit))
 			: 10;
 		const preferAi = url.searchParams.get("ai") !== "0";
-		const result = await classifyPluginBatch(db, { offset, limit, preferAi });
+		let budget: AiBudgetGrant | undefined;
+		if (preferAi) {
+			const rateLimit = await consumeAiRateLimit(
+				db,
+				"system:classify-plugins",
+				"classification",
+			);
+			if (rateLimit.limited) {
+				return NextResponse.json(
+					{ success: false, error: "AI_RATE_LIMITED" },
+					{ status: 429 },
+				);
+			}
+			budget = rateLimit.grant;
+		}
+		const result = await classifyPluginBatch(
+			db,
+			{ offset, limit, preferAi },
+			budget,
+		);
 		return NextResponse.json(
 			{
 				success: result.updated === result.processed && result.failed === 0,

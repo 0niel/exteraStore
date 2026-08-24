@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import {
 	and,
 	desc,
@@ -28,11 +29,43 @@ import {
 	users,
 } from "~/server/db/schema";
 import { isAdminSessionUser } from "~/server/lib/admin";
+import {
+	type AiBudgetGrant,
+	consumeAiRateLimit,
+} from "~/server/lib/ai-rate-limiter";
 import { emitWebhookEvent } from "~/server/lib/developer-platform";
 import { sendTelegramMessage } from "~/server/lib/telegram-client";
-import { type AILocale, PluginAIChecker } from "./plugin-pipeline-ai";
+import {
+	type AILocale,
+	getAiCheckRequestCost,
+	PluginAIChecker,
+} from "./plugin-pipeline-ai";
 
 type PipelineContext = Awaited<ReturnType<typeof createTRPCContext>>;
+
+async function enforcePipelineAiRateLimit(
+	ctx: PipelineContext,
+	feature: "pipeline_checks" | "text_improvement" | "collections",
+	cost = 1,
+) {
+	const userId = ctx.session?.user?.id;
+	if (!userId) {
+		throw new TRPCError({ code: "UNAUTHORIZED" });
+	}
+	const result = await consumeAiRateLimit(
+		ctx.db,
+		`user:${userId}`,
+		feature,
+		cost,
+	);
+	if (result.limited) {
+		throw new TRPCError({
+			code: "TOO_MANY_REQUESTS",
+			message: "AI_RATE_LIMITED",
+		});
+	}
+	return result;
+}
 
 export async function sendSecurityAlerts(
 	database: typeof import("~/server/db").db,
@@ -143,18 +176,23 @@ export async function processQueueItem(
 		if (!latestVersion[0]) {
 			throw new Error("Plugin version not found");
 		}
+		const budget = await enforcePipelineAiRateLimit(
+			ctx,
+			"pipeline_checks",
+			getAiCheckRequestCost(latestVersion[0].fileContent),
+		);
 
 		const aiChecker = new PluginAIChecker();
 		const checks = [
 			{
 				type: "security",
 				checker: (code: string, name: string) =>
-					aiChecker.checkSecurity(code, name),
+					aiChecker.checkSecurity(code, name, budget.grant),
 			},
 			{
 				type: "performance",
 				checker: (code: string, name: string) =>
-					aiChecker.checkPerformance(code, name),
+					aiChecker.checkPerformance(code, name, budget.grant),
 			},
 		];
 		const checkIds: number[] = [];
@@ -388,6 +426,8 @@ export const pluginPipelineRouter = createTRPCRouter({
 				throw new Error("Проверки этого плагина уже выполняются");
 			}
 
+			await enforcePipelineAiRateLimit(ctx, "pipeline_checks");
+
 			const [queueItem] = await ctx.db
 				.insert(pluginPipelineQueue)
 				.values({
@@ -495,16 +535,19 @@ export const pluginPipelineRouter = createTRPCRouter({
 				locale: z.enum(["en", "ru"]).default("ru"),
 			}),
 		)
-		.mutation(async ({ input }) => {
+		.mutation(async ({ ctx, input }) => {
 			if (!input.text.trim()) {
 				throw new Error("Текст не может быть пустым");
 			}
+
+			const budget = await enforcePipelineAiRateLimit(ctx, "text_improvement");
 
 			const aiChecker = new PluginAIChecker();
 			try {
 				const result = await aiChecker.improveText(
 					input.text,
 					input.textType,
+					budget.grant,
 					input.pluginName,
 					input.locale,
 				);
@@ -691,6 +734,7 @@ export const DEFAULT_AI_COLLECTION_THEMES = [
 export async function generateAndSaveAICollections(
 	database: typeof import("~/server/db").db,
 	themes: readonly string[],
+	budget: AiBudgetGrant,
 	locale: AILocale = "ru",
 ) {
 	const allPlugins = await database
@@ -727,6 +771,7 @@ export async function generateAndSaveAICollections(
 			const collection = await aiChecker.generateAICollection(
 				allPlugins,
 				theme,
+				budget,
 				locale,
 			);
 			generatedCollections.push({ collection });
@@ -776,7 +821,11 @@ export const aiCollectionsRouter = createTRPCRouter({
 	generateAndSaveAICollections: protectedProcedure
 		.input(
 			z.object({
-				themes: z.array(z.string()).default([...DEFAULT_AI_COLLECTION_THEMES]),
+				themes: z
+					.array(z.string().min(1).max(120))
+					.min(1)
+					.max(12)
+					.default([...DEFAULT_AI_COLLECTION_THEMES]),
 				locale: z.enum(["en", "ru"]).default("ru"),
 			}),
 		)
@@ -784,10 +833,20 @@ export const aiCollectionsRouter = createTRPCRouter({
 			if (!isAdminSessionUser(ctx.session.user)) {
 				throw new Error("Unauthorized");
 			}
-			return generateAndSaveAICollections(ctx.db, input.themes, input.locale);
+			const budget = await enforcePipelineAiRateLimit(
+				ctx,
+				"collections",
+				input.themes.length,
+			);
+			return generateAndSaveAICollections(
+				ctx.db,
+				input.themes,
+				budget.grant,
+				input.locale,
+			);
 		}),
 
-	getAICollections: publicProcedure
+	getAICollections: protectedProcedure
 		.input(
 			z.object({
 				limit: z.number().min(1).max(20).default(5),

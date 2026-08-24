@@ -2,9 +2,15 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { generateText, Output } from "ai";
 import type { z } from "zod";
 import { env } from "~/env";
+import {
+	type AiBudgetGrant,
+	assertAiBudgetGrant,
+} from "~/server/lib/ai-rate-limiter";
 
 const REQUEST_TIMEOUT_MS = 120_000;
-const MAX_RETRIES = 2;
+const MAX_RETRIES = 1;
+const MAX_OBJECT_OUTPUT_TOKENS = 5_000;
+const MAX_TEXT_OUTPUT_TOKENS = 2_000;
 const UNAVAILABLE_STATUS = new Set([
 	401, 402, 403, 408, 429, 500, 502, 503, 504,
 ]);
@@ -108,7 +114,9 @@ export async function generateAIObject<T>(
 	schema: z.ZodType<T>,
 	instructions: string,
 	prompt: string,
+	budget: AiBudgetGrant,
 ): Promise<T> {
+	assertAiBudgetGrant(budget);
 	try {
 		const result = await generateText({
 			model: getModel(),
@@ -116,6 +124,7 @@ export async function generateAIObject<T>(
 			instructions,
 			prompt,
 			temperature: 0.1,
+			maxOutputTokens: MAX_OBJECT_OUTPUT_TOKENS,
 			maxRetries: MAX_RETRIES,
 			timeout: REQUEST_TIMEOUT_MS,
 		});
@@ -129,13 +138,16 @@ export async function generateAIObject<T>(
 export async function generateAIText(
 	instructions: string,
 	prompt: string,
+	budget: AiBudgetGrant,
 ): Promise<string> {
+	assertAiBudgetGrant(budget);
 	try {
 		const result = await generateText({
 			model: getModel(),
 			instructions,
 			prompt,
 			temperature: 0.2,
+			maxOutputTokens: MAX_TEXT_OUTPUT_TOKENS,
 			maxRetries: MAX_RETRIES,
 			timeout: REQUEST_TIMEOUT_MS,
 		});

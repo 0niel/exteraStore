@@ -1,8 +1,13 @@
 import { z } from "zod";
 import { generateAIObject, generateAIText } from "~/server/lib/ai-client";
+import type { AiBudgetGrant } from "~/server/lib/ai-rate-limiter";
 
 const CHUNK_SIZE = 90_000;
 const CHUNK_OVERLAP = 4_000;
+const MAX_CHECK_CHUNKS = 4;
+export const MAX_AI_CHECK_REQUESTS_PER_PLUGIN = MAX_CHECK_CHUNKS * 2;
+export const MAX_AI_CHECK_CODE_CHARS =
+	CHUNK_SIZE + (MAX_CHECK_CHUNKS - 1) * (CHUNK_SIZE - CHUNK_OVERLAP);
 
 export type AILocale = "en" | "ru";
 
@@ -92,6 +97,10 @@ function checkTask(checkType: CheckType) {
 }
 
 function splitCode(code: string): string[] {
+	if (code.length > MAX_AI_CHECK_CODE_CHARS) {
+		throw new Error("Plugin source is too large for AI checks");
+	}
+
 	if (code.length <= CHUNK_SIZE) {
 		return [code];
 	}
@@ -116,6 +125,10 @@ function splitCode(code: string): string[] {
 	}
 
 	return chunks;
+}
+
+export function getAiCheckRequestCost(code: string) {
+	return splitCode(code).length * 2;
 }
 
 function mergeChunkResults(
@@ -252,12 +265,14 @@ export class PluginAIChecker {
 			exteralessCompatible: boolean | null;
 		}[],
 		theme: string,
+		budget: AiBudgetGrant,
 		locale: AILocale = "ru",
 	): Promise<AICollectionResult> {
 		const result = await generateAIObject(
 			AICollectionResultSchema,
 			this.getAICollectionPrompt(locale),
 			`Тема: ${theme}\n\nДоступные плагины:\n${JSON.stringify(allPlugins)}`,
+			budget,
 		);
 		const validIds = new Set(allPlugins.map((plugin) => plugin.id));
 		const pluginIds = [...new Set(result.pluginIds)].filter((id) =>
@@ -274,12 +289,14 @@ export class PluginAIChecker {
 	async improveText(
 		text: string,
 		textType: "description" | "changelog",
+		budget: AiBudgetGrant,
 		pluginName?: string,
 		locale: AILocale = "ru",
 	): Promise<{ improvedText: string }> {
 		const improvedText = await generateAIText(
 			this.getTextImprovementPrompt(textType, locale),
 			`${pluginName ? `Плагин: ${pluginName}\n\n` : ""}Исходный текст:\n${text}`,
+			budget,
 		);
 
 		return { improvedText };
@@ -288,17 +305,19 @@ export class PluginAIChecker {
 	async checkSecurity(
 		pluginCode: string,
 		pluginName: string,
+		budget: AiBudgetGrant,
 		locale: AILocale = "ru",
 	): Promise<{ score: number; details: CheckResult; issues: string[] }> {
-		return this.runCheck("security", pluginCode, pluginName, locale);
+		return this.runCheck("security", pluginCode, pluginName, locale, budget);
 	}
 
 	async checkPerformance(
 		pluginCode: string,
 		pluginName: string,
+		budget: AiBudgetGrant,
 		locale: AILocale = "ru",
 	): Promise<{ score: number; details: CheckResult; issues: string[] }> {
-		return this.runCheck("performance", pluginCode, pluginName, locale);
+		return this.runCheck("performance", pluginCode, pluginName, locale, budget);
 	}
 
 	private async runCheck(
@@ -306,6 +325,7 @@ export class PluginAIChecker {
 		pluginCode: string,
 		pluginName: string,
 		locale: AILocale,
+		budget: AiBudgetGrant,
 	) {
 		const prompts = buildCheckPrompts(checkType, {
 			name: pluginName,
@@ -319,6 +339,7 @@ export class PluginAIChecker {
 				CheckResultSchema,
 				instructions,
 				prompt,
+				budget,
 			);
 			results.push(result);
 		}

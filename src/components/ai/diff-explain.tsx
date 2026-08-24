@@ -1,7 +1,9 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, LogIn, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
@@ -26,13 +28,14 @@ export function DiffExplain({ pluginId, fromHash, toHash }: DiffExplainProps) {
 	const t = useTranslations("AI");
 	const rawLocale = useLocale();
 	const locale = rawLocale === "en" ? ("en" as const) : ("ru" as const);
+	const { status } = useSession();
 	const reduceMotion = useReducedMotion();
 	const [requested, setRequested] = useState(false);
 
 	const { data, isFetching, isError } = api.ai.explainDiff.useQuery(
 		{ pluginId, fromHash, toHash, locale },
 		{
-			enabled: requested,
+			enabled: requested && status === "authenticated",
 			staleTime: Number.POSITIVE_INFINITY,
 			retry: false,
 		},
@@ -40,6 +43,29 @@ export function DiffExplain({ pluginId, fromHash, toHash }: DiffExplainProps) {
 
 	const explanation = data?.available ? data : null;
 	const unavailable = data?.available === false;
+
+	if (status !== "authenticated") {
+		return (
+			<Button
+				variant="outline"
+				className="press-scale min-h-11 gap-2 border-primary/30 bg-primary/5 hover:bg-primary/10"
+				asChild={status === "unauthenticated"}
+				disabled={status === "loading"}
+			>
+				{status === "unauthenticated" ? (
+					<Link href="/auth/signin">
+						<LogIn className="size-4 text-primary" />
+						{t("auth_action")}
+					</Link>
+				) : (
+					<span>
+						<Loader2 className="size-4 animate-spin" />
+						{t("explain_button")}
+					</span>
+				)}
+			</Button>
+		);
+	}
 
 	return (
 		<div className="space-y-3">

@@ -14,7 +14,9 @@ import {
 	Zap,
 } from "lucide-react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
+import { AiAuthRequired } from "~/components/ai/ai-auth-required";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
@@ -134,10 +136,14 @@ function CollectionPreview({
 export function AiCollections() {
 	const t = useTranslations("Home");
 	const reduceMotion = useReducedMotion();
+	const { status } = useSession();
 	const { data: collections, isLoading } =
-		api.aiCollections.getAICollections.useQuery({
-			limit: 3,
-		});
+		api.aiCollections.getAICollections.useQuery(
+			{
+				limit: 3,
+			},
+			{ enabled: status === "authenticated" },
+		);
 
 	const container = {
 		hidden: {},
@@ -153,6 +159,26 @@ export function AiCollections() {
 			transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const },
 		},
 	};
+
+	if (status === "loading") {
+		return (
+			<section className="section-band py-16 sm:py-24">
+				<div className="container mx-auto px-4">
+					<Skeleton className="h-56 w-full rounded-3xl" />
+				</div>
+			</section>
+		);
+	}
+
+	if (status === "unauthenticated") {
+		return (
+			<section className="section-band py-16 sm:py-24">
+				<div className="container mx-auto px-4">
+					<AiAuthRequired compact />
+				</div>
+			</section>
+		);
+	}
 
 	return (
 		<section

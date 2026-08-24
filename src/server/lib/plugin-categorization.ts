@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { Database } from "~/server/db";
 import { pluginCategories, plugins } from "~/server/db/schema";
 import { generateAIObject } from "~/server/lib/ai-client";
+import type { AiBudgetGrant } from "~/server/lib/ai-rate-limiter";
 import {
 	buildFallbackPluginMetadata,
 	normalizeDiscoveryTags,
@@ -25,6 +26,7 @@ const BatchResultSchema = z.object({
 export async function classifyPluginBatch(
 	database: Database,
 	input: { offset: number; limit: number; preferAi?: boolean },
+	budget?: AiBudgetGrant,
 ) {
 	const [categories, pluginRows, totalRows] = await Promise.all([
 		database
@@ -73,7 +75,7 @@ export async function classifyPluginBatch(
 			category: string;
 			tags: string[];
 		}> = [];
-		if (input.preferAi !== false) {
+		if (input.preferAi !== false && budget) {
 			try {
 				const result = await generateAIObject(
 					BatchResultSchema,
@@ -88,6 +90,7 @@ export async function classifyPluginBatch(
 							currentTags: plugin.tags,
 						})),
 					),
+					budget,
 				);
 				suggestions = result.plugins;
 				source = "ai";

@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertTriangle, CheckCircle2, Sparkles } from "lucide-react";
+import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
@@ -11,15 +12,20 @@ interface ReviewSummaryProps {
 
 export function ReviewSummary({ pluginId }: ReviewSummaryProps) {
 	const t = useTranslations("AI");
+	const { status } = useSession();
 
 	const { data, isLoading, isError } = api.ai.summarizeReviews.useQuery(
 		{ pluginId },
 		{
-			enabled: pluginId > 0,
+			enabled: pluginId > 0 && status === "authenticated",
 			staleTime: 5 * 60 * 1000,
 			retry: false,
 		},
 	);
+
+	if (status !== "authenticated") {
+		return null;
+	}
 
 	if (isLoading) {
 		return (

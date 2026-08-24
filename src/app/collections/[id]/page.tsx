@@ -4,8 +4,9 @@ import { motion, useReducedMotion } from "framer-motion";
 import { ArrowLeft, Calendar, Sparkles, Star } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useFormatter, useTranslations } from "next-intl";
-
+import { AiAuthRequired } from "~/components/ai/ai-auth-required";
 import { PluginCard } from "~/components/plugin-card";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -48,6 +49,7 @@ export default function CollectionDetailPage() {
 	const reduceMotion = useReducedMotion();
 	const params = useParams();
 	const router = useRouter();
+	const { status } = useSession();
 	const collectionId = Number.parseInt(params.id as string, 10);
 
 	const {
@@ -55,7 +57,10 @@ export default function CollectionDetailPage() {
 		isLoading,
 		isError,
 		refetch,
-	} = api.aiCollections.getAICollections.useQuery({ limit: 20 });
+	} = api.aiCollections.getAICollections.useQuery(
+		{ limit: 20 },
+		{ enabled: status === "authenticated" },
+	);
 
 	const collection = collections?.find((c) => c.id === collectionId);
 	const plugins = collection?.plugins || [];
@@ -74,7 +79,15 @@ export default function CollectionDetailPage() {
 
 	const initial = (collection?.name || "?").trim().charAt(0).toUpperCase();
 
-	if (isLoading) {
+	if (status === "unauthenticated") {
+		return (
+			<div className="container mx-auto px-4 py-8">
+				<AiAuthRequired />
+			</div>
+		);
+	}
+
+	if (status === "loading" || isLoading) {
 		return (
 			<div className="bg-background">
 				<div className="container mx-auto px-4 py-8">

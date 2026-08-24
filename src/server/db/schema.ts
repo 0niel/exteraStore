@@ -709,6 +709,30 @@ export const aiArtifacts = pgTable(
 	],
 );
 
+export const aiRateLimits = pgTable(
+	"extera_plugins_ai_rate_limit",
+	{
+		id: serial("id").primaryKey(),
+		subjectKey: varchar("subject_key", { length: 160 }).notNull(),
+		scope: varchar("scope", { length: 80 }).notNull(),
+		windowStart: integer("window_start").notNull(),
+		requestCount: integer("request_count").default(0).notNull(),
+		expiresAt: integer("expires_at").notNull(),
+		updatedAt: integer("updated_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+	},
+	(t) => [
+		uniqueIndex("ai_rate_limit_window_idx").on(
+			t.subjectKey,
+			t.scope,
+			t.windowStart,
+		),
+		index("ai_rate_limit_subject_idx").on(t.subjectKey),
+		index("ai_rate_limit_expiry_idx").on(t.expiresAt),
+	],
+);
+
 export const aiPluginCollections = pgTable(
 	"extera_plugins_ai_plugin_collection",
 	{

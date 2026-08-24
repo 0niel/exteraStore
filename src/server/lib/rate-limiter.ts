@@ -71,26 +71,3 @@ export async function checkDownloadRateLimit(
 export function hashIp(ip: string | undefined | null): string | null {
 	return getIpHash(ip);
 }
-
-const AI_QUESTION_LIMIT = 10;
-const AI_QUESTION_WINDOW_MS = 60 * 60 * 1000;
-const aiQuestionLog = new Map<string, number[]>();
-
-export function checkAiQuestionRateLimit(userId: string): {
-	limited: boolean;
-	remaining: number;
-} {
-	const now = Date.now();
-	const recent = (aiQuestionLog.get(userId) ?? []).filter(
-		(timestamp) => now - timestamp < AI_QUESTION_WINDOW_MS,
-	);
-
-	if (recent.length >= AI_QUESTION_LIMIT) {
-		aiQuestionLog.set(userId, recent);
-		return { limited: true, remaining: 0 };
-	}
-
-	recent.push(now);
-	aiQuestionLog.set(userId, recent);
-	return { limited: false, remaining: AI_QUESTION_LIMIT - recent.length };
-}

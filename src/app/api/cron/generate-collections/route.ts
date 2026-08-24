@@ -1,26 +1,39 @@
 import { NextResponse } from "next/server";
-import { env } from "~/env";
 import {
 	DEFAULT_AI_COLLECTION_THEMES,
 	generateAndSaveAICollections,
 } from "~/server/api/routers/plugin-pipeline";
 import { db } from "~/server/db";
+import { consumeAiRateLimit } from "~/server/lib/ai-rate-limiter";
+import { isCronAuthorized } from "~/server/lib/cron-auth";
 
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-	const authHeader = request.headers.get("authorization");
-	if (!env.CRON_SECRET || authHeader !== `Bearer ${env.CRON_SECRET}`) {
+	if (!isCronAuthorized(request)) {
 		return new Response("Unauthorized", {
 			status: 401,
 		});
 	}
 
 	try {
+		const rateLimit = await consumeAiRateLimit(
+			db,
+			"system:generate-collections",
+			"collections",
+			DEFAULT_AI_COLLECTION_THEMES.length,
+		);
+		if (rateLimit.limited) {
+			return NextResponse.json(
+				{ success: false, error: "AI_RATE_LIMITED" },
+				{ status: 429 },
+			);
+		}
 		const result = await generateAndSaveAICollections(
 			db,
 			DEFAULT_AI_COLLECTION_THEMES,
+			rateLimit.grant,
 			"ru",
 		);
 		const generated = result.filter((item) => item.status === "success").length;

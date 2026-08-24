@@ -3,9 +3,10 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, Calendar, Sparkles, Star, Zap } from "lucide-react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";
-
+import { AiAuthRequired } from "~/components/ai/ai-auth-required";
 import { PageHeader } from "~/components/page-header";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
@@ -157,6 +158,7 @@ function CollectionCard({
 export default function CollectionsPage() {
 	const t = useTranslations("CollectionsPage");
 	const reduceMotion = useReducedMotion();
+	const { status } = useSession();
 	const [activeTab, setActiveTab] = useState<CollectionTab>("all");
 	const [visibleCount, setVisibleCount] = useState(6);
 
@@ -165,7 +167,26 @@ export default function CollectionsPage() {
 		isLoading,
 		isError,
 		refetch,
-	} = api.aiCollections.getAICollections.useQuery({ limit: 20 });
+	} = api.aiCollections.getAICollections.useQuery(
+		{ limit: 20 },
+		{ enabled: status === "authenticated" },
+	);
+
+	if (status === "loading") {
+		return (
+			<div className="container mx-auto px-4 py-8">
+				<CollectionSkeleton />
+			</div>
+		);
+	}
+
+	if (status === "unauthenticated") {
+		return (
+			<div className="container mx-auto px-4 py-8">
+				<AiAuthRequired />
+			</div>
+		);
+	}
 
 	const filteredCollections =
 		collections?.filter((collection) => {

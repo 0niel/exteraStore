@@ -1575,6 +1575,10 @@
 		"other_title": "Other"
 	},
 	"AI": {
+		"auth_badge": "Protected AI features",
+		"auth_title": "Sign in to use AI",
+		"auth_description": "AI features are available only to authenticated users. This protects the shared budget from automated requests and keeps the service reliable.",
+		"auth_action": "Sign in with Telegram",
 		"summary_chip": "AI summary",
 		"summary_based_on": "Based on {count, plural, one {# review} other {# reviews}}",
 		"sentiment_positive": "Positive",
