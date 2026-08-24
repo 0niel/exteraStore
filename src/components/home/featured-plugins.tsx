@@ -76,12 +76,9 @@ export function FeaturedPlugins() {
 				</motion.div>
 
 				{isLoading ? (
-					<div className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-5 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3">
+					<div className="grid min-w-0 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
 						{Array.from({ length: 3 }).map((_, i) => (
-							<Skeleton
-								key={i}
-								className="h-104 w-[min(86vw,23rem)] shrink-0 snap-center rounded-2xl sm:w-auto sm:shrink sm:snap-start"
-							/>
+							<Skeleton key={i} className="h-104 w-full min-w-0 rounded-2xl" />
 						))}
 					</div>
 				) : (
@@ -90,13 +87,13 @@ export function FeaturedPlugins() {
 						initial="hidden"
 						whileInView="show"
 						viewport={{ once: true, margin: "-80px" }}
-						className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-5 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3"
+						className="grid min-w-0 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3"
 					>
 						{featuredPlugins?.map((plugin: typeof Plugin.$inferSelect) => (
 							<motion.div
 								key={plugin.id}
 								variants={item}
-								className="w-[min(86vw,23rem)] shrink-0 snap-center sm:w-auto sm:shrink sm:snap-start"
+								className="min-w-0 max-w-full"
 							>
 								<PluginCard plugin={plugin} />
 							</motion.div>

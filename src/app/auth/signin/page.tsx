@@ -28,9 +28,9 @@ export default async function SignInPage() {
 			<div className="dot-grid absolute inset-x-0 top-0 -z-10 h-72" />
 			<div className="absolute -top-24 left-1/2 -z-10 h-72 w-72 -translate-x-1/2 rounded-full bg-primary/15 blur-3xl" />
 			<div className="w-full max-w-md">
-				<div className="animate-fade-up rounded-3xl border bg-card p-6 shadow-black/5 shadow-xl sm:p-8">
+				<div className="animate-fade-up rounded-3xl bg-card p-6 sm:p-8">
 					<div className="mb-6 flex flex-col items-center text-center">
-						<div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-linear-to-b from-primary to-[color-mix(in_oklch,var(--primary)_82%,black)] shadow-lg shadow-primary/25">
+						<div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary">
 							<span className="font-bold text-lg text-primary-foreground">
 								eS
 							</span>

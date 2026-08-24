@@ -91,13 +91,13 @@ export function ImageGallery({
 				<div
 					ref={scrollRef}
 					onScroll={handleScroll}
-					className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-4 [scroll-padding-inline:1rem] md:mx-0 md:px-0 md:[scroll-padding-inline:0]"
+					className="scrollbar-hide flex w-full min-w-0 snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain [scroll-padding-inline:0]"
 				>
 					{images.map((image, index) => (
 						<button
 							key={`${image}-${index}`}
 							type="button"
-							className="group tap-highlight-none relative block aspect-[4/3] w-[calc(100vw-2.5rem)] max-w-full shrink-0 snap-center overflow-hidden rounded-2xl bg-black/[0.035] text-left sm:aspect-video md:w-full md:snap-start dark:bg-white/[0.035]"
+							className="group tap-highlight-none relative block aspect-[4/3] w-full min-w-0 max-w-full shrink-0 snap-center overflow-hidden rounded-2xl bg-black/[0.035] text-left sm:aspect-video md:snap-start dark:bg-white/[0.035]"
 							onClick={() => openModal(index)}
 							aria-label={t("open_image", { index: index + 1 })}
 						>

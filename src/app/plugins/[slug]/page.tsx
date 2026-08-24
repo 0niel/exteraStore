@@ -391,7 +391,7 @@ export default function PluginDetailPage() {
 
 	return (
 		<div className="bg-background">
-			<div className="glass sticky top-0 z-50 border-b lg:hidden">
+			<div className="glass sticky top-[calc(4rem+env(safe-area-inset-top))] z-40 lg:hidden">
 				<div className="flex items-center justify-between px-4 py-2">
 					<Button
 						variant="ghost"
@@ -425,7 +425,7 @@ export default function PluginDetailPage() {
 				</div>
 			</div>
 
-			<div className="container mx-auto max-w-4xl px-4 py-4 pb-28 md:pb-8 lg:py-8">
+			<div className="container mx-auto max-w-4xl px-4 py-4 pb-40 md:pb-8 lg:py-8">
 				<div className="mb-6 hidden lg:block">
 					<Button
 						variant="ghost"
@@ -1217,23 +1217,11 @@ export default function PluginDetailPage() {
 				</div>
 			</div>
 
-			<div className="glass fixed inset-x-0 bottom-16 z-40 border-t px-4 py-2.5 md:hidden">
-				<div className="mx-auto flex max-w-4xl items-center gap-3">
-					<div className="min-w-0 shrink-0">
-						<div className="flex items-center gap-1 font-semibold text-sm">
-							<Star className="h-4 w-4 fill-warning text-warning" />
-							{plugin.rating.toFixed(1)}
-							<span className="font-normal text-muted-foreground">
-								({plugin.ratingCount})
-							</span>
-						</div>
-						<div className="text-muted-foreground text-xs">
-							{formatNumber(plugin.downloadCount)} · {t("stats_downloads")}
-						</div>
-					</div>
+			<div className="glass fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 px-3 py-2 md:hidden">
+				<div className="mx-auto max-w-4xl">
 					<motion.div
 						key={downloadPulse}
-						className="min-w-0 flex-1"
+						className="min-w-0"
 						animate={
 							reduceMotion || downloadPulse === 0
 								? undefined

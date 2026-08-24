@@ -200,7 +200,7 @@ export default function DevelopersPage() {
 					</div>
 				) : (
 					<>
-						<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+						<div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 							{filteredDevelopers.map((developer: Developer, index: number) => {
 								const tier = getDeveloperTier(
 									developer.totalDownloads || 0,
@@ -229,7 +229,7 @@ export default function DevelopersPage() {
 											delay: (index % 4) * 0.06,
 											ease: [0.16, 1, 0.3, 1],
 										}}
-										className="h-full"
+										className="h-full min-w-0 max-w-full"
 									>
 										<Card
 											className="group card-lift relative h-full cursor-pointer overflow-hidden bg-card focus-visible:ring-2 focus-visible:ring-ring"
@@ -249,8 +249,8 @@ export default function DevelopersPage() {
 													className={cn(
 														"absolute top-3 right-3 z-10 flex h-9 w-9 items-center justify-center rounded-xl font-bold font-mono text-sm tabular-nums",
 														rank === 1
-															? "bg-primary text-primary-foreground shadow-md"
-															: "border border-primary/20 bg-primary/10 text-primary",
+															? "bg-primary text-primary-foreground"
+															: "bg-primary/10 text-primary",
 													)}
 												>
 													<span className="sr-only">{t("rank", { rank })}</span>
@@ -269,7 +269,7 @@ export default function DevelopersPage() {
 											<CardContent className="relative flex h-full flex-col p-6">
 												<div className="mb-4 flex items-start gap-4">
 													<div className="relative">
-														<Avatar className="h-14 w-14 border-2 border-border transition-colors duration-300 group-hover:border-primary/50">
+														<Avatar className="h-14 w-14 ring-2 ring-primary/10 transition-colors duration-300 group-hover:ring-primary/40">
 															<AvatarImage
 																src={developer.image || undefined}
 																alt={developer.name || ""}
@@ -281,7 +281,7 @@ export default function DevelopersPage() {
 																	.toUpperCase()}
 															</AvatarFallback>
 														</Avatar>
-														<div className="absolute -right-1 -bottom-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-background bg-primary text-primary-foreground shadow-md">
+														<div className="absolute -right-1 -bottom-1 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground ring-2 ring-background">
 															<TierIcon className="h-3.5 w-3.5" />
 														</div>
 													</div>
@@ -291,7 +291,7 @@ export default function DevelopersPage() {
 															{developer.name || t("anonymous")}
 														</h3>
 														<div className="mt-2">
-															<Badge className="border border-primary/20 bg-primary/10 px-3 py-1 text-primary text-xs">
+															<Badge className="border-0 bg-primary/10 px-3 py-1 text-primary text-xs">
 																<TierIcon className="mr-1.5 h-3 w-3" />
 																{t("tier_developer", {
 																	tier: t(`tier_${tier.key}`),

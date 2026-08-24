@@ -45,7 +45,7 @@ function LogoMark({ size = "size-9" }: { size?: string }) {
 	return (
 		<div
 			className={cn(
-				"flex shrink-0 items-center justify-center rounded-xl bg-linear-to-b from-primary to-[color-mix(in_oklch,var(--primary)_82%,black)] shadow-lg shadow-primary/30",
+				"flex shrink-0 items-center justify-center rounded-xl bg-primary",
 				size,
 			)}
 		>
@@ -215,10 +215,10 @@ export function Navigation() {
 	return (
 		<header
 			className={cn(
-				"sticky top-0 z-50 w-full border-b pt-[env(safe-area-inset-top)] transition-[background-color,border-color,box-shadow] duration-300",
+				"sticky top-0 z-50 w-full pt-[env(safe-area-inset-top)] transition-colors duration-300",
 				scrolled
-					? "glass shadow-soft"
-					: "border-transparent bg-background/95 supports-[backdrop-filter]:bg-background/80",
+					? "glass"
+					: "bg-background/95 supports-[backdrop-filter]:bg-background/80",
 			)}
 		>
 			<div className="container mx-auto px-3 sm:px-4">
@@ -394,9 +394,10 @@ export function Navigation() {
 							</SheetTrigger>
 							<SheetContent
 								side="right"
-								className="flex h-full w-[min(100%,24rem)] flex-col p-0 pb-[env(safe-area-inset-bottom)]"
+								closeLabel={t("close_menu")}
+								className="flex h-dvh w-[min(100%,24rem)] flex-col gap-0 border-0 p-0 pb-[env(safe-area-inset-bottom)] shadow-none"
 							>
-								<div className="relative flex min-h-16 items-center overflow-hidden border-b px-4">
+								<div className="relative flex min-h-16 shrink-0 items-center overflow-hidden px-4">
 									<div className="dot-grid absolute inset-0 -z-10" />
 									<div className="flex items-center gap-2">
 										<LogoMark />
@@ -406,8 +407,8 @@ export function Navigation() {
 									</div>
 								</div>
 
-								<div className="flex min-h-0 flex-1 flex-col">
-									<div className="border-b p-4">
+								<div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+									<div className="sticky top-0 z-10 bg-background/95 p-4 backdrop-blur-xl">
 										<SearchDialog
 											isMobile
 											className="h-11 w-full justify-start"
@@ -415,7 +416,7 @@ export function Navigation() {
 										/>
 									</div>
 
-									<div className="flex-1 overflow-y-auto p-4">
+									<div className="p-4 pb-2">
 										<span className="eyebrow mb-3">{t("menu_section")}</span>
 										<nav className="space-y-1">
 											{navigation.map((item, index) => {
@@ -475,7 +476,7 @@ export function Navigation() {
 										)}
 									</div>
 
-									<div className="section-band border-b-0 p-4">
+									<div className="mt-2 bg-surface/70 p-4 pb-6">
 										<div className="mb-4 flex items-center justify-between gap-3">
 											<span className="eyebrow">{t("account_section")}</span>
 											<div className="flex items-center gap-1">
@@ -486,7 +487,7 @@ export function Navigation() {
 										</div>
 										{session?.user ? (
 											<>
-												<div className="flex items-center gap-3 rounded-xl border bg-card p-3 shadow-soft">
+												<div className="flex items-center gap-3 rounded-xl bg-card p-3">
 													<Avatar className="h-8 w-8">
 														<AvatarImage
 															src={session.user.image || undefined}

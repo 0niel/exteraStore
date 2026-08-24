@@ -201,11 +201,11 @@ export function AiCollections() {
 				</motion.div>
 
 				{isLoading ? (
-					<div className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pb-0 lg:grid-cols-3">
+					<div className="grid min-w-0 gap-4 md:grid-cols-2 lg:grid-cols-3">
 						{Array.from({ length: 3 }).map((_, i) => (
 							<Card
 								key={i}
-								className="w-[min(86vw,23rem)] shrink-0 snap-center gap-0 overflow-hidden bg-card/50 py-0 sm:py-0 md:w-auto md:shrink md:snap-start"
+								className="w-full min-w-0 gap-0 overflow-hidden bg-card/50 py-0 sm:py-0"
 							>
 								<Skeleton className="h-24 w-full" />
 								<div className="space-y-3 p-4">
@@ -227,13 +227,13 @@ export function AiCollections() {
 						initial="hidden"
 						whileInView="show"
 						viewport={{ once: true, margin: "-80px" }}
-						className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pb-0 lg:grid-cols-3"
+						className="grid min-w-0 gap-4 md:grid-cols-2 lg:grid-cols-3"
 					>
 						{collections.map((collection: AICollection, index: number) => (
 							<motion.div
 								key={collection.id}
 								variants={item}
-								className="w-[min(86vw,23rem)] shrink-0 snap-center md:w-auto md:shrink md:snap-start"
+								className="min-w-0 max-w-full"
 							>
 								<CollectionPreview collection={collection} index={index} />
 							</motion.div>

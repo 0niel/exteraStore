@@ -71,11 +71,11 @@ export function Footer() {
 			<div className="dot-grid absolute inset-x-0 bottom-0 h-64 opacity-60" />
 			<div className="absolute -bottom-32 left-1/4 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
 
-			<div className="container relative mx-auto px-4 py-12 lg:py-16">
-				<div className="grid grid-cols-1 gap-10 lg:grid-cols-12">
+			<div className="container relative mx-auto px-4 py-10 lg:py-16">
+				<div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-10">
 					<div className="space-y-4 lg:col-span-4">
 						<div className="flex items-center gap-3">
-							<div className="flex size-10 items-center justify-center rounded-xl bg-linear-to-b from-primary to-[color-mix(in_oklch,var(--primary)_82%,black)] shadow-lg shadow-primary/25">
+							<div className="flex size-10 items-center justify-center rounded-xl bg-primary">
 								<span className="font-bold text-primary-foreground text-sm">
 									eS
 								</span>
@@ -111,7 +111,7 @@ export function Footer() {
 						</div>
 					</div>
 
-					<div className="grid grid-cols-2 gap-x-6 gap-y-10 lg:col-span-8 lg:grid-cols-4">
+					<div className="grid grid-cols-2 gap-x-5 gap-y-7 lg:col-span-8 lg:grid-cols-4 lg:gap-x-6 lg:gap-y-10">
 						<div className="space-y-4">
 							<h3 className="eyebrow">{t("quick_links")}</h3>
 							<ul className="space-y-2">
@@ -168,7 +168,7 @@ export function Footer() {
 					</div>
 				</div>
 
-				<div className="mt-10 border-t pt-6">
+				<div className="mt-8 pt-4 lg:mt-10 lg:pt-6">
 					<div className="flex flex-col items-center justify-between gap-3 md:flex-row">
 						<div className="font-mono text-muted-foreground text-xs">
 							© {new Date().getFullYear()} exteraStore. {t("rights_reserved")}

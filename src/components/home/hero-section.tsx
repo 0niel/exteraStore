@@ -88,7 +88,7 @@ export function HeroSection() {
 	];
 
 	return (
-		<section className="relative isolate overflow-hidden border-b">
+		<section className="relative isolate overflow-hidden">
 			<div className="grid-fade absolute inset-x-0 top-0 -z-10 h-[38rem]" />
 			<div className="absolute -top-32 left-1/2 -z-10 h-96 w-96 -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
 			<div className="absolute top-40 -right-24 -z-10 h-72 w-72 rounded-full bg-primary/5 blur-3xl" />
@@ -122,7 +122,7 @@ export function HeroSection() {
 							trigger={
 								<button
 									type="button"
-									className="group flex min-h-16 w-full touch-manipulation items-center gap-3 rounded-2xl border bg-background px-4 text-left shadow-black/5 shadow-lg transition-[border-color,box-shadow] hover:border-primary/40 hover:shadow-xl focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:px-5"
+									className="group flex min-h-16 w-full touch-manipulation items-center gap-3 rounded-2xl bg-surface px-4 text-left transition-colors hover:bg-primary/[0.07] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:px-5"
 									aria-label={t("hero.searchAria")}
 								>
 									<Search className="size-5 shrink-0 text-primary" />
@@ -200,7 +200,7 @@ export function HeroSection() {
 					{[...tags, ...tags].map((tag, index) => (
 						<span
 							key={`${tag}-${index}`}
-							className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border bg-card/70 px-4 py-1.5 font-medium text-muted-foreground text-sm"
+							className="inline-flex items-center gap-2 whitespace-nowrap rounded-full bg-card/70 px-4 py-1.5 font-medium text-muted-foreground text-sm"
 						>
 							<span className="size-1.5 rounded-full bg-primary" />
 							{tag}

@@ -166,6 +166,9 @@
 	textarea {
 		font-size: 1rem;
 	}
+	fieldset {
+		min-inline-size: 0;
+	}
 	button,
 	a,
 	input,
@@ -413,6 +416,16 @@
 @media (max-width: 767px) {
 	.extera-lightbox {
 		--yarl__navigation_button_padding: 0.35rem;
+	}
+
+	.extera-lightbox .yarl__slide_image {
+		max-width: 100%;
+		max-height: calc(
+			100dvh -
+			env(safe-area-inset-top) -
+			env(safe-area-inset-bottom)
+		);
+		object-fit: contain;
 	}
 
 	.extera-lightbox .yarl__navigation_prev,

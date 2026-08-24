@@ -169,7 +169,7 @@ function PluginsContent() {
 			</header>
 
 			<div className="container mx-auto px-4 py-6 sm:py-8">
-				<div className="glass sticky top-[calc(4rem+env(safe-area-inset-top))] z-20 -mx-4 mb-7 border-b px-4 py-3 sm:mx-0 sm:rounded-2xl sm:border sm:p-4">
+				<div className="sticky top-[calc(4rem+env(safe-area-inset-top))] z-20 -mx-4 mb-7 max-w-full overflow-hidden bg-background/96 px-4 py-3 backdrop-blur-xl sm:mx-0 sm:rounded-2xl sm:bg-surface sm:p-4">
 					<div className="grid gap-3 lg:grid-cols-[minmax(16rem,1fr)_13rem_auto]">
 						<label className="relative block">
 							<span className="sr-only">{t("search_label")}</span>
@@ -232,7 +232,7 @@ function PluginsContent() {
 						)}
 					</div>
 
-					<fieldset className="scrollbar-hide -mx-4 mt-3 flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+					<fieldset className="scrollbar-hide -mx-4 mt-3 flex w-auto min-w-0 max-w-[calc(100%+2rem)] snap-x snap-mandatory gap-2 overflow-x-auto px-4 sm:mx-0 sm:max-w-full sm:flex-wrap sm:overflow-visible sm:px-0">
 						<legend className="sr-only">{t("category_label")}</legend>
 						<button
 							type="button"
@@ -303,7 +303,7 @@ function PluginsContent() {
 							<span className="size-2 animate-pulse-dot rounded-full bg-primary" />
 						)}
 					</div>
-					<fieldset className="flex rounded-2xl border bg-card p-1 shadow-soft">
+					<fieldset className="flex min-w-0 rounded-2xl bg-surface p-1">
 						<legend className="sr-only">{t("view_label")}</legend>
 						<button
 							type="button"
@@ -384,7 +384,7 @@ function PluginsContent() {
 									<PluginCard
 										plugin={plugin}
 										compact={viewMode === "list"}
-										className="h-full"
+										className="h-full min-w-0 max-w-full"
 									/>
 								</motion.div>
 							))}

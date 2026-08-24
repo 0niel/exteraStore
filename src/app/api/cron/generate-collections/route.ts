@@ -7,6 +7,7 @@ import {
 import { db } from "~/server/db";
 
 export const maxDuration = 300;
+export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
 	const authHeader = request.headers.get("authorization");
@@ -22,8 +23,16 @@ export async function GET(request: Request) {
 			DEFAULT_AI_COLLECTION_THEMES,
 			"ru",
 		);
+		const generated = result.filter((item) => item.status === "success").length;
+		const failed = result.length - generated;
 
-		return NextResponse.json({ success: true, data: result });
+		return NextResponse.json(
+			{ success: generated > 0, generated, failed, data: result },
+			{
+				status: generated > 0 ? 200 : 502,
+				headers: { "Cache-Control": "no-store" },
+			},
+		);
 	} catch (error) {
 		return NextResponse.json(
 			{

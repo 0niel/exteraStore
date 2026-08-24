@@ -243,7 +243,7 @@ export default function DeveloperProfilePage() {
 		<div className="bg-background">
 			<div className="container mx-auto max-w-6xl px-4 py-8">
 				<div className="space-y-8">
-					<div className="relative isolate animate-fade-up overflow-hidden rounded-3xl border bg-card shadow-soft">
+					<div className="relative isolate animate-fade-up overflow-hidden rounded-3xl bg-card">
 						<div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-primary/70 to-primary/10" />
 						<div
 							aria-hidden="true"
@@ -288,7 +288,7 @@ export default function DeveloperProfilePage() {
 
 							<div className="flex flex-col items-center gap-8 md:flex-row md:items-start">
 								<div className="relative">
-									<Avatar className="h-32 w-32 border-4 border-border md:h-40 md:w-40">
+									<Avatar className="h-32 w-32 ring-4 ring-primary/10 md:h-40 md:w-40">
 										<AvatarImage
 											src={developer.image || undefined}
 											alt={developer.name || ""}
@@ -298,7 +298,7 @@ export default function DeveloperProfilePage() {
 											{(developer.name || "??").slice(0, 2).toUpperCase()}
 										</AvatarFallback>
 									</Avatar>
-									<div className="absolute -right-2 -bottom-2 flex h-16 w-16 items-center justify-center rounded-full border-4 border-card bg-primary text-primary-foreground shadow-lg">
+									<div className="absolute -right-2 -bottom-2 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground ring-4 ring-card">
 										<TierIcon className="h-7 w-7" />
 									</div>
 								</div>
@@ -319,7 +319,7 @@ export default function DeveloperProfilePage() {
 									</div>
 
 									<div className="mb-6 flex flex-wrap items-center justify-center gap-3 md:justify-start">
-										<Badge className="border border-primary/20 bg-primary/10 px-4 py-2 text-primary text-sm">
+										<Badge className="border-0 bg-primary/10 px-4 py-2 text-primary text-sm">
 											<TierIcon className="mr-2 h-4 w-4" />
 											{t("tier_developer", { tier: tierName })}
 										</Badge>
@@ -445,7 +445,7 @@ export default function DeveloperProfilePage() {
 								</div>
 
 								{plugins.length === 0 ? (
-									<Card className="border bg-card">
+									<Card className="bg-card">
 										<CardContent>
 											<EmptyState
 												icon="+"
@@ -455,7 +455,7 @@ export default function DeveloperProfilePage() {
 										</CardContent>
 									</Card>
 								) : (
-									<div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+									<div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2">
 										{plugins.map((plugin: DeveloperPlugin, index: number) => (
 											<motion.div
 												key={plugin.id}
@@ -469,7 +469,7 @@ export default function DeveloperProfilePage() {
 													delay: (index % 2) * 0.06,
 													ease: [0.16, 1, 0.3, 1],
 												}}
-												className="h-full"
+												className="h-full min-w-0 max-w-full"
 											>
 												<PluginCard plugin={plugin} className="h-full" />
 											</motion.div>

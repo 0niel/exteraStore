@@ -92,8 +92,8 @@ function StatTile({
 	return (
 		<div
 			className={cn(
-				"flex items-center gap-3 rounded-2xl border p-4 shadow-soft",
-				highlight ? "border-primary/25 bg-primary/5" : "bg-card",
+				"flex items-center gap-3 rounded-2xl p-4",
+				highlight ? "bg-primary/8" : "bg-card",
 			)}
 		>
 			<span
@@ -129,7 +129,7 @@ function WeekBars({
 	const max = Math.max(1, ...days.map((d) => d.total));
 
 	return (
-		<div className="rounded-2xl border bg-card p-4 shadow-soft">
+		<div className="rounded-2xl bg-card p-4">
 			<div className="mb-3 flex items-center justify-between">
 				<span className="eyebrow">{label}</span>
 			</div>
@@ -152,9 +152,7 @@ function WeekBars({
 								style={{ height: `${Math.max(8, (d.total / max) * 100)}%` }}
 								className={cn(
 									"w-full origin-bottom rounded-md",
-									isToday
-										? "bg-primary shadow-[0_0_12px] shadow-primary/40"
-										: "bg-primary/20",
+									isToday ? "bg-primary" : "bg-primary/20",
 								)}
 							/>
 							<span
@@ -355,12 +353,12 @@ export default function PulsePage() {
 
 	return (
 		<div className="bg-background">
-			<section className="relative isolate overflow-hidden border-b">
+			<section className="relative isolate overflow-hidden">
 				<div className="dot-grid absolute inset-0 -z-10" />
 				<div className="absolute -top-24 left-1/4 -z-10 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
 				<div className="container mx-auto px-4 pt-10 pb-14 sm:pt-14">
 					<div className="flex flex-wrap items-center gap-3">
-						<span className="inline-flex min-h-8 items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3 font-mono font-semibold text-primary text-xs uppercase tracking-widest">
+						<span className="inline-flex min-h-8 items-center gap-2 rounded-full bg-primary/10 px-3 font-mono font-semibold text-primary text-xs uppercase tracking-widest">
 							<span className="size-2 animate-pulse-dot rounded-full bg-primary" />
 							{t("live")}
 						</span>
@@ -420,10 +418,10 @@ export default function PulsePage() {
 										}}
 										aria-pressed={tab === item.value}
 										className={cn(
-											"press-scale inline-flex min-h-11 shrink-0 snap-start items-center gap-1.5 rounded-full border px-4 font-medium text-sm transition-colors",
+											"press-scale inline-flex min-h-11 shrink-0 snap-start items-center gap-1.5 rounded-full px-4 font-medium text-sm transition-colors",
 											tab === item.value
-												? "border-primary bg-primary text-primary-foreground"
-												: "bg-background/70 backdrop-blur hover:border-primary/40 hover:text-primary",
+												? "bg-primary text-primary-foreground"
+												: "bg-surface hover:text-primary",
 										)}
 									>
 										{ItemIcon && <ItemIcon className="h-4 w-4" />}
@@ -516,7 +514,7 @@ export default function PulsePage() {
 														>
 															<span
 																className={cn(
-																	"relative z-10 mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl shadow-soft",
+																	"relative z-10 mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl",
 																	node?.className,
 																	isLatest &&
 																		!reduceMotion &&
@@ -574,7 +572,7 @@ export default function PulsePage() {
 					<aside className="hidden space-y-6 lg:block">
 						{stats && <WeekBars days={stats.days} label={t("week_activity")} />}
 
-						<div className="rounded-2xl border bg-card p-5 shadow-soft">
+						<div className="rounded-2xl bg-card p-5">
 							<div className="mb-4 flex items-center justify-between">
 								<span className="eyebrow">{t("trending_title")}</span>
 								<TrendingUp className="size-4 text-primary" />

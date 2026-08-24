@@ -28,7 +28,7 @@ function CollectionSkeleton() {
 			</div>
 			<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
 				{Array.from({ length: 6 }).map((_, i) => (
-					<div key={i} className="space-y-4 rounded-lg border p-4">
+					<div key={i} className="space-y-4 rounded-lg bg-surface p-4">
 						<Skeleton className="skeleton-shimmer h-32 w-full" />
 						<div className="space-y-2">
 							<Skeleton className="skeleton-shimmer h-5 w-3/4" />
@@ -105,7 +105,7 @@ export default function CollectionDetailPage() {
 
 	return (
 		<div className="bg-background">
-			<div className="glass sticky top-0 z-50 border-b lg:hidden">
+			<div className="glass sticky top-[calc(4rem+env(safe-area-inset-top))] z-40 lg:hidden">
 				<div className="flex items-center justify-between px-4 py-2">
 					<Button
 						variant="ghost"
@@ -136,7 +136,7 @@ export default function CollectionDetailPage() {
 				</div>
 
 				<div className="mb-8 space-y-6">
-					<div className="relative animate-fade-up overflow-hidden rounded-2xl border bg-card p-6 shadow-soft lg:p-8">
+					<div className="relative animate-fade-up overflow-hidden rounded-2xl bg-card p-6 lg:p-8">
 						<div
 							aria-hidden="true"
 							className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-primary/50 to-transparent"
@@ -153,7 +153,7 @@ export default function CollectionDetailPage() {
 							{initial}
 						</span>
 						<div className="relative flex min-h-40 flex-col justify-between gap-6">
-							<span className="inline-flex w-fit items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1.5 font-medium text-primary text-xs">
+							<span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1.5 font-medium text-primary text-xs">
 								<Sparkles className="h-3.5 w-3.5" />
 								{t("ai_curated")}
 							</span>
@@ -169,7 +169,7 @@ export default function CollectionDetailPage() {
 					</div>
 
 					<div className="grid animate-fade-up grid-cols-3 gap-3">
-						<div className="rounded-2xl border bg-card p-4 text-center shadow-soft">
+						<div className="rounded-2xl bg-card p-4 text-center">
 							<div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
 								<Sparkles className="h-4 w-4" />
 							</div>
@@ -180,7 +180,7 @@ export default function CollectionDetailPage() {
 								{t("stat_plugins")}
 							</div>
 						</div>
-						<div className="rounded-2xl border bg-card p-4 text-center shadow-soft">
+						<div className="rounded-2xl bg-card p-4 text-center">
 							<div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
 								<Star className="h-4 w-4" />
 							</div>
@@ -198,7 +198,7 @@ export default function CollectionDetailPage() {
 								{t("avg_rating")}
 							</div>
 						</div>
-						<div className="rounded-2xl border bg-card p-4 text-center shadow-soft">
+						<div className="rounded-2xl bg-card p-4 text-center">
 							<div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
 								<Calendar className="h-4 w-4" />
 							</div>
@@ -237,7 +237,7 @@ export default function CollectionDetailPage() {
 							description={t("empty_plugins_description")}
 						/>
 					) : (
-						<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+						<div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 							{plugins.map((plugin: CollectionPlugin, index: number) => (
 								<motion.div
 									key={plugin.id}
@@ -249,7 +249,7 @@ export default function CollectionDetailPage() {
 										delay: (index % 3) * 0.06,
 										ease: [0.16, 1, 0.3, 1],
 									}}
-									className="h-full"
+									className="h-full min-w-0 max-w-full"
 								>
 									<PluginCard plugin={plugin} className="h-full" />
 								</motion.div>
@@ -258,7 +258,7 @@ export default function CollectionDetailPage() {
 					)}
 				</div>
 
-				<Card className="relative mt-12 overflow-hidden border">
+				<Card className="relative mt-12 overflow-hidden bg-surface">
 					<div
 						aria-hidden="true"
 						className="pointer-events-none absolute -top-20 -right-20 h-56 w-56 rounded-full bg-primary/10 blur-3xl"

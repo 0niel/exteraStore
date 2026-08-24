@@ -44,7 +44,7 @@ export function MobileTabBar() {
 	return (
 		<nav
 			aria-label={t("home")}
-			className="fixed inset-x-0 bottom-0 isolate z-50 border-t bg-background/96 pb-safe shadow-[0_-10px_35px_-22px_rgba(0,0,0,.45)] backdrop-blur-xl md:hidden"
+			className="fixed inset-x-0 bottom-0 isolate z-50 bg-background/96 pb-safe backdrop-blur-xl md:hidden"
 		>
 			<span className="pointer-events-none absolute inset-x-6 top-0 h-px bg-linear-to-r from-transparent via-primary/60 to-transparent" />
 			<div className="mx-auto flex h-16 max-w-lg items-stretch justify-around px-2">
@@ -68,7 +68,7 @@ export function MobileTabBar() {
 							{active && (
 								<motion.span
 									layoutId="mobile-tab-indicator"
-									className="absolute inset-x-1.5 inset-y-1.5 -z-10 rounded-2xl border border-primary/15 bg-primary/8"
+									className="absolute inset-x-1.5 inset-y-1.5 -z-10 rounded-2xl bg-primary/10"
 									transition={
 										reduceMotion
 											? { duration: 0 }
@@ -87,10 +87,8 @@ export function MobileTabBar() {
 								{isProfile ? (
 									<Avatar
 										className={cn(
-											"size-6 border",
-											active
-												? "border-primary shadow-[0_0_8px] shadow-primary/40"
-												: "border-transparent",
+											"size-6",
+											active ? "ring-2 ring-primary/40" : "",
 										)}
 									>
 										<AvatarImage

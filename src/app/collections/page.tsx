@@ -21,7 +21,7 @@ type CollectionTab = "all" | "recent" | "popular";
 
 function CollectionSkeleton() {
 	return (
-		<Card className="overflow-hidden border bg-card">
+		<Card className="overflow-hidden bg-card">
 			<Skeleton className="skeleton-shimmer h-28 w-full rounded-none" />
 			<CardContent className="p-4">
 				<Skeleton className="skeleton-shimmer mb-2 h-6 w-3/4" />
@@ -52,7 +52,7 @@ function CollectionCard({
 	const pluginData = collection.plugins || [];
 
 	return (
-		<Card className="group card-lift h-full overflow-hidden border bg-card">
+		<Card className="group card-lift h-full overflow-hidden bg-card">
 			<div className="relative">
 				<div className="relative h-24 overflow-hidden bg-gradient-to-br from-primary/25 via-primary/10 to-primary/5 p-4 dark:from-primary/30 dark:via-primary/12 dark:to-transparent">
 					<div
@@ -63,7 +63,7 @@ function CollectionCard({
 						<span className="font-bold font-mono text-muted-foreground text-sm tabular-nums">
 							{String(index + 1).padStart(2, "0")}
 						</span>
-						<span className="glass inline-flex items-center gap-1 rounded-full border border-primary/25 px-2.5 py-1 font-medium text-primary text-xs">
+						<span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 font-medium text-primary text-xs">
 							<Sparkles className="h-3 w-3" />
 							{t("ai_curated")}
 						</span>
@@ -75,7 +75,7 @@ function CollectionCard({
 				</div>
 				<span
 					aria-hidden="true"
-					className="absolute -bottom-6 left-4 flex size-12 select-none items-center justify-center rounded-2xl bg-linear-to-b from-primary to-[color-mix(in_oklch,var(--primary)_78%,black)] font-black text-2xl text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-card transition-transform duration-300 group-hover:scale-105"
+					className="absolute -bottom-6 left-4 flex size-12 select-none items-center justify-center rounded-2xl bg-primary font-black text-2xl text-primary-foreground transition-transform duration-300 group-hover:scale-105"
 				>
 					{initial}
 				</span>
@@ -156,6 +156,7 @@ export default function CollectionsPage() {
 	const t = useTranslations("CollectionsPage");
 	const reduceMotion = useReducedMotion();
 	const [activeTab, setActiveTab] = useState<CollectionTab>("all");
+	const [visibleCount, setVisibleCount] = useState(6);
 
 	const {
 		data: collections,
@@ -182,6 +183,7 @@ export default function CollectionsPage() {
 		{ value: "recent", label: t("tab_recent") },
 		{ value: "popular", label: t("tab_popular") },
 	];
+	const visibleCollections = filteredCollections.slice(0, visibleCount);
 
 	const emptyByTab: Record<
 		CollectionTab,
@@ -243,7 +245,7 @@ export default function CollectionsPage() {
 
 				<div className="mb-8 grid grid-cols-3 gap-2 sm:gap-4">
 					{stats.map((stat) => (
-						<Card key={stat.label} className="border bg-card">
+						<Card key={stat.label} className="bg-card">
 							<CardContent className="flex h-full flex-col items-start gap-2 p-3 sm:flex-row sm:items-center sm:gap-3 sm:p-4">
 								<div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary sm:size-11">
 									<stat.icon className="h-5 w-5" />
@@ -280,7 +282,10 @@ export default function CollectionsPage() {
 						<button
 							key={item.value}
 							type="button"
-							onClick={() => setActiveTab(item.value)}
+							onClick={() => {
+								setActiveTab(item.value);
+								setVisibleCount(6);
+							}}
 							aria-pressed={activeTab === item.value}
 							className={cn(
 								"press-scale min-h-11 shrink-0 snap-start rounded-full border px-4 font-medium text-sm transition-colors",
@@ -315,8 +320,8 @@ export default function CollectionsPage() {
 						description={emptyByTab[activeTab].description}
 					/>
 				) : (
-					<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-						{filteredCollections.map((collection, index) => (
+					<div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+						{visibleCollections.map((collection, index) => (
 							<motion.div
 								key={collection.id}
 								initial={reduceMotion ? false : { opacity: 0, y: 24 }}
@@ -327,7 +332,7 @@ export default function CollectionsPage() {
 									delay: (index % 3) * 0.06,
 									ease: [0.16, 1, 0.3, 1],
 								}}
-								className="h-full"
+								className="h-full min-w-0 max-w-full"
 							>
 								<CollectionCard collection={collection} index={index} />
 							</motion.div>
@@ -335,7 +340,21 @@ export default function CollectionsPage() {
 					</div>
 				)}
 
-				<Card className="relative mt-12 overflow-hidden border">
+				{visibleCount < filteredCollections.length && (
+					<div className="mt-6 flex justify-center">
+						<Button
+							variant="secondary"
+							className="w-full sm:w-auto"
+							onClick={() => setVisibleCount((count) => count + 6)}
+						>
+							{t("show_more", {
+								count: filteredCollections.length - visibleCount,
+							})}
+						</Button>
+					</div>
+				)}
+
+				<Card className="relative mt-12 overflow-hidden bg-surface">
 					<div
 						aria-hidden="true"
 						className="pointer-events-none absolute -top-20 -right-20 h-56 w-56 rounded-full bg-primary/10 blur-3xl"

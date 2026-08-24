@@ -83,6 +83,7 @@ export function SearchDialog({
 	trigger,
 	placeholder,
 	className,
+	isMobile = false,
 }: SearchDialogProps) {
 	const t = useTranslations("SearchDialog");
 	const reduceMotion = useReducedMotion();
@@ -251,7 +252,8 @@ export function SearchDialog({
 					<button
 						type="button"
 						className={cn(
-							"flex min-h-11 items-center gap-2 rounded-xl border bg-muted/50 px-3 text-muted-foreground text-sm transition-colors hover:border-primary/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+							"flex min-h-11 items-center gap-2 rounded-xl bg-surface px-3 text-muted-foreground text-sm transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+							isMobile && "bg-card",
 							className,
 						)}
 					>
@@ -259,7 +261,7 @@ export function SearchDialog({
 						<span className="min-w-0 flex-1 truncate text-left">
 							{placeholder || t("search_plugins")}
 						</span>
-						<kbd className="pointer-events-none hidden rounded-md border bg-background px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground lg:block">
+						<kbd className="pointer-events-none hidden rounded-md bg-background px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground lg:block">
 							⌘K
 						</kbd>
 					</button>
@@ -267,14 +269,14 @@ export function SearchDialog({
 			</DialogTrigger>
 			<DialogContent
 				showCloseButton={false}
-				className="top-0 h-dvh w-full max-w-full translate-y-0 gap-0 overflow-hidden rounded-none border-0 p-0 sm:top-[8rem] sm:h-auto sm:max-w-2xl sm:rounded-2xl sm:border"
+				className="top-0 h-dvh w-full max-w-full translate-y-0 gap-0 overflow-hidden rounded-none border-0 p-0 sm:top-[8rem] sm:h-auto sm:max-w-2xl sm:rounded-2xl"
 			>
 				<DialogTitle className="sr-only">{t("title")}</DialogTitle>
 				<DialogDescription className="sr-only">
 					{t("subtitle")}
 				</DialogDescription>
 
-				<div className="flex items-center gap-3 border-b px-4 sm:px-5">
+				<div className="flex items-center gap-3 bg-surface px-4 sm:px-5">
 					<Search
 						className={cn(
 							"size-5 shrink-0",
@@ -309,11 +311,11 @@ export function SearchDialog({
 						type="button"
 						onClick={close}
 						aria-label={t("close")}
-						className="flex size-9 shrink-0 items-center justify-center rounded-lg border text-muted-foreground text-xs transition-colors hover:bg-muted hover:text-foreground sm:hidden"
+						className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-background text-muted-foreground text-xs transition-colors hover:bg-muted hover:text-foreground sm:hidden"
 					>
 						<X className="size-4" />
 					</button>
-					<kbd className="pointer-events-none hidden rounded-md border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground sm:block">
+					<kbd className="pointer-events-none hidden rounded-md bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground sm:block">
 						esc
 					</kbd>
 				</div>

@@ -41,7 +41,7 @@ const iconMap = {
 
 function CategorySkeleton() {
 	return (
-		<div className="flex h-full flex-col justify-between rounded-2xl border bg-card p-5">
+		<div className="flex h-full flex-col justify-between rounded-2xl bg-card p-5">
 			<div className="flex items-start justify-between">
 				<Skeleton className="skeleton-shimmer h-10 w-14" />
 				<Skeleton className="skeleton-shimmer h-11 w-11 rounded-xl" />
@@ -128,7 +128,7 @@ export default function CategoriesPage() {
 											href={`/categories/${category.slug}`}
 											className="group tap-highlight-none block h-full"
 										>
-											<div className="card-lift relative flex h-full min-h-11 flex-col justify-between overflow-hidden rounded-2xl border bg-card p-5">
+											<div className="card-lift relative flex h-full min-h-11 flex-col justify-between overflow-hidden rounded-2xl bg-card p-5">
 												<div
 													aria-hidden="true"
 													className="pointer-events-none absolute inset-0 origin-left scale-x-0 bg-primary/5 transition-transform duration-500 ease-[var(--ease-out-expo)] group-hover:scale-x-100"

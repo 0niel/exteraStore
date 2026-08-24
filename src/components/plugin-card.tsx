@@ -72,9 +72,9 @@ function CategoryChip({
 }) {
 	return (
 		<Badge
-			variant="outline"
+			variant="secondary"
 			className={cn(
-				"border bg-background/70 text-foreground text-xs backdrop-blur",
+				"max-w-full border-0 bg-background/75 text-foreground text-xs backdrop-blur",
 				className,
 			)}
 		>
@@ -98,7 +98,7 @@ function VerifiedChip({
 		);
 	}
 	return (
-		<span className="inline-flex items-center gap-1 rounded-full bg-contrast px-2 py-1 text-contrast-foreground text-xs shadow-sm">
+		<span className="inline-flex items-center gap-1 rounded-full bg-contrast px-2 py-1 text-contrast-foreground text-xs">
 			<Shield className="size-3.5" />
 			<span>{label}</span>
 		</span>
@@ -125,7 +125,7 @@ function FavoriteButton({
 			variant="secondary"
 			disabled={pending}
 			className={cn(
-				"press-scale pointer-events-auto size-11 rounded-full bg-background/85 shadow-sm backdrop-blur hover:bg-background",
+				"press-scale pointer-events-auto size-11 rounded-full bg-background/90 backdrop-blur hover:bg-background",
 				isFavorited && "bg-primary/10 hover:bg-primary/20",
 				className,
 			)}
@@ -238,7 +238,7 @@ export function PluginCard({
 		return (
 			<Card
 				className={cn(
-					"card-lift group relative overflow-hidden border-border/60 bg-card focus-within:ring-2 focus-within:ring-ring/40",
+					"card-lift group relative w-full min-w-0 max-w-full overflow-hidden bg-card focus-within:ring-2 focus-within:ring-ring/40",
 					className,
 				)}
 			>
@@ -323,8 +323,8 @@ export function PluginCard({
 	return (
 		<Card
 			className={cn(
-				"card-lift group relative flex h-full flex-col overflow-hidden border-border/60 bg-card focus-within:ring-2 focus-within:ring-ring/40",
-				plugin.featured && "border-primary/30",
+				"card-lift group relative flex h-full w-full min-w-0 max-w-full flex-col overflow-hidden bg-card focus-within:ring-2 focus-within:ring-ring/40",
+				plugin.featured && "bg-primary/[0.055]",
 				className,
 			)}
 		>
@@ -336,8 +336,8 @@ export function PluginCard({
 				<span className="sr-only">{plugin.name}</span>
 			</Link>
 			<div className="pointer-events-none relative z-10 flex h-full flex-col">
-				<div className="flex h-full flex-col p-5">
-					<div className="relative mb-4 overflow-hidden rounded-xl border bg-surface">
+				<div className="flex h-full min-w-0 flex-col p-3 sm:p-5">
+					<div className="relative mb-4 min-w-0 overflow-hidden rounded-xl bg-surface">
 						<div className="relative aspect-[16/10] sm:aspect-video">
 							{coverImage ? (
 								<Image
@@ -381,7 +381,7 @@ export function PluginCard({
 						</div>
 					</div>
 
-					<div className="flex min-h-0 flex-1 flex-col">
+					<div className="flex min-h-0 min-w-0 flex-1 flex-col">
 						<div className="space-y-2">
 							<div className="flex items-start justify-between gap-3">
 								<div className="min-w-0 flex-1">
@@ -412,7 +412,7 @@ export function PluginCard({
 						)}
 
 						{safeTags.length > 0 && (
-							<div className="mt-2 flex flex-wrap gap-1">
+							<div className="mt-2 flex min-w-0 flex-wrap gap-1">
 								{safeTags.slice(0, 3).map((tag) => (
 									<Badge
 										key={tag}
@@ -430,8 +430,8 @@ export function PluginCard({
 							</div>
 						)}
 
-						<div className="mt-auto flex items-center justify-between pt-3">
-							<div className="flex items-center gap-4 text-sm">
+						<div className="mt-auto flex min-w-0 items-center justify-between gap-2 pt-3">
+							<div className="flex min-w-0 items-center gap-3 text-sm sm:gap-4">
 								<Tooltip>
 									<TooltipTrigger asChild>
 										<div className="flex cursor-default items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5">

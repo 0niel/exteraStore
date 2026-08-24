@@ -74,12 +74,9 @@ export function TrendingPlugins() {
 				</motion.div>
 
 				{isLoading ? (
-					<div className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pb-0">
+					<div className="grid min-w-0 gap-3 md:grid-cols-2">
 						{Array.from({ length: 4 }).map((_, i) => (
-							<Skeleton
-								key={i}
-								className="h-28 w-[min(86vw,23rem)] shrink-0 snap-center rounded-2xl md:w-full md:shrink md:snap-start"
-							/>
+							<Skeleton key={i} className="h-28 w-full min-w-0 rounded-2xl" />
 						))}
 					</div>
 				) : trending && trending.length > 0 ? (
@@ -88,13 +85,13 @@ export function TrendingPlugins() {
 						initial="hidden"
 						whileInView="show"
 						viewport={{ once: true, margin: "-80px" }}
-						className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 md:mx-0 md:grid md:grid-cols-2 md:overflow-visible md:px-0 md:pb-0"
+						className="grid min-w-0 gap-3 md:grid-cols-2"
 					>
 						{trending.map((plugin: Plugin) => (
 							<motion.div
 								key={plugin.id}
 								variants={item}
-								className="w-[min(86vw,23rem)] shrink-0 snap-center md:w-auto md:shrink md:snap-start"
+								className="min-w-0 max-w-full"
 							>
 								<PluginCard plugin={plugin} compact />
 							</motion.div>

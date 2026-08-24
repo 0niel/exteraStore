@@ -2,7 +2,7 @@
 
 import { LoginButton } from "@telegram-auth/react";
 import { signIn } from "next-auth/react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback } from "react";
 import { toast } from "sonner";
 import { TelegramIcon } from "~/components/icons/telegram-icon";
@@ -20,6 +20,7 @@ type TelegramAuthData = {
 
 export function TelegramLoginButton({ botUsername }: { botUsername?: string }) {
 	const t = useTranslations("Auth");
+	const locale = useLocale();
 	const handleAuth = useCallback(
 		async (data: TelegramAuthData) => {
 			const result = await signIn("telegram", {
@@ -60,6 +61,7 @@ export function TelegramLoginButton({ botUsername }: { botUsername?: string }) {
 				buttonSize="large"
 				cornerRadius={10}
 				showAvatar={false}
+				lang={locale}
 			/>
 		</div>
 	);
