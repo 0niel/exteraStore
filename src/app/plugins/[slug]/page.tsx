@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
+	CheckCircle,
 	ChevronLeft,
 	Download,
 	Edit,
@@ -9,12 +10,14 @@ import {
 	FileText,
 	Globe,
 	Heart,
+	Loader2,
 	MessageSquare,
 	Share2,
 	Shield,
 	Star,
 	Tag,
 	Trash2,
+	TriangleAlert,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -378,6 +381,38 @@ export default function PluginDetailPage() {
 		{ id: "changelog", label: t("changelog_tab") },
 		{ id: "pipeline", label: t("pipeline_tab") },
 	];
+	const checkBadge = {
+		critical: {
+			label: t("checks_badge_critical"),
+			icon: TriangleAlert,
+			className: "bg-destructive/15 text-destructive",
+			activeClassName: "bg-background text-destructive",
+		},
+		issues: {
+			label: t("checks_badge_issues"),
+			icon: TriangleAlert,
+			className: "bg-warning/15 text-warning",
+			activeClassName: "bg-warning text-black",
+		},
+		ok: {
+			label: t("checks_badge_ok"),
+			icon: CheckCircle,
+			className: "bg-success/15 text-success",
+			activeClassName: "bg-success text-white",
+		},
+		running: {
+			label: t("checks_badge_running"),
+			icon: Loader2,
+			className: "bg-primary/10 text-primary",
+			activeClassName: "bg-background/15 text-primary-foreground",
+		},
+		unchecked: {
+			label: t("checks_badge_unchecked"),
+			icon: Shield,
+			className: "bg-muted text-muted-foreground",
+			activeClassName: "bg-background/15 text-primary-foreground/80",
+		},
+	}[plugin.checkSummary];
 
 	return (
 		<div className="bg-background">
@@ -673,7 +708,25 @@ export default function PluginDetailPage() {
 											: "bg-surface text-muted-foreground hover:bg-primary/10 hover:text-foreground",
 									)}
 								>
-									{tab.label}
+									<span>{tab.label}</span>
+									{tab.id === "pipeline" && (
+										<span
+											className={cn(
+												"ml-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold text-[11px] leading-none",
+												activeTab === tab.id
+													? checkBadge.activeClassName
+													: checkBadge.className,
+											)}
+										>
+											<checkBadge.icon
+												className={cn(
+													"h-3 w-3",
+													plugin.checkSummary === "running" && "animate-spin",
+												)}
+											/>
+											{checkBadge.label}
+										</span>
+									)}
 								</button>
 							))}
 						</div>

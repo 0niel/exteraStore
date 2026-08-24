@@ -12,6 +12,7 @@ import {
 } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { summarizePluginChecks } from "~/lib/plugin-check-summary";
 import { notifyReviewSubscribers } from "~/lib/telegram-notifications";
 import { generateSlug } from "~/lib/utils";
 import {
@@ -24,6 +25,7 @@ import {
 	pluginCategories,
 	pluginDownloads,
 	pluginPipelineChecks,
+	pluginPipelineQueue,
 	pluginReviews,
 	plugins,
 	users,
@@ -144,24 +146,47 @@ export const pluginsRouter = createTRPCRouter({
 				throw new Error("Plugin not found");
 			}
 
-			const [latestSecurityCheck, dependencies] = await Promise.all([
-				ctx.db
-					.select()
-					.from(pluginPipelineChecks)
-					.where(
-						and(
-							eq(pluginPipelineChecks.pluginId, plugin[0].id),
-							eq(pluginPipelineChecks.checkType, "security"),
-						),
-					)
-					.orderBy(desc(pluginPipelineChecks.createdAt))
-					.limit(1),
-				getDirectPluginDependencies(ctx.db, plugin[0].id),
-			]);
+			const [latestSecurityCheck, recentChecks, latestQueue, dependencies] =
+				await Promise.all([
+					ctx.db
+						.select()
+						.from(pluginPipelineChecks)
+						.where(
+							and(
+								eq(pluginPipelineChecks.pluginId, plugin[0].id),
+								eq(pluginPipelineChecks.checkType, "security"),
+							),
+						)
+						.orderBy(desc(pluginPipelineChecks.createdAt))
+						.limit(1),
+					ctx.db
+						.select({
+							checkType: pluginPipelineChecks.checkType,
+							status: pluginPipelineChecks.status,
+							score: pluginPipelineChecks.score,
+							classification: pluginPipelineChecks.classification,
+							createdAt: pluginPipelineChecks.createdAt,
+						})
+						.from(pluginPipelineChecks)
+						.where(eq(pluginPipelineChecks.pluginId, plugin[0].id))
+						.orderBy(desc(pluginPipelineChecks.createdAt))
+						.limit(12),
+					ctx.db
+						.select({ status: pluginPipelineQueue.status })
+						.from(pluginPipelineQueue)
+						.where(eq(pluginPipelineQueue.pluginId, plugin[0].id))
+						.orderBy(desc(pluginPipelineQueue.createdAt))
+						.limit(1),
+					getDirectPluginDependencies(ctx.db, plugin[0].id),
+				]);
 
 			return {
 				...plugin[0],
 				latestSecurityCheck: latestSecurityCheck[0] || null,
+				checkSummary: summarizePluginChecks(
+					recentChecks,
+					latestQueue[0]?.status,
+				),
 				dependencies,
 			};
 		}),
