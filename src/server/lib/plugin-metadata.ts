@@ -210,31 +210,11 @@ const CATEGORY_TAGS: Record<string, string[]> = {
 	fun: ["развлечения", "игры", "мемы"],
 };
 
-function readTags(value: string | null) {
-	if (!value) {
-		return [];
-	}
-	try {
-		const parsed: unknown = JSON.parse(value);
-		return Array.isArray(parsed)
-			? parsed.filter((tag): tag is string => typeof tag === "string")
-			: [];
-	} catch {
-		return [];
-	}
-}
-
 export function buildFallbackPluginMetadata(
 	plugin: MetadataPlugin,
 	validCategories: Set<string>,
 ) {
-	const existingTags = readTags(plugin.tags);
-	const text = [
-		plugin.name,
-		plugin.shortDescription,
-		plugin.description,
-		...existingTags,
-	]
+	const text = [plugin.name, plugin.shortDescription, plugin.description]
 		.join(" ")
 		.toLocaleLowerCase("ru");
 	const scores = CATEGORY_RULES.map((rule) => ({
@@ -264,7 +244,6 @@ export function buildFallbackPluginMetadata(
 	const tags = normalizeDiscoveryTags([
 		...(CATEGORY_TAGS[category] ?? [category, "telegram", "плагин"]),
 		...matchedTags,
-		...existingTags,
 	]);
 
 	return { category, tags };

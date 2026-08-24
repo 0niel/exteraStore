@@ -75,7 +75,7 @@ test("classifies TikTok image tools as media without inventing API support", () 
 			description: "создает рамку из тиктока",
 			shortDescription: "рамка для сообщения",
 			category: "fun",
-			tags: "[]",
+			tags: '["интеграции","сервисы","api"]',
 		},
 		new Set(["media", "integrations", "fun"]),
 	);
