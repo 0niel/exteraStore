@@ -54,10 +54,39 @@ interface TelegramWebApp {
 declare global {
 	interface Window {
 		Telegram?: { WebApp?: TelegramWebApp };
+		TelegramWebviewProxy?: { postEvent: (type: string, data: string) => void };
 	}
 }
 
 type TelegramStatus = "loading" | "ready" | "unavailable";
+
+function isTelegramLaunch() {
+	if (
+		/(?:^|[&#?])tgWebApp(?:Data|Version|Platform)=/.test(location.hash) ||
+		window.TelegramWebviewProxy
+	) {
+		return true;
+	}
+
+	const external = window.external as typeof window.external & {
+		notify?: unknown;
+	};
+	if (typeof external?.notify === "function") {
+		return true;
+	}
+
+	try {
+		const stored = sessionStorage.getItem("__telegram__initParams");
+		const params = stored
+			? (JSON.parse(stored) as { tgWebAppData?: unknown })
+			: null;
+		if (typeof params?.tgWebAppData === "string" && params.tgWebAppData) {
+			return true;
+		}
+	} catch {}
+
+	return document.referrer.startsWith("https://web.telegram.org/");
+}
 
 function applyTelegramTheme(webApp: TelegramWebApp) {
 	const root = document.documentElement;
@@ -109,9 +138,10 @@ export function useTelegramWebApp() {
 		let connected: TelegramWebApp | null = null;
 		let pollId: number | undefined;
 		let timeoutId: number | undefined;
-		const script = document.querySelector<HTMLScriptElement>(
+		let script = document.querySelector<HTMLScriptElement>(
 			'script[src="https://telegram.org/js/telegram-web-app.js"]',
 		);
+		let createdScript = false;
 
 		const stopWaiting = () => {
 			if (pollId !== undefined) window.clearInterval(pollId);
@@ -161,8 +191,23 @@ export function useTelegramWebApp() {
 		};
 
 		if (!connect()) {
+			if (!script && !isTelegramLaunch()) {
+				setStatus("unavailable");
+				return;
+			}
+
+			if (!script) {
+				script = document.createElement("script");
+				script.src = "https://telegram.org/js/telegram-web-app.js";
+				script.async = true;
+				script.fetchPriority = "high";
+				createdScript = true;
+			}
 			script?.addEventListener("load", handleScriptLoad);
 			script?.addEventListener("error", handleScriptError);
+			if (createdScript) {
+				document.head.append(script);
+			}
 			pollId = window.setInterval(connect, 100);
 			timeoutId = window.setTimeout(() => {
 				stopWaiting();

@@ -105,12 +105,8 @@ export default async function RootLayout({
 			suppressHydrationWarning
 		>
 			<body className="overflow-x-hidden bg-background font-sans antialiased">
-				<Script
-					src="https://telegram.org/js/telegram-web-app.js"
-					strategy="beforeInteractive"
-				/>
 				<Script id="telegram-mini-app-bootstrap" strategy="beforeInteractive">
-					{`if(window.Telegram?.WebApp?.initData){document.documentElement.dataset.telegramMiniApp="true"}`}
+					{`try{const s=sessionStorage.getItem("__telegram__initParams");const p=s?JSON.parse(s):null;if(/(?:^|[&#?])tgWebApp(?:Data|Version|Platform)=/.test(location.hash)||window.TelegramWebviewProxy||p?.tgWebAppData||document.referrer.startsWith("https://web.telegram.org/")){document.documentElement.dataset.telegramMiniApp="true"}}catch{}`}
 				</Script>
 				<a
 					href="#main-content"
