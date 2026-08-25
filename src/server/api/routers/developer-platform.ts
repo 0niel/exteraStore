@@ -1,5 +1,15 @@
 import { TRPCError } from "@trpc/server";
-import { and, count, desc, eq, gte, isNull } from "drizzle-orm";
+import {
+	and,
+	count,
+	desc,
+	eq,
+	gte,
+	inArray,
+	isNull,
+	lte,
+	sql,
+} from "drizzle-orm";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import {
@@ -14,7 +24,6 @@ import {
 	createWebhookSecret,
 	deliverWebhook,
 	encryptWebhookSecret,
-	getLatestWebhookDeliveries,
 	validateWebhookUrl,
 	WEBHOOK_EVENTS,
 } from "~/server/lib/developer-platform";
@@ -71,37 +80,43 @@ export const developerPlatformRouter = createTRPCRouter({
 			if (input.expiresAt !== null && input.expiresAt <= now()) {
 				throw new TRPCError({ code: "BAD_REQUEST", message: "INVALID_EXPIRY" });
 			}
-			const current = await ctx.db
-				.select({ value: count() })
-				.from(apiKeys)
-				.where(
-					and(
-						eq(apiKeys.userId, ctx.session.user.id),
-						isNull(apiKeys.revokedAt),
-					),
-				);
-			if ((current[0]?.value ?? 0) >= 20) {
-				throw new TRPCError({ code: "BAD_REQUEST", message: "KEY_LIMIT" });
-			}
 			const generated = createApiKeyValue();
-			const [record] = await ctx.db
-				.insert(apiKeys)
-				.values({
-					userId: ctx.session.user.id,
-					name: input.name,
-					prefix: generated.prefix,
-					secretHash: generated.hash,
-					scopes: JSON.stringify([...new Set(input.scopes)]),
-					expiresAt: input.expiresAt,
-				})
-				.returning({ id: apiKeys.id });
-			return { id: record?.id, key: generated.value };
+			return ctx.db.transaction(async (transaction) => {
+				await transaction.execute(
+					sql`select pg_advisory_xact_lock(hashtextextended(${`api-key:${ctx.session.user.id}`}, 0))`,
+				);
+				const current = await transaction
+					.select({ value: count() })
+					.from(apiKeys)
+					.where(
+						and(
+							eq(apiKeys.userId, ctx.session.user.id),
+							isNull(apiKeys.revokedAt),
+						),
+					);
+				if ((current[0]?.value ?? 0) >= 20) {
+					throw new TRPCError({ code: "BAD_REQUEST", message: "KEY_LIMIT" });
+				}
+				const [record] = await transaction
+					.insert(apiKeys)
+					.values({
+						userId: ctx.session.user.id,
+						name: input.name,
+						prefix: generated.prefix,
+						secretHash: generated.hash,
+						scopes: JSON.stringify([...new Set(input.scopes)]),
+						expiresAt: input.expiresAt,
+					})
+					.returning({ id: apiKeys.id });
+				if (!record) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+				return { id: record.id, key: generated.value };
+			});
 		}),
 
 	revokeApiKey: protectedProcedure
 		.input(z.object({ id: z.number().int().positive() }))
 		.mutation(async ({ ctx, input }) => {
-			await ctx.db
+			const [revoked] = await ctx.db
 				.update(apiKeys)
 				.set({ revokedAt: now() })
 				.where(
@@ -109,7 +124,9 @@ export const developerPlatformRouter = createTRPCRouter({
 						eq(apiKeys.id, input.id),
 						eq(apiKeys.userId, ctx.session.user.id),
 					),
-				);
+				)
+				.returning({ id: apiKeys.id });
+			if (!revoked) throw new TRPCError({ code: "NOT_FOUND" });
 			return { success: true };
 		}),
 
@@ -128,13 +145,48 @@ export const developerPlatformRouter = createTRPCRouter({
 			.from(webhooks)
 			.where(eq(webhooks.userId, ctx.session.user.id))
 			.orderBy(desc(webhooks.createdAt));
-		return Promise.all(
-			hooks.map(async (hook) => ({
-				...hook,
-				events: z.array(eventSchema).catch([]).parse(JSON.parse(hook.events)),
-				deliveries: await getLatestWebhookDeliveries(ctx.db, hook.id, 8),
-			})),
-		);
+		if (hooks.length === 0) return [];
+		const rankedDeliveries = ctx.db
+			.select({
+				id: webhookDeliveries.id,
+				webhookId: webhookDeliveries.webhookId,
+				event: webhookDeliveries.event,
+				status: webhookDeliveries.status,
+				createdAt: webhookDeliveries.createdAt,
+				rank: sql<number>`row_number() over (partition by ${webhookDeliveries.webhookId} order by ${webhookDeliveries.createdAt} desc)`.as(
+					"delivery_rank",
+				),
+			})
+			.from(webhookDeliveries)
+			.where(
+				inArray(
+					webhookDeliveries.webhookId,
+					hooks.map((hook) => hook.id),
+				),
+			)
+			.as("ranked_deliveries");
+		const deliveries = await ctx.db
+			.select({
+				id: rankedDeliveries.id,
+				webhookId: rankedDeliveries.webhookId,
+				event: rankedDeliveries.event,
+				status: rankedDeliveries.status,
+				createdAt: rankedDeliveries.createdAt,
+			})
+			.from(rankedDeliveries)
+			.where(lte(rankedDeliveries.rank, 8))
+			.orderBy(rankedDeliveries.webhookId, desc(rankedDeliveries.createdAt));
+		const deliveriesByWebhook = new Map<number, typeof deliveries>();
+		for (const delivery of deliveries) {
+			const existing = deliveriesByWebhook.get(delivery.webhookId) ?? [];
+			existing.push(delivery);
+			deliveriesByWebhook.set(delivery.webhookId, existing);
+		}
+		return hooks.map((hook) => ({
+			...hook,
+			events: z.array(eventSchema).catch([]).parse(JSON.parse(hook.events)),
+			deliveries: deliveriesByWebhook.get(hook.id) ?? [],
+		}));
 	}),
 
 	createWebhook: protectedProcedure
@@ -146,26 +198,35 @@ export const developerPlatformRouter = createTRPCRouter({
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
-			const current = await ctx.db
-				.select({ value: count() })
-				.from(webhooks)
-				.where(eq(webhooks.userId, ctx.session.user.id));
-			if ((current[0]?.value ?? 0) >= 20) {
-				throw new TRPCError({ code: "BAD_REQUEST", message: "WEBHOOK_LIMIT" });
-			}
 			const url = await validateWebhookUrl(input.url);
 			const secret = createWebhookSecret();
-			const [record] = await ctx.db
-				.insert(webhooks)
-				.values({
-					userId: ctx.session.user.id,
-					name: input.name,
-					url,
-					events: JSON.stringify([...new Set(input.events)]),
-					secretEncrypted: encryptWebhookSecret(secret),
-				})
-				.returning({ id: webhooks.id });
-			return { id: record?.id, secret };
+			return ctx.db.transaction(async (transaction) => {
+				await transaction.execute(
+					sql`select pg_advisory_xact_lock(hashtextextended(${`webhook:${ctx.session.user.id}`}, 0))`,
+				);
+				const current = await transaction
+					.select({ value: count() })
+					.from(webhooks)
+					.where(eq(webhooks.userId, ctx.session.user.id));
+				if ((current[0]?.value ?? 0) >= 20) {
+					throw new TRPCError({
+						code: "BAD_REQUEST",
+						message: "WEBHOOK_LIMIT",
+					});
+				}
+				const [record] = await transaction
+					.insert(webhooks)
+					.values({
+						userId: ctx.session.user.id,
+						name: input.name,
+						url,
+						events: JSON.stringify([...new Set(input.events)]),
+						secretEncrypted: encryptWebhookSecret(secret),
+					})
+					.returning({ id: webhooks.id });
+				if (!record) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+				return { id: record.id, secret };
+			});
 		}),
 
 	updateWebhook: protectedProcedure
@@ -180,7 +241,7 @@ export const developerPlatformRouter = createTRPCRouter({
 		)
 		.mutation(async ({ ctx, input }) => {
 			const url = await validateWebhookUrl(input.url);
-			await ctx.db
+			const [updated] = await ctx.db
 				.update(webhooks)
 				.set({
 					name: input.name,
@@ -195,7 +256,9 @@ export const developerPlatformRouter = createTRPCRouter({
 						eq(webhooks.id, input.id),
 						eq(webhooks.userId, ctx.session.user.id),
 					),
-				);
+				)
+				.returning({ id: webhooks.id });
+			if (!updated) throw new TRPCError({ code: "NOT_FOUND" });
 			return { success: true };
 		}),
 
@@ -223,14 +286,16 @@ export const developerPlatformRouter = createTRPCRouter({
 	deleteWebhook: protectedProcedure
 		.input(z.object({ id: z.number().int().positive() }))
 		.mutation(async ({ ctx, input }) => {
-			await ctx.db
+			const [deleted] = await ctx.db
 				.delete(webhooks)
 				.where(
 					and(
 						eq(webhooks.id, input.id),
 						eq(webhooks.userId, ctx.session.user.id),
 					),
-				);
+				)
+				.returning({ id: webhooks.id });
+			if (!deleted) throw new TRPCError({ code: "NOT_FOUND" });
 			return { success: true };
 		}),
 

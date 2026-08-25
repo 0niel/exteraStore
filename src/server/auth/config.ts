@@ -1,6 +1,4 @@
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import { AuthDataValidator } from "@telegram-auth/server";
-import { objectToAuthDataMap } from "@telegram-auth/server/utils";
 import { eq } from "drizzle-orm";
 import type { DefaultSession, NextAuthConfig } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
@@ -13,6 +11,10 @@ import {
 	users,
 	verificationTokens,
 } from "~/server/db/schema";
+import {
+	type TelegramLoginData,
+	validateTelegramLoginData,
+} from "~/server/lib/telegram-login-auth";
 import {
 	type TelegramMiniAppUser,
 	validateTelegramMiniAppInitData,
@@ -118,10 +120,6 @@ export const authConfig = {
 					return null;
 				}
 
-				const validator = new AuthDataValidator({
-					botToken,
-				});
-
 				try {
 					const initData = (credentials as Record<string, unknown>).initData;
 					if (typeof initData === "string" && initData.length > 0) {
@@ -150,23 +148,9 @@ export const authConfig = {
 						}
 					}
 
-					const dataMap = objectToAuthDataMap(strObj);
-
-					const validatedUser = await validator.validate(dataMap);
-
-					const telegramId = validatedUser.id?.toString();
-					if (!telegramId) return null;
-
-					return persistTelegramUser({
-						id: telegramId,
-						firstName: validatedUser.first_name ?? "Telegram user",
-						lastName: validatedUser.last_name,
-						username: validatedUser.username,
-						photoUrl:
-							typeof validatedUser.photo_url === "string"
-								? validatedUser.photo_url
-								: undefined,
-					});
+					return persistTelegramUser(
+						validateTelegramLoginData(strObj as TelegramLoginData, botToken),
+					);
 				} catch {
 					return null;
 				}

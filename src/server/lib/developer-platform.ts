@@ -4,7 +4,7 @@ import crypto from "node:crypto";
 import { lookup } from "node:dns/promises";
 import https from "node:https";
 import { isIP } from "node:net";
-import { and, desc, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { env } from "~/env";
 import { safeJsonParse } from "~/lib/utils";
 import { type Database, db } from "~/server/db";
@@ -216,7 +216,9 @@ export async function recordApiUsage(input: {
 			statusCode: input.statusCode,
 			latencyMs: Math.max(0, Date.now() - input.startedAt),
 		});
-	} catch {}
+	} catch (error) {
+		console.error("developer API usage recording failed", error);
+	}
 }
 
 function signature(secret: string, timestamp: number, payload: string) {
@@ -342,17 +344,4 @@ export async function emitWebhookEvent(
 	return Promise.allSettled(
 		matching.map((hook) => deliverWebhook(database, hook, event, payload)),
 	);
-}
-
-export async function getLatestWebhookDeliveries(
-	database: Database,
-	webhookId: number,
-	limit = 20,
-) {
-	return database
-		.select()
-		.from(webhookDeliveries)
-		.where(eq(webhookDeliveries.webhookId, webhookId))
-		.orderBy(desc(webhookDeliveries.createdAt))
-		.limit(limit);
 }

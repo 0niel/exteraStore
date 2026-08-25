@@ -510,6 +510,7 @@
 	},
 	"Auth": {
 		"telegramAuthFailed": "Ошибка аутентификации через Telegram. Попробуйте еще раз.",
+		"telegram_login_frame": "Вход через Telegram",
 		"sign_in_title": "Вход в exteraStore",
 		"sign_in_subtitle": "Используйте аккаунт Telegram — без паролей, в один клик.",
 		"sign_in_benefit_upload": "Публикуйте и управляйте своими плагинами",

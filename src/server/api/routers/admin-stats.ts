@@ -1,4 +1,4 @@
-import { and, count, desc, eq, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { env } from "~/env";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import {
@@ -73,10 +73,10 @@ export const adminStatsRouter = createTRPCRouter({
 			.orderBy(desc(plugins.createdAt))
 			.limit(5);
 
-		const withChecks = await Promise.all(
-			pending.map(async (plugin: (typeof pending)[number]) => {
-				const check = await ctx.db
-					.select({
+		const checks = pending.length
+			? await ctx.db
+					.selectDistinctOn([pluginPipelineChecks.pluginId], {
+						pluginId: pluginPipelineChecks.pluginId,
 						classification: pluginPipelineChecks.classification,
 						status: pluginPipelineChecks.status,
 						score: pluginPipelineChecks.score,
@@ -84,18 +84,25 @@ export const adminStatsRouter = createTRPCRouter({
 					.from(pluginPipelineChecks)
 					.where(
 						and(
-							eq(pluginPipelineChecks.pluginId, plugin.id),
+							inArray(
+								pluginPipelineChecks.pluginId,
+								pending.map((plugin) => plugin.id),
+							),
 							eq(pluginPipelineChecks.checkType, "security"),
 						),
 					)
-					.orderBy(desc(pluginPipelineChecks.createdAt))
-					.limit(1);
-
-				return { ...plugin, securityCheck: check[0] ?? null };
-			}),
+					.orderBy(
+						pluginPipelineChecks.pluginId,
+						desc(pluginPipelineChecks.createdAt),
+					)
+			: [];
+		const checksByPlugin = new Map(
+			checks.map((check) => [check.pluginId, check]),
 		);
-
-		return withChecks;
+		return pending.map((plugin) => ({
+			...plugin,
+			securityCheck: checksByPlugin.get(plugin.id) ?? null,
+		}));
 	}),
 
 	pipelineFailures: protectedProcedure.query(async ({ ctx }) => {

@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import {
 	and,
 	asc,
@@ -6,7 +7,6 @@ import {
 	eq,
 	ilike,
 	inArray,
-	like,
 	or,
 	sql,
 } from "drizzle-orm";
@@ -48,7 +48,7 @@ export const pluginsRouter = createTRPCRouter({
 				page: z.number().min(1).default(1),
 				limit: z.number().min(1).max(50).default(12),
 				category: z.string().optional(),
-				search: z.string().optional(),
+				search: z.string().trim().max(100).optional(),
 				sortBy: z
 					.enum(["newest", "popular", "rating", "downloads"])
 					.default("newest"),
@@ -62,27 +62,38 @@ export const pluginsRouter = createTRPCRouter({
 			const whereConditions = and(
 				eq(plugins.status, "approved"),
 				input.category ? eq(plugins.category, input.category) : undefined,
-				input.search ? like(plugins.name, `%${input.search}%`) : undefined,
+				input.search ? ilike(plugins.name, `%${input.search}%`) : undefined,
 				input.featured ? eq(plugins.featured, true) : undefined,
 				input.exteralessOnly
 					? eq(plugins.exteralessCompatible, true)
 					: undefined,
 			);
 
-			let orderBy;
-			switch (input.sortBy) {
-				case "popular":
-					orderBy = desc(plugins.downloadCount);
-					break;
-				case "rating":
-					orderBy = desc(plugins.rating);
-					break;
-				case "downloads":
-					orderBy = desc(plugins.downloadCount);
-					break;
-				default:
-					orderBy = desc(plugins.createdAt);
-			}
+			const orderBy = (() => {
+				switch (input.sortBy) {
+					case "popular":
+						return [
+							desc(
+								sql<number>`${plugins.downloadCount} + ${plugins.ratingCount} * 250`,
+							),
+							desc(plugins.ratingCount),
+							desc(plugins.createdAt),
+						];
+					case "rating":
+						return [
+							desc(
+								sql<number>`case when ${plugins.ratingCount} > 0 then 1 else 0 end`,
+							),
+							desc(plugins.rating),
+							desc(plugins.ratingCount),
+							desc(plugins.createdAt),
+						];
+					case "downloads":
+						return [desc(plugins.downloadCount), desc(plugins.createdAt)];
+					default:
+						return [desc(plugins.createdAt)];
+				}
+			})();
 
 			const [pluginRows, totalCount] = await Promise.all([
 				ctx.db
@@ -90,7 +101,7 @@ export const pluginsRouter = createTRPCRouter({
 					.from(plugins)
 					.leftJoin(users, eq(plugins.authorId, users.id))
 					.where(whereConditions)
-					.orderBy(orderBy)
+					.orderBy(...orderBy)
 					.limit(input.limit)
 					.offset(offset),
 				ctx.db
@@ -104,26 +115,31 @@ export const pluginsRouter = createTRPCRouter({
 				authorImage: row.authorImage,
 			}));
 
-			const pluginsWithSecurity = await Promise.all(
-				pluginsList.map(async (plugin: typeof plugins.$inferSelect) => {
-					const latestSecurityCheck = await ctx.db
-						.select()
+			const latestSecurityChecks = pluginsList.length
+				? await ctx.db
+						.selectDistinctOn([pluginPipelineChecks.pluginId])
 						.from(pluginPipelineChecks)
 						.where(
 							and(
-								eq(pluginPipelineChecks.pluginId, plugin.id),
+								inArray(
+									pluginPipelineChecks.pluginId,
+									pluginsList.map((plugin) => plugin.id),
+								),
 								eq(pluginPipelineChecks.checkType, "security"),
 							),
 						)
-						.orderBy(desc(pluginPipelineChecks.createdAt))
-						.limit(1);
-
-					return {
-						...plugin,
-						latestSecurityCheck: latestSecurityCheck[0] || null,
-					};
-				}),
+						.orderBy(
+							pluginPipelineChecks.pluginId,
+							desc(pluginPipelineChecks.createdAt),
+						)
+				: [];
+			const securityByPlugin = new Map(
+				latestSecurityChecks.map((check) => [check.pluginId, check]),
 			);
+			const pluginsWithSecurity = pluginsList.map((plugin) => ({
+				...plugin,
+				latestSecurityCheck: securityByPlugin.get(plugin.id) ?? null,
+			}));
 
 			return {
 				plugins: pluginsWithSecurity,
@@ -134,7 +150,7 @@ export const pluginsRouter = createTRPCRouter({
 		}),
 
 	getBySlug: publicProcedure
-		.input(z.object({ slug: z.string() }))
+		.input(z.object({ slug: z.string().trim().min(1).max(200) }))
 		.query(async ({ ctx, input }) => {
 			const plugin = await ctx.db
 				.select()
@@ -142,49 +158,43 @@ export const pluginsRouter = createTRPCRouter({
 				.where(eq(plugins.slug, input.slug))
 				.limit(1);
 
-			if (!plugin[0]) {
-				throw new Error("Plugin not found");
+			const selectedPlugin = plugin[0];
+			const canViewUnapproved =
+				selectedPlugin &&
+				ctx.session?.user &&
+				(selectedPlugin.authorId === ctx.session.user.id ||
+					ctx.session.user.role === "admin");
+			if (
+				!selectedPlugin ||
+				(selectedPlugin.status !== "approved" && !canViewUnapproved)
+			) {
+				throw new TRPCError({ code: "NOT_FOUND", message: "Plugin not found" });
 			}
 
-			const [latestSecurityCheck, recentChecks, latestQueue, dependencies] =
-				await Promise.all([
-					ctx.db
-						.select()
-						.from(pluginPipelineChecks)
-						.where(
-							and(
-								eq(pluginPipelineChecks.pluginId, plugin[0].id),
-								eq(pluginPipelineChecks.checkType, "security"),
-							),
-						)
-						.orderBy(desc(pluginPipelineChecks.createdAt))
-						.limit(1),
-					ctx.db
-						.select({
-							checkType: pluginPipelineChecks.checkType,
-							status: pluginPipelineChecks.status,
-							score: pluginPipelineChecks.score,
-							classification: pluginPipelineChecks.classification,
-							createdAt: pluginPipelineChecks.createdAt,
-						})
-						.from(pluginPipelineChecks)
-						.where(eq(pluginPipelineChecks.pluginId, plugin[0].id))
-						.orderBy(desc(pluginPipelineChecks.createdAt))
-						.limit(12),
-					ctx.db
-						.select({ status: pluginPipelineQueue.status })
-						.from(pluginPipelineQueue)
-						.where(eq(pluginPipelineQueue.pluginId, plugin[0].id))
-						.orderBy(desc(pluginPipelineQueue.createdAt))
-						.limit(1),
-					getDirectPluginDependencies(ctx.db, plugin[0].id),
-				]);
+			const [latestChecks, latestQueue, dependencies] = await Promise.all([
+				ctx.db
+					.selectDistinctOn([pluginPipelineChecks.checkType])
+					.from(pluginPipelineChecks)
+					.where(eq(pluginPipelineChecks.pluginId, selectedPlugin.id))
+					.orderBy(
+						pluginPipelineChecks.checkType,
+						desc(pluginPipelineChecks.createdAt),
+					),
+				ctx.db
+					.select({ status: pluginPipelineQueue.status })
+					.from(pluginPipelineQueue)
+					.where(eq(pluginPipelineQueue.pluginId, selectedPlugin.id))
+					.orderBy(desc(pluginPipelineQueue.createdAt))
+					.limit(1),
+				getDirectPluginDependencies(ctx.db, selectedPlugin.id),
+			]);
 
 			return {
-				...plugin[0],
-				latestSecurityCheck: latestSecurityCheck[0] || null,
+				...selectedPlugin,
+				latestSecurityCheck:
+					latestChecks.find((check) => check.checkType === "security") ?? null,
 				checkSummary: summarizePluginChecks(
-					recentChecks,
+					latestChecks,
 					latestQueue[0]?.status,
 				),
 				dependencies,

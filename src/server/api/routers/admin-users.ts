@@ -1,4 +1,14 @@
-import { and, count, desc, eq, like, or, type SQL, sql } from "drizzle-orm";
+import {
+	and,
+	count,
+	desc,
+	eq,
+	inArray,
+	like,
+	or,
+	type SQL,
+	sql,
+} from "drizzle-orm";
 import { z } from "zod";
 import { env } from "~/env";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
@@ -74,25 +84,32 @@ export const adminUsersRouter = createTRPCRouter({
 
 			const [usersList, totalRes] = await Promise.all([listQuery, totalQuery]);
 
-			const usersWithStats = await Promise.all(
-				usersList.map(async (user: (typeof usersList)[0]) => {
-					const [pluginCount] = await ctx.db
-						.select({ count: count() })
-						.from(plugins)
-						.where(eq(plugins.authorId, user.id));
-
-					const [reviewCount] = await ctx.db
-						.select({ count: count() })
-						.from(pluginReviews)
-						.where(eq(pluginReviews.userId, user.id));
-
-					return {
-						...user,
-						pluginCount: pluginCount?.count ?? 0,
-						reviewCount: reviewCount?.count ?? 0,
-					};
-				}),
+			const userIds = usersList.map((user) => user.id);
+			const [pluginStats, reviewStats] = userIds.length
+				? await Promise.all([
+						ctx.db
+							.select({ userId: plugins.authorId, count: count() })
+							.from(plugins)
+							.where(inArray(plugins.authorId, userIds))
+							.groupBy(plugins.authorId),
+						ctx.db
+							.select({ userId: pluginReviews.userId, count: count() })
+							.from(pluginReviews)
+							.where(inArray(pluginReviews.userId, userIds))
+							.groupBy(pluginReviews.userId),
+					])
+				: [[], []];
+			const pluginCounts = new Map(
+				pluginStats.map((row) => [row.userId, row.count]),
 			);
+			const reviewCounts = new Map(
+				reviewStats.map((row) => [row.userId, row.count]),
+			);
+			const usersWithStats = usersList.map((user) => ({
+				...user,
+				pluginCount: pluginCounts.get(user.id) ?? 0,
+				reviewCount: reviewCounts.get(user.id) ?? 0,
+			}));
 
 			const total = totalRes[0]?.count ?? 0;
 

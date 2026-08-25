@@ -1,4 +1,4 @@
-import { count, desc, eq } from "drizzle-orm";
+import { count, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "~/server/db";
 import { webhooks } from "~/server/db/schema";
@@ -71,28 +71,35 @@ export async function POST(request: Request) {
 				{ status: statusCode },
 			);
 		}
-		const [current] = await db
-			.select({ value: count() })
-			.from(webhooks)
-			.where(eq(webhooks.userId, credential.userId));
-		if ((current?.value ?? 0) >= 20) {
+		const url = await validateWebhookUrl(parsed.data.url);
+		const secret = createWebhookSecret();
+		const created = await db.transaction(async (transaction) => {
+			await transaction.execute(
+				sql`select pg_advisory_xact_lock(hashtextextended(${`webhook:${credential.userId}`}, 0))`,
+			);
+			const [current] = await transaction
+				.select({ value: count() })
+				.from(webhooks)
+				.where(eq(webhooks.userId, credential.userId));
+			if ((current?.value ?? 0) >= 20) return null;
+			const [record] = await transaction
+				.insert(webhooks)
+				.values({
+					userId: credential.userId,
+					name: parsed.data.name,
+					url,
+					events: JSON.stringify([...new Set(parsed.data.events)]),
+					secretEncrypted: encryptWebhookSecret(secret),
+				})
+				.returning({ id: webhooks.id });
+			return record ?? null;
+		});
+		if (!created) {
 			statusCode = 409;
 			return Response.json({ error: "webhook_limit" }, { status: statusCode });
 		}
-		const url = await validateWebhookUrl(parsed.data.url);
-		const secret = createWebhookSecret();
-		const [created] = await db
-			.insert(webhooks)
-			.values({
-				userId: credential.userId,
-				name: parsed.data.name,
-				url,
-				events: JSON.stringify([...new Set(parsed.data.events)]),
-				secretEncrypted: encryptWebhookSecret(secret),
-			})
-			.returning({ id: webhooks.id });
 		return Response.json(
-			{ data: { id: created?.id, secret } },
+			{ data: { id: created.id, secret } },
 			{ status: statusCode },
 		);
 	} catch (error) {

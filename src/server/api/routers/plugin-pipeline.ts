@@ -863,31 +863,34 @@ export const aiCollectionsRouter = createTRPCRouter({
 				return [];
 			}
 
-			const result = await Promise.all(
-				collections.map(
-					async (collection: typeof aiPluginCollections.$inferSelect) => {
-						const pluginsInCollection = await ctx.db
-							.select({ plugin: plugins, authorImage: users.image })
-							.from(plugins)
-							.leftJoin(users, eq(plugins.authorId, users.id))
-							.where(
-								and(
-									inArray(plugins.id, collection.pluginIds),
-									eq(plugins.status, "approved"),
-								),
-							);
-
-						return {
-							...collection,
-							plugins: pluginsInCollection.map((row) => ({
-								...row.plugin,
-								authorImage: row.authorImage,
-							})),
-						};
-					},
-				),
+			const pluginIds = [
+				...new Set(collections.flatMap((collection) => collection.pluginIds)),
+			];
+			const pluginRows = pluginIds.length
+				? await ctx.db
+						.select({ plugin: plugins, authorImage: users.image })
+						.from(plugins)
+						.leftJoin(users, eq(plugins.authorId, users.id))
+						.where(
+							and(
+								inArray(plugins.id, pluginIds),
+								eq(plugins.status, "approved"),
+							),
+						)
+				: [];
+			const pluginsById = new Map(
+				pluginRows.map((row) => [
+					row.plugin.id,
+					{ ...row.plugin, authorImage: row.authorImage },
+				]),
 			);
 
-			return result;
+			return collections.map((collection) => ({
+				...collection,
+				plugins: collection.pluginIds.flatMap((pluginId) => {
+					const plugin = pluginsById.get(pluginId);
+					return plugin ? [plugin] : [];
+				}),
+			}));
 		}),
 });

@@ -17,15 +17,16 @@ import {
 	Zap,
 } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useEffect } from "react";
+import { CatalogPagination } from "~/components/catalog-pagination";
 import { PluginCard } from "~/components/plugin-card";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { EmptyState } from "~/components/ui/empty-state";
 import { Skeleton } from "~/components/ui/skeleton";
 import { getCategoryDescriptionKey } from "~/lib/category-description";
-import type { plugins as Plugin } from "~/server/db/schema";
 import { api } from "~/trpc/react";
 
 const iconMap = {
@@ -88,14 +89,29 @@ export default function CategoryPage() {
 	const t = useTranslations("CategoriesPage");
 	const reduceMotion = useReducedMotion();
 	const params = useParams();
+	const router = useRouter();
+	const searchParams = useSearchParams();
 	const slug = params.slug as string;
+	const requestedPage = Number(searchParams.get("page") || "1");
+	const page =
+		Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
 
 	const {
 		data: category,
 		isLoading,
 		isError,
 		refetch,
-	} = api.categories.getBySlug.useQuery({ slug });
+	} = api.categories.getBySlug.useQuery({ slug, page, limit: 12 });
+
+	useEffect(() => {
+		if (!category || category.pagination.totalPages < 1) return;
+		if (page <= category.pagination.totalPages) return;
+		const target =
+			category.pagination.totalPages === 1
+				? `/categories/${slug}`
+				: `/categories/${slug}?page=${category.pagination.totalPages}`;
+		router.replace(target, { scroll: false });
+	}, [category, page, router, slug]);
 
 	if (isLoading) {
 		return (
@@ -187,7 +203,7 @@ export default function CategoryPage() {
 								{category.name}
 							</h1>
 							<span className="inline-flex min-h-6 items-center rounded-full bg-primary/10 px-3 py-1 font-medium font-mono text-primary text-xs uppercase tracking-wider">
-								{t("plugin_count", { count: category.plugins.length })}
+								{t("plugin_count", { count: category.pagination.total })}
 							</span>
 						</div>
 					</div>
@@ -198,14 +214,16 @@ export default function CategoryPage() {
 				</div>
 			</section>
 
-			<section className="py-12 md:py-16">
+			<section id="category-plugins" className="py-12 md:py-16">
 				<div className="container mx-auto px-4">
 					{category.plugins.length > 0 ? (
 						<>
 							<div className="mb-8 flex items-end justify-between gap-3">
 								<div>
 									<span className="eyebrow">
-										{t("plugin_count", { count: category.plugins.length })}
+										{t("plugin_count", {
+											count: category.pagination.total,
+										})}
 									</span>
 									<h2 className="mt-2 font-bold text-2xl text-foreground">
 										{t("plugins_in_category")}
@@ -214,27 +232,46 @@ export default function CategoryPage() {
 							</div>
 
 							<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-								{category.plugins.map(
-									(plugin: typeof Plugin.$inferSelect, index: number) => (
-										<motion.div
-											key={plugin.id}
-											initial={reduceMotion ? false : { opacity: 0, y: 24 }}
-											whileInView={
-												reduceMotion ? undefined : { opacity: 1, y: 0 }
-											}
-											viewport={{ once: true, margin: "-80px" }}
-											transition={{
-												duration: 0.5,
-												delay: (index % 3) * 0.06,
-												ease: [0.16, 1, 0.3, 1],
-											}}
-											className="h-full"
-										>
-											<PluginCard plugin={plugin} />
-										</motion.div>
-									),
-								)}
+								{category.plugins.map((plugin, index) => (
+									<motion.div
+										key={plugin.id}
+										initial={reduceMotion ? false : { opacity: 0, y: 24 }}
+										whileInView={
+											reduceMotion ? undefined : { opacity: 1, y: 0 }
+										}
+										viewport={{ once: true, margin: "-80px" }}
+										transition={{
+											duration: 0.5,
+											delay: (index % 3) * 0.06,
+											ease: [0.16, 1, 0.3, 1],
+										}}
+										className="h-full"
+									>
+										<PluginCard plugin={plugin} />
+									</motion.div>
+								))}
 							</div>
+
+							{category.pagination.totalPages > 1 && (
+								<CatalogPagination
+									currentPage={category.pagination.page}
+									totalPages={category.pagination.totalPages}
+									totalItems={category.pagination.total}
+									pageSize={category.pagination.limit}
+									getHref={(targetPage) =>
+										targetPage === 1
+											? `/categories/${slug}`
+											: `/categories/${slug}?page=${targetPage}`
+									}
+									onNavigate={() =>
+										document
+											.getElementById("category-plugins")
+											?.scrollIntoView({
+												behavior: reduceMotion ? "auto" : "smooth",
+											})
+									}
+								/>
+							)}
 						</>
 					) : (
 						<div className="animate-fade-up py-12 text-center md:py-16">

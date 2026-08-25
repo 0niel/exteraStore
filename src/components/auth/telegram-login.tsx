@@ -1,9 +1,8 @@
 "use client";
 
-import { LoginButton } from "@telegram-auth/react";
 import { signIn } from "next-auth/react";
 import { useLocale, useTranslations } from "next-intl";
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { TelegramIcon } from "~/components/icons/telegram-icon";
 import { Button } from "~/components/ui/button";
@@ -18,9 +17,18 @@ type TelegramAuthData = {
 	hash: string;
 };
 
+declare global {
+	interface Window {
+		TelegramAuthLogin?: {
+			onAuthCallback: (data: TelegramAuthData) => void;
+		};
+	}
+}
+
 export function TelegramLoginButton({ botUsername }: { botUsername?: string }) {
 	const t = useTranslations("Auth");
 	const locale = useLocale();
+	const containerRef = useRef<HTMLDivElement>(null);
 	const handleAuth = useCallback(
 		async (data: TelegramAuthData) => {
 			const result = await signIn("telegram", {
@@ -40,6 +48,36 @@ export function TelegramLoginButton({ botUsername }: { botUsername?: string }) {
 		[t],
 	);
 
+	useEffect(() => {
+		const container = containerRef.current;
+		if (!container || !botUsername) return;
+		const labelFrame = () => {
+			container
+				.querySelector("iframe")
+				?.setAttribute("title", t("telegram_login_frame"));
+		};
+		const observer = new MutationObserver(labelFrame);
+		observer.observe(container, { childList: true, subtree: true });
+		window.TelegramAuthLogin = { onAuthCallback: handleAuth };
+		const script = document.createElement("script");
+		script.async = true;
+		script.src = "https://telegram.org/js/telegram-widget.js?22";
+		script.dataset.telegramLogin = botUsername;
+		script.dataset.size = "large";
+		script.dataset.radius = "10";
+		script.dataset.requestAccess = "write";
+		script.dataset.userpic = "false";
+		script.dataset.lang = locale;
+		script.dataset.onauth = "TelegramAuthLogin.onAuthCallback(user)";
+		container.replaceChildren(script);
+
+		return () => {
+			observer.disconnect();
+			container.replaceChildren();
+			delete window.TelegramAuthLogin;
+		};
+	}, [botUsername, handleAuth, locale, t]);
+
 	if (!botUsername) {
 		return (
 			<Button
@@ -54,15 +92,9 @@ export function TelegramLoginButton({ botUsername }: { botUsername?: string }) {
 	}
 
 	return (
-		<div className="flex min-h-12 w-full items-center justify-center overflow-hidden rounded-xl [&>iframe]:max-w-full">
-			<LoginButton
-				botUsername={botUsername}
-				onAuthCallback={handleAuth}
-				buttonSize="large"
-				cornerRadius={10}
-				showAvatar={false}
-				lang={locale}
-			/>
-		</div>
+		<div
+			ref={containerRef}
+			className="flex min-h-12 w-full items-center justify-center overflow-hidden rounded-xl [&>iframe]:max-w-full"
+		/>
 	);
 }

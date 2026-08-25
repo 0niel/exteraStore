@@ -1,4 +1,4 @@
-import { and, count, desc, eq, like, sql } from "drizzle-orm";
+import { and, count, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { plugins, users } from "~/server/db/schema";
@@ -9,7 +9,7 @@ export const developersRouter = createTRPCRouter({
 			z.object({
 				page: z.number().min(1).default(1),
 				limit: z.number().min(1).max(50).default(12),
-				search: z.string().optional(),
+				search: z.string().trim().max(100).optional(),
 			}),
 		)
 		.query(async ({ ctx, input }) => {
@@ -18,7 +18,14 @@ export const developersRouter = createTRPCRouter({
 			const whereConditions = [eq(plugins.status, "approved")];
 
 			if (input.search) {
-				whereConditions.push(like(users.name, `%${input.search}%`));
+				const searchCondition = or(
+					ilike(users.name, `%${input.search}%`),
+					ilike(users.telegramUsername, `%${input.search}%`),
+					ilike(users.githubUsername, `%${input.search}%`),
+				);
+				if (searchCondition) {
+					whereConditions.push(searchCondition);
+				}
 			}
 
 			const developersQuery = ctx.db
