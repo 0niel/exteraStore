@@ -14,6 +14,16 @@ const styles = readFileSync(
 	new URL("../../styles/globals.css", import.meta.url),
 	"utf8",
 );
+const nextConfig = readFileSync(
+	new URL("../../../next.config.js", import.meta.url),
+	"utf8",
+);
+const speculationRules = JSON.parse(
+	readFileSync(
+		new URL("../../../public/speculation-rules.json", import.meta.url),
+		"utf8",
+	),
+);
 
 test("the Telegram SDK is not loaded globally", () => {
 	assert.doesNotMatch(
@@ -39,4 +49,10 @@ test("Telegram Mini Apps avoid GPU-heavy compositing effects", () => {
 	assert.match(styles, /box-shadow: none/);
 	assert.match(styles, /filter: none/);
 	assert.match(styles, /transition: none/);
+});
+
+test("Cloudflare navigation speculation is disabled at the origin", () => {
+	assert.match(nextConfig, /key: "Speculation-Rules"/);
+	assert.match(nextConfig, /value: '"\/speculation-rules\.json"'/);
+	assert.deepEqual(speculationRules, { prefetch: [], prerender: [] });
 });

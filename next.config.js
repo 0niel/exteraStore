@@ -7,6 +7,19 @@ const withNextIntlConfig = withNextIntl("./src/i18n.ts");
 const config = {
 	reactStrictMode: true,
 	poweredByHeader: false,
+	async headers() {
+		return [
+			{
+				source: "/:path*",
+				headers: [
+					{
+						key: "Speculation-Rules",
+						value: '"/speculation-rules.json"',
+					},
+				],
+			},
+		];
+	},
 	images: {
 		remotePatterns: [
 			new URL("https://exteragram-plugins.storage.yandexcloud.net/**"),
