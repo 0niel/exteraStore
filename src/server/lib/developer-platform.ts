@@ -15,6 +15,7 @@ import {
 	webhookDeliveries,
 	webhooks,
 } from "~/server/db/schema";
+import { consumeDeveloperRateLimits } from "~/server/lib/developer-rate-limiter";
 
 export const API_SCOPES = [
 	"plugins:read",
@@ -159,12 +160,37 @@ export async function validateWebhookUrl(value: string) {
 	return (await resolveWebhookUrl(value)).url.toString();
 }
 
-export async function authenticateApiKey(request: Request, scope: ApiScope) {
+export async function authorizeApiRequest(
+	request: Request,
+	scope?: ApiScope,
+	responseHeaders?: HeadersInit,
+) {
+	const errorResponse = (
+		status: number,
+		error: string,
+		message: string,
+		extraHeaders?: Record<string, string>,
+	) => {
+		const headers = new Headers(responseHeaders);
+		for (const [key, value] of Object.entries(extraHeaders || {})) {
+			headers.set(key, value);
+		}
+		return Response.json({ error, message }, { status, headers });
+	};
 	const authorization = request.headers.get("authorization") ?? "";
 	const token = authorization.startsWith("Bearer ")
 		? authorization.slice(7).trim()
 		: "";
-	if (!token.startsWith("ext_live_") || token.length > 160) return null;
+	if (!token.startsWith("ext_live_") || token.length > 160) {
+		return {
+			ok: false as const,
+			response: errorResponse(
+				401,
+				"invalid_api_key",
+				"API-ключ отсутствует или недействителен",
+			),
+		};
+	}
 
 	const [record] = await db
 		.select({
@@ -185,10 +211,58 @@ export async function authenticateApiKey(request: Request, scope: ApiScope) {
 		record.isBanned ||
 		(record.expiresAt !== null && record.expiresAt <= now())
 	) {
-		return null;
+		return {
+			ok: false as const,
+			response: errorResponse(
+				401,
+				"invalid_api_key",
+				"API-ключ отозван, истёк или недействителен",
+			),
+		};
 	}
 	const scopes = safeJsonParse<ApiScope[]>(record.scopes, []);
-	if (!scopes.includes(scope)) return null;
+	if (scope && !scopes.includes(scope)) {
+		return {
+			ok: false as const,
+			response: errorResponse(
+				403,
+				"insufficient_scope",
+				`Для запроса требуется scope ${scope}`,
+			),
+		};
+	}
+
+	const rateLimit = await consumeDeveloperRateLimits(db, [
+		{
+			subjectKey: `api-key:${record.id}`,
+			scope: "rest-api",
+			limit: 120,
+			windowSeconds: 60,
+		},
+		{
+			subjectKey: `user:${record.userId}`,
+			scope: "rest-api",
+			limit: 600,
+			windowSeconds: 60,
+		},
+	]);
+	if (rateLimit.limited) {
+		const retryAfter = Math.max(1, rateLimit.resetAt - now());
+		return {
+			ok: false as const,
+			response: errorResponse(
+				429,
+				"rate_limit_exceeded",
+				"Слишком много запросов. Повторите позже",
+				{
+					"retry-after": String(retryAfter),
+					"x-ratelimit-limit": "120",
+					"x-ratelimit-remaining": "0",
+					"x-ratelimit-reset": String(rateLimit.resetAt),
+				},
+			),
+		};
+	}
 
 	const forwarded = request.headers
 		.get("x-forwarded-for")
@@ -199,7 +273,16 @@ export async function authenticateApiKey(request: Request, scope: ApiScope) {
 		.update(apiKeys)
 		.set({ lastUsedAt: now(), lastIpHash: ip ? hashSecret(ip) : null })
 		.where(eq(apiKeys.id, record.id));
-	return { id: record.id, userId: record.userId, scopes };
+	const successHeaders = new Headers(responseHeaders);
+	successHeaders.set("x-ratelimit-limit", "120");
+	successHeaders.set("x-ratelimit-remaining", String(rateLimit.remaining));
+	successHeaders.set("x-ratelimit-reset", String(rateLimit.resetAt));
+	return {
+		ok: true as const,
+		credential: { id: record.id, userId: record.userId, scopes },
+		rateLimit,
+		responseHeaders: successHeaders,
+	};
 }
 
 export async function recordApiUsage(input: {
@@ -266,6 +349,7 @@ export async function deliverWebhook(
 	webhook: typeof webhooks.$inferSelect,
 	event: WebhookEvent,
 	payloadData: Record<string, unknown>,
+	options?: { attemptCount?: number; mode?: "live" | "test" },
 ) {
 	const resolved = await resolveWebhookUrl(webhook.url);
 	const timestamp = now();
@@ -273,6 +357,7 @@ export async function deliverWebhook(
 	const payload = JSON.stringify({
 		id: eventId,
 		event,
+		mode: options?.mode || "live",
 		createdAt: new Date(timestamp * 1000).toISOString(),
 		data: payloadData,
 	});
@@ -312,6 +397,7 @@ export async function deliverWebhook(
 			payload,
 			status,
 			responseStatus,
+			attemptCount: options?.attemptCount || 1,
 			errorMessage,
 			deliveredAt,
 		})
@@ -324,6 +410,7 @@ export async function deliverWebhook(
 			isActive: status === "delivered" || webhook.failureCount < 9,
 		})
 		.where(eq(webhooks.id, webhook.id));
+	if (!delivery) throw new Error("Webhook delivery could not be recorded");
 	return delivery;
 }
 

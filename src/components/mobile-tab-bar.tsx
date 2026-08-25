@@ -6,12 +6,14 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
+import { useTelegramWebApp } from "~/hooks/use-telegram-web-app";
 import { cn } from "~/lib/utils";
 
 export function MobileTabBar() {
 	const pathname = usePathname();
 	const { data: session } = useSession();
 	const t = useTranslations("Navigation");
+	const { webApp, isTelegramWebApp } = useTelegramWebApp();
 
 	if (
 		pathname.startsWith("/admin") ||
@@ -59,6 +61,11 @@ export function MobileTabBar() {
 							href={tab.href}
 							prefetch={false}
 							aria-current={active ? "page" : undefined}
+							onClick={() => {
+								if (isTelegramWebApp && !active) {
+									webApp?.HapticFeedback?.selectionChanged?.();
+								}
+							}}
 							className={cn(
 								"tap-highlight-none relative flex min-w-14 flex-1 flex-col items-center justify-center gap-1 rounded-2xl transition-colors",
 								active ? "text-primary" : "text-muted-foreground",

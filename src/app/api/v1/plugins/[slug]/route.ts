@@ -3,7 +3,7 @@ import { safeJsonParse } from "~/lib/utils";
 import { db } from "~/server/db";
 import { plugins, users } from "~/server/db/schema";
 import {
-	authenticateApiKey,
+	authorizeApiRequest,
 	recordApiUsage,
 } from "~/server/lib/developer-platform";
 
@@ -12,10 +12,9 @@ export async function GET(
 	context: { params: Promise<{ slug: string }> },
 ) {
 	const startedAt = Date.now();
-	const credential = await authenticateApiKey(request, "plugins:read");
-	if (!credential) {
-		return Response.json({ error: "invalid_api_key" }, { status: 401 });
-	}
+	const authorization = await authorizeApiRequest(request, "plugins:read");
+	if (!authorization.ok) return authorization.response;
+	const { credential } = authorization;
 	let statusCode = 200;
 	try {
 		const { slug } = await context.params;
@@ -32,27 +31,36 @@ export async function GET(
 			.limit(1);
 		if (!plugin) {
 			statusCode = 404;
-			return Response.json({ error: "not_found" }, { status: statusCode });
+			return Response.json(
+				{ error: "not_found" },
+				{ status: statusCode, headers: authorization.responseHeaders },
+			);
 		}
-		return Response.json({
-			data: {
-				...plugin.plugin,
-				tags: safeJsonParse<string[]>(plugin.plugin.tags ?? "[]", []),
-				screenshots: safeJsonParse<string[]>(
-					plugin.plugin.screenshots ?? "[]",
-					[],
-				),
-				rating: plugin.plugin.ratingCount > 0 ? plugin.plugin.rating : null,
-				author: {
-					id: plugin.authorId,
-					name: plugin.authorName,
-					avatarUrl: plugin.authorImage,
+		return Response.json(
+			{
+				data: {
+					...plugin.plugin,
+					tags: safeJsonParse<string[]>(plugin.plugin.tags ?? "[]", []),
+					screenshots: safeJsonParse<string[]>(
+						plugin.plugin.screenshots ?? "[]",
+						[],
+					),
+					rating: plugin.plugin.ratingCount > 0 ? plugin.plugin.rating : null,
+					author: {
+						id: plugin.authorId,
+						name: plugin.authorName,
+						avatarUrl: plugin.authorImage,
+					},
 				},
 			},
-		});
+			{ headers: authorization.responseHeaders },
+		);
 	} catch {
 		statusCode = 500;
-		return Response.json({ error: "internal_error" }, { status: statusCode });
+		return Response.json(
+			{ error: "internal_error" },
+			{ status: statusCode, headers: authorization.responseHeaders },
+		);
 	} finally {
 		await recordApiUsage({
 			apiKeyId: credential.id,

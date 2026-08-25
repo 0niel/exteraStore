@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "~/server/db";
 import { webhooks } from "~/server/db/schema";
 import {
-	authenticateApiKey,
+	authorizeApiRequest,
 	recordApiUsage,
 	validateWebhookUrl,
 	WEBHOOK_EVENTS,
@@ -23,10 +23,9 @@ export async function PATCH(
 	context: { params: Promise<{ id: string }> },
 ) {
 	const startedAt = Date.now();
-	const credential = await authenticateApiKey(request, "webhooks:write");
-	if (!credential) {
-		return Response.json({ error: "invalid_api_key" }, { status: 401 });
-	}
+	const authorization = await authorizeApiRequest(request, "webhooks:write");
+	if (!authorization.ok) return authorization.response;
+	const { credential } = authorization;
 	let statusCode = 200;
 	try {
 		const { id: rawId } = await context.params;
@@ -36,7 +35,7 @@ export async function PATCH(
 			statusCode = 400;
 			return Response.json(
 				{ error: "invalid_request" },
-				{ status: statusCode },
+				{ status: statusCode, headers: authorization.responseHeaders },
 			);
 		}
 		const [updated] = await db
@@ -57,9 +56,15 @@ export async function PATCH(
 			.returning({ id: webhooks.id });
 		if (!updated) {
 			statusCode = 404;
-			return Response.json({ error: "not_found" }, { status: statusCode });
+			return Response.json(
+				{ error: "not_found" },
+				{ status: statusCode, headers: authorization.responseHeaders },
+			);
 		}
-		return Response.json({ data: updated });
+		return Response.json(
+			{ data: updated },
+			{ headers: authorization.responseHeaders },
+		);
 	} catch (error) {
 		statusCode = 400;
 		return Response.json(
@@ -67,7 +72,7 @@ export async function PATCH(
 				error: "invalid_request",
 				message: error instanceof Error ? error.message : undefined,
 			},
-			{ status: statusCode },
+			{ status: statusCode, headers: authorization.responseHeaders },
 		);
 	} finally {
 		await recordApiUsage({
@@ -84,10 +89,9 @@ export async function DELETE(
 	context: { params: Promise<{ id: string }> },
 ) {
 	const startedAt = Date.now();
-	const credential = await authenticateApiKey(request, "webhooks:write");
-	if (!credential) {
-		return Response.json({ error: "invalid_api_key" }, { status: 401 });
-	}
+	const authorization = await authorizeApiRequest(request, "webhooks:write");
+	if (!authorization.ok) return authorization.response;
+	const { credential } = authorization;
 	let statusCode = 204;
 	try {
 		const { id: rawId } = await context.params;
@@ -96,7 +100,7 @@ export async function DELETE(
 			statusCode = 400;
 			return Response.json(
 				{ error: "invalid_request" },
-				{ status: statusCode },
+				{ status: statusCode, headers: authorization.responseHeaders },
 			);
 		}
 		const [deleted] = await db
@@ -105,9 +109,15 @@ export async function DELETE(
 			.returning({ id: webhooks.id });
 		if (!deleted) {
 			statusCode = 404;
-			return Response.json({ error: "not_found" }, { status: statusCode });
+			return Response.json(
+				{ error: "not_found" },
+				{ status: statusCode, headers: authorization.responseHeaders },
+			);
 		}
-		return new Response(null, { status: 204 });
+		return new Response(null, {
+			status: 204,
+			headers: authorization.responseHeaders,
+		});
 	} finally {
 		await recordApiUsage({
 			apiKeyId: credential.id,

@@ -10,6 +10,14 @@ const telegramHook = readFileSync(
 	new URL("../../hooks/use-telegram-web-app.ts", import.meta.url),
 	"utf8",
 );
+const installDialog = readFileSync(
+	new URL("../../components/plugin-install-dialog.tsx", import.meta.url),
+	"utf8",
+);
+const navigationBridge = readFileSync(
+	new URL("../../components/telegram-navigation-bridge.tsx", import.meta.url),
+	"utf8",
+);
 const styles = readFileSync(
 	new URL("../../styles/globals.css", import.meta.url),
 	"utf8",
@@ -42,6 +50,19 @@ test("Telegram vertical close gestures stay disabled while content scrolls", () 
 	assert.match(layout, /allow_vertical_swipe:false/);
 	assert.match(telegramHook, /candidate\.disableVerticalSwipes\?\.\(\)/);
 	assert.doesNotMatch(telegramHook, /candidate\.enableVerticalSwipes\?\.\(\)/);
+});
+
+test("Telegram installation opens the bot natively and closes the Mini App", () => {
+	assert.match(telegramHook, /openTelegramLink/);
+	assert.match(installDialog, /webApp\.openTelegramLink\(botLink\)/);
+	assert.match(installDialog, /webApp\.close\(\)/);
+	assert.match(installDialog, /await onDownload\(\)/);
+});
+
+test("Telegram routes expose the native back button", () => {
+	assert.match(telegramHook, /BackButton/);
+	assert.match(navigationBridge, /backButton\.show\(\)/);
+	assert.match(navigationBridge, /router\.back\(\)/);
 });
 
 test("Telegram Mini Apps avoid GPU-heavy compositing effects", () => {

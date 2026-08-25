@@ -662,9 +662,19 @@ html[data-telegram-mini-app="true"] .route-progress {
 	display: none;
 }
 
-html[data-telegram-mini-app="true"] .route-motion {
-	opacity: 1 !important;
-	transform: none !important;
+@keyframes route-enter {
+	from {
+		opacity: 0;
+		transform: translateY(8px) scale(0.997);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+	}
+}
+
+.route-motion {
+	animation: route-enter 320ms var(--ease-out-expo) both;
 }
 
 html[data-telegram-mini-app="true"] [data-plugin-artwork-backdrop="true"] {

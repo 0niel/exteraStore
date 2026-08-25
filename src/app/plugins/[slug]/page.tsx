@@ -152,10 +152,10 @@ export default function PluginDetailPage() {
 		},
 	});
 
-	const handleDownload = () => {
+	const handleDownload = async () => {
 		if (!plugin) return;
 
-		downloadMutation.mutate({
+		await downloadMutation.mutateAsync({
 			pluginId: plugin.id,
 			userAgent: navigator.userAgent,
 		});

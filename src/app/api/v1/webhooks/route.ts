@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "~/server/db";
 import { webhooks } from "~/server/db/schema";
 import {
-	authenticateApiKey,
+	authorizeApiRequest,
 	createWebhookSecret,
 	encryptWebhookSecret,
 	recordApiUsage,
@@ -19,10 +19,9 @@ const InputSchema = z.object({
 
 export async function GET(request: Request) {
 	const startedAt = Date.now();
-	const credential = await authenticateApiKey(request, "webhooks:read");
-	if (!credential) {
-		return Response.json({ error: "invalid_api_key" }, { status: 401 });
-	}
+	const authorization = await authorizeApiRequest(request, "webhooks:read");
+	if (!authorization.ok) return authorization.response;
+	const { credential } = authorization;
 	let statusCode = 200;
 	try {
 		const rows = await db
@@ -39,12 +38,18 @@ export async function GET(request: Request) {
 			.from(webhooks)
 			.where(eq(webhooks.userId, credential.userId))
 			.orderBy(desc(webhooks.createdAt));
-		return Response.json({
-			data: rows.map((row) => ({ ...row, events: JSON.parse(row.events) })),
-		});
+		return Response.json(
+			{
+				data: rows.map((row) => ({ ...row, events: JSON.parse(row.events) })),
+			},
+			{ headers: authorization.responseHeaders },
+		);
 	} catch {
 		statusCode = 500;
-		return Response.json({ error: "internal_error" }, { status: statusCode });
+		return Response.json(
+			{ error: "internal_error" },
+			{ status: statusCode, headers: authorization.responseHeaders },
+		);
 	} finally {
 		await recordApiUsage({
 			apiKeyId: credential.id,
@@ -57,10 +62,9 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
 	const startedAt = Date.now();
-	const credential = await authenticateApiKey(request, "webhooks:write");
-	if (!credential) {
-		return Response.json({ error: "invalid_api_key" }, { status: 401 });
-	}
+	const authorization = await authorizeApiRequest(request, "webhooks:write");
+	if (!authorization.ok) return authorization.response;
+	const { credential } = authorization;
 	let statusCode = 201;
 	try {
 		const parsed = InputSchema.safeParse(await request.json());
@@ -68,7 +72,7 @@ export async function POST(request: Request) {
 			statusCode = 400;
 			return Response.json(
 				{ error: "invalid_request", issues: parsed.error.flatten() },
-				{ status: statusCode },
+				{ status: statusCode, headers: authorization.responseHeaders },
 			);
 		}
 		const url = await validateWebhookUrl(parsed.data.url);
@@ -96,11 +100,14 @@ export async function POST(request: Request) {
 		});
 		if (!created) {
 			statusCode = 409;
-			return Response.json({ error: "webhook_limit" }, { status: statusCode });
+			return Response.json(
+				{ error: "webhook_limit" },
+				{ status: statusCode, headers: authorization.responseHeaders },
+			);
 		}
 		return Response.json(
 			{ data: { id: created.id, secret } },
-			{ status: statusCode },
+			{ status: statusCode, headers: authorization.responseHeaders },
 		);
 	} catch (error) {
 		statusCode = 400;
@@ -109,7 +116,7 @@ export async function POST(request: Request) {
 				error: "invalid_request",
 				message: error instanceof Error ? error.message : undefined,
 			},
-			{ status: statusCode },
+			{ status: statusCode, headers: authorization.responseHeaders },
 		);
 	} finally {
 		await recordApiUsage({

@@ -27,6 +27,7 @@ import {
 	validateWebhookUrl,
 	WEBHOOK_EVENTS,
 } from "~/server/lib/developer-platform";
+import { consumeDeveloperRateLimits } from "~/server/lib/developer-rate-limiter";
 
 const scopeSchema = z.enum(API_SCOPES);
 const eventSchema = z.enum(WEBHOOK_EVENTS);
@@ -61,10 +62,47 @@ export const developerPlatformRouter = createTRPCRouter({
 			)
 			.groupBy(apiKeyUsage.apiKeyId);
 		const usageMap = new Map(usage.map((row) => [row.apiKeyId, row.requests]));
+		const rankedUsage = ctx.db
+			.select({
+				id: apiKeyUsage.id,
+				apiKeyId: apiKeyUsage.apiKeyId,
+				method: apiKeyUsage.method,
+				path: apiKeyUsage.path,
+				statusCode: apiKeyUsage.statusCode,
+				latencyMs: apiKeyUsage.latencyMs,
+				createdAt: apiKeyUsage.createdAt,
+				rank: sql<number>`row_number() over (partition by ${apiKeyUsage.apiKeyId} order by ${apiKeyUsage.createdAt} desc)`.as(
+					"usage_rank",
+				),
+			})
+			.from(apiKeyUsage)
+			.innerJoin(apiKeys, eq(apiKeyUsage.apiKeyId, apiKeys.id))
+			.where(eq(apiKeys.userId, ctx.session.user.id))
+			.as("ranked_api_usage");
+		const recentUsage = await ctx.db
+			.select({
+				id: rankedUsage.id,
+				apiKeyId: rankedUsage.apiKeyId,
+				method: rankedUsage.method,
+				path: rankedUsage.path,
+				statusCode: rankedUsage.statusCode,
+				latencyMs: rankedUsage.latencyMs,
+				createdAt: rankedUsage.createdAt,
+			})
+			.from(rankedUsage)
+			.where(lte(rankedUsage.rank, 6))
+			.orderBy(rankedUsage.apiKeyId, desc(rankedUsage.createdAt));
+		const usageByKey = new Map<number, typeof recentUsage>();
+		for (const request of recentUsage) {
+			const existing = usageByKey.get(request.apiKeyId) || [];
+			existing.push(request);
+			usageByKey.set(request.apiKeyId, existing);
+		}
 		return keys.map((key) => ({
 			...key,
 			scopes: z.array(scopeSchema).catch([]).parse(JSON.parse(key.scopes)),
 			requestsLast7Days: usageMap.get(key.id) ?? 0,
+			recentRequests: usageByKey.get(key.id) || [],
 		}));
 	}),
 
@@ -152,6 +190,10 @@ export const developerPlatformRouter = createTRPCRouter({
 				webhookId: webhookDeliveries.webhookId,
 				event: webhookDeliveries.event,
 				status: webhookDeliveries.status,
+				responseStatus: webhookDeliveries.responseStatus,
+				attemptCount: webhookDeliveries.attemptCount,
+				errorMessage: webhookDeliveries.errorMessage,
+				deliveredAt: webhookDeliveries.deliveredAt,
 				createdAt: webhookDeliveries.createdAt,
 				rank: sql<number>`row_number() over (partition by ${webhookDeliveries.webhookId} order by ${webhookDeliveries.createdAt} desc)`.as(
 					"delivery_rank",
@@ -171,6 +213,10 @@ export const developerPlatformRouter = createTRPCRouter({
 				webhookId: rankedDeliveries.webhookId,
 				event: rankedDeliveries.event,
 				status: rankedDeliveries.status,
+				responseStatus: rankedDeliveries.responseStatus,
+				attemptCount: rankedDeliveries.attemptCount,
+				errorMessage: rankedDeliveries.errorMessage,
+				deliveredAt: rankedDeliveries.deliveredAt,
 				createdAt: rankedDeliveries.createdAt,
 			})
 			.from(rankedDeliveries)
@@ -300,7 +346,13 @@ export const developerPlatformRouter = createTRPCRouter({
 		}),
 
 	testWebhook: protectedProcedure
-		.input(z.object({ id: z.number().int().positive() }))
+		.input(
+			z.object({
+				id: z.number().int().positive(),
+				event: eventSchema,
+				data: z.record(z.string().max(100), z.unknown()),
+			}),
+		)
 		.mutation(async ({ ctx, input }) => {
 			const [hook] = await ctx.db
 				.select()
@@ -313,10 +365,45 @@ export const developerPlatformRouter = createTRPCRouter({
 				)
 				.limit(1);
 			if (!hook) throw new TRPCError({ code: "NOT_FOUND" });
-			return deliverWebhook(ctx.db, hook, "plugin.updated", {
-				test: true,
-				message: "Проверка подключения exteraStore",
-			});
+			const subscribedEvents = z
+				.array(eventSchema)
+				.catch([])
+				.parse(JSON.parse(hook.events));
+			if (!subscribedEvents.includes(input.event)) {
+				throw new TRPCError({ code: "BAD_REQUEST", message: "EVENT_DISABLED" });
+			}
+			if (Buffer.byteLength(JSON.stringify(input.data), "utf8") > 16_384) {
+				throw new TRPCError({ code: "PAYLOAD_TOO_LARGE" });
+			}
+			const limit = await consumeDeveloperRateLimits(ctx.db, [
+				{
+					subjectKey: `user:${ctx.session.user.id}`,
+					scope: `webhook-test:${hook.id}`,
+					limit: 5,
+					windowSeconds: 60,
+				},
+			]);
+			if (limit.limited) {
+				throw new TRPCError({ code: "TOO_MANY_REQUESTS" });
+			}
+			const delivery = await deliverWebhook(
+				ctx.db,
+				hook,
+				input.event,
+				{
+					...input.data,
+					test: true,
+					message: "Проверка подключения exteraStore",
+				},
+				{ mode: "test" },
+			);
+			return {
+				id: delivery.id,
+				status: delivery.status,
+				responseStatus: delivery.responseStatus,
+				errorMessage: delivery.errorMessage,
+				createdAt: delivery.createdAt,
+			};
 		}),
 
 	retryDelivery: protectedProcedure
@@ -342,6 +429,7 @@ export const developerPlatformRouter = createTRPCRouter({
 				delivery.webhook,
 				eventSchema.parse(delivery.delivery.event),
 				parsed.data,
+				{ attemptCount: delivery.delivery.attemptCount + 1 },
 			);
 		}),
 });

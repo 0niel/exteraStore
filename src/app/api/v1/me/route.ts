@@ -2,16 +2,15 @@ import { eq } from "drizzle-orm";
 import { db } from "~/server/db";
 import { users } from "~/server/db/schema";
 import {
-	authenticateApiKey,
+	authorizeApiRequest,
 	recordApiUsage,
 } from "~/server/lib/developer-platform";
 
 export async function GET(request: Request) {
 	const startedAt = Date.now();
-	const credential = await authenticateApiKey(request, "profile:read");
-	if (!credential) {
-		return Response.json({ error: "invalid_api_key" }, { status: 401 });
-	}
+	const authorization = await authorizeApiRequest(request, "profile:read");
+	if (!authorization.ok) return authorization.response;
+	const { credential } = authorization;
 	let statusCode = 200;
 	try {
 		const [user] = await db
@@ -30,12 +29,21 @@ export async function GET(request: Request) {
 			.limit(1);
 		if (!user) {
 			statusCode = 404;
-			return Response.json({ error: "not_found" }, { status: statusCode });
+			return Response.json(
+				{ error: "not_found" },
+				{ status: statusCode, headers: authorization.responseHeaders },
+			);
 		}
-		return Response.json({ data: user });
+		return Response.json(
+			{ data: user },
+			{ headers: authorization.responseHeaders },
+		);
 	} catch {
 		statusCode = 500;
-		return Response.json({ error: "internal_error" }, { status: statusCode });
+		return Response.json(
+			{ error: "internal_error" },
+			{ status: statusCode, headers: authorization.responseHeaders },
+		);
 	} finally {
 		await recordApiUsage({
 			apiKeyId: credential.id,

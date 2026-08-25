@@ -14,24 +14,17 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import {
+	type DonationMethod,
+	type DonationMethodType,
+	getSafeDonationUrl,
+} from "~/lib/donation-requisites";
 import { cn } from "~/lib/utils";
 
-export type DonationMethodType =
-	| "sbp"
-	| "card"
-	| "yoomoney"
-	| "boosty"
-	| "donationalerts"
-	| "ton"
-	| "usdt_trc20"
-	| "btc"
-	| "custom";
-
-export interface DonationMethod {
-	type: DonationMethodType;
-	value: string;
-	label?: string;
-}
+export type {
+	DonationMethod,
+	DonationMethodType,
+} from "~/lib/donation-requisites";
 
 type Translator = (key: string) => string;
 
@@ -96,15 +89,6 @@ function getMethodMeta(
 	}
 }
 
-function isLikelyUrl(value: string) {
-	try {
-		const u = new URL(value);
-		return Boolean(u.protocol);
-	} catch {
-		return false;
-	}
-}
-
 export function DonationWidget({
 	methods,
 	className,
@@ -118,11 +102,13 @@ export function DonationWidget({
 
 	const handleAction = (method: DonationMethod) => {
 		const meta = getMethodMeta(method.type, t);
-		if (meta.action === "open" || isLikelyUrl(method.value)) {
-			const url = isLikelyUrl(method.value)
-				? method.value
-				: `https://${method.value}`;
-			window.open(url, "_blank", "noopener,noreferrer");
+		const safeUrl = getSafeDonationUrl(method.value);
+		if (meta.action === "open" || (method.type === "sbp" && safeUrl)) {
+			if (!safeUrl) {
+				toast.error(t("invalid_link"));
+				return;
+			}
+			window.open(safeUrl, "_blank", "noopener,noreferrer");
 		} else {
 			navigator.clipboard
 				.writeText(method.value)

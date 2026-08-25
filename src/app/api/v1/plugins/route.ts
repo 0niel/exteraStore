@@ -3,7 +3,7 @@ import { safeJsonParse } from "~/lib/utils";
 import { db } from "~/server/db";
 import { plugins, users } from "~/server/db/schema";
 import {
-	authenticateApiKey,
+	authorizeApiRequest,
 	recordApiUsage,
 } from "~/server/lib/developer-platform";
 
@@ -19,16 +19,13 @@ export function OPTIONS() {
 
 export async function GET(request: Request) {
 	const startedAt = Date.now();
-	const credential = await authenticateApiKey(request, "plugins:read");
-	if (!credential) {
-		return Response.json(
-			{
-				error: "invalid_api_key",
-				message: "API-ключ недействителен или не имеет нужного scope",
-			},
-			{ status: 401, headers },
-		);
-	}
+	const authorization = await authorizeApiRequest(
+		request,
+		"plugins:read",
+		headers,
+	);
+	if (!authorization.ok) return authorization.response;
+	const { credential } = authorization;
 
 	let statusCode = 200;
 	try {
@@ -96,13 +93,13 @@ export async function GET(request: Request) {
 					total: Number(totalRows[0]?.total ?? 0),
 				},
 			},
-			{ headers },
+			{ headers: authorization.responseHeaders },
 		);
 	} catch {
 		statusCode = 500;
 		return Response.json(
 			{ error: "internal_error", message: "Не удалось получить плагины" },
-			{ status: statusCode, headers },
+			{ status: statusCode, headers: authorization.responseHeaders },
 		);
 	} finally {
 		await recordApiUsage({

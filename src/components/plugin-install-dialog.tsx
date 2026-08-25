@@ -2,6 +2,7 @@
 
 import { AlertTriangle, ArrowDown, Blocks, ExternalLink } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
 import { toast } from "sonner";
 import { TelegramIcon } from "~/components/icons/telegram-icon";
 import { Button } from "~/components/ui/button";
@@ -13,6 +14,7 @@ import {
 	DialogTitle,
 } from "~/components/ui/dialog";
 import { env } from "~/env";
+import { useTelegramWebApp } from "~/hooks/use-telegram-web-app";
 import { api } from "~/trpc/react";
 
 type PluginInstallDialogProps = {
@@ -22,7 +24,7 @@ type PluginInstallDialogProps = {
 	pluginName: string;
 	pluginSlug: string;
 	telegramBotDeeplink?: string | null;
-	onDownload: () => void;
+	onDownload: () => Promise<void>;
 };
 
 export function PluginInstallDialog({
@@ -35,6 +37,8 @@ export function PluginInstallDialog({
 	onDownload,
 }: PluginInstallDialogProps) {
 	const t = useTranslations("PluginDependencies");
+	const { webApp, isTelegramWebApp } = useTelegramWebApp();
+	const [isOpening, setIsOpening] = useState(false);
 	const {
 		data: installPlan,
 		isLoading,
@@ -59,27 +63,51 @@ export function PluginInstallDialog({
 		return `https://t.me/${botUsername}?start=plugin_${pluginId}`;
 	};
 
-	const handleInstall = () => {
+	const handleInstall = async () => {
 		if (!installPlan || isError) return;
-		const botWindow = window.open(resolveBotLink(), "_blank");
-		if (!botWindow) {
-			toast.error(t("bot_open_error"));
-			return;
+		const botLink = resolveBotLink();
+		const botWindow = isTelegramWebApp ? null : window.open("", "_blank");
+		if (botWindow) botWindow.opener = null;
+
+		setIsOpening(true);
+		try {
+			await onDownload();
+			webApp?.HapticFeedback?.notificationOccurred?.("success");
+
+			if (isTelegramWebApp && webApp?.openTelegramLink) {
+				webApp.openTelegramLink(botLink);
+				onOpenChange(false);
+				webApp.close();
+				return;
+			}
+
+			if (botWindow) {
+				botWindow.location.replace(botLink);
+			} else {
+				window.location.assign(botLink);
+			}
+			toast.success(t("telegram_opened"), {
+				description:
+					dependencyCount > 0
+						? t("telegram_opened_dependencies", { count: dependencyCount })
+						: t("telegram_opened_single"),
+			});
+			onOpenChange(false);
+		} catch {
+			botWindow?.close();
+			webApp?.HapticFeedback?.notificationOccurred?.("error");
+		} finally {
+			setIsOpening(false);
 		}
-		botWindow.opener = null;
-		onDownload();
-		toast.success(t("telegram_opened"), {
-			description:
-				dependencyCount > 0
-					? t("telegram_opened_dependencies", { count: dependencyCount })
-					: t("telegram_opened_single"),
-		});
-		onOpenChange(false);
 	};
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="max-h-[min(90dvh,48rem)] overflow-y-auto border-0 shadow-none sm:max-w-lg">
+				<div
+					aria-hidden="true"
+					className="mx-auto -mt-1 mb-1 h-1.5 w-12 rounded-full bg-muted-foreground/25 sm:hidden"
+				/>
 				<DialogHeader>
 					<div className="mb-2 flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary">
 						<Blocks className="size-5" />
@@ -166,12 +194,14 @@ export function PluginInstallDialog({
 					<Button
 						className="min-h-11"
 						onClick={handleInstall}
-						disabled={isLoading || isError || !installPlan}
+						disabled={isLoading || isError || !installPlan || isOpening}
 					>
 						<TelegramIcon className="mr-2 size-4" />
-						{dependencyCount > 0
-							? t("install_all", { count: installPlan?.length ?? 1 })
-							: t("open_telegram")}
+						{isOpening
+							? t("opening_telegram")
+							: dependencyCount > 0
+								? t("install_all", { count: installPlan?.length ?? 1 })
+								: t("open_telegram")}
 						<ExternalLink className="ml-2 size-4" />
 					</Button>
 				</div>

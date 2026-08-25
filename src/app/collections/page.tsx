@@ -22,8 +22,8 @@ type CollectionTab = "all" | "recent" | "popular";
 
 function CollectionSkeleton() {
 	return (
-		<Card className="overflow-hidden bg-card">
-			<Skeleton className="skeleton-shimmer h-28 w-full rounded-none" />
+		<Card className="gap-0 overflow-hidden border-0 bg-card py-0 shadow-none">
+			<Skeleton className="skeleton-shimmer h-40 w-full rounded-none" />
 			<CardContent className="p-4">
 				<Skeleton className="skeleton-shimmer mb-2 h-6 w-3/4" />
 				<Skeleton className="skeleton-shimmer mb-3 h-4 w-full" />
@@ -53,36 +53,38 @@ function CollectionCard({
 	const pluginData = collection.plugins || [];
 
 	return (
-		<Card className="group card-lift h-full overflow-hidden bg-card">
-			<div className="relative">
-				<div className="relative h-24 overflow-hidden bg-gradient-to-br from-primary/25 via-primary/10 to-primary/5 p-4 dark:from-primary/30 dark:via-primary/12 dark:to-transparent">
+		<Card className="group card-lift h-full gap-0 overflow-hidden border-0 bg-card py-0 shadow-none">
+			<div className="relative h-40 overflow-hidden bg-gradient-to-br from-primary/30 via-primary/12 to-card p-4 dark:from-primary/35 dark:via-primary/10 dark:to-card">
+				<div
+					aria-hidden="true"
+					className="absolute -top-16 -right-14 size-44 rounded-full bg-primary/20 blur-3xl"
+				/>
+				<div className="absolute inset-0">
 					<div
 						aria-hidden="true"
-						className="dot-grid absolute inset-0 opacity-70"
-					/>
-					<div className="relative flex items-start justify-between">
-						<span className="font-bold font-mono text-muted-foreground text-sm tabular-nums">
-							{String(index + 1).padStart(2, "0")}
-						</span>
-						<span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 font-medium text-primary text-xs">
-							<Sparkles className="h-3 w-3" />
-							{t("ai_curated")}
-						</span>
-					</div>
-					<div
-						aria-hidden="true"
-						className="absolute inset-x-0 bottom-0 h-0.5 bg-gradient-to-r from-primary via-primary/40 to-transparent"
+						className="dot-grid absolute inset-0 opacity-55"
 					/>
 				</div>
-				<span
+				<div className="relative flex items-start justify-between">
+					<span className="font-bold font-mono text-foreground/55 text-sm tabular-nums">
+						{String(index + 1).padStart(2, "0")}
+					</span>
+					<span className="inline-flex min-h-8 items-center gap-1.5 rounded-full bg-background/80 px-3 py-1 font-medium text-primary text-xs">
+						<Sparkles className="h-3 w-3" />
+						{t("ai_curated")}
+					</span>
+				</div>
+				<div
 					aria-hidden="true"
-					className="absolute -bottom-6 left-4 flex size-12 select-none items-center justify-center rounded-2xl bg-primary font-black text-2xl text-primary-foreground transition-transform duration-300 group-hover:scale-105"
+					className="absolute inset-0 flex select-none items-center justify-center pt-5"
 				>
-					{initial}
-				</span>
+					<span className="flex size-16 items-center justify-center rounded-[1.4rem] bg-primary font-black text-3xl text-primary-foreground transition-transform duration-300 group-hover:scale-105">
+						{initial}
+					</span>
+				</div>
 			</div>
 
-			<CardContent className="p-4 pt-9">
+			<CardContent className="flex flex-1 flex-col p-4 sm:p-5">
 				<h3 className="mb-1.5 line-clamp-1 font-bold text-lg leading-tight transition-colors group-hover:text-primary">
 					{collection.name}
 				</h3>
@@ -105,12 +107,12 @@ function CollectionCard({
 					</span>
 				</div>
 
-				<div className="space-y-2">
+				<div className="mt-auto space-y-2">
 					{pluginData.slice(0, 2).map((plugin: CollectionPlugin) => (
 						<Link
 							key={plugin.id}
 							href={`/plugins/${plugin.slug}`}
-							className="block min-h-11 rounded-xl border border-transparent bg-primary/5 p-3 transition-colors hover:border-primary/30 hover:bg-primary/10"
+							className="block min-h-11 rounded-2xl bg-primary/[0.06] p-3 transition-colors hover:bg-primary/10"
 						>
 							<div className="flex items-center gap-3">
 								<div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -268,7 +270,7 @@ export default function CollectionsPage() {
 
 				<div className="mb-8 grid grid-cols-3 gap-2 sm:gap-4">
 					{stats.map((stat) => (
-						<Card key={stat.label} className="bg-card">
+						<Card key={stat.label} className="border-0 bg-card shadow-none">
 							<CardContent className="flex h-full flex-col items-start gap-2 p-3 sm:flex-row sm:items-center sm:gap-3 sm:p-4">
 								<div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary sm:size-11">
 									<stat.icon className="h-5 w-5" />
@@ -291,35 +293,37 @@ export default function CollectionsPage() {
 					))}
 				</div>
 
-				<div className="mb-4 flex min-h-6 items-center justify-between gap-3">
-					<span className="eyebrow">{t("section_collections")}</span>
-					{!isLoading && filteredCollections.length > 0 && (
-						<span className="font-mono text-muted-foreground text-xs tabular-nums">
-							{String(filteredCollections.length).padStart(2, "0")}
-						</span>
-					)}
-				</div>
+				<div className="sticky top-[calc(4rem+env(safe-area-inset-top))] z-30 -mx-4 mb-6 bg-background/95 px-4 py-3 backdrop-blur-xl sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:py-0 sm:backdrop-blur-none">
+					<div className="mb-3 flex min-h-6 items-center justify-between gap-3 sm:mb-4">
+						<span className="eyebrow">{t("section_collections")}</span>
+						{!isLoading && filteredCollections.length > 0 && (
+							<span className="font-mono text-muted-foreground text-xs tabular-nums">
+								{String(filteredCollections.length).padStart(2, "0")}
+							</span>
+						)}
+					</div>
 
-				<div className="scrollbar-hide -mx-4 mb-6 flex snap-x gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-					{tabItems.map((item) => (
-						<button
-							key={item.value}
-							type="button"
-							onClick={() => {
-								setActiveTab(item.value);
-								setVisibleCount(6);
-							}}
-							aria-pressed={activeTab === item.value}
-							className={cn(
-								"press-scale min-h-11 shrink-0 snap-start rounded-full border px-4 font-medium text-sm transition-colors",
-								activeTab === item.value
-									? "border-primary bg-primary text-primary-foreground"
-									: "bg-background/70 backdrop-blur hover:border-primary/40 hover:text-primary",
-							)}
-						>
-							{item.label}
-						</button>
-					))}
+					<div className="scrollbar-hide -mx-4 flex snap-x gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+						{tabItems.map((item) => (
+							<button
+								key={item.value}
+								type="button"
+								onClick={() => {
+									setActiveTab(item.value);
+									setVisibleCount(6);
+								}}
+								aria-pressed={activeTab === item.value}
+								className={cn(
+									"press-scale min-h-11 shrink-0 snap-start rounded-full px-4 font-medium text-sm transition-colors",
+									activeTab === item.value
+										? "bg-primary text-primary-foreground"
+										: "bg-muted/55 text-muted-foreground hover:bg-primary/10 hover:text-primary",
+								)}
+							>
+								{item.label}
+							</button>
+						))}
+					</div>
 				</div>
 
 				{isLoading ? (

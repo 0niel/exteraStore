@@ -801,6 +801,29 @@ export const apiKeyUsage = pgTable(
 	],
 );
 
+export const developerRateLimits = pgTable(
+	"extera_plugins_developer_rate_limit",
+	{
+		id: serial("id").primaryKey(),
+		subjectKey: varchar("subject_key", { length: 160 }).notNull(),
+		scope: varchar("scope", { length: 80 }).notNull(),
+		windowStart: integer("window_start").notNull(),
+		requestCount: integer("request_count").default(0).notNull(),
+		expiresAt: integer("expires_at").notNull(),
+		updatedAt: integer("updated_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+	},
+	(t) => [
+		uniqueIndex("developer_rate_limit_window_idx").on(
+			t.subjectKey,
+			t.scope,
+			t.windowStart,
+		),
+		index("developer_rate_limit_expiry_idx").on(t.expiresAt),
+	],
+);
+
 export const webhooks = pgTable(
 	"extera_plugins_webhook",
 	{

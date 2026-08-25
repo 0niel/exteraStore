@@ -28,6 +28,19 @@ interface TelegramWebApp {
 	ready: () => void;
 	expand: () => void;
 	close: () => void;
+	openTelegramLink?: (url: string) => void;
+	BackButton?: {
+		isVisible?: boolean;
+		show: () => void;
+		hide: () => void;
+		onClick: (callback: () => void) => void;
+		offClick: (callback: () => void) => void;
+	};
+	HapticFeedback?: {
+		impactOccurred?: (style: "light" | "medium" | "heavy") => void;
+		notificationOccurred?: (type: "error" | "success" | "warning") => void;
+		selectionChanged?: () => void;
+	};
 	disableVerticalSwipes?: () => void;
 	onEvent?: (
 		event: "themeChanged" | "viewportChanged",

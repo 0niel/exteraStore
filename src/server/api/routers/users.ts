@@ -1,5 +1,6 @@
 import { count, eq, sql } from "drizzle-orm";
 import { z } from "zod";
+import { parseDonationRequisites } from "~/lib/donation-requisites";
 import {
 	createTRPCRouter,
 	protectedProcedure,
@@ -62,7 +63,7 @@ export const usersRouter = createTRPCRouter({
 				bio: z.string().max(1000).optional(),
 				website: z.string().url().optional().or(z.literal("")),
 				links: z.string().optional(),
-				donationRequisites: z.string().optional(),
+				donationRequisites: z.string().max(10_000).optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -73,8 +74,11 @@ export const usersRouter = createTRPCRouter({
 			if (input.website !== undefined)
 				updateData.website = input.website || null;
 			if (input.links !== undefined) updateData.links = input.links || null;
-			if (input.donationRequisites !== undefined)
-				updateData.donationRequisites = input.donationRequisites || null;
+			if (input.donationRequisites !== undefined) {
+				updateData.donationRequisites = input.donationRequisites
+					? JSON.stringify(parseDonationRequisites(input.donationRequisites))
+					: null;
+			}
 
 			await ctx.db
 				.update(users)

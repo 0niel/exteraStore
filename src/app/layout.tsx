@@ -15,6 +15,7 @@ import { Footer } from "~/components/footer";
 import { MobileTabBar } from "~/components/mobile-tab-bar";
 import { Navigation } from "~/components/navigation";
 import { TelegramMotionProvider } from "~/components/telegram-motion-provider";
+import { TelegramNavigationBridge } from "~/components/telegram-navigation-bridge";
 import { TelegramWebAppAuth } from "~/components/telegram-web-app-auth";
 import { Toaster } from "~/components/ui/sonner";
 import { type Locale, locales } from "~/lib/i18n-config";
@@ -125,6 +126,7 @@ export default async function RootLayout({
 							>
 								<TelegramMotionProvider>
 									<TelegramWebAppAuth />
+									<TelegramNavigationBridge />
 									<div className="flex min-h-dvh flex-col overflow-x-hidden pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
 										<Navigation />
 										<main
