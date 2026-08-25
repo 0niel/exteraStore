@@ -111,27 +111,37 @@ jobs:
             "$SERVER_USER@$SERVER_HOST" 'bash -s' <<'REMOTE'
           set -uo pipefail
           cd ~/exterastore
+          export DEPLOY_ROOT="$PWD"
+          export APP_IMAGE=$(cat .deploy-state/current-image 2>/dev/null || true)
+          . scripts/docker-cmd.sh
           echo "=== containers ==="
-          (./scripts/docker-cmd.sh ps 2>/dev/null || sudo docker ps) | head -20
+          docker_cmd ps -a --format 'table {{.Names}}\t{{.Status}}\t{{.Image}}' | head -20
           echo "=== disk ==="
           df -h / | tail -1
-          echo "=== app logs (tail) ==="
-          APP_ID=$(sudo docker ps -qf "name=app" | head -1)
-          if [ -n "$APP_ID" ]; then sudo docker logs "$APP_ID" --tail 40 2>&1 | tail -40; else echo "app container not found"; fi
+          echo "=== memory ==="
+          free -h
+          echo "=== app state ==="
+          APP_ID=$(docker_cmd compose ps -q app)
+          if [ -n "$APP_ID" ]; then
+            docker_cmd inspect --format 'status={{.State.Status}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}} started={{.State.StartedAt}} restarts={{.RestartCount}} oom={{.State.OOMKilled}} exit={{.State.ExitCode}} error={{.State.Error}}' "$APP_ID"
+            docker_cmd stats --no-stream --format 'cpu={{.CPUPerc}} memory={{.MemUsage}} memory_percent={{.MemPerc}} pids={{.PIDs}}' "$APP_ID"
+          else
+            echo "app container not found"
+          fi
           echo "=== local health ==="
-          curl -sf -m 10 http://localhost:3000/api/health || echo "local health check failed"
+          if [ -n "$APP_ID" ]; then
+            docker_cmd exec "$APP_ID" node -e "fetch('http://127.0.0.1:3000/api/health',{signal:AbortSignal.timeout(8000)}).then(async r=>{console.log(r.status,await r.text())}).catch(e=>{console.error(e);process.exit(1)})" || echo "local health check failed"
+          fi
           echo "=== outbound connectivity ==="
-          APP_ID=$(sudo docker ps -qf "name=app" | head -1)
           for host in https://openrouter.ai/api/v1/models https://api.telegram.org https://generativelanguage.googleapis.com/v1beta/models https://api.groq.com/openai/v1/models https://api.deepseek.com/v1/models https://api.mistral.ai/v1/models https://api.together.xyz/v1/models https://llm.api.cloud.yandex.net https://openrouter-proxy.controlisanillusion08.workers.dev/api/v1/models https://gateway.ai.cloudflare.com/v1/921dffe6e25cf9e4b3d958ea33d83dac/exterastore/openrouter/models; do
-            code=$(sudo docker exec "$APP_ID" node -e "fetch('$host',{signal:AbortSignal.timeout(8000)}).then(r=>console.log(r.status)).catch(e=>console.log('ERR '+e.cause?.code+' '+e.message))" 2>/dev/null || echo "exec-failed")
+            code=$(docker_cmd exec "$APP_ID" node -e "fetch('$host',{signal:AbortSignal.timeout(8000)}).then(r=>console.log(r.status)).catch(e=>console.log('ERR '+e.cause?.code+' '+e.message))" 2>/dev/null || echo "exec-failed")
             echo "$host -> $code"
           done
-          ua_code=$(sudo docker exec "$APP_ID" node -e "fetch('https://openrouter.ai/api/v1/models',{headers:{'User-Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'},signal:AbortSignal.timeout(8000)}).then(r=>console.log(r.status)).catch(e=>console.log('ERR '+e.message))" 2>/dev/null || echo "exec-failed")
+          ua_code=$(docker_cmd exec "$APP_ID" node -e "fetch('https://openrouter.ai/api/v1/models',{headers:{'User-Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'},signal:AbortSignal.timeout(8000)}).then(r=>console.log(r.status)).catch(e=>console.log('ERR '+e.message))" 2>/dev/null || echo "exec-failed")
           echo "openrouter with browser UA -> $ua_code"
           echo "=== cron secret fingerprint ==="
-          APP_ID=$(sudo docker ps -qf "name=app" | head -1)
           echo "env file:  $(grep -m1 '^CRON_SECRET=' .env | cut -d= -f2- | tr -d '"' | sha256sum | cut -c1-12)"
-          echo "container: $(sudo docker exec "$APP_ID" printenv CRON_SECRET | sha256sum | cut -c1-12)"
+          echo "container: $(docker_cmd exec "$APP_ID" printenv CRON_SECRET | sha256sum | cut -c1-12)"
           echo "=== public build vars ==="
           grep -E '^(NEXT_PUBLIC_[A-Z_]+|TELEGRAM_BOT_USERNAME|TELEGRAM_POLLING|OPENROUTER_MODEL|TELEGRAM_API_BASE_URL)=' .env || echo "none"
           REMOTE
