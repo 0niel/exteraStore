@@ -28,7 +28,7 @@ interface TelegramWebApp {
 	ready: () => void;
 	expand: () => void;
 	close: () => void;
-	enableVerticalSwipes?: () => void;
+	disableVerticalSwipes?: () => void;
 	onEvent?: (
 		event: "themeChanged" | "viewportChanged",
 		callback: () => void,
@@ -172,7 +172,7 @@ export function useTelegramWebApp() {
 					candidate.expand();
 				} catch {}
 				try {
-					candidate.enableVerticalSwipes?.();
+					candidate.disableVerticalSwipes?.();
 				} catch {}
 				candidate.onEvent?.("themeChanged", syncTheme);
 				candidate.onEvent?.("viewportChanged", syncViewport);

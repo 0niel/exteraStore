@@ -22,3 +22,8 @@ test("the Telegram SDK is not loaded globally", () => {
 		/script\.src = "https:\/\/telegram\.org\/js\/telegram-web-app\.js"/,
 	);
 });
+
+test("Telegram vertical close gestures stay disabled while content scrolls", () => {
+	assert.match(telegramHook, /candidate\.disableVerticalSwipes\?\.\(\)/);
+	assert.doesNotMatch(telegramHook, /candidate\.enableVerticalSwipes\?\.\(\)/);
+});
