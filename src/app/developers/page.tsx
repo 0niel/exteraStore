@@ -315,6 +315,9 @@ export default function DevelopersPage() {
 														</div>
 														<div
 															role="progressbar"
+															aria-label={t("progress_to", {
+																tier: t(`tier_${progress.nextTier.key}`),
+															})}
 															aria-valuenow={Math.round(progress.progress)}
 															aria-valuemin={0}
 															aria-valuemax={100}

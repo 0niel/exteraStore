@@ -4,7 +4,6 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
 	CheckCircle,
 	ChevronLeft,
-	Download,
 	Edit,
 	ExternalLink,
 	FileText,
@@ -68,7 +67,6 @@ export default function PluginDetailPage() {
 	const [reviewComment, setReviewComment] = useState("");
 	const [reviewCaptchaToken, setReviewCaptchaToken] = useState("");
 	const [isFavorited, setIsFavorited] = useState(false);
-	const [downloadPulse, setDownloadPulse] = useState(0);
 	const [isInstallDialogOpen, setIsInstallDialogOpen] = useState(false);
 	const reviewTextareaRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -95,7 +93,6 @@ export default function PluginDetailPage() {
 
 	const downloadMutation = api.plugins.download.useMutation({
 		onSuccess: (data) => {
-			setDownloadPulse((value) => value + 1);
 			if (
 				data.securityCheck &&
 				data.securityCheck.status !== "passed" &&
@@ -422,7 +419,7 @@ export default function PluginDetailPage() {
 				</div>
 			</div>
 
-			<div className="container mx-auto max-w-4xl px-4 py-4 pb-40 md:pb-8 lg:py-8">
+			<div className="container mx-auto max-w-4xl px-4 py-4 pb-24 md:pb-8 lg:py-8">
 				<div className="mb-6 hidden lg:block">
 					<Button
 						variant="ghost"
@@ -570,9 +567,7 @@ export default function PluginDetailPage() {
 											plugin.ratingCount > 0 && "fill-warning text-warning",
 										)}
 									/>
-									{plugin.ratingCount > 0
-										? plugin.rating.toFixed(1)
-										: t("not_rated")}
+									{plugin.ratingCount > 0 ? plugin.rating.toFixed(1) : "—"}
 								</div>
 								<div className="mt-1 truncate text-muted-foreground text-xs">
 									{plugin.ratingCount > 0
@@ -1072,30 +1067,6 @@ export default function PluginDetailPage() {
 							/>
 						</motion.section>
 					)}
-				</div>
-			</div>
-
-			<div className="glass fixed inset-x-0 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-40 px-3 py-2 md:hidden">
-				<div className="mx-auto max-w-4xl">
-					<motion.div
-						key={downloadPulse}
-						className="min-w-0"
-						animate={
-							reduceMotion || downloadPulse === 0
-								? undefined
-								: { scale: [1, 1.05, 1] }
-						}
-						transition={{ duration: 0.45, ease: "easeOut" }}
-					>
-						<Button
-							className="press-scale min-h-11 w-full"
-							onClick={() => setIsInstallDialogOpen(true)}
-							disabled={downloadMutation.isPending}
-						>
-							<Download className="mr-2 h-4 w-4" />
-							{t("download")}
-						</Button>
-					</motion.div>
 				</div>
 			</div>
 

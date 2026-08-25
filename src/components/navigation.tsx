@@ -482,6 +482,7 @@ export function Navigation() {
 							<SheetContent
 								side="right"
 								closeLabel={t("close_menu")}
+								titleLabel={t("menu_title")}
 								className="flex h-dvh w-[min(100%,24rem)] flex-col gap-0 border-0 p-0 pb-[env(safe-area-inset-bottom)] shadow-none"
 							>
 								<div className="relative flex min-h-16 shrink-0 items-center overflow-hidden px-4">

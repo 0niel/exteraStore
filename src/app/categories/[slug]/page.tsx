@@ -24,6 +24,7 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { EmptyState } from "~/components/ui/empty-state";
 import { Skeleton } from "~/components/ui/skeleton";
+import { getCategoryDescriptionKey } from "~/lib/category-description";
 import type { plugins as Plugin } from "~/server/db/schema";
 import { api } from "~/trpc/react";
 
@@ -150,6 +151,12 @@ export default function CategoryPage() {
 	}
 
 	const IconComponent = iconMap[category.icon as keyof typeof iconMap] || Code;
+	const descriptionKey = getCategoryDescriptionKey(category.slug);
+	const description =
+		category.description?.trim() ||
+		(descriptionKey
+			? t(descriptionKey)
+			: t("category_description_fallback", { category: category.name }));
 
 	return (
 		<div className="bg-background">
@@ -185,11 +192,9 @@ export default function CategoryPage() {
 						</div>
 					</div>
 
-					{category.description && (
-						<p className="max-w-2xl animate-fade-up text-balance text-muted-foreground text-xl">
-							{category.description}
-						</p>
-					)}
+					<p className="max-w-2xl animate-fade-up text-balance text-muted-foreground text-xl">
+						{description}
+					</p>
 				</div>
 			</section>
 

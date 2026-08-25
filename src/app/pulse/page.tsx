@@ -97,7 +97,7 @@ function StatTile({
 	return (
 		<div
 			className={cn(
-				"flex items-center gap-3 rounded-2xl p-4",
+				"flex items-start gap-3 rounded-2xl p-4 sm:items-center",
 				highlight ? "bg-primary/8" : "bg-card",
 			)}
 		>
@@ -111,11 +111,11 @@ function StatTile({
 			>
 				<Icon className="size-4" />
 			</span>
-			<div className="min-w-0">
+			<div className="min-w-0 flex-1">
 				<div className="font-bold font-mono text-2xl tabular-nums leading-none">
 					{formatNumber(value)}
 				</div>
-				<div className="mt-1 truncate text-muted-foreground text-xs">
+				<div className="mt-1 text-pretty text-muted-foreground text-xs leading-tight">
 					{label}
 				</div>
 			</div>

@@ -389,6 +389,13 @@ export default function DeveloperProfilePage() {
 											</div>
 											<div
 												role="progressbar"
+												aria-label={
+													tierProgress.nextTier
+														? t("progress_to", {
+																tier: t(`tier_${tierProgress.nextTier.key}`),
+															})
+														: t("progress")
+												}
 												aria-valuenow={Math.round(tierProgress.progress)}
 												aria-valuemin={0}
 												aria-valuemax={100}

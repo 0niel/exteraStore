@@ -100,7 +100,14 @@ export function MobileTabBar() {
 										strokeWidth={active ? 2.4 : 2}
 									/>
 								)}
-								<span className="font-medium text-[10px] leading-none">
+								<span
+									className={cn(
+										"text-[10px] leading-none",
+										active
+											? "font-semibold text-foreground"
+											: "font-medium text-muted-foreground",
+									)}
+								>
 									{tab.name}
 								</span>
 							</span>

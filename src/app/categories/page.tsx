@@ -22,6 +22,7 @@ import { useTranslations } from "next-intl";
 import { PageHeader } from "~/components/page-header";
 import { EmptyState } from "~/components/ui/empty-state";
 import { Skeleton } from "~/components/ui/skeleton";
+import { getCategoryDescriptionKey } from "~/lib/category-description";
 import { api } from "~/trpc/react";
 
 const iconMap = {
@@ -108,6 +109,14 @@ export default function CategoriesPage() {
 							{categories?.map((category, index) => {
 								const IconComponent =
 									iconMap[category.icon as keyof typeof iconMap] || Code;
+								const descriptionKey = getCategoryDescriptionKey(category.slug);
+								const description =
+									category.description?.trim() ||
+									(descriptionKey
+										? t(descriptionKey)
+										: t("category_description_fallback", {
+												category: category.name,
+											}));
 
 								return (
 									<motion.div
@@ -134,7 +143,7 @@ export default function CategoriesPage() {
 													className="pointer-events-none absolute inset-0 origin-left scale-x-0 bg-primary/5 transition-transform duration-500 ease-[var(--ease-out-expo)] group-hover:scale-x-100"
 												/>
 												<div className="relative flex items-start justify-between">
-													<span className="font-bold font-mono text-4xl text-muted-foreground/25 tabular-nums tracking-tight transition-colors duration-300 group-hover:text-primary">
+													<span className="font-bold font-mono text-4xl text-muted-foreground tabular-nums tracking-tight transition-colors duration-300 group-hover:text-primary">
 														{String(index + 1).padStart(2, "0")}
 													</span>
 													<div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors duration-300 group-hover:bg-primary group-hover:text-primary-foreground">
@@ -146,7 +155,7 @@ export default function CategoriesPage() {
 														{category.name}
 													</h3>
 													<p className="mt-1.5 line-clamp-2 text-muted-foreground text-sm leading-relaxed">
-														{category.description || t("no_description")}
+														{description}
 													</p>
 													<p className="mt-4 flex items-center gap-1.5 font-medium font-mono text-muted-foreground text-xs uppercase tracking-wider">
 														{t("plugin_count", {
