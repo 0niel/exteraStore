@@ -16,7 +16,7 @@ import {
 	Users,
 	X,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { GitHubIcon } from "~/components/icons/github-icon";
@@ -78,7 +78,6 @@ function getTierProgress(downloads: number, rating: number, plugins: number) {
 
 export default function DevelopersPage() {
 	const t = useTranslations("Developers");
-	const router = useRouter();
 	const reduceMotion = useReducedMotion();
 	const [searchQuery, setSearchQuery] = useState("");
 	const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -231,18 +230,14 @@ export default function DevelopersPage() {
 										}}
 										className="h-full min-w-0 max-w-full"
 									>
-										<Card
-											className="group card-lift relative h-full cursor-pointer overflow-hidden bg-card focus-visible:ring-2 focus-visible:ring-ring"
-											role="link"
-											tabIndex={0}
-											onClick={() => router.push(`/developers/${developer.id}`)}
-											onKeyDown={(e) => {
-												if (e.key === "Enter") {
-													router.push(`/developers/${developer.id}`);
-												}
-											}}
-										>
+										<Card className="group card-lift relative h-full overflow-hidden bg-card">
 											<div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-primary to-primary/20 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+											<Link
+												href={`/developers/${developer.id}`}
+												prefetch={false}
+												aria-label={`${t("view_profile")}: ${developer.name || t("anonymous")}`}
+												className="absolute inset-0 z-10 rounded-[inherit] outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+											/>
 
 											{hasMedal && (
 												<div
@@ -372,7 +367,7 @@ export default function DevelopersPage() {
 												</div>
 
 												<div className="mt-auto flex items-center justify-between">
-													<div className="flex items-center gap-1">
+													<div className="relative z-20 flex items-center gap-1">
 														{developer.githubUsername && (
 															<Button
 																variant="ghost"
@@ -409,14 +404,12 @@ export default function DevelopersPage() {
 														)}
 													</div>
 
-													<Button
-														size="sm"
-														variant="ghost"
-														aria-label={t("view_profile")}
-														className="h-11 w-11 p-0 opacity-60 transition-colors hover:bg-primary/10 hover:text-primary group-hover:opacity-100"
+													<span
+														aria-hidden="true"
+														className="flex h-11 w-11 items-center justify-center opacity-60 transition-colors group-hover:text-primary group-hover:opacity-100"
 													>
 														<ExternalLink className="h-4 w-4" />
-													</Button>
+													</span>
 												</div>
 											</CardContent>
 										</Card>
