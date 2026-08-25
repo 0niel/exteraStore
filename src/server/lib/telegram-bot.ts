@@ -14,6 +14,13 @@ import {
 import { getPluginInstallPlan } from "~/server/lib/plugin-dependencies";
 import { checkDownloadRateLimit, hashIp } from "~/server/lib/rate-limiter";
 import {
+	botText,
+	formatTelegramDate,
+	pluginCountLabel,
+	resolveTelegramBotLocale,
+	type TelegramBotLocale,
+} from "~/server/lib/telegram-bot-i18n";
+import {
 	answerTelegramCallback,
 	editTelegramMessage,
 	sendTelegramDocument,
@@ -25,7 +32,7 @@ import {
 export interface TelegramCallbackQuery {
 	id: string;
 	data: string;
-	from: { id: number | string };
+	from: { id: number | string; language_code?: string };
 	message: { message_id: number; chat: { id: number | string } };
 }
 
@@ -33,16 +40,19 @@ export interface TelegramUpdate {
 	update_id: number;
 	message?: {
 		chat: { id: number | string };
-		from: { id: number | string };
+		from: { id: number | string; language_code?: string };
 		text?: string;
 	};
 	callback_query?: TelegramCallbackQuery;
 }
 
-function pluginRating(plugin: typeof Plugin.$inferSelect) {
+function pluginRating(
+	plugin: typeof Plugin.$inferSelect,
+	locale: TelegramBotLocale,
+) {
 	return plugin.ratingCount > 0
 		? `⭐ ${plugin.rating.toFixed(1)} (${plugin.ratingCount})`
-		: "⭐ Нет оценок";
+		: botText(locale, "⭐ Нет оценок", "⭐ No ratings yet");
 }
 
 export async function processTelegramUpdate(
@@ -52,8 +62,9 @@ export async function processTelegramUpdate(
 		const callbackQuery = update.callback_query;
 		const chatId = callbackQuery.message.chat.id.toString();
 		const userId = callbackQuery.from.id.toString();
+		const locale = resolveTelegramBotLocale(callbackQuery.from.language_code);
 
-		await handleCallbackQuery(callbackQuery, userId, chatId);
+		await handleCallbackQuery(callbackQuery, userId, chatId, locale);
 		return;
 	}
 
@@ -65,48 +76,71 @@ export async function processTelegramUpdate(
 	const chatId = message.chat.id.toString();
 	const text = message.text || "";
 	const userId = message.from.id.toString();
+	const locale = resolveTelegramBotLocale(message.from.language_code);
 
 	if (text.startsWith("/start")) {
 		const params = text.split(" ")[1];
 
 		if (params?.startsWith("plugin_")) {
-			await handlePluginDownload(chatId, params, userId);
+			await handlePluginDownload(chatId, params, userId, locale);
 		} else {
-			await showMainMenu(chatId, userId);
+			await showMainMenu(chatId, userId, locale);
 		}
 	} else if (text.startsWith("/menu")) {
-		await showMainMenu(chatId, userId);
+		await showMainMenu(chatId, userId, locale);
 	} else if (text.startsWith("/search")) {
 		const query = text.substring(8).trim();
 		if (query) {
-			await handleSearch(chatId, query, 0);
+			await handleSearch(chatId, query, 0, locale);
 		} else {
 			await sendMessage(
 				chatId,
-				"🔍 Введите запрос для поиска. Например: <code>/search theme</code>",
+				botText(
+					locale,
+					"🔍 Введите запрос для поиска. Например: <code>/search тема</code>",
+					"🔍 Enter a search query. Example: <code>/search theme</code>",
+				),
 			);
 		}
 	} else if (text.startsWith("/download")) {
 		const pluginSlug = text.split(" ")[1];
 		if (pluginSlug) {
-			await handlePluginDownload(chatId, `plugin_${pluginSlug}`, userId);
+			await handlePluginDownload(
+				chatId,
+				`plugin_${pluginSlug}`,
+				userId,
+				locale,
+			);
 		} else {
 			await sendMessage(
 				chatId,
-				"❌ Укажите название плагина. Например: <code>/download my-plugin</code>",
+				botText(
+					locale,
+					"❌ Укажите название плагина. Например: <code>/download my-plugin</code>",
+					"❌ Enter a plugin name. Example: <code>/download my-plugin</code>",
+				),
 			);
 		}
 	} else if (text.startsWith("/profile")) {
-		await showUserProfile(chatId, userId);
+		await showUserProfile(chatId, userId, locale);
 	} else if (text.startsWith("/help")) {
-		await showHelp(chatId);
+		await showHelp(chatId, locale);
 	} else if (text.startsWith("/categories")) {
-		await showCategories(chatId, 0);
+		await showCategories(chatId, 0, locale);
+	} else if (text.startsWith("/language")) {
+		await sendMessage(
+			chatId,
+			botText(
+				locale,
+				"🌐 Язык определяется автоматически по настройкам Telegram. Сейчас выбран русский.",
+				"🌐 Language is detected automatically from Telegram settings. English is currently selected.",
+			),
+		);
 	} else {
 		if (text.length > 2 && !text.startsWith("/")) {
-			await handleSearch(chatId, text, 0);
+			await handleSearch(chatId, text, 0, locale);
 		} else {
-			await showMainMenu(chatId, userId);
+			await showMainMenu(chatId, userId, locale);
 		}
 	}
 }
@@ -170,11 +204,19 @@ async function handlePluginDownload(
 	chatId: string,
 	params: string,
 	userId: string,
+	locale: TelegramBotLocale,
 ) {
 	try {
 		const parts = params.split("_");
 		if (parts.length < 2) {
-			await sendMessage(chatId, "❌ Неверная ссылка на плагин.");
+			await sendMessage(
+				chatId,
+				botText(
+					locale,
+					"❌ Неверная ссылка на плагин.",
+					"❌ Invalid plugin link.",
+				),
+			);
 			return;
 		}
 
@@ -214,7 +256,10 @@ async function handlePluginDownload(
 		}
 
 		if (!plugin[0]) {
-			await sendMessage(chatId, "❌ Плагин не найден.");
+			await sendMessage(
+				chatId,
+				botText(locale, "❌ Плагин не найден.", "❌ Plugin not found."),
+			);
 			return;
 		}
 
@@ -254,7 +299,13 @@ async function handlePluginDownload(
 							.orderBy(desc(pluginVersions.createdAt))
 							.limit(1);
 				if (!versionRows[0]) {
-					throw new Error(`Версия для ${planPlugin.name} не найдена`);
+					throw new Error(
+						botText(
+							locale,
+							`Версия для ${planPlugin.name} не найдена`,
+							`No version found for ${planPlugin.name}`,
+						),
+					);
 				}
 				return { plugin: planPlugin, version: versionRows[0] };
 			}),
@@ -270,7 +321,11 @@ async function handlePluginDownload(
 			if (rateLimit.limited) {
 				await sendMessage(
 					chatId,
-					`❌ ${escapeHtml(item.plugin.name)}: ${escapeHtml(rateLimit.reason)}`,
+					botText(
+						locale,
+						`❌ ${escapeHtml(item.plugin.name)}: лимит скачиваний исчерпан. Попробуйте позже.`,
+						`❌ ${escapeHtml(item.plugin.name)}: download limit reached. Please try again later.`,
+					),
 				);
 				return;
 			}
@@ -280,12 +335,16 @@ async function handlePluginDownload(
 			const orderedNames = packages
 				.map(
 					(item, index) =>
-						`${index + 1}. <b>${escapeHtml(item.plugin.name)}</b>${item.plugin.isRequestedPlugin ? " — основной плагин" : " — зависимость"}`,
+						`${index + 1}. <b>${escapeHtml(item.plugin.name)}</b>${item.plugin.isRequestedPlugin ? botText(locale, " — основной плагин", " — main plugin") : botText(locale, " — зависимость", " — dependency")}`,
 				)
 				.join("\n");
 			await sendMessage(
 				chatId,
-				`📦 <b>Нужно установить несколько плагинов: ${packages.length}</b>\n\nУстанавливайте файлы в этом порядке:\n\n${orderedNames}\n\nСейчас отправлю их по очереди.`,
+				botText(
+					locale,
+					`📦 <b>Нужно установить несколько плагинов: ${packages.length}</b>\n\nУстанавливайте файлы в этом порядке:\n\n${orderedNames}\n\nСейчас отправлю их по очереди.`,
+					`📦 <b>Several plugins are required: ${packages.length}</b>\n\nInstall the files in this order:\n\n${orderedNames}\n\nI will send them one by one now.`,
+				),
 			);
 		}
 
@@ -297,12 +356,20 @@ async function handlePluginDownload(
 			);
 			const safeAuthor = escapeHtml(item.plugin.author);
 			const role = item.plugin.isRequestedPlugin
-				? "Основной плагин"
-				: "Обязательная зависимость";
+				? botText(locale, "Основной плагин", "Main plugin")
+				: botText(locale, "Обязательная зависимость", "Required dependency");
 			const platform = item.plugin.exteralessCompatible
-				? "exteraGram или exteraless"
+				? botText(
+						locale,
+						"exteraGram или exteraless",
+						"exteraGram or exteraless",
+					)
 				: "exteraGram";
-			const caption = `📦 <b>${index + 1}/${packages.length} · ${role}</b>\n\n🔌 <b>${safeName}</b> v${item.version.version}\n📝 ${safeDesc}\n👤 Автор: ${safeAuthor}\n📱 Клиент: ${platform}\n\nУстановите этот файл перед переходом к следующему.`;
+			const caption = botText(
+				locale,
+				`📦 <b>${index + 1}/${packages.length} · ${role}</b>\n\n🔌 <b>${safeName}</b> v${item.version.version}\n📝 ${safeDesc}\n👤 Автор: ${safeAuthor}\n📱 Клиент: ${platform}\n\nУстановите этот файл перед переходом к следующему.`,
+				`📦 <b>${index + 1}/${packages.length} · ${role}</b>\n\n🔌 <b>${safeName}</b> v${item.version.version}\n📝 ${safeDesc}\n👤 Author: ${safeAuthor}\n📱 Client: ${platform}\n\nInstall this file before continuing to the next one.`,
+			);
 			const fileName = `${item.plugin.slug}-v${item.version.version}.plugin`;
 			await sendDocument(
 				chatId,
@@ -325,16 +392,32 @@ async function handlePluginDownload(
 		await sendMessage(
 			chatId,
 			packages.length > 1
-				? `✅ Все файлы отправлены. Установите их по порядку от 1 до ${packages.length}.`
+				? botText(
+						locale,
+						`✅ Все файлы отправлены. Установите их по порядку от 1 до ${packages.length}.`,
+						`✅ All files have been sent. Install them in order from 1 to ${packages.length}.`,
+					)
 				: requestedPlugin?.exteralessCompatible
-					? "✅ Файл отправлен. Откройте его в exteraGram или exteraless для установки."
-					: "✅ Файл отправлен. Откройте его в exteraGram для установки.",
+					? botText(
+							locale,
+							"✅ Файл отправлен. Откройте его в exteraGram или exteraless для установки.",
+							"✅ File sent. Open it in exteraGram or exteraless to install.",
+						)
+					: botText(
+							locale,
+							"✅ Файл отправлен. Откройте его в exteraGram для установки.",
+							"✅ File sent. Open it in exteraGram to install.",
+						),
 		);
 	} catch (error) {
 		console.error("Plugin download error:", error);
 		await sendMessage(
 			chatId,
-			"❌ Произошла ошибка при скачивании плагина. Попробуйте позже.",
+			botText(
+				locale,
+				"❌ Произошла ошибка при скачивании плагина. Попробуйте позже.",
+				"❌ The plugin could not be downloaded. Please try again later.",
+			),
 		);
 	}
 }
@@ -443,36 +526,69 @@ async function ensureUpdateSubscription(
 async function showMainMenu(
 	chatId: string,
 	_userId: string,
+	locale: TelegramBotLocale,
 	messageId?: number,
 ) {
 	const keyboard = {
 		inline_keyboard: [
 			[
-				{ text: "🔍 Поиск плагинов", callback_data: "search_menu" },
-				{ text: "📂 Категории", callback_data: "categories_0" },
+				{
+					text: botText(locale, "🔍 Поиск плагинов", "🔍 Search plugins"),
+					callback_data: "search_menu",
+				},
+				{
+					text: botText(locale, "📂 Категории", "📂 Categories"),
+					callback_data: "categories_0",
+				},
 			],
 			[
-				{ text: "⭐ Популярные", callback_data: "popular_0" },
-				{ text: "🆕 Новые", callback_data: "recent_0" },
+				{
+					text: botText(locale, "⭐ Популярные", "⭐ Popular"),
+					callback_data: "popular_0",
+				},
+				{
+					text: botText(locale, "🆕 Новые", "🆕 New"),
+					callback_data: "recent_0",
+				},
 			],
 			[
-				{ text: "👤 Мой профиль", callback_data: "profile" },
-				{ text: "❓ Помощь", callback_data: "help" },
+				{
+					text: botText(locale, "👤 Мой профиль", "👤 My profile"),
+					callback_data: "profile",
+				},
+				{
+					text: botText(locale, "❓ Помощь", "❓ Help"),
+					callback_data: "help",
+				},
 			],
 		],
 	};
 
-	const message = `
+	const pluginsCount = await getPluginsCount();
+	const usersCount = await getActiveUsersCount();
+	const message = botText(
+		locale,
+		`
 🔌 <b>exteraStore</b>
 
 Добро пожаловать в каталог плагинов для exteraGram и совместимых расширений exteraless!
 
 📊 <b>Статистика:</b>
-• Всего плагинов: ${await getPluginsCount()}
-• Активных пользователей: ${await getActiveUsersCount()}
+• Всего плагинов: ${pluginsCount}
+• Активных пользователей: ${usersCount}
 
-Выберите действие:
-	`;
+Выберите действие:`,
+		`
+🔌 <b>exteraStore</b>
+
+Welcome to the plugin catalog for exteraGram and compatible exteraless extensions!
+
+📊 <b>Statistics:</b>
+• Total plugins: ${pluginsCount}
+• Active users: ${usersCount}
+
+Choose an action:`,
+	);
 
 	if (messageId) {
 		await editMessage(chatId, messageId, message, keyboard);
@@ -485,16 +601,20 @@ async function handleCallbackQuery(
 	callbackQuery: TelegramCallbackQuery,
 	userId: string,
 	chatId: string,
+	locale: TelegramBotLocale,
 ) {
 	const { data, id: queryId } = callbackQuery;
 
 	if (data.startsWith("unsubscribe_")) {
-		await handleUnsubscribe(data, userId, chatId, queryId);
+		await handleUnsubscribe(data, userId, chatId, queryId, locale);
 		return;
 	}
 
 	try {
-		await answerCallbackQuery(queryId, "✅ Processing...");
+		await answerCallbackQuery(
+			queryId,
+			botText(locale, "✅ Обрабатываю...", "✅ Processing..."),
+		);
 	} catch (error) {
 		console.error(
 			"[handleCallbackQuery] Error answering callback query:",
@@ -510,7 +630,9 @@ async function handleCallbackQuery(
 				await editMessage(
 					chatId,
 					callbackQuery.message.message_id,
-					`
+					botText(
+						locale,
+						`
 🔍 <b>Поиск плагинов</b>
 
 Введите название плагина, описание или ключевые слова для поиска.
@@ -520,20 +642,56 @@ async function handleCallbackQuery(
 • <code>notification</code> - поиск плагинов уведомлений
 • <code>chat</code> - поиск плагинов для чата
 
-Или просто отправьте сообщение с запросом.
-				`,
+Или просто отправьте сообщение с запросом.`,
+						`
+🔍 <b>Plugin search</b>
+
+Enter a plugin name, description, or keywords.
+
+Example queries:
+• <code>theme</code> — themes
+• <code>notification</code> — notification plugins
+• <code>chat</code> — chat plugins
+
+You can also send your query as a regular message.`,
+					),
 					{
 						inline_keyboard: [
-							[{ text: "🔙 Назад", callback_data: "main_menu" }],
+							[
+								{
+									text: botText(locale, "🔙 Назад", "🔙 Back"),
+									callback_data: "main_menu",
+								},
+							],
 						],
 					},
 				);
+			} else {
+				const page = Number.parseInt(params.at(-1) || "0", 10) || 0;
+				const query = Buffer.from(
+					params.slice(0, -1).join("_"),
+					"base64url",
+				).toString("utf8");
+				if (query) {
+					await handleSearch(
+						chatId,
+						query,
+						page,
+						locale,
+						callbackQuery.message.message_id,
+					);
+				}
 			}
 			break;
 
 		case "categories": {
 			const page = Number.parseInt(params[0] || "0", 10) || 0;
-			await showCategories(chatId, page, callbackQuery.message.message_id);
+			await showCategories(
+				chatId,
+				page,
+				locale,
+				callbackQuery.message.message_id,
+			);
 			break;
 		}
 
@@ -542,6 +700,7 @@ async function handleCallbackQuery(
 			await showPopularPlugins(
 				chatId,
 				popularPage,
+				locale,
 				callbackQuery.message.message_id,
 			);
 			break;
@@ -552,22 +711,33 @@ async function handleCallbackQuery(
 			await showRecentPlugins(
 				chatId,
 				recentPage,
+				locale,
 				callbackQuery.message.message_id,
 			);
 			break;
 		}
 
 		case "profile":
-			await showUserProfile(chatId, userId, callbackQuery.message.message_id);
+			await showUserProfile(
+				chatId,
+				userId,
+				locale,
+				callbackQuery.message.message_id,
+			);
 			break;
 
 		case "help":
-			await showHelp(chatId, callbackQuery.message.message_id);
+			await showHelp(chatId, locale, callbackQuery.message.message_id);
 			break;
 
 		case "main":
 			if (params[0] === "menu") {
-				await showMainMenu(chatId, userId, callbackQuery.message.message_id);
+				await showMainMenu(
+					chatId,
+					userId,
+					locale,
+					callbackQuery.message.message_id,
+				);
 			}
 			break;
 
@@ -596,10 +766,15 @@ async function handleCallbackQuery(
 				await showPluginDetails(
 					chatId,
 					pluginId,
+					locale,
 					callbackQuery.message.message_id,
 				);
 			} else {
-				await answerCallbackQuery(queryId, "❌ Плагин не найден", true);
+				await answerCallbackQuery(
+					queryId,
+					botText(locale, "❌ Плагин не найден", "❌ Plugin not found"),
+					true,
+				);
 			}
 			break;
 		}
@@ -611,6 +786,7 @@ async function handleCallbackQuery(
 					chatId,
 					`plugin_${downloadPluginId}`,
 					userId,
+					locale,
 				);
 			}
 			break;
@@ -624,6 +800,7 @@ async function handleCallbackQuery(
 					chatId,
 					categoryName,
 					categoryPage,
+					locale,
 					callbackQuery.message.message_id,
 				);
 			}
@@ -631,7 +808,12 @@ async function handleCallbackQuery(
 		}
 
 		default:
-			await showMainMenu(chatId, userId, callbackQuery.message.message_id);
+			await showMainMenu(
+				chatId,
+				userId,
+				locale,
+				callbackQuery.message.message_id,
+			);
 			break;
 	}
 }
@@ -641,6 +823,7 @@ async function handleUnsubscribe(
 	userId: string,
 	_chatId: string,
 	queryId: string,
+	locale: TelegramBotLocale,
 ) {
 	try {
 		const parts = data.split("_");
@@ -648,7 +831,10 @@ async function handleUnsubscribe(
 		const subscriberUserId = parts[2];
 
 		if (!subscriberUserId) {
-			await answerCallbackQuery(queryId, "❌ Invalid request");
+			await answerCallbackQuery(
+				queryId,
+				botText(locale, "❌ Неверный запрос", "❌ Invalid request"),
+			);
 			return;
 		}
 
@@ -659,7 +845,10 @@ async function handleUnsubscribe(
 			.limit(1);
 
 		if (!user[0] || user[0].id !== subscriberUserId) {
-			await answerCallbackQuery(queryId, "❌ Unauthorized");
+			await answerCallbackQuery(
+				queryId,
+				botText(locale, "❌ Нет доступа", "❌ Unauthorized"),
+			);
 			return;
 		}
 
@@ -682,11 +871,18 @@ async function handleUnsubscribe(
 
 		await answerCallbackQuery(
 			queryId,
-			`✅ Unsubscribed from ${plugin[0]?.name || "plugin"} updates`,
+			botText(
+				locale,
+				`✅ Вы отписались от обновлений ${plugin[0]?.name || "плагина"}`,
+				`✅ Unsubscribed from ${plugin[0]?.name || "plugin"} updates`,
+			),
 		);
 	} catch (error) {
 		console.error("Unsubscribe error:", error);
-		await answerCallbackQuery(queryId, "❌ Error during unsubscribe");
+		await answerCallbackQuery(
+			queryId,
+			botText(locale, "❌ Ошибка при отписке", "❌ Error during unsubscribe"),
+		);
 	}
 }
 
@@ -694,6 +890,7 @@ async function handleSearch(
 	chatId: string,
 	query: string,
 	page: number,
+	locale: TelegramBotLocale,
 	messageId?: number,
 ) {
 	try {
@@ -721,10 +918,19 @@ async function handleSearch(
 		const results = hasMore ? searchResults.slice(0, limit) : searchResults;
 
 		if (results.length === 0) {
-			const message = `🔍 <b>Поиск: "${query}"</b>\n\n❌ Плагины не найдены.\n\nПопробуйте изменить запрос.`;
+			const message = botText(
+				locale,
+				`🔍 <b>Поиск: "${query}"</b>\n\n❌ Плагины не найдены.\n\nПопробуйте изменить запрос.`,
+				`🔍 <b>Search: "${query}"</b>\n\n❌ No plugins found.\n\nTry a different query.`,
+			);
 			const keyboard = {
 				inline_keyboard: [
-					[{ text: "🔙 Главное меню", callback_data: "main_menu" }],
+					[
+						{
+							text: botText(locale, "🔙 Главное меню", "🔙 Main menu"),
+							callback_data: "main_menu",
+						},
+					],
 				],
 			};
 
@@ -736,7 +942,11 @@ async function handleSearch(
 			return;
 		}
 
-		let message = `🔍 <b>Поиск: "${query}"</b>\n\n📦 Найдено ${results.length} плагин${results.length === 1 ? "" : results.length < 5 ? "а" : "ов"}:\n\n`;
+		let message = botText(
+			locale,
+			`🔍 <b>Поиск: "${query}"</b>\n\n📦 Найдено ${results.length} ${pluginCountLabel(results.length, locale)}:\n\n`,
+			`🔍 <b>Search: "${query}"</b>\n\n📦 Found ${results.length} ${pluginCountLabel(results.length, locale)}:\n\n`,
+		);
 
 		results.forEach((plugin: typeof Plugin.$inferSelect, index: number) => {
 			const safeName = escapeHtml(plugin.name);
@@ -745,7 +955,7 @@ async function handleSearch(
 			);
 			message += `${index + 1 + offset}. <b>${safeName}</b>\n`;
 			message += `   📝 ${safeDesc}...\n`;
-			message += `   ${pluginRating(plugin)} • ⬇️ ${plugin.downloadCount}\n\n`;
+			message += `   ${pluginRating(plugin, locale)} • ⬇️ ${plugin.downloadCount}\n\n`;
 		});
 
 		const keyboard = {
@@ -757,21 +967,27 @@ async function handleSearch(
 		results.forEach((plugin: typeof Plugin.$inferSelect) => {
 			keyboard.inline_keyboard.push([
 				{ text: `📦 ${plugin.name}`, callback_data: `plugin_${plugin.id}` },
-				{ text: "⬇️ Скачать", callback_data: `download_${plugin.id}` },
+				{
+					text: botText(locale, "⬇️ Скачать", "⬇️ Download"),
+					callback_data: `download_${plugin.id}`,
+				},
 			]);
 		});
 
 		const paginationRow: Array<{ text: string; callback_data: string }> = [];
+		const queryKey = Buffer.from(
+			Array.from(query).slice(0, 14).join(""),
+		).toString("base64url");
 		if (page > 0) {
 			paginationRow.push({
-				text: "⬅️ Назад",
-				callback_data: `search_${query}_${page - 1}`,
+				text: botText(locale, "⬅️ Назад", "⬅️ Back"),
+				callback_data: `search_${queryKey}_${page - 1}`,
 			});
 		}
 		if (hasMore) {
 			paginationRow.push({
-				text: "Далее ➡️",
-				callback_data: `search_${query}_${page + 1}`,
+				text: botText(locale, "Далее ➡️", "Next ➡️"),
+				callback_data: `search_${queryKey}_${page + 1}`,
 			});
 		}
 		if (paginationRow.length > 0) {
@@ -779,7 +995,10 @@ async function handleSearch(
 		}
 
 		keyboard.inline_keyboard.push([
-			{ text: "🔙 Главное меню", callback_data: "main_menu" },
+			{
+				text: botText(locale, "🔙 Главное меню", "🔙 Main menu"),
+				callback_data: "main_menu",
+			},
 		]);
 
 		if (messageId) {
@@ -789,13 +1008,21 @@ async function handleSearch(
 		}
 	} catch (error) {
 		console.error("Search error:", error);
-		await sendMessage(chatId, "❌ Ошибка при поиске. Попробуйте позже.");
+		await sendMessage(
+			chatId,
+			botText(
+				locale,
+				"❌ Ошибка при поиске. Попробуйте позже.",
+				"❌ Search failed. Please try again later.",
+			),
+		);
 	}
 }
 
 async function showCategories(
 	chatId: string,
 	page: number,
+	locale: TelegramBotLocale,
 	messageId?: number,
 ) {
 	try {
@@ -816,8 +1043,16 @@ async function showCategories(
 			.select({ count: sql<number>`count(*)` })
 			.from(pluginCategories);
 
-		let message = "📂 <b>Категории плагинов</b>\n\n";
-		message += `Всего категорий: ${totalCount[0]?.count || 0}\n\n`;
+		let message = botText(
+			locale,
+			"📂 <b>Категории плагинов</b>\n\n",
+			"📂 <b>Plugin categories</b>\n\n",
+		);
+		message += botText(
+			locale,
+			`Всего категорий: ${totalCount[0]?.count || 0}\n\n`,
+			`Total categories: ${totalCount[0]?.count || 0}\n\n`,
+		);
 
 		const keyboard = {
 			inline_keyboard: [] as Array<
@@ -847,13 +1082,13 @@ async function showCategories(
 		const paginationRow: Array<{ text: string; callback_data: string }> = [];
 		if (page > 0) {
 			paginationRow.push({
-				text: "⬅️ Назад",
+				text: botText(locale, "⬅️ Назад", "⬅️ Back"),
 				callback_data: `categories_${page - 1}`,
 			});
 		}
 		if (hasMore) {
 			paginationRow.push({
-				text: "Далее ➡️",
+				text: botText(locale, "Далее ➡️", "Next ➡️"),
 				callback_data: `categories_${page + 1}`,
 			});
 		}
@@ -862,7 +1097,10 @@ async function showCategories(
 		}
 
 		keyboard.inline_keyboard.push([
-			{ text: "🔙 Главное меню", callback_data: "main_menu" },
+			{
+				text: botText(locale, "🔙 Главное меню", "🔙 Main menu"),
+				callback_data: "main_menu",
+			},
 		]);
 
 		if (messageId) {
@@ -872,7 +1110,14 @@ async function showCategories(
 		}
 	} catch (error) {
 		console.error("Categories error:", error);
-		await sendMessage(chatId, "❌ Ошибка при загрузке категорий.");
+		await sendMessage(
+			chatId,
+			botText(
+				locale,
+				"❌ Ошибка при загрузке категорий.",
+				"❌ Could not load categories.",
+			),
+		);
 	}
 }
 
@@ -880,6 +1125,7 @@ async function showPluginsByCategory(
 	chatId: string,
 	categorySlug: string,
 	page: number,
+	locale: TelegramBotLocale,
 	messageId?: number,
 ) {
 	try {
@@ -893,7 +1139,10 @@ async function showPluginsByCategory(
 			.limit(1);
 
 		if (!categoryInfo[0]) {
-			await sendMessage(chatId, "❌ Категория не найдена.");
+			await sendMessage(
+				chatId,
+				botText(locale, "❌ Категория не найдена.", "❌ Category not found."),
+			);
 			return;
 		}
 
@@ -911,21 +1160,29 @@ async function showPluginsByCategory(
 		const hasMore = categoryPlugins.length > limit;
 		const results = hasMore ? categoryPlugins.slice(0, limit) : categoryPlugins;
 
-		let message = `${category.icon || "📁"} <b>Категория: ${category.name}</b>\n\n`;
+		let message = `${category.icon || "📁"} <b>${botText(locale, "Категория", "Category")}: ${escapeHtml(category.name)}</b>\n\n`;
 
 		if (category.description) {
 			message += `${category.description}\n\n`;
 		}
 
 		if (results.length === 0) {
-			message += "❌ В этой категории пока нет плагинов.";
+			message += botText(
+				locale,
+				"❌ В этой категории пока нет плагинов.",
+				"❌ There are no plugins in this category yet.",
+			);
 		} else {
-			message += `📦 Найдено ${results.length} плагин${results.length === 1 ? "" : results.length < 5 ? "а" : "ов"}:\n\n`;
+			message += botText(
+				locale,
+				`📦 Найдено ${results.length} ${pluginCountLabel(results.length, locale)}:\n\n`,
+				`📦 Found ${results.length} ${pluginCountLabel(results.length, locale)}:\n\n`,
+			);
 
 			results.forEach((plugin: typeof Plugin.$inferSelect, index: number) => {
 				message += `${index + 1 + offset}. <b>${plugin.name}</b>\n`;
 				message += `   📝 ${plugin.shortDescription || plugin.description.substring(0, 50)}...\n`;
-				message += `   ${pluginRating(plugin)} • ⬇️ ${plugin.downloadCount}\n\n`;
+				message += `   ${pluginRating(plugin, locale)} • ⬇️ ${plugin.downloadCount}\n\n`;
 			});
 		}
 
@@ -939,20 +1196,23 @@ async function showPluginsByCategory(
 			results.forEach((plugin: typeof Plugin.$inferSelect) => {
 				keyboard.inline_keyboard.push([
 					{ text: `📦 ${plugin.name}`, callback_data: `plugin_${plugin.id}` },
-					{ text: "⬇️ Скачать", callback_data: `download_${plugin.id}` },
+					{
+						text: botText(locale, "⬇️ Скачать", "⬇️ Download"),
+						callback_data: `download_${plugin.id}`,
+					},
 				]);
 			});
 
 			const paginationRow: Array<{ text: string; callback_data: string }> = [];
 			if (page > 0) {
 				paginationRow.push({
-					text: "⬅️ Назад",
+					text: botText(locale, "⬅️ Назад", "⬅️ Back"),
 					callback_data: `category_${categorySlug}_${page - 1}`,
 				});
 			}
 			if (hasMore) {
 				paginationRow.push({
-					text: "Далее ➡️",
+					text: botText(locale, "Далее ➡️", "Next ➡️"),
 					callback_data: `category_${categorySlug}_${page + 1}`,
 				});
 			}
@@ -962,8 +1222,14 @@ async function showPluginsByCategory(
 		}
 
 		keyboard.inline_keyboard.push([
-			{ text: "🔙 Категории", callback_data: "categories_0" },
-			{ text: "🏠 Главное меню", callback_data: "main_menu" },
+			{
+				text: botText(locale, "🔙 Категории", "🔙 Categories"),
+				callback_data: "categories_0",
+			},
+			{
+				text: botText(locale, "🏠 Главное меню", "🏠 Main menu"),
+				callback_data: "main_menu",
+			},
 		]);
 
 		if (messageId) {
@@ -973,13 +1239,21 @@ async function showPluginsByCategory(
 		}
 	} catch (error) {
 		console.error("Category plugins error:", error);
-		await sendMessage(chatId, "❌ Ошибка при загрузке плагинов категории.");
+		await sendMessage(
+			chatId,
+			botText(
+				locale,
+				"❌ Ошибка при загрузке плагинов категории.",
+				"❌ Could not load category plugins.",
+			),
+		);
 	}
 }
 
 async function showPopularPlugins(
 	chatId: string,
 	page: number,
+	locale: TelegramBotLocale,
 	messageId?: number,
 ) {
 	try {
@@ -997,8 +1271,16 @@ async function showPopularPlugins(
 		const hasMore = popularPlugins.length > limit;
 		const results = hasMore ? popularPlugins.slice(0, limit) : popularPlugins;
 
-		let message = "⭐ <b>Популярные плагины</b>\n\n";
-		message += `📦 Топ ${results.length} плагин${results.length === 1 ? "" : results.length < 5 ? "а" : "ов"}:\n\n`;
+		let message = botText(
+			locale,
+			"⭐ <b>Популярные плагины</b>\n\n",
+			"⭐ <b>Popular plugins</b>\n\n",
+		);
+		message += botText(
+			locale,
+			`📦 Топ ${results.length}:\n\n`,
+			`📦 Top ${results.length}:\n\n`,
+		);
 
 		results.forEach((plugin: typeof Plugin.$inferSelect, index: number) => {
 			const safeName = escapeHtml(plugin.name);
@@ -1007,7 +1289,7 @@ async function showPopularPlugins(
 			);
 			message += `${index + 1 + offset}. <b>${safeName}</b>\n`;
 			message += `   📝 ${safeDesc}...\n`;
-			message += `   ${pluginRating(plugin)} • ⬇️ ${plugin.downloadCount}\n\n`;
+			message += `   ${pluginRating(plugin, locale)} • ⬇️ ${plugin.downloadCount}\n\n`;
 		});
 
 		const keyboard = {
@@ -1019,20 +1301,23 @@ async function showPopularPlugins(
 		results.forEach((plugin: typeof Plugin.$inferSelect) => {
 			keyboard.inline_keyboard.push([
 				{ text: `📦 ${plugin.name}`, callback_data: `plugin_${plugin.id}` },
-				{ text: "⬇️ Скачать", callback_data: `download_${plugin.id}` },
+				{
+					text: botText(locale, "⬇️ Скачать", "⬇️ Download"),
+					callback_data: `download_${plugin.id}`,
+				},
 			]);
 		});
 
 		const paginationRow: Array<{ text: string; callback_data: string }> = [];
 		if (page > 0) {
 			paginationRow.push({
-				text: "⬅️ Назад",
+				text: botText(locale, "⬅️ Назад", "⬅️ Back"),
 				callback_data: `popular_${page - 1}`,
 			});
 		}
 		if (hasMore) {
 			paginationRow.push({
-				text: "Далее ➡️",
+				text: botText(locale, "Далее ➡️", "Next ➡️"),
 				callback_data: `popular_${page + 1}`,
 			});
 		}
@@ -1041,7 +1326,10 @@ async function showPopularPlugins(
 		}
 
 		keyboard.inline_keyboard.push([
-			{ text: "🔙 Главное меню", callback_data: "main_menu" },
+			{
+				text: botText(locale, "🔙 Главное меню", "🔙 Main menu"),
+				callback_data: "main_menu",
+			},
 		]);
 
 		if (messageId) {
@@ -1051,13 +1339,21 @@ async function showPopularPlugins(
 		}
 	} catch (error) {
 		console.error("Popular plugins error:", error);
-		await sendMessage(chatId, "❌ Ошибка при загрузке популярных плагинов.");
+		await sendMessage(
+			chatId,
+			botText(
+				locale,
+				"❌ Ошибка при загрузке популярных плагинов.",
+				"❌ Could not load popular plugins.",
+			),
+		);
 	}
 }
 
 async function showRecentPlugins(
 	chatId: string,
 	page: number,
+	locale: TelegramBotLocale,
 	messageId?: number,
 ) {
 	try {
@@ -1075,12 +1371,21 @@ async function showRecentPlugins(
 		const hasMore = recentPlugins.length > limit;
 		const results = hasMore ? recentPlugins.slice(0, limit) : recentPlugins;
 
-		let message = "🆕 <b>Новые плагины</b>\n\n";
-		message += `📦 Последние ${results.length} плагин${results.length === 1 ? "" : results.length < 5 ? "а" : "ов"}:\n\n`;
+		let message = botText(
+			locale,
+			"🆕 <b>Новые плагины</b>\n\n",
+			"🆕 <b>New plugins</b>\n\n",
+		);
+		message += botText(
+			locale,
+			`📦 Последние ${results.length}:\n\n`,
+			`📦 Latest ${results.length}:\n\n`,
+		);
 
 		results.forEach((plugin: typeof Plugin.$inferSelect, index: number) => {
-			const createdDate = createValidDate(plugin.createdAt).toLocaleDateString(
-				"ru-RU",
+			const createdDate = formatTelegramDate(
+				createValidDate(plugin.createdAt),
+				locale,
 			);
 			const safeName = escapeHtml(plugin.name);
 			const safeDesc = escapeHtml(
@@ -1088,7 +1393,7 @@ async function showRecentPlugins(
 			);
 			message += `${index + 1 + offset}. <b>${safeName}</b>\n`;
 			message += `   📝 ${safeDesc}...\n`;
-			message += `   📅 ${createdDate} • ${pluginRating(plugin)} • ⬇️ ${plugin.downloadCount}\n\n`;
+			message += `   📅 ${createdDate} • ${pluginRating(plugin, locale)} • ⬇️ ${plugin.downloadCount}\n\n`;
 		});
 
 		const keyboard = {
@@ -1100,20 +1405,23 @@ async function showRecentPlugins(
 		results.forEach((plugin: typeof Plugin.$inferSelect) => {
 			keyboard.inline_keyboard.push([
 				{ text: `📦 ${plugin.name}`, callback_data: `plugin_${plugin.id}` },
-				{ text: "⬇️ Скачать", callback_data: `download_${plugin.id}` },
+				{
+					text: botText(locale, "⬇️ Скачать", "⬇️ Download"),
+					callback_data: `download_${plugin.id}`,
+				},
 			]);
 		});
 
 		const paginationRow: Array<{ text: string; callback_data: string }> = [];
 		if (page > 0) {
 			paginationRow.push({
-				text: "⬅️ Назад",
+				text: botText(locale, "⬅️ Назад", "⬅️ Back"),
 				callback_data: `recent_${page - 1}`,
 			});
 		}
 		if (hasMore) {
 			paginationRow.push({
-				text: "Далее ➡️",
+				text: botText(locale, "Далее ➡️", "Next ➡️"),
 				callback_data: `recent_${page + 1}`,
 			});
 		}
@@ -1122,7 +1430,10 @@ async function showRecentPlugins(
 		}
 
 		keyboard.inline_keyboard.push([
-			{ text: "🔙 Главное меню", callback_data: "main_menu" },
+			{
+				text: botText(locale, "🔙 Главное меню", "🔙 Main menu"),
+				callback_data: "main_menu",
+			},
 		]);
 
 		if (messageId) {
@@ -1132,13 +1443,21 @@ async function showRecentPlugins(
 		}
 	} catch (error) {
 		console.error("Recent plugins error:", error);
-		await sendMessage(chatId, "❌ Ошибка при загрузке новых плагинов.");
+		await sendMessage(
+			chatId,
+			botText(
+				locale,
+				"❌ Ошибка при загрузке новых плагинов.",
+				"❌ Could not load new plugins.",
+			),
+		);
 	}
 }
 
 async function showUserProfile(
 	chatId: string,
 	userId: string,
+	locale: TelegramBotLocale,
 	messageId?: number,
 ) {
 	try {
@@ -1148,28 +1467,63 @@ async function showUserProfile(
 			.where(eq(users.telegramId, userId))
 			.limit(1);
 
-		const downloadCount = 0;
+		const downloadResult = user[0]
+			? await db
+					.select({ count: sql<number>`count(*)` })
+					.from(pluginDownloads)
+					.where(eq(pluginDownloads.userId, user[0].id))
+			: [];
+		const downloadCount = Number(downloadResult[0]?.count ?? 0);
 
-		let message = "👤 <b>Ваш профиль</b>\n\n";
+		let message = botText(
+			locale,
+			"👤 <b>Ваш профиль</b>\n\n",
+			"👤 <b>Your profile</b>\n\n",
+		);
 
 		if (user[0]) {
-			message += `📧 Email: ${user[0].email || "Не указан"}\n`;
-			message += `📅 Регистрация: ${createValidDate(user[0].createdAt).toLocaleDateString("ru-RU")}\n`;
+			message += `📧 Email: ${user[0].email || botText(locale, "Не указан", "Not provided")}\n`;
+			message += `${botText(locale, "📅 Регистрация", "📅 Joined")}: ${formatTelegramDate(createValidDate(user[0].createdAt), locale)}\n`;
 		} else {
 			message += `🆔 Telegram ID: ${userId}\n`;
-			message += "📅 Первое использование: сегодня\n";
+			message += botText(
+				locale,
+				"📅 Первое использование: сегодня\n",
+				"📅 First use: today\n",
+			);
 		}
 
-		message += `⬇️ Скачано плагинов: ${downloadCount}\n\n`;
+		message += botText(
+			locale,
+			`⬇️ Скачано плагинов: ${downloadCount}\n\n`,
+			`⬇️ Plugin downloads: ${downloadCount}\n\n`,
+		);
 
-		message += "🔗 <b>Полезные ссылки:</b>\n";
-		message += "• Каталог: https://exterastore.app\n";
+		message += botText(
+			locale,
+			"🔗 <b>Полезные ссылки:</b>\n",
+			"🔗 <b>Useful links:</b>\n",
+		);
+		message += botText(
+			locale,
+			"• Каталог: https://exterastore.app\n",
+			"• Catalog: https://exterastore.app\n",
+		);
 		message += "• exteraless: https://github.com/exteraless/exteraless\n";
-		message += "• Документация: https://plugins.exteragram.app/\n";
+		message += botText(
+			locale,
+			"• Документация: https://plugins.exteragram.app/\n",
+			"• Documentation: https://plugins.exteragram.app/\n",
+		);
 
 		const keyboard = {
 			inline_keyboard: [
-				[{ text: "🔙 Главное меню", callback_data: "main_menu" }],
+				[
+					{
+						text: botText(locale, "🔙 Главное меню", "🔙 Main menu"),
+						callback_data: "main_menu",
+					},
+				],
 			],
 		};
 
@@ -1180,13 +1534,21 @@ async function showUserProfile(
 		}
 	} catch (error) {
 		console.error("User profile error:", error);
-		await sendMessage(chatId, "❌ Ошибка при загрузке профиля.");
+		await sendMessage(
+			chatId,
+			botText(
+				locale,
+				"❌ Ошибка при загрузке профиля.",
+				"❌ Could not load your profile.",
+			),
+		);
 	}
 }
 
 async function showPluginDetails(
 	chatId: string,
 	pluginId: number,
+	locale: TelegramBotLocale,
 	messageId?: number,
 ) {
 	try {
@@ -1197,7 +1559,10 @@ async function showPluginDetails(
 			.limit(1);
 
 		if (!plugin[0]) {
-			await sendMessage(chatId, "❌ Плагин не найден.");
+			await sendMessage(
+				chatId,
+				botText(locale, "❌ Плагин не найден.", "❌ Plugin not found."),
+			);
 			return;
 		}
 
@@ -1208,32 +1573,86 @@ async function showPluginDetails(
 		const safeTags = escapeHtml(p.tags || "");
 
 		let message = `📦 <b>${safeName}</b>\n\n`;
-		message += `📝 <b>Описание:</b>\n${safeDesc}\n\n`;
-		message += `👤 <b>Автор:</b> ${safeAuthor}\n`;
-		message += `📊 <b>Рейтинг:</b> ${pluginRating(p)}\n`;
-		message += `⬇️ <b>Скачиваний:</b> ${p.downloadCount}\n`;
-		message += `📅 <b>Обновлен:</b> ${createValidDate(p.updatedAt || p.createdAt).toLocaleDateString("ru-RU")}\n`;
+		message += botText(
+			locale,
+			`📝 <b>Описание:</b>\n${safeDesc}\n\n`,
+			`📝 <b>Description:</b>\n${safeDesc}\n\n`,
+		);
+		message += botText(
+			locale,
+			`👤 <b>Автор:</b> ${safeAuthor}\n`,
+			`👤 <b>Author:</b> ${safeAuthor}\n`,
+		);
+		message += botText(
+			locale,
+			`📊 <b>Рейтинг:</b> ${pluginRating(p, locale)}\n`,
+			`📊 <b>Rating:</b> ${pluginRating(p, locale)}\n`,
+		);
+		message += botText(
+			locale,
+			`⬇️ <b>Скачиваний:</b> ${p.downloadCount}\n`,
+			`⬇️ <b>Downloads:</b> ${p.downloadCount}\n`,
+		);
+		message += botText(
+			locale,
+			`📅 <b>Обновлен:</b> ${formatTelegramDate(createValidDate(p.updatedAt || p.createdAt), locale)}\n`,
+			`📅 <b>Updated:</b> ${formatTelegramDate(createValidDate(p.updatedAt || p.createdAt), locale)}\n`,
+		);
 
 		if (p.tags) {
-			message += `🏷️ <b>Теги:</b> ${safeTags}\n`;
+			message += botText(
+				locale,
+				`🏷️ <b>Теги:</b> ${safeTags}\n`,
+				`🏷️ <b>Tags:</b> ${safeTags}\n`,
+			);
 		}
 
 		message += p.exteralessCompatible
-			? "✅ <b>exteraless:</b> совместим\n"
+			? botText(
+					locale,
+					"✅ <b>exteraless:</b> совместим\n",
+					"✅ <b>exteraless:</b> compatible\n",
+				)
 			: p.exteralessCompatible === false
-				? "⛔ <b>exteraless:</b> не совместим\n"
-				: "❔ <b>exteraless:</b> совместимость не указана\n";
+				? botText(
+						locale,
+						"⛔ <b>exteraless:</b> не совместим\n",
+						"⛔ <b>exteraless:</b> incompatible\n",
+					)
+				: botText(
+						locale,
+						"❔ <b>exteraless:</b> совместимость не указана\n",
+						"❔ <b>exteraless:</b> compatibility not specified\n",
+					);
 
 		if (p.price > 0) {
-			message += `💰 <b>Цена:</b> $${p.price}\n`;
+			message += botText(
+				locale,
+				`💰 <b>Цена:</b> $${p.price}\n`,
+				`💰 <b>Price:</b> $${p.price}\n`,
+			);
 		} else {
-			message += "💰 <b>Цена:</b> Бесплатно\n";
+			message += botText(
+				locale,
+				"💰 <b>Цена:</b> Бесплатно\n",
+				"💰 <b>Price:</b> Free\n",
+			);
 		}
 
 		const keyboard = {
 			inline_keyboard: [
-				[{ text: "⬇️ Скачать плагин", callback_data: `download_${pluginId}` }],
-				[{ text: "🔙 Назад", callback_data: "main_menu" }],
+				[
+					{
+						text: botText(locale, "⬇️ Скачать плагин", "⬇️ Download plugin"),
+						callback_data: `download_${pluginId}`,
+					},
+				],
+				[
+					{
+						text: botText(locale, "🔙 Назад", "🔙 Back"),
+						callback_data: "main_menu",
+					},
+				],
 			],
 		};
 
@@ -1244,12 +1663,25 @@ async function showPluginDetails(
 		}
 	} catch (error) {
 		console.error("Plugin details error:", error);
-		await sendMessage(chatId, "❌ Ошибка при загрузке информации о плагине.");
+		await sendMessage(
+			chatId,
+			botText(
+				locale,
+				"❌ Ошибка при загрузке информации о плагине.",
+				"❌ Could not load plugin details.",
+			),
+		);
 	}
 }
 
-async function showHelp(chatId: string, messageId?: number) {
-	const message = `
+async function showHelp(
+	chatId: string,
+	locale: TelegramBotLocale,
+	messageId?: number,
+) {
+	const message = botText(
+		locale,
+		`
 📖 <b>Справка по боту exteraStore</b>
 
 <b>🔍 Поиск плагинов:</b>
@@ -1274,15 +1706,57 @@ async function showHelp(chatId: string, messageId?: number) {
 • Файл .plugin будет отправлен в чат
 • Установите его в exteraGram или exteraless, если плагин отмечен совместимым
 
+<b>🌐 Язык:</b>
+• Бот автоматически отвечает на языке Telegram
+• Команда <code>/language</code> показывает активный язык
+
 <b>🔗 Полезные ссылки:</b>
 • Разработчик: https://github.com/0niel
 • exteraless: https://github.com/exteraless/exteraless
-• Документация: http://plugins.exteragram.app
-	`;
+• Документация: https://plugins.exteragram.app`,
+		`
+📖 <b>exteraStore bot help</b>
+
+<b>🔍 Plugin search:</b>
+• Use the Search button in the main menu
+• Or send <code>/search query</code>
+• Or simply type a plugin name
+
+<b>📂 Categories:</b>
+• Browse plugins by category
+• Use pagination to navigate
+
+<b>⭐ Popular and new:</b>
+• Explore the most downloaded plugins
+• Discover recent releases
+
+<b>👤 Profile:</b>
+• View your download statistics
+• Open useful project links
+
+<b>📥 Download:</b>
+• Tap Download on any plugin
+• The .plugin file will be sent to this chat
+• Install it in exteraGram or exteraless when marked compatible
+
+<b>🌐 Language:</b>
+• The bot follows your Telegram language automatically
+• Use <code>/language</code> to view the active language
+
+<b>🔗 Useful links:</b>
+• Developer: https://github.com/0niel
+• exteraless: https://github.com/exteraless/exteraless
+• Documentation: https://plugins.exteragram.app`,
+	);
 
 	const keyboard = {
 		inline_keyboard: [
-			[{ text: "🔙 Главное меню", callback_data: "main_menu" }],
+			[
+				{
+					text: botText(locale, "🔙 Главное меню", "🔙 Main menu"),
+					callback_data: "main_menu",
+				},
+			],
 		],
 	};
 

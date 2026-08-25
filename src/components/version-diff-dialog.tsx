@@ -28,7 +28,7 @@ interface VersionDiffDialogProps {
 	versions: Array<{
 		id: number;
 		version: string;
-		createdAt: Date;
+		createdAt: Date | number;
 	}>;
 	triggerText?: string;
 }

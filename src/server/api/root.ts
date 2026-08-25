@@ -15,7 +15,6 @@ import { pluginVersionsRouter } from "~/server/api/routers/plugin-versions";
 import { pluginsRouter } from "~/server/api/routers/plugins";
 import { postRouter } from "~/server/api/routers/post";
 import { pulseRouter } from "~/server/api/routers/pulse";
-import { telegramBotRouter } from "~/server/api/routers/telegram-bot";
 import { telegramNotificationsRouter } from "~/server/api/routers/telegram-notifications";
 import { usersRouter } from "~/server/api/routers/users";
 import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
@@ -23,7 +22,6 @@ import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 export const appRouter = createTRPCRouter({
 	post: postRouter,
 	plugins: pluginsRouter,
-	telegramBot: telegramBotRouter,
 	pluginUpload: pluginUploadRouter,
 	categories: categoriesRouter,
 	pluginPipeline: pluginPipelineRouter,

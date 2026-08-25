@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 import { SmartCaptcha } from "~/components/captcha/smart-captcha";
 import { MarkdownEditor } from "~/components/markdown-editor";
+import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
 	Dialog,
@@ -29,6 +30,12 @@ import {
 } from "~/components/ui/form";
 import { Input } from "~/components/ui/input";
 import { Switch } from "~/components/ui/switch";
+import {
+	getPluginReleaseChannel,
+	normalizePluginVersion,
+	PLUGIN_VERSION_PATTERN,
+} from "~/lib/plugin-version";
+import { formatBytes } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
 interface UploadVersionDialogProps {
@@ -57,15 +64,26 @@ export function UploadVersionDialog({
 
 	const uploadVersionSchema = useMemo(
 		() =>
-			z.object({
-				version: z
-					.string()
-					.min(1, t("version_required"))
-					.max(50, t("version_too_long")),
-				fileContent: z.string().min(1, t("file_required")),
-				changelog: z.string().optional(),
-				isStable: z.boolean(),
-			}),
+			z
+				.object({
+					version: z
+						.string()
+						.min(1, t("version_required"))
+						.max(50, t("version_too_long"))
+						.regex(PLUGIN_VERSION_PATTERN, t("version_invalid")),
+					fileContent: z.string().min(1, t("file_required")),
+					changelog: z.string().optional(),
+					isStable: z.boolean(),
+				})
+				.superRefine((value, context) => {
+					if (value.isStable && (value.changelog?.trim().length ?? 0) < 10) {
+						context.addIssue({
+							code: "custom",
+							path: ["changelog"],
+							message: t("stable_changelog_required"),
+						});
+					}
+				}),
 		[t],
 	);
 
@@ -91,9 +109,19 @@ export function UploadVersionDialog({
 		onError: (error) => {
 			setCaptchaToken("");
 			setCaptchaKey((value) => value + 1);
-			toast.error(t("upload_error", { error: error.message }));
+			toast.error(
+				error.message.includes("VERSION_ALREADY_EXISTS")
+					? t("version_exists")
+					: t("upload_error", { error: error.message }),
+			);
 		},
 	});
+	const watchedVersion = form.watch("version");
+	const watchedStable = form.watch("isStable");
+	const releaseChannel = getPluginReleaseChannel(
+		normalizePluginVersion(watchedVersion || "0.0.0"),
+		watchedStable,
+	);
 
 	const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		const selectedFile = event.target.files?.[0];
@@ -124,6 +152,7 @@ export function UploadVersionDialog({
 		createVersionMutation.mutate({
 			pluginId,
 			...data,
+			version: normalizePluginVersion(data.version),
 			filename: file?.name,
 			captchaToken,
 		});
@@ -181,6 +210,9 @@ export function UploadVersionDialog({
 										<FormDescription className="text-xs">
 											{t("semantic_version")}
 										</FormDescription>
+										<Badge variant="secondary" className="w-fit">
+											{t("release_channel")}: {t(`channel_${releaseChannel}`)}
+										</Badge>
 										<FormMessage />
 									</FormItem>
 								)}
@@ -228,7 +260,8 @@ export function UploadVersionDialog({
 											/>
 											{file && (
 												<p className="break-all text-muted-foreground text-xs sm:text-sm">
-													{t("selected_file")}: {file.name}
+													{t("selected_file")}: {file.name} ·{" "}
+													{formatBytes(file.size)}
 												</p>
 											)}
 										</div>

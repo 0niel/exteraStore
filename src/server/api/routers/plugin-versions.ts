@@ -20,7 +20,7 @@ export const pluginVersionsRouter = createTRPCRouter({
 		.input(z.object({ pluginSlug: z.string() }))
 		.query(async ({ ctx, input }) => {
 			const plugin = await ctx.db
-				.select({ id: plugins.id })
+				.select({ id: plugins.id, currentVersion: plugins.version })
 				.from(plugins)
 				.where(
 					and(
@@ -33,6 +33,7 @@ export const pluginVersionsRouter = createTRPCRouter({
 			if (!plugin[0]) {
 				throw new Error("Plugin not found");
 			}
+			const currentVersion = plugin[0].currentVersion;
 
 			const versions = await ctx.db
 				.select({
@@ -58,7 +59,10 @@ export const pluginVersionsRouter = createTRPCRouter({
 				.where(eq(pluginVersions.pluginId, plugin[0].id))
 				.orderBy(desc(pluginVersions.createdAt));
 
-			return versions;
+			return versions.map((version) => ({
+				...version,
+				isCurrent: version.version === currentVersion,
+			}));
 		}),
 
 	getVersion: publicProcedure

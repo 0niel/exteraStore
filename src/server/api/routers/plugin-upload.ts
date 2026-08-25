@@ -1,6 +1,10 @@
 import crypto from "node:crypto";
-import { desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
+import {
+	normalizePluginVersion,
+	PLUGIN_VERSION_PATTERN,
+} from "~/lib/plugin-version";
 import { notifyPluginUpdateSubscribers } from "~/lib/telegram-notifications";
 import { generateSlug } from "~/lib/utils";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
@@ -26,7 +30,12 @@ const createPluginSchema = z.object({
 	category: z.string().min(1).max(100),
 	tags: z.array(z.string()).optional(),
 	screenshots: z.string().optional(),
-	version: z.string().min(1).max(50),
+	version: z
+		.string()
+		.min(1)
+		.max(50)
+		.regex(PLUGIN_VERSION_PATTERN)
+		.transform(normalizePluginVersion),
 	fileContent: z.string().min(1),
 	filename: z.string().optional(),
 	changelog: z.string().optional(),
@@ -56,18 +65,33 @@ const updatePluginFromGitSchema = z.object({
 	autoSync: z.boolean().default(false),
 });
 
-const createVersionSchema = z.object({
-	pluginId: z.number(),
-	version: z.string().min(1).max(50),
-	fileContent: z.string().min(1),
-	filename: z.string().optional(),
-	changelog: z.string().optional(),
-	gitCommitHash: z.string().optional(),
-	gitBranch: z.string().optional(),
-	gitTag: z.string().optional(),
-	isStable: z.boolean().default(true),
-	captchaToken: z.string().min(1),
-});
+const createVersionSchema = z
+	.object({
+		pluginId: z.number(),
+		version: z
+			.string()
+			.min(1)
+			.max(50)
+			.regex(PLUGIN_VERSION_PATTERN)
+			.transform(normalizePluginVersion),
+		fileContent: z.string().min(1),
+		filename: z.string().optional(),
+		changelog: z.string().optional(),
+		gitCommitHash: z.string().optional(),
+		gitBranch: z.string().optional(),
+		gitTag: z.string().optional(),
+		isStable: z.boolean().default(true),
+		captchaToken: z.string().min(1),
+	})
+	.superRefine((value, context) => {
+		if (value.isStable && (value.changelog?.trim().length ?? 0) < 10) {
+			context.addIssue({
+				code: "custom",
+				path: ["changelog"],
+				message: "STABLE_CHANGELOG_REQUIRED",
+			});
+		}
+	});
 
 export const pluginUploadRouter = createTRPCRouter({
 	create: protectedProcedure
@@ -228,6 +252,21 @@ export const pluginUploadRouter = createTRPCRouter({
 
 			if (!plugin || plugin.authorId !== ctx.session.user.id) {
 				throw new Error("Plugin not found or unauthorized");
+			}
+
+			const existingVersion = await ctx.db
+				.select({ id: pluginVersions.id })
+				.from(pluginVersions)
+				.where(
+					and(
+						eq(pluginVersions.pluginId, input.pluginId),
+						eq(pluginVersions.version, input.version),
+					),
+				)
+				.limit(1);
+
+			if (existingVersion[0]) {
+				throw new Error("VERSION_ALREADY_EXISTS");
 			}
 
 			const fileHash = crypto

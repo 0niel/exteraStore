@@ -58,6 +58,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "~/components/ui/select";
+import {
+	normalizePluginVersion,
+	PLUGIN_VERSION_PATTERN,
+} from "~/lib/plugin-version";
 import { formatBytes } from "~/lib/utils";
 import type { RouterOutputs } from "~/trpc/react";
 import { api } from "~/trpc/react";
@@ -78,7 +82,8 @@ const buildFormSchema = (t: (key: string) => string) =>
 		version: z
 			.string()
 			.min(1, t("error_version_required"))
-			.max(50, t("error_version_max")),
+			.max(50, t("error_version_max"))
+			.regex(PLUGIN_VERSION_PATTERN, t("error_version_invalid")),
 		changelog: z.string().optional(),
 		githubUrl: z
 			.string()
@@ -234,6 +239,7 @@ export default function UploadPluginPage() {
 
 		const cleanedData = {
 			...data,
+			version: normalizePluginVersion(data.version),
 			category: data.categorySlug || "utility",
 			description: data.description || data.shortDescription,
 			githubUrl: data.githubUrl?.trim() || undefined,
