@@ -47,7 +47,7 @@ export function TagInput({
 	};
 
 	return (
-		<div className="flex min-h-11 flex-wrap items-center gap-2 rounded-xl border bg-transparent px-3 py-2 transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 dark:bg-input/30">
+		<div className="flex min-h-12 flex-wrap items-center gap-2 rounded-2xl bg-surface px-4 py-2.5 ring-1 ring-transparent transition-[background-color,box-shadow] duration-200 focus-within:bg-background focus-within:ring-[3px] focus-within:ring-primary/20 hover:bg-accent/75">
 			<AnimatePresence initial={false}>
 				{tags.map((tag) => (
 					<motion.span
@@ -81,7 +81,7 @@ export function TagInput({
 				onChange={(e) => setInputValue(e.target.value)}
 				onKeyDown={handleKeyDown}
 				placeholder={placeholder || t("add_tag")}
-				className="m-0 h-auto min-w-24 flex-1 border-0 bg-transparent p-0 shadow-none focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent"
+				className="m-0 h-auto min-h-8 min-w-24 flex-1 bg-transparent p-0 ring-0 hover:bg-transparent focus-visible:bg-transparent focus-visible:ring-0"
 			/>
 		</div>
 	);

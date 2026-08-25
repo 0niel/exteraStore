@@ -87,14 +87,22 @@ export function DonationRequisitesEditor({
 								className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-12"
 							>
 								<div className="sm:col-span-2 md:col-span-3">
-									<Label className="sr-only">{t("type_label")}</Label>
+									<Label
+										htmlFor={`donation-type-${idx}`}
+										className="mb-2 px-0.5 text-muted-foreground text-xs"
+									>
+										{t("type_label")}
+									</Label>
 									<Select
 										value={m.type}
 										onValueChange={(v: DonationMethodType) =>
 											updateMethod(idx, { type: v })
 										}
 									>
-										<SelectTrigger className="min-h-11 w-full">
+										<SelectTrigger
+											id={`donation-type-${idx}`}
+											className="w-full"
+										>
 											<SelectValue placeholder={t("type_label")} />
 										</SelectTrigger>
 										<SelectContent>
@@ -107,9 +115,14 @@ export function DonationRequisitesEditor({
 									</Select>
 								</div>
 								<div className="md:col-span-5">
-									<Label className="sr-only">{t("value_label")}</Label>
+									<Label
+										htmlFor={`donation-value-${idx}`}
+										className="mb-2 px-0.5 text-muted-foreground text-xs"
+									>
+										{t("value_label")}
+									</Label>
 									<Input
-										className="min-h-11"
+										id={`donation-value-${idx}`}
 										value={m.value}
 										onChange={(e) =>
 											updateMethod(idx, { value: e.target.value })
@@ -119,9 +132,14 @@ export function DonationRequisitesEditor({
 								</div>
 								<div className="flex gap-3 sm:col-span-2 md:col-span-4 md:gap-3">
 									<div className="flex-1">
-										<Label className="sr-only">{t("label_label")}</Label>
+										<Label
+											htmlFor={`donation-label-${idx}`}
+											className="mb-2 px-0.5 text-muted-foreground text-xs"
+										>
+											{t("label_label")}
+										</Label>
 										<Input
-											className="min-h-11"
+											id={`donation-label-${idx}`}
 											value={m.label || ""}
 											onChange={(e) =>
 												updateMethod(idx, { label: e.target.value })
@@ -132,7 +150,7 @@ export function DonationRequisitesEditor({
 									<Button
 										variant="outline"
 										size="icon"
-										className="h-11 w-11 shrink-0"
+										className="mt-6 shrink-0"
 										onClick={() => removeMethod(idx)}
 										aria-label={t("remove")}
 									>

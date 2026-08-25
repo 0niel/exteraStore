@@ -134,7 +134,7 @@ export function PluginDependencyPicker({
 					value={search}
 					onChange={(event) => setSearch(event.target.value)}
 					placeholder={t("search_placeholder")}
-					className="min-h-11 border-0 bg-background pr-10 pl-10 shadow-none"
+					className="bg-background pr-10 pl-10"
 					disabled={disabled}
 				/>
 				{isFetching && (

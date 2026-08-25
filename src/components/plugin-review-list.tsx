@@ -213,7 +213,7 @@ export function PluginReviewList({
 												setEditingComment(event.target.value)
 											}
 											rows={3}
-											className="resize-none border-0 bg-background/75 text-base"
+											className="resize-none"
 										/>
 										<div className="flex flex-wrap gap-2">
 											<Button

@@ -223,10 +223,10 @@ export function ScreenshotUploader({
 				{screenshots.length < maxFiles && (
 					<div
 						{...getRootProps()}
-						className={`tap-highlight-none min-h-11 cursor-pointer rounded-xl border-2 border-dashed p-6 text-center transition-[border-color,background-color,transform] duration-200 sm:p-8 ${
+						className={`tap-highlight-none min-h-32 cursor-pointer rounded-2xl bg-surface p-6 text-center outline-none ring-1 ring-transparent transition-[background-color,box-shadow,transform] duration-200 focus-visible:ring-[3px] focus-visible:ring-primary/20 sm:p-8 ${
 							isDragActive
-								? `border-primary bg-primary/10 ${reduceMotion ? "" : "scale-[1.01]"}`
-								: "border-primary/25 bg-primary/[0.03] hover:border-primary/50 hover:bg-primary/5"
+								? `bg-primary/10 ${reduceMotion ? "" : "scale-[1.01]"}`
+								: "hover:bg-accent/75"
 						} ${isUploading ? "cursor-not-allowed opacity-50" : ""}`}
 					>
 						<input {...getInputProps()} />

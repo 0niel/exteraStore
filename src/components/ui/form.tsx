@@ -80,7 +80,7 @@ function FormItem({ className, ...props }: React.ComponentProps<"div">) {
 		<FormItemContext.Provider value={{ id }}>
 			<div
 				data-slot="form-item"
-				className={cn("grid min-w-0 grid-cols-1 gap-2", className)}
+				className={cn("group grid min-w-0 grid-cols-1 gap-2.5", className)}
 				{...props}
 			/>
 		</FormItemContext.Provider>
@@ -97,7 +97,10 @@ function FormLabel({
 		<Label
 			data-slot="form-label"
 			data-error={!!error}
-			className={cn("data-[error=true]:text-destructive", className)}
+			className={cn(
+				"px-0.5 font-semibold text-foreground text-sm data-[error=true]:text-destructive",
+				className,
+			)}
 			htmlFor={formItemId}
 			{...props}
 		/>
@@ -130,7 +133,10 @@ function FormDescription({ className, ...props }: React.ComponentProps<"p">) {
 		<p
 			data-slot="form-description"
 			id={formDescriptionId}
-			className={cn("text-muted-foreground text-sm", className)}
+			className={cn(
+				"px-0.5 text-muted-foreground text-sm leading-relaxed",
+				className,
+			)}
 			{...props}
 		/>
 	);
@@ -148,7 +154,12 @@ function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
 		<p
 			data-slot="form-message"
 			id={formMessageId}
-			className={cn("text-destructive text-sm", className)}
+			role="alert"
+			aria-live="polite"
+			className={cn(
+				"flex items-start gap-2 px-0.5 font-medium text-destructive text-sm leading-relaxed before:mt-[0.55em] before:size-1.5 before:shrink-0 before:rounded-full before:bg-destructive",
+				className,
+			)}
 			{...props}
 		>
 			{body}

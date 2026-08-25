@@ -328,6 +328,8 @@
 		"checks_badge_ok": "Всё ок",
 		"checks_badge_running": "Анализ",
 		"checks_badge_unchecked": "Нет данных",
+		"about_plugin": "О плагине",
+		"open_author_profile": "Открыть профиль разработчика {name}",
 		"author_plugins": "Плагинов",
 		"author_downloads": "Скачиваний",
 		"author_rating": "Рейтинг",

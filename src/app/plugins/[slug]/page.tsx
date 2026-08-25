@@ -49,6 +49,7 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "~/components/ui/tooltip";
+import { UserAvatar } from "~/components/user-avatar";
 import { cn, formatNumber, safeJsonParse } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
@@ -335,8 +336,6 @@ export default function PluginDetailPage() {
 	const categoryName =
 		categories?.find((c) => c.slug === plugin.category)?.name ||
 		plugin.category;
-	const hasLinks = Boolean(plugin.githubUrl || plugin.documentationUrl);
-
 	const tabs: Array<{ id: TabId; label: string }> = [
 		{ id: "description", label: t("description") },
 		{
@@ -659,7 +658,7 @@ export default function PluginDetailPage() {
 						<div
 							role="tablist"
 							aria-label={t("description")}
-							className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:px-0"
+							className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-1 overflow-x-auto bg-surface p-1.5 sm:mx-0 sm:w-fit sm:max-w-full sm:rounded-2xl"
 						>
 							{tabs.map((tab) => (
 								<button
@@ -669,10 +668,10 @@ export default function PluginDetailPage() {
 									aria-selected={activeTab === tab.id}
 									onClick={() => setActiveTab(tab.id)}
 									className={cn(
-										"press-scale tap-highlight-none min-h-11 shrink-0 snap-start whitespace-nowrap rounded-full px-4 font-medium text-sm transition-all duration-200 ease-[var(--ease-spring)]",
+										"press-scale tap-highlight-none min-h-11 shrink-0 snap-start whitespace-nowrap rounded-xl px-4 font-medium text-sm transition-[background-color,color,transform] duration-200 ease-[var(--ease-spring)]",
 										activeTab === tab.id
 											? "bg-primary text-primary-foreground"
-											: "bg-surface text-muted-foreground hover:bg-primary/10 hover:text-foreground",
+											: "text-muted-foreground hover:bg-background/80 hover:text-foreground",
 									)}
 								>
 									<span>{tab.label}</span>
@@ -708,217 +707,230 @@ export default function PluginDetailPage() {
 								className="mt-6"
 							>
 								{activeTab === "description" && (
-									<div>
-										<div className="mb-5 flex flex-wrap justify-end gap-2">
-											<PluginInsight
-												pluginId={plugin.id}
-												pluginName={plugin.name}
-											/>
-											<AskAi pluginId={plugin.id} pluginName={plugin.name} />
-										</div>
-										<div className="prose prose-neutral dark:prose-invert max-w-none">
-											<ReactMarkdown>{plugin.description}</ReactMarkdown>
+									<div className="space-y-8">
+										<div>
+											<div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+												<span className="eyebrow">{t("about_plugin")}</span>
+												<div className="flex w-full flex-wrap gap-2 rounded-2xl bg-surface p-1.5 sm:w-auto sm:justify-end [&>*]:flex-1 sm:[&>*]:flex-none">
+													<PluginInsight
+														pluginId={plugin.id}
+														pluginName={plugin.name}
+													/>
+													<AskAi
+														pluginId={plugin.id}
+														pluginName={plugin.name}
+													/>
+												</div>
+											</div>
+											<div className="prose prose-neutral dark:prose-invert max-w-none">
+												<ReactMarkdown>{plugin.description}</ReactMarkdown>
+											</div>
 										</div>
 
-										<div
-											className={cn(
-												"mt-8 grid min-w-0 grid-cols-1 gap-4",
-												hasLinks ? "sm:grid-cols-2" : "sm:grid-cols-1",
-											)}
-										>
-											<Card className="transition-colors hover:border-primary/30">
-												<CardContent className="p-4">
+										<div className="space-y-3">
+											<section className="rounded-3xl bg-surface p-4 sm:p-6">
+												<div className="flex items-start gap-4">
 													<Link
 														href={`/developers/${plugin.authorId}`}
-														className="group flex items-start gap-3 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+														className="shrink-0 rounded-2xl outline-none focus-visible:ring-[3px] focus-visible:ring-primary/20"
+														aria-label={t("open_author_profile", {
+															name: authorData?.name || plugin.author,
+														})}
 													>
-														<Avatar className="h-12 w-12 rounded-xl">
-															<AvatarImage
-																src={authorData?.image || undefined}
-															/>
-															<AvatarFallback className="rounded-xl bg-primary/10 font-medium text-primary text-sm">
-																{(authorData?.name || plugin.author)
-																	.slice(0, 2)
-																	.toUpperCase()}
-															</AvatarFallback>
-														</Avatar>
-														<div className="min-w-0 flex-1">
-															<div className="flex items-center gap-2">
-																<p className="truncate font-semibold">
-																	{authorData?.name || plugin.author}
-																</p>
-																{authorData?.isVerified && (
-																	<Badge className="border-transparent bg-contrast text-contrast-foreground text-xs">
-																		<Shield className="mr-1 h-3 w-3" />
-																		{t("verified")}
-																	</Badge>
-																)}
-															</div>
-															{authorData?.telegramUsername && (
-																<p className="text-primary text-sm">
-																	@{authorData.telegramUsername}
-																</p>
-															)}
-															{authorData?.bio && (
-																<p className="mt-1 line-clamp-2 text-muted-foreground text-sm">
-																	{authorData.bio}
-																</p>
-															)}
-															{authorData?.stats && (
-																<div className="mt-3 grid grid-cols-3 gap-2 text-center">
-																	<div>
-																		<div className="font-semibold text-sm">
-																			{authorData.stats.totalPlugins || 0}
-																		</div>
-																		<div className="text-muted-foreground text-xs">
-																			{t("author_plugins")}
-																		</div>
-																	</div>
-																	<div>
-																		<div className="font-semibold text-sm">
-																			{formatNumber(
-																				Number(
-																					authorData.stats.totalDownloads,
-																				) || 0,
-																			)}
-																		</div>
-																		<div className="text-muted-foreground text-xs">
-																			{t("author_downloads")}
-																		</div>
-																	</div>
-																	<div>
-																		<div className="flex items-center justify-center gap-1 font-semibold text-sm">
-																			<Star className="h-3.5 w-3.5 fill-warning text-warning" />
-																			{authorData.stats.ratingCount > 0
-																				? Number(
-																						authorData.stats.averageRating,
-																					).toFixed(1)
-																				: t("not_rated")}
-																		</div>
-																		<div className="text-muted-foreground text-xs">
-																			{t("author_rating")}
-																		</div>
-																	</div>
-																</div>
+														<UserAvatar
+															name={authorData?.name || plugin.author}
+															src={authorData?.image}
+															className="size-14 rounded-2xl sm:size-16"
+															imageClassName="rounded-2xl"
+															fallbackClassName="rounded-2xl text-base"
+														/>
+													</Link>
+													<div className="min-w-0 flex-1">
+														<div className="flex flex-wrap items-center gap-2">
+															<Link
+																href={`/developers/${plugin.authorId}`}
+																className="truncate font-semibold text-lg outline-none hover:text-primary focus-visible:text-primary"
+															>
+																{authorData?.name || plugin.author}
+															</Link>
+															{authorData?.isVerified && (
+																<Badge className="border-transparent bg-contrast text-contrast-foreground text-xs">
+																	<Shield className="mr-1 h-3 w-3" />
+																	{t("verified")}
+																</Badge>
 															)}
 														</div>
-													</Link>
-													<div className="mt-3 flex flex-wrap gap-2">
-														{authorData?.githubUsername && (
-															<Button
-																asChild
-																variant="outline"
-																size="sm"
-																className="min-h-11 md:min-h-8"
-															>
-																<a
-																	href={`https://github.com/${authorData.githubUsername}`}
-																	target="_blank"
-																	rel="noopener noreferrer"
-																	className="inline-flex items-center gap-2"
-																>
-																	<GitHubIcon className="size-4" /> GitHub
-																</a>
-															</Button>
-														)}
-														{authorData?.website && (
-															<Button
-																asChild
-																variant="outline"
-																size="sm"
-																className="min-h-11 md:min-h-8"
-															>
-																<a
-																	href={authorData.website}
-																	target="_blank"
-																	rel="noopener noreferrer"
-																	className="inline-flex items-center gap-2"
-																>
-																	<Globe className="h-4 w-4" /> {t("website")}
-																</a>
-															</Button>
-														)}
 														{authorData?.telegramUsername && (
-															<Button
-																asChild
-																variant="outline"
-																size="sm"
-																className="min-h-11 md:min-h-8"
-															>
-																<a
-																	href={`https://t.me/${authorData.telegramUsername}`}
-																	target="_blank"
-																	rel="noopener noreferrer"
-																	className="inline-flex items-center gap-2"
-																>
-																	<MessageSquare className="h-4 w-4" /> Telegram
-																</a>
-															</Button>
+															<p className="mt-0.5 text-primary text-sm">
+																@{authorData.telegramUsername}
+															</p>
+														)}
+														{authorData?.bio && (
+															<p className="mt-2 line-clamp-3 max-w-2xl text-muted-foreground text-sm leading-relaxed">
+																{authorData.bio}
+															</p>
 														)}
 													</div>
-												</CardContent>
-											</Card>
+													<Button
+														asChild
+														variant="ghost"
+														size="icon"
+														className="shrink-0 bg-background/70"
+													>
+														<Link
+															href={`/developers/${plugin.authorId}`}
+															aria-label={t("open_author_profile", {
+																name: authorData?.name || plugin.author,
+															})}
+														>
+															<ExternalLink className="size-4" />
+														</Link>
+													</Button>
+												</div>
 
-											{hasLinks && (
-												<Card>
-													<CardContent className="p-4">
-														<div className="flex flex-wrap gap-2">
-															{plugin.githubUrl && (
-																<Tooltip>
-																	<TooltipTrigger asChild>
-																		<Button
-																			asChild
-																			variant="outline"
-																			size="sm"
-																			className="min-h-11 md:min-h-8"
-																		>
-																			<a
-																				href={plugin.githubUrl}
-																				target="_blank"
-																				rel="noopener noreferrer"
-																				className="inline-flex items-center gap-2"
-																			>
-																				<GitHubIcon className="size-4" />{" "}
-																				{t("source_code")}{" "}
-																				<ExternalLink className="h-3 w-3" />
-																			</a>
-																		</Button>
-																	</TooltipTrigger>
-																	<TooltipContent>
-																		{t("open_github")}
-																	</TooltipContent>
-																</Tooltip>
-															)}
-															{plugin.documentationUrl && (
-																<Tooltip>
-																	<TooltipTrigger asChild>
-																		<Button
-																			asChild
-																			variant="outline"
-																			size="sm"
-																			className="min-h-11 md:min-h-8"
-																		>
-																			<a
-																				href={plugin.documentationUrl}
-																				target="_blank"
-																				rel="noopener noreferrer"
-																				className="inline-flex items-center gap-2"
-																			>
-																				<FileText className="h-4 w-4" />{" "}
-																				{t("documentation")}{" "}
-																				<ExternalLink className="h-3 w-3" />
-																			</a>
-																		</Button>
-																	</TooltipTrigger>
-																	<TooltipContent>
-																		{t("open_docs")}
-																	</TooltipContent>
-																</Tooltip>
-															)}
-														</div>
-													</CardContent>
-												</Card>
-											)}
+												{authorData?.stats && (
+													<div className="mt-4 flex flex-wrap gap-2">
+														<span className="inline-flex min-h-9 items-center gap-2 rounded-full bg-background/75 px-3 text-sm">
+															<strong className="font-mono">
+																{authorData.stats.totalPlugins || 0}
+															</strong>
+															<span className="text-muted-foreground">
+																{t("author_plugins")}
+															</span>
+														</span>
+														<span className="inline-flex min-h-9 items-center gap-2 rounded-full bg-background/75 px-3 text-sm">
+															<strong className="font-mono">
+																{formatNumber(
+																	Number(authorData.stats.totalDownloads) || 0,
+																)}
+															</strong>
+															<span className="text-muted-foreground">
+																{t("author_downloads")}
+															</span>
+														</span>
+														<span className="inline-flex min-h-9 items-center gap-2 rounded-full bg-background/75 px-3 text-sm">
+															<Star
+																className={cn(
+																	"size-4",
+																	authorData.stats.ratingCount > 0 &&
+																		"fill-warning text-warning",
+																)}
+															/>
+															<strong className="font-mono">
+																{authorData.stats.ratingCount > 0
+																	? Number(
+																			authorData.stats.averageRating,
+																		).toFixed(1)
+																	: t("not_rated")}
+															</strong>
+														</span>
+													</div>
+												)}
+
+												<div className="mt-5 flex flex-wrap gap-2">
+													{authorData?.githubUsername && (
+														<Button
+															asChild
+															variant="ghost"
+															size="sm"
+															className="bg-background/70 hover:bg-background"
+														>
+															<a
+																href={`https://github.com/${authorData.githubUsername}`}
+																target="_blank"
+																rel="noopener noreferrer"
+																className="inline-flex items-center gap-2"
+															>
+																<GitHubIcon className="size-4" /> GitHub
+															</a>
+														</Button>
+													)}
+													{authorData?.website && (
+														<Button
+															asChild
+															variant="ghost"
+															size="sm"
+															className="bg-background/70 hover:bg-background"
+														>
+															<a
+																href={authorData.website}
+																target="_blank"
+																rel="noopener noreferrer"
+																className="inline-flex items-center gap-2"
+															>
+																<Globe className="h-4 w-4" /> {t("website")}
+															</a>
+														</Button>
+													)}
+													{authorData?.telegramUsername && (
+														<Button
+															asChild
+															variant="ghost"
+															size="sm"
+															className="bg-background/70 hover:bg-background"
+														>
+															<a
+																href={`https://t.me/${authorData.telegramUsername}`}
+																target="_blank"
+																rel="noopener noreferrer"
+																className="inline-flex items-center gap-2"
+															>
+																<MessageSquare className="h-4 w-4" /> Telegram
+															</a>
+														</Button>
+													)}
+													{plugin.githubUrl && (
+														<Tooltip>
+															<TooltipTrigger asChild>
+																<Button
+																	asChild
+																	variant="secondary"
+																	size="sm"
+																	className="bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
+																>
+																	<a
+																		href={plugin.githubUrl}
+																		target="_blank"
+																		rel="noopener noreferrer"
+																		className="inline-flex items-center gap-2"
+																	>
+																		<GitHubIcon className="size-4" />{" "}
+																		{t("source_code")}{" "}
+																		<ExternalLink className="h-3 w-3" />
+																	</a>
+																</Button>
+															</TooltipTrigger>
+															<TooltipContent>
+																{t("open_github")}
+															</TooltipContent>
+														</Tooltip>
+													)}
+													{plugin.documentationUrl && (
+														<Tooltip>
+															<TooltipTrigger asChild>
+																<Button
+																	asChild
+																	variant="secondary"
+																	size="sm"
+																	className="bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
+																>
+																	<a
+																		href={plugin.documentationUrl}
+																		target="_blank"
+																		rel="noopener noreferrer"
+																		className="inline-flex items-center gap-2"
+																	>
+																		<FileText className="h-4 w-4" />{" "}
+																		{t("documentation")}{" "}
+																		<ExternalLink className="h-3 w-3" />
+																	</a>
+																</Button>
+															</TooltipTrigger>
+															<TooltipContent>{t("open_docs")}</TooltipContent>
+														</Tooltip>
+													)}
+												</div>
+											</section>
 
 											{authorData?.donationRequisites && (
 												<DonationWidget
@@ -988,7 +1000,7 @@ export default function PluginDetailPage() {
 															onChange={(e) => setReviewComment(e.target.value)}
 															placeholder={t("review_placeholder")}
 															rows={3}
-															className="min-h-28 resize-none border-0 bg-background/75 text-base"
+															className="resize-none"
 														/>
 														<SmartCaptcha
 															onSuccess={setReviewCaptchaToken}

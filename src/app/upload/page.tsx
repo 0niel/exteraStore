@@ -925,50 +925,12 @@ export default function UploadPluginPage() {
 									<CardContent>
 										<div
 											{...getRootProps()}
-											className={`tap-highlight-none relative min-h-11 cursor-pointer rounded-xl p-6 text-center transition-[background-color,transform] duration-200 ${
+											className={`tap-highlight-none relative min-h-32 cursor-pointer rounded-2xl bg-surface p-6 text-center outline-none ring-1 ring-transparent transition-[background-color,box-shadow,transform] duration-200 focus-visible:ring-[3px] focus-visible:ring-primary/20 ${
 												isDragActive
 													? `bg-primary/10 ${reduceMotion ? "" : "scale-[1.02]"}`
-													: "bg-primary/[0.03] hover:bg-primary/5"
+													: "hover:bg-accent/75"
 											}`}
 										>
-											<svg
-												className="pointer-events-none absolute inset-0 h-full w-full"
-												aria-hidden="true"
-											>
-												<motion.rect
-													x="1"
-													y="1"
-													style={{
-														width: "calc(100% - 2px)",
-														height: "calc(100% - 2px)",
-													}}
-													rx="11"
-													fill="none"
-													strokeWidth="2"
-													strokeDasharray="8 8"
-													className={
-														isDragActive
-															? "stroke-primary"
-															: fileContent
-																? "stroke-primary/50"
-																: "stroke-primary/25"
-													}
-													animate={
-														!reduceMotion && isDragActive
-															? { strokeDashoffset: [0, -32] }
-															: { strokeDashoffset: 0 }
-													}
-													transition={
-														!reduceMotion && isDragActive
-															? {
-																	duration: 0.8,
-																	repeat: Number.POSITIVE_INFINITY,
-																	ease: "linear",
-																}
-															: { duration: 0.2 }
-													}
-												/>
-											</svg>
 											<input {...getInputProps()} />
 											{fileContent && fileName ? (
 												<div className="space-y-2">

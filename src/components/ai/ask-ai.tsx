@@ -109,8 +109,8 @@ export function AskAi({ pluginId, pluginName }: AskAiProps) {
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild>
 				<Button
-					variant="outline"
-					className="press-scale min-h-11 gap-2 border-primary/30 bg-primary/5 hover:bg-primary/10"
+					variant="secondary"
+					className="press-scale min-h-11 gap-2 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
 				>
 					<Sparkles className="h-4 w-4 text-primary" />
 					{t("ask_button")}
@@ -119,7 +119,7 @@ export function AskAi({ pluginId, pluginName }: AskAiProps) {
 			<DialogContent className="sm:max-w-2xl">
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-3 pr-8">
-						<span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/25">
+						<span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
 							<Sparkles className="size-5" />
 						</span>
 						{t("ask_title", { name: pluginName })}
@@ -128,11 +128,11 @@ export function AskAi({ pluginId, pluginName }: AskAiProps) {
 				</DialogHeader>
 
 				{status === "loading" ? (
-					<div className="flex min-h-56 items-center justify-center rounded-2xl border bg-surface">
+					<div className="flex min-h-56 items-center justify-center rounded-2xl bg-surface">
 						<Loader2 className="size-7 animate-spin text-primary" />
 					</div>
 				) : status === "unauthenticated" ? (
-					<div className="flex min-h-56 flex-col items-center justify-center rounded-2xl border bg-surface p-6 text-center">
+					<div className="flex min-h-56 flex-col items-center justify-center rounded-2xl bg-surface p-6 text-center">
 						<span className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
 							<LogIn className="size-5" />
 						</span>
@@ -156,7 +156,7 @@ export function AskAi({ pluginId, pluginName }: AskAiProps) {
 										<div className="ml-auto w-fit max-w-[90%] rounded-2xl rounded-br-md bg-contrast px-4 py-2.5 text-contrast-foreground text-sm">
 											{item.question}
 										</div>
-										<div className="relative rounded-2xl rounded-tl-md border border-primary/20 bg-linear-to-br from-primary/7 via-card to-card p-4 pr-12">
+										<div className="relative rounded-2xl rounded-tl-md bg-linear-to-br from-primary/8 via-card to-card p-4 pr-12">
 											<div className="prose prose-neutral dark:prose-invert max-w-none text-sm">
 												<ReactMarkdown>{item.answer}</ReactMarkdown>
 											</div>

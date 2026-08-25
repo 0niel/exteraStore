@@ -218,7 +218,7 @@ function PluginsContent() {
 									setSearch(event.target.value);
 								}}
 								placeholder={t("search_placeholder")}
-								className="h-11 rounded-2xl bg-background/80 pr-11 pl-10"
+								className="pr-11 pl-11 sm:bg-background/80"
 							/>
 							{search && (
 								<button
@@ -241,7 +241,7 @@ function PluginsContent() {
 							}}
 						>
 							<SelectTrigger
-								className="h-11 w-full rounded-2xl bg-background/80"
+								className="w-full sm:bg-background/80"
 								aria-label={t("sort_label")}
 							>
 								<SelectValue />

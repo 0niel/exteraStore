@@ -328,6 +328,8 @@
 		"checks_badge_ok": "All clear",
 		"checks_badge_running": "Checking",
 		"checks_badge_unchecked": "No data",
+		"about_plugin": "About the plugin",
+		"open_author_profile": "Open {name}'s developer profile",
 		"author_plugins": "Plugins",
 		"author_downloads": "Downloads",
 		"author_rating": "Rating",
