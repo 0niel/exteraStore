@@ -638,11 +638,14 @@ html[data-telegram-mini-app="true"] .overflow-x-hidden {
 	overflow-y: visible;
 }
 
-html[data-telegram-mini-app="true"] .card-lift,
-html[data-telegram-mini-app="true"] [class*="transition-"],
-html[data-telegram-mini-app="true"] [class*="animate-"] {
+html[data-telegram-mini-app="true"] * {
 	animation: none;
-	transition-duration: 0.01ms;
+	background-image: none;
+	box-shadow: none;
+	filter: none;
+	transition: none;
+	-webkit-backdrop-filter: none;
+	backdrop-filter: none;
 }
 
 html[data-telegram-mini-app="true"] .glass,

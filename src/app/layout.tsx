@@ -106,7 +106,7 @@ export default async function RootLayout({
 		>
 			<body className="overflow-x-hidden bg-background font-sans antialiased">
 				<Script id="telegram-mini-app-bootstrap" strategy="beforeInteractive">
-					{`try{const s=sessionStorage.getItem("__telegram__initParams");const p=s?JSON.parse(s):null;if(/(?:^|[&#?])tgWebApp(?:Data|Version|Platform)=/.test(location.hash)||window.TelegramWebviewProxy||p?.tgWebAppData||document.referrer.startsWith("https://web.telegram.org/")){document.documentElement.dataset.telegramMiniApp="true"}}catch{}`}
+					{`try{const s=sessionStorage.getItem("__telegram__initParams");const p=s?JSON.parse(s):null;if(/(?:^|[&#?])tgWebApp(?:Data|Version|Platform)=/.test(location.hash)||window.TelegramWebviewProxy||p?.tgWebAppData||document.referrer.startsWith("https://web.telegram.org/")){document.documentElement.dataset.telegramMiniApp="true";window.TelegramWebviewProxy?.postEvent("web_app_setup_swipe_behavior",JSON.stringify({allow_vertical_swipe:false}))}}catch{}`}
 				</Script>
 				<a
 					href="#main-content"
