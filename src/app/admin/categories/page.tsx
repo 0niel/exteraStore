@@ -1,6 +1,6 @@
 "use client";
 
-import { Edit, Layers, Loader2, Plus, Trash2 } from "lucide-react";
+import { Edit, Loader2, Plus, Trash2 } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -36,6 +36,7 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
 import { env } from "~/env";
+import { getCategoryEmoji, isCategoryEmoji } from "~/lib/category-icon";
 import { api } from "~/trpc/react";
 
 const ADMINS = (env.NEXT_PUBLIC_INITIAL_ADMINS ?? "i_am_oniel")
@@ -146,7 +147,7 @@ export default function AdminCategoriesPage() {
 			setName(category.name);
 			setSlug(category.slug);
 			setDescription(category.description || "");
-			setIcon(category.icon || "");
+			setIcon(getCategoryEmoji(category.icon, category.slug));
 			setColor(category.color || "");
 		} else {
 			resetForm();
@@ -161,6 +162,12 @@ export default function AdminCategoriesPage() {
 			toast.error(t("fill_required_fields"));
 			return;
 		}
+		if (icon.trim() && !isCategoryEmoji(icon)) {
+			toast.error(t("icon_emoji_only"));
+			return;
+		}
+
+		const normalizedIcon = getCategoryEmoji(icon, slug);
 
 		if (editingCategory) {
 			updateCategory.mutate({
@@ -168,7 +175,7 @@ export default function AdminCategoriesPage() {
 				name,
 				slug,
 				description: description || undefined,
-				icon: icon || undefined,
+				icon: normalizedIcon,
 				color: color || undefined,
 			});
 		} else {
@@ -176,7 +183,7 @@ export default function AdminCategoriesPage() {
 				name,
 				slug,
 				description: description || undefined,
-				icon: icon || undefined,
+				icon: normalizedIcon,
 				color: color || undefined,
 			});
 		}
@@ -249,7 +256,9 @@ export default function AdminCategoriesPage() {
 									<div className="flex items-start justify-between gap-3">
 										<div className="flex min-w-0 items-center gap-3">
 											<span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-lg text-primary">
-												{category.icon || <Layers className="h-5 w-5" />}
+												<span aria-hidden="true">
+													{getCategoryEmoji(category.icon, category.slug)}
+												</span>
 											</span>
 											<div className="min-w-0">
 												<CardTitle className="truncate">
@@ -365,13 +374,21 @@ export default function AdminCategoriesPage() {
 							<div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 								<div className="space-y-2">
 									<Label htmlFor="icon">{t("icon")}</Label>
-									<Input
-										id="icon"
-										className="min-h-11"
-										value={icon}
-										onChange={(e) => setIcon(e.target.value)}
-										placeholder={t("icon_placeholder")}
-									/>
+									<div className="flex items-center gap-2">
+										<Input
+											id="icon"
+											className="min-h-11 text-xl"
+											value={icon}
+											onChange={(e) => setIcon(e.target.value)}
+											placeholder={t("icon_placeholder")}
+											maxLength={16}
+										/>
+										<span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-2xl">
+											<span aria-hidden="true">
+												{getCategoryEmoji(icon, slug)}
+											</span>
+										</span>
+									</div>
 									<p className="text-muted-foreground text-xs">
 										{t("icon_help")}
 									</p>

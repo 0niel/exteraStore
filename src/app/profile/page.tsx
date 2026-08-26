@@ -2,8 +2,11 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
+	ChartNoAxesColumnIncreasing,
+	CircleUserRound,
 	Download,
 	ExternalLink,
+	KeyRound,
 	Loader2,
 	Package,
 	Plus,
@@ -320,23 +323,17 @@ export default function ProfilePage() {
 
 					<motion.div variants={fadeUp}>
 						<Tabs defaultValue="profile" className="space-y-6">
-							<TabsList className="grid w-full grid-cols-3 sm:inline-flex sm:w-auto">
-								<TabsTrigger
-									value="profile"
-									className="min-h-10 px-2 text-xs sm:text-sm"
-								>
+							<TabsList className="max-w-full">
+								<TabsTrigger value="profile" className="px-3 sm:px-4">
+									<CircleUserRound />
 									{t("profile_tab")}
 								</TabsTrigger>
-								<TabsTrigger
-									value="stats"
-									className="min-h-10 px-2 text-xs sm:text-sm"
-								>
+								<TabsTrigger value="stats" className="px-3 sm:px-4">
+									<ChartNoAxesColumnIncreasing />
 									{t("stats_tab")}
 								</TabsTrigger>
-								<TabsTrigger
-									value="api"
-									className="min-h-10 px-2 text-xs sm:text-sm"
-								>
+								<TabsTrigger value="api" className="px-3 sm:px-4">
+									<KeyRound />
 									{t("api_tab")}
 								</TabsTrigger>
 							</TabsList>

@@ -12,6 +12,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { env } from "~/env";
+import { getCategoryEmoji, isCategoryEmoji } from "~/lib/category-icon";
 import {
 	notifyPluginApproved,
 	notifyPluginRejected,
@@ -31,6 +32,13 @@ const ADMINS = (env.INITIAL_ADMINS ?? "i_am_oniel")
 	.split(",")
 	.map((a) => a.trim().toLowerCase())
 	.filter(Boolean);
+
+const categoryIconSchema = z
+	.string()
+	.trim()
+	.max(16)
+	.refine(isCategoryEmoji, "Для категории нужно выбрать один эмодзи")
+	.optional();
 
 export const adminPluginsRouter = createTRPCRouter({
 	getPlugins: protectedProcedure
@@ -301,10 +309,26 @@ export const adminPluginsRouter = createTRPCRouter({
 			throw new Error("Unauthorized");
 		}
 
-		return await ctx.db
-			.select()
+		const categories = await ctx.db
+			.select({
+				id: pluginCategories.id,
+				name: pluginCategories.name,
+				slug: pluginCategories.slug,
+				description: pluginCategories.description,
+				icon: pluginCategories.icon,
+				color: pluginCategories.color,
+				createdAt: pluginCategories.createdAt,
+				pluginCount: count(plugins.id),
+			})
 			.from(pluginCategories)
+			.leftJoin(plugins, eq(plugins.category, pluginCategories.slug))
+			.groupBy(pluginCategories.id)
 			.orderBy(asc(pluginCategories.name));
+
+		return categories.map((category) => ({
+			...category,
+			icon: getCategoryEmoji(category.icon, category.slug),
+		}));
 	}),
 	createCategory: protectedProcedure
 		.input(
@@ -312,7 +336,7 @@ export const adminPluginsRouter = createTRPCRouter({
 				name: z.string().min(1).max(50),
 				slug: z.string().min(1).max(50),
 				description: z.string().optional(),
-				icon: z.string().optional(),
+				icon: categoryIconSchema,
 				color: z.string().optional(),
 			}),
 		)
@@ -351,7 +375,7 @@ export const adminPluginsRouter = createTRPCRouter({
 				name: z.string().min(1).max(50),
 				slug: z.string().min(1).max(50),
 				description: z.string().optional(),
-				icon: z.string().optional(),
+				icon: categoryIconSchema,
 				color: z.string().optional(),
 			}),
 		)

@@ -1,44 +1,15 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import {
-	ArrowUpRight,
-	Camera,
-	Code,
-	FileText,
-	Globe,
-	Heart,
-	MessageSquare,
-	Music,
-	Palette,
-	Settings,
-	Shield,
-	Tag,
-	Users,
-	Zap,
-} from "lucide-react";
+import { ArrowUpRight, Tag } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { PageHeader } from "~/components/page-header";
 import { EmptyState } from "~/components/ui/empty-state";
 import { Skeleton } from "~/components/ui/skeleton";
 import { getCategoryDescriptionKey } from "~/lib/category-description";
+import { getCategoryEmoji } from "~/lib/category-icon";
 import { api } from "~/trpc/react";
-
-const iconMap = {
-	code: Code,
-	palette: Palette,
-	shield: Shield,
-	zap: Zap,
-	"message-square": MessageSquare,
-	settings: Settings,
-	globe: Globe,
-	music: Music,
-	camera: Camera,
-	"file-text": FileText,
-	users: Users,
-	heart: Heart,
-} as const;
 
 function CategorySkeleton() {
 	return (
@@ -107,8 +78,7 @@ export default function CategoriesPage() {
 					) : (
 						<div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 							{categories?.map((category, index) => {
-								const IconComponent =
-									iconMap[category.icon as keyof typeof iconMap] || Code;
+								const emoji = getCategoryEmoji(category.icon, category.slug);
 								const descriptionKey = getCategoryDescriptionKey(category.slug);
 								const description =
 									category.description?.trim() ||
@@ -146,8 +116,8 @@ export default function CategoriesPage() {
 													<span className="font-bold font-mono text-4xl text-muted-foreground tabular-nums tracking-tight transition-colors duration-300 group-hover:text-primary">
 														{String(index + 1).padStart(2, "0")}
 													</span>
-													<div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors duration-300 group-hover:bg-primary group-hover:text-primary-foreground">
-														<IconComponent className="h-5 w-5" />
+													<div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-2xl transition-colors duration-300 group-hover:bg-primary/20">
+														<span aria-hidden="true">{emoji}</span>
 													</div>
 												</div>
 												<div className="relative mt-6">

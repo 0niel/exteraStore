@@ -1,21 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import {
-	ArrowLeft,
-	Camera,
-	Code,
-	FileText,
-	Globe,
-	Heart,
-	MessageSquare,
-	Music,
-	Palette,
-	Settings,
-	Shield,
-	Users,
-	Zap,
-} from "lucide-react";
+import { ArrowLeft, Code } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -27,22 +13,8 @@ import { Card, CardContent, CardHeader } from "~/components/ui/card";
 import { EmptyState } from "~/components/ui/empty-state";
 import { Skeleton } from "~/components/ui/skeleton";
 import { getCategoryDescriptionKey } from "~/lib/category-description";
+import { getCategoryEmoji } from "~/lib/category-icon";
 import { api } from "~/trpc/react";
-
-const iconMap = {
-	code: Code,
-	palette: Palette,
-	shield: Shield,
-	zap: Zap,
-	"message-square": MessageSquare,
-	settings: Settings,
-	globe: Globe,
-	music: Music,
-	camera: Camera,
-	"file-text": FileText,
-	users: Users,
-	heart: Heart,
-} as const;
 
 function CategoryHeaderSkeleton() {
 	return (
@@ -166,7 +138,7 @@ export default function CategoryPage() {
 		);
 	}
 
-	const IconComponent = iconMap[category.icon as keyof typeof iconMap] || Code;
+	const emoji = getCategoryEmoji(category.icon, category.slug);
 	const descriptionKey = getCategoryDescriptionKey(category.slug);
 	const description =
 		category.description?.trim() ||
@@ -195,8 +167,8 @@ export default function CategoryPage() {
 					<span className="eyebrow mb-4 animate-fade-up">{t("badge")}</span>
 
 					<div className="mt-4 mb-6 flex animate-fade-up items-center gap-5 md:gap-6">
-						<div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-							<IconComponent className="h-8 w-8" />
+						<div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-4xl">
+							<span aria-hidden="true">{emoji}</span>
 						</div>
 						<div>
 							<h1 className="mb-2 font-bold text-4xl text-foreground tracking-tight md:text-5xl">
@@ -275,8 +247,8 @@ export default function CategoryPage() {
 						</>
 					) : (
 						<div className="animate-fade-up py-12 text-center md:py-16">
-							<div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-								<IconComponent className="h-10 w-10" />
+							<div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10 text-5xl">
+								<span aria-hidden="true">{emoji}</span>
 							</div>
 							<h3 className="mb-2 font-semibold text-foreground text-xl">
 								{t("empty_category_title")}

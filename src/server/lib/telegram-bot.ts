@@ -1,5 +1,6 @@
 import { and, desc, eq, like, or, sql } from "drizzle-orm";
 import { env } from "~/env";
+import { getCategoryEmoji } from "~/lib/category-icon";
 import { createValidDate, escapeHtml } from "~/lib/utils";
 import { db } from "~/server/db";
 import {
@@ -1065,14 +1066,14 @@ async function showCategories(
 			const category1 = pageCategories[i];
 			if (!category1) break;
 			row.push({
-				text: `${category1.icon || "📁"} ${category1.name}`,
+				text: `${getCategoryEmoji(category1.icon, category1.slug)} ${category1.name}`,
 				callback_data: `category_${category1.slug}_0`,
 			});
 
 			const category2 = pageCategories[i + 1];
 			if (category2) {
 				row.push({
-					text: `${category2.icon || "📁"} ${category2.name}`,
+					text: `${getCategoryEmoji(category2.icon, category2.slug)} ${category2.name}`,
 					callback_data: `category_${category2.slug}_0`,
 				});
 			}
@@ -1160,7 +1161,7 @@ async function showPluginsByCategory(
 		const hasMore = categoryPlugins.length > limit;
 		const results = hasMore ? categoryPlugins.slice(0, limit) : categoryPlugins;
 
-		let message = `${category.icon || "📁"} <b>${botText(locale, "Категория", "Category")}: ${escapeHtml(category.name)}</b>\n\n`;
+		let message = `${getCategoryEmoji(category.icon, category.slug)} <b>${botText(locale, "Категория", "Category")}: ${escapeHtml(category.name)}</b>\n\n`;
 
 		if (category.description) {
 			message += `${category.description}\n\n`;

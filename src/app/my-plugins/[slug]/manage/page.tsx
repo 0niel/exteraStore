@@ -285,17 +285,17 @@ export default function PluginManagePage() {
 				</motion.div>
 
 				<Tabs defaultValue="edit" className="space-y-6">
-					<TabsList className="grid w-full grid-cols-3 sm:inline-flex sm:w-auto">
+					<TabsList className="max-w-full">
 						<TabsTrigger value="edit" className="min-h-9 gap-2">
-							<FileText className="hidden h-4 w-4 sm:block" />
+							<FileText className="h-4 w-4" />
 							{t("tab_edit")}
 						</TabsTrigger>
 						<TabsTrigger value="versions" className="min-h-9 gap-2">
-							<GitBranch className="hidden h-4 w-4 sm:block" />
+							<GitBranch className="h-4 w-4" />
 							{t("tab_versions")}
 						</TabsTrigger>
 						<TabsTrigger value="settings" className="min-h-9 gap-2">
-							<Settings className="hidden h-4 w-4 sm:block" />
+							<Settings className="h-4 w-4" />
 							{t("tab_settings")}
 						</TabsTrigger>
 					</TabsList>

@@ -248,7 +248,7 @@ export default function MyPluginsPage() {
 					<MyPluginsSkeleton />
 				) : (
 					<Tabs defaultValue="published" className="space-y-6">
-						<TabsList className="grid w-full grid-cols-3 sm:inline-flex sm:w-auto">
+						<TabsList className="max-w-full">
 							<TabsTrigger value="published" className="min-h-9">
 								{t("tab_published")} ({publishedPlugins.length})
 							</TabsTrigger>

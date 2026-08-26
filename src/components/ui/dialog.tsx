@@ -1,44 +1,50 @@
 "use client";
 
-import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { XIcon } from "lucide-react";
 import type * as React from "react";
+import { Drawer } from "vaul";
 
 import { cn } from "~/lib/utils";
 
-function Dialog({
-	...props
-}: React.ComponentProps<typeof DialogPrimitive.Root>) {
-	return <DialogPrimitive.Root data-slot="dialog" {...props} />;
+function Dialog({ ...props }: React.ComponentProps<typeof Drawer.Root>) {
+	return (
+		<Drawer.Root
+			data-slot="dialog"
+			direction="bottom"
+			handleOnly
+			closeThreshold={0.25}
+			scrollLockTimeout={200}
+			shouldScaleBackground={false}
+			{...props}
+		/>
+	);
 }
 
 function DialogTrigger({
 	...props
-}: React.ComponentProps<typeof DialogPrimitive.Trigger>) {
-	return <DialogPrimitive.Trigger data-slot="dialog-trigger" {...props} />;
+}: React.ComponentProps<typeof Drawer.Trigger>) {
+	return <Drawer.Trigger data-slot="dialog-trigger" {...props} />;
 }
 
 function DialogPortal({
 	...props
-}: React.ComponentProps<typeof DialogPrimitive.Portal>) {
-	return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
+}: React.ComponentProps<typeof Drawer.Portal>) {
+	return <Drawer.Portal data-slot="dialog-portal" {...props} />;
 }
 
-function DialogClose({
-	...props
-}: React.ComponentProps<typeof DialogPrimitive.Close>) {
-	return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
+function DialogClose({ ...props }: React.ComponentProps<typeof Drawer.Close>) {
+	return <Drawer.Close data-slot="dialog-close" {...props} />;
 }
 
 function DialogOverlay({
 	className,
 	...props
-}: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
+}: React.ComponentProps<typeof Drawer.Overlay>) {
 	return (
-		<DialogPrimitive.Overlay
+		<Drawer.Overlay
 			data-slot="dialog-overlay"
 			className={cn(
-				"data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50 data-[state=closed]:animate-out data-[state=open]:animate-in",
+				"data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/72 backdrop-blur-[2px] data-[state=closed]:animate-out data-[state=open]:animate-in",
 				className,
 			)}
 			{...props}
@@ -52,32 +58,37 @@ function DialogContent({
 	showCloseButton = true,
 	closeLabel = "Close",
 	...props
-}: React.ComponentProps<typeof DialogPrimitive.Content> & {
+}: React.ComponentProps<typeof Drawer.Content> & {
 	showCloseButton?: boolean;
 	closeLabel?: string;
 }) {
 	return (
 		<DialogPortal data-slot="dialog-portal">
 			<DialogOverlay />
-			<DialogPrimitive.Content
+			<Drawer.Content
 				data-slot="dialog-content"
-				className={cn(
-					"data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 max-sm:data-[state=closed]:slide-out-to-bottom max-sm:data-[state=open]:slide-in-from-bottom fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-1rem)] translate-x-[-50%] translate-y-[-50%] gap-3 rounded-2xl border border-transparent bg-background p-4 duration-300 data-[state=closed]:animate-out data-[state=open]:animate-in max-sm:inset-x-0 max-sm:top-auto max-sm:bottom-0 max-sm:max-h-[calc(100dvh-env(safe-area-inset-top)-.5rem)] max-sm:max-w-none max-sm:translate-x-0 max-sm:translate-y-0 max-sm:overflow-y-auto max-sm:rounded-t-3xl max-sm:rounded-b-none max-sm:border-x-0 max-sm:border-b-0 max-sm:pb-[max(1rem,env(safe-area-inset-bottom))] sm:max-w-lg sm:gap-4 sm:p-6 md:max-w-2xl",
-					className,
-				)}
+				className="fixed inset-x-0 bottom-0 z-50 outline-none sm:pointer-events-none sm:inset-0 sm:flex sm:items-center sm:justify-center"
 				{...props}
 			>
-				{children}
-				{showCloseButton && (
-					<DialogPrimitive.Close
-						data-slot="dialog-close"
-						className="absolute top-4 right-4 rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-hidden focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0"
-					>
-						<XIcon />
-						<span className="sr-only">{closeLabel}</span>
-					</DialogPrimitive.Close>
-				)}
-			</DialogPrimitive.Content>
+				<div
+					className={cn(
+						"relative grid max-h-[calc(100dvh-env(safe-area-inset-top)-.5rem)] w-full min-w-0 gap-3 overflow-y-auto rounded-t-3xl bg-popover px-4 pt-2.5 pb-[max(1rem,env(safe-area-inset-bottom))] text-popover-foreground sm:pointer-events-auto sm:max-h-[calc(100dvh-2rem)] sm:max-w-lg sm:gap-4 sm:rounded-3xl sm:p-6 md:max-w-2xl",
+						className,
+					)}
+				>
+					<Drawer.Handle className="mx-auto mb-1 h-1.5 w-12 shrink-0 rounded-full bg-muted-foreground/55 sm:hidden" />
+					{children}
+					{showCloseButton && (
+						<Drawer.Close
+							data-slot="dialog-close"
+							className="absolute top-4 right-4 flex size-10 touch-manipulation items-center justify-center rounded-full bg-secondary text-secondary-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/55 disabled:pointer-events-none disabled:opacity-50 sm:size-9"
+						>
+							<XIcon className="size-5" />
+							<span className="sr-only">{closeLabel}</span>
+						</Drawer.Close>
+					)}
+				</div>
+			</Drawer.Content>
 		</DialogPortal>
 	);
 }
@@ -86,7 +97,7 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="dialog-header"
-			className={cn("flex flex-col gap-2 text-center sm:text-left", className)}
+			className={cn("flex flex-col gap-2 pr-10 text-left", className)}
 			{...props}
 		/>
 	);
@@ -97,7 +108,7 @@ function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
 		<div
 			data-slot="dialog-footer"
 			className={cn(
-				"flex flex-col-reverse gap-2 sm:flex-row sm:justify-end",
+				"flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end",
 				className,
 			)}
 			{...props}
@@ -108,11 +119,11 @@ function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
 function DialogTitle({
 	className,
 	...props
-}: React.ComponentProps<typeof DialogPrimitive.Title>) {
+}: React.ComponentProps<typeof Drawer.Title>) {
 	return (
-		<DialogPrimitive.Title
+		<Drawer.Title
 			data-slot="dialog-title"
-			className={cn("font-semibold text-lg leading-none", className)}
+			className={cn("font-semibold text-xl leading-tight", className)}
 			{...props}
 		/>
 	);
@@ -121,11 +132,11 @@ function DialogTitle({
 function DialogDescription({
 	className,
 	...props
-}: React.ComponentProps<typeof DialogPrimitive.Description>) {
+}: React.ComponentProps<typeof Drawer.Description>) {
 	return (
-		<DialogPrimitive.Description
+		<Drawer.Description
 			data-slot="dialog-description"
-			className={cn("text-muted-foreground text-sm", className)}
+			className={cn("text-muted-foreground text-sm leading-relaxed", className)}
 			{...props}
 		/>
 	);

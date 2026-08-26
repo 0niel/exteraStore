@@ -1,5 +1,6 @@
 import { and, count, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
+import { getCategoryEmoji } from "~/lib/category-icon";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import {
 	pluginCategories,
@@ -10,7 +11,7 @@ import {
 
 export const categoriesRouter = createTRPCRouter({
 	getAll: publicProcedure.query(async ({ ctx }) => {
-		return ctx.db
+		const categories = await ctx.db
 			.select({
 				id: pluginCategories.id,
 				name: pluginCategories.name,
@@ -29,6 +30,11 @@ export const categoriesRouter = createTRPCRouter({
 				),
 			)
 			.groupBy(pluginCategories.id);
+
+		return categories.map((category) => ({
+			...category,
+			icon: getCategoryEmoji(category.icon, category.slug),
+		}));
 	}),
 
 	getBySlug: publicProcedure
@@ -96,6 +102,7 @@ export const categoriesRouter = createTRPCRouter({
 
 			return {
 				...category,
+				icon: getCategoryEmoji(category.icon, category.slug),
 				plugins: categoryPlugins.map((plugin) => ({
 					...plugin,
 					latestSecurityCheck: securityByPlugin.get(plugin.id) ?? null,
