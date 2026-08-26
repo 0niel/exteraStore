@@ -193,22 +193,6 @@
 		"unsubscribe_error": "Ошибка отмены подписки: {error}",
 		"subscription_canceled": "Подписка отменена!"
 	},
-	"PluginVersionsList": {
-		"versions": "Версии",
-		"version": "Версия",
-		"release_date": "Дата выпуска",
-		"downloads": "Скачивания",
-		"file_size": "Размер файла",
-		"stable": "Стабильная",
-		"beta": "Бета",
-		"no_versions": "Версии для этого плагина не найдены.",
-		"loading": "Загрузка версий...",
-		"download_file": "Скачать файл",
-		"view_changes": "Просмотреть изменения",
-		"commit": "Коммит",
-		"author": "Автор",
-		"actions": "Действия"
-	},
 	"PluginVersions": {
 		"versions": "Версии",
 		"description": "Просматривайте и загружайте различные версии плагина.",
@@ -1578,6 +1562,7 @@
 	},
 	"PluginChangesPage": {
 		"copied": "Скопировано в буфер обмена",
+		"copy_failed": "Не удалось скопировать в буфер обмена",
 		"back_to_plugin": "Назад к плагину",
 		"back_to_plugin_button": "Вернуться к плагину",
 		"breadcrumb": "последние изменения",
@@ -1599,6 +1584,7 @@
 	},
 	"PluginDiffPage": {
 		"copied": "Скопировано в буфер обмена",
+		"copy_failed": "Не удалось скопировать в буфер обмена",
 		"back_to_plugin": "Назад к плагину",
 		"back_to_plugin_button": "Вернуться к плагину",
 		"title": "Сравнение коммитов",

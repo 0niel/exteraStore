@@ -2,23 +2,19 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 import {
-	Award,
-	Crown,
 	Download,
 	ExternalLink,
 	Globe,
 	Package,
 	Search,
-	Sparkles,
 	Star,
-	Target,
-	Trophy,
 	Users,
 	X,
 } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
+import { getDeveloperTierIcon } from "~/components/developer-tier-icon";
 import { GitHubIcon } from "~/components/icons/github-icon";
 import { PageHeader } from "~/components/page-header";
 import { Badge } from "~/components/ui/badge";
@@ -28,53 +24,12 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { Input } from "~/components/ui/input";
 import { Skeleton } from "~/components/ui/skeleton";
 import { UserAvatar } from "~/components/user-avatar";
+import { getDeveloperReputation } from "~/lib/developer-reputation";
 import { cn, formatNumber } from "~/lib/utils";
 import { api, type RouterOutputs } from "~/trpc/react";
 
 type Developer =
 	RouterOutputs["developers"]["getDevelopers"]["developers"][number];
-
-const tiers = [
-	{ key: "rising", min: 0, icon: Sparkles },
-	{ key: "pro", min: 500, icon: Target },
-	{ key: "expert", min: 2000, icon: Award },
-	{ key: "master", min: 5000, icon: Trophy },
-	{ key: "legend", min: 10000, icon: Crown },
-] as const;
-
-function getScore(downloads: number, rating: number, plugins: number) {
-	return downloads * 0.6 + rating * plugins * 20;
-}
-
-function getDeveloperTier(downloads: number, rating: number, plugins: number) {
-	const score = getScore(downloads, rating, plugins);
-	let current: (typeof tiers)[number] = tiers[0];
-	for (const tier of tiers) {
-		if (score >= tier.min) current = tier;
-	}
-	return current;
-}
-
-function getTierProgress(downloads: number, rating: number, plugins: number) {
-	const score = getScore(downloads, rating, plugins);
-	let currentIndex = 0;
-	for (const [i, tier] of tiers.entries()) {
-		if (score >= tier.min) currentIndex = i;
-	}
-
-	const currentTier = tiers[currentIndex] ?? tiers[0];
-	const nextTier = tiers[currentIndex + 1];
-	if (!nextTier) {
-		return { progress: 100, nextTier: null };
-	}
-
-	const progress = Math.min(
-		((score - currentTier.min) / (nextTier.min - currentTier.min)) * 100,
-		100,
-	);
-
-	return { progress, nextTier };
-}
 
 export default function DevelopersPage() {
 	const t = useTranslations("Developers");
@@ -201,17 +156,14 @@ export default function DevelopersPage() {
 					<>
 						<div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 							{filteredDevelopers.map((developer: Developer, index: number) => {
-								const tier = getDeveloperTier(
-									developer.totalDownloads || 0,
-									developer.averageRating || 0,
-									developer.pluginCount || 0,
-								);
-								const progress = getTierProgress(
-									developer.totalDownloads || 0,
-									developer.averageRating || 0,
-									developer.pluginCount || 0,
-								);
-								const TierIcon = tier.icon;
+								const reputation = getDeveloperReputation({
+									downloads: developer.totalDownloads || 0,
+									rating: developer.averageRating || 0,
+									pluginCount: developer.pluginCount || 0,
+								});
+								const { tier } = reputation;
+								const progress = reputation;
+								const TierIcon = getDeveloperTierIcon(tier.key);
 								const rank = index + 1;
 								const hasMedal = showMedals && rank <= 3;
 

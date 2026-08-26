@@ -35,14 +35,9 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Textarea } from "~/components/ui/textarea";
-import { env } from "~/env";
+import { isAdminUser } from "~/config/admins";
 import { getCategoryEmoji, isCategoryEmoji } from "~/lib/category-icon";
 import { api } from "~/trpc/react";
-
-const ADMINS = (env.NEXT_PUBLIC_INITIAL_ADMINS ?? "i_am_oniel")
-	.split(",")
-	.map((a) => a.trim().toLowerCase())
-	.filter(Boolean);
 
 const SKELETON_KEYS = ["sk-1", "sk-2", "sk-3", "sk-4", "sk-5", "sk-6"];
 
@@ -83,10 +78,7 @@ export default function AdminCategoriesPage() {
 	const [icon, setIcon] = useState("");
 	const [color, setColor] = useState("");
 
-	const isAdmin =
-		session?.user?.role === "admin" ||
-		(session?.user?.telegramUsername &&
-			ADMINS.includes(session.user.telegramUsername.toLowerCase()));
+	const isAdmin = isAdminUser(session?.user);
 
 	const {
 		data: categories,

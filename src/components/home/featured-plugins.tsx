@@ -7,8 +7,9 @@ import { useTranslations } from "next-intl";
 import { PluginCard } from "~/components/plugin-card";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
-import type { plugins as Plugin } from "~/server/db/schema";
-import { api } from "~/trpc/react";
+import { api, type RouterOutputs } from "~/trpc/react";
+
+type FeaturedPlugin = RouterOutputs["plugins"]["getFeatured"][number];
 
 export function FeaturedPlugins() {
 	const t = useTranslations("Home");
@@ -89,7 +90,7 @@ export function FeaturedPlugins() {
 						viewport={{ once: true, margin: "-80px" }}
 						className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3"
 					>
-						{featuredPlugins?.map((plugin: typeof Plugin.$inferSelect) => (
+						{featuredPlugins?.map((plugin: FeaturedPlugin) => (
 							<motion.div
 								key={plugin.id}
 								variants={item}

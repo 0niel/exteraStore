@@ -19,14 +19,9 @@ import { useEffect, useState } from "react";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { env } from "~/env";
+import { isAdminUser } from "~/config/admins";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
-
-const ADMINS = (env.NEXT_PUBLIC_INITIAL_ADMINS ?? "i_am_oniel")
-	.split(",")
-	.map((a) => a.trim().toLowerCase())
-	.filter(Boolean);
 
 const STAT_SKELETON_KEYS = ["st-1", "st-2", "st-3", "st-4", "st-5"];
 const LIST_SKELETON_KEYS = ["ls-1", "ls-2", "ls-3"];
@@ -139,10 +134,7 @@ export default function AdminDashboardPage() {
 	const t = useTranslations("AdminDashboard");
 	const locale = useLocale();
 
-	const isAdmin =
-		session?.user?.role === "admin" ||
-		(session?.user?.telegramUsername &&
-			ADMINS.includes(session.user.telegramUsername.toLowerCase()));
+	const isAdmin = isAdminUser(session?.user);
 	const enabled = Boolean(session && isAdmin);
 
 	const { data: overview } = api.adminStats.overview.useQuery(undefined, {

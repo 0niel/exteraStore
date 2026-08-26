@@ -37,8 +37,9 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { Input } from "~/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { formatNumber } from "~/lib/utils";
-import type { plugins as Plugin } from "~/server/db/schema";
-import { api } from "~/trpc/react";
+import { api, type RouterOutputs } from "~/trpc/react";
+
+type AuthorPlugin = RouterOutputs["plugins"]["getByAuthor"][number];
 
 const fadeUp = {
 	hidden: { opacity: 0, y: 14 },
@@ -121,37 +122,36 @@ export default function MyPluginsPage() {
 
 	const filteredPlugins =
 		myPlugins?.filter(
-			(plugin: typeof Plugin.$inferSelect) =>
+			(plugin: AuthorPlugin) =>
 				plugin.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
 				plugin.description.toLowerCase().includes(searchQuery.toLowerCase()),
 		) || [];
 
 	const publishedPlugins = filteredPlugins.filter(
-		(p: typeof Plugin.$inferSelect) => p.status === "approved",
+		(p: AuthorPlugin) => p.status === "approved",
 	);
 	const pendingPlugins = filteredPlugins.filter(
-		(p: typeof Plugin.$inferSelect) => p.status === "pending",
+		(p: AuthorPlugin) => p.status === "pending",
 	);
 	const rejectedPlugins = filteredPlugins.filter(
-		(p: typeof Plugin.$inferSelect) => p.status === "rejected",
+		(p: AuthorPlugin) => p.status === "rejected",
 	);
 
 	const totalDownloads = (myPlugins ?? []).reduce(
-		(sum: number, p: typeof Plugin.$inferSelect) => sum + p.downloadCount,
+		(sum: number, p: AuthorPlugin) => sum + p.downloadCount,
 		0,
 	);
 	const ratedPlugins = (myPlugins ?? []).filter(
-		(p: typeof Plugin.$inferSelect) => p.ratingCount > 0,
+		(p: AuthorPlugin) => p.ratingCount > 0,
 	);
 	const averageRating =
 		ratedPlugins.length > 0
 			? ratedPlugins.reduce(
-					(sum: number, p: typeof Plugin.$inferSelect) =>
-						sum + p.rating * p.ratingCount,
+					(sum: number, p: AuthorPlugin) => sum + p.rating * p.ratingCount,
 					0,
 				) /
 				ratedPlugins.reduce(
-					(sum: number, p: typeof Plugin.$inferSelect) => sum + p.ratingCount,
+					(sum: number, p: AuthorPlugin) => sum + p.ratingCount,
 					0,
 				)
 			: 0;
@@ -174,7 +174,7 @@ export default function MyPluginsPage() {
 		},
 	] as const;
 
-	const renderGrid = (plugins: (typeof Plugin.$inferSelect)[]) => (
+	const renderGrid = (plugins: AuthorPlugin[]) => (
 		<motion.div
 			initial={reduceMotion ? false : "hidden"}
 			animate="show"
@@ -304,7 +304,7 @@ export default function MyPluginsPage() {
 	);
 }
 
-function PluginCard({ plugin }: { plugin: typeof Plugin.$inferSelect }) {
+function PluginCard({ plugin }: { plugin: AuthorPlugin }) {
 	const t = useTranslations("MyPluginsPage");
 
 	const statusStyles: Record<string, string> = {

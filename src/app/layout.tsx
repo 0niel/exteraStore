@@ -5,7 +5,6 @@ import "yet-another-react-lightbox/styles.css";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 import type { Metadata, Viewport } from "next";
-import { cookies, headers } from "next/headers";
 import Script from "next/script";
 import { SessionProvider } from "next-auth/react";
 import { NextIntlClientProvider } from "next-intl";
@@ -19,9 +18,9 @@ import { TelegramMotionProvider } from "~/components/telegram-motion-provider";
 import { TelegramNavigationBridge } from "~/components/telegram-navigation-bridge";
 import { TelegramWebAppAuth } from "~/components/telegram-web-app-auth";
 import { Toaster } from "~/components/ui/sonner";
-import { type Locale, locales } from "~/lib/i18n-config";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "~/lib/site";
 import { auth } from "~/server/auth";
+import { getServerLocale } from "~/server/locale";
 import { TRPCReactProvider } from "~/trpc/react";
 
 export const metadata: Metadata = {
@@ -93,36 +92,6 @@ export const viewport: Viewport = {
 		{ media: "(prefers-color-scheme: dark)", color: "#0b0909" },
 	],
 };
-
-async function getServerLocale(): Promise<Locale> {
-	const cookieStore = await cookies();
-	const localeCookie = cookieStore.get("locale")?.value as Locale;
-
-	if (localeCookie && locales.includes(localeCookie)) {
-		return localeCookie;
-	}
-
-	const headersList = await headers();
-	const acceptLanguage = headersList.get("accept-language");
-
-	if (acceptLanguage) {
-		const preferredLocales = acceptLanguage
-			.split(",")
-			.map((lang) => {
-				const [locale, q = "1"] = lang.trim().split(";q=");
-				return { locale: locale?.split("-")[0], quality: Number.parseFloat(q) };
-			})
-			.sort((a, b) => b.quality - a.quality);
-
-		for (const { locale } of preferredLocales) {
-			if (locale && locales.includes(locale as Locale)) {
-				return locale as Locale;
-			}
-		}
-	}
-
-	return "en";
-}
 
 export default async function RootLayout({
 	children,

@@ -22,13 +22,10 @@ import { Button } from "~/components/ui/button";
 import { Card, CardContent } from "~/components/ui/card";
 import { Skeleton } from "~/components/ui/skeleton";
 import { formatDate } from "~/lib/utils";
-import type { aiPluginCollections, plugins } from "~/server/db/schema";
-import { api } from "~/trpc/react";
+import { api, type RouterOutputs } from "~/trpc/react";
 
-type Plugin = typeof plugins.$inferSelect;
-type AICollection = typeof aiPluginCollections.$inferSelect & {
-	plugins: Plugin[];
-};
+type AICollection = RouterOutputs["aiCollections"]["getAICollections"][number];
+type Plugin = AICollection["plugins"][number];
 
 const collectionIcons = [Wrench, Rocket, Users, Heart, Gem, Zap] as const;
 

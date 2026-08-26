@@ -23,13 +23,8 @@ import {
 	CardHeader,
 	CardTitle,
 } from "~/components/ui/card";
-import { env } from "~/env";
+import { isAdminUser } from "~/config/admins";
 import { cn } from "~/lib/utils";
-
-const ADMINS = (env.NEXT_PUBLIC_INITIAL_ADMINS ?? "i_am_oniel")
-	.split(",")
-	.map((a) => a.trim().toLowerCase())
-	.filter(Boolean);
 
 const NAV_SKELETON_KEYS = ["nav-1", "nav-2", "nav-3", "nav-4"];
 const CARD_SKELETON_KEYS = [
@@ -87,10 +82,7 @@ export default function AdminLayout({
 		}
 	}, [status, router]);
 
-	const isAdmin =
-		session?.user?.role === "admin" ||
-		(session?.user?.telegramUsername &&
-			ADMINS.includes(session.user.telegramUsername.toLowerCase()));
+	const isAdmin = isAdminUser(session?.user);
 
 	if (status === "loading" || status === "unauthenticated") {
 		return <AdminSkeletonShell />;

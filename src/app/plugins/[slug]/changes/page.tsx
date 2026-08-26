@@ -1,25 +1,15 @@
 "use client";
 
-import { type Change, diffLines } from "diff";
 import { motion, useReducedMotion } from "framer-motion";
-import {
-	ArrowLeft,
-	Calendar,
-	Clock,
-	Copy,
-	FileText,
-	GitCommit,
-	Minus,
-	Plus,
-	Zap,
-} from "lucide-react";
+import { ArrowLeft, Calendar, Clock, GitCommit, Zap } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { toast } from "sonner";
+import { CodeDiffViewer } from "~/components/code-diff-viewer";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { useClipboard } from "~/hooks/use-clipboard";
 import { formatDate } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
@@ -29,6 +19,7 @@ export default function PluginChangesPage() {
 	const t = useTranslations("PluginChangesPage");
 	const locale = useLocale();
 	const reduceMotion = useReducedMotion();
+	const copyToClipboard = useClipboard(t("copied"), t("copy_failed"));
 
 	const { data: plugin } = api.plugins.getBySlug.useQuery({ slug });
 	const { data: versions } = api.pluginVersions.getVersions.useQuery({
@@ -50,12 +41,6 @@ export default function PluginChangesPage() {
 			},
 		);
 
-	const copyToClipboard = (text: string) => {
-		navigator.clipboard.writeText(text).then(() => {
-			toast.success(t("copied"));
-		});
-	};
-
 	const timelineMotion = reduceMotion
 		? {}
 		: {
@@ -64,135 +49,6 @@ export default function PluginChangesPage() {
 				viewport: { once: true, margin: "-40px" },
 				transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] as const },
 			};
-
-	const renderDiffStats = (changes: Change[]) => {
-		let additions = 0;
-		let deletions = 0;
-
-		changes.forEach((change) => {
-			const lines = change.value.split("\n").filter((line) => line !== "");
-			if (change.added) additions += lines.length;
-			if (change.removed) deletions += lines.length;
-		});
-
-		return { additions, deletions };
-	};
-
-	const renderDiff = () => {
-		if (!diffData?.oldContent || !diffData?.newContent) {
-			return (
-				<div className="rounded-2xl border border-dashed bg-primary/5 py-12 text-center text-muted-foreground">
-					<div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10 text-primary">
-						<FileText className="h-7 w-7" />
-					</div>
-					<h3 className="mb-2 font-medium text-foreground text-lg">
-						{t("no_changes_title")}
-					</h3>
-					<p>{t("no_changes_description")}</p>
-				</div>
-			);
-		}
-
-		const changes: Change[] = diffLines(
-			diffData.oldContent,
-			diffData.newContent,
-		);
-		const { additions, deletions } = renderDiffStats(changes);
-		let lineNumber = 1;
-
-		return (
-			<div className="space-y-6">
-				<div className="flex flex-wrap items-center justify-between gap-3">
-					<div className="flex items-center gap-4 text-sm">
-						<div className="flex items-center gap-1 text-success">
-							<Plus className="h-4 w-4" />
-							<span className="font-medium">
-								{t("additions", { count: additions })}
-							</span>
-						</div>
-						<div className="flex items-center gap-1 text-destructive">
-							<Minus className="h-4 w-4" />
-							<span className="font-medium">
-								{t("deletions", { count: deletions })}
-							</span>
-						</div>
-					</div>
-					<Button
-						variant="outline"
-						size="sm"
-						className="min-h-11 md:min-h-8"
-						onClick={() => copyToClipboard(diffData.newContent)}
-					>
-						<Copy className="mr-2 h-4 w-4" />
-						{t("copy_code")}
-					</Button>
-				</div>
-
-				<Card className="overflow-hidden py-0">
-					<CardContent className="p-0">
-						<div className="max-h-[70vh] overflow-y-auto bg-muted/30">
-							<div className="glass sticky top-0 z-10 border-b px-4 py-3">
-								<div className="flex items-center gap-2 font-mono text-sm">
-									<FileText className="h-4 w-4 shrink-0" />
-									<span className="truncate">{plugin?.name}.py</span>
-								</div>
-							</div>
-							<div className="scrollbar-hide overflow-x-auto font-mono text-sm">
-								<div className="min-w-max">
-									{changes.map((change, changeIndex) => {
-										const lines = change.value
-											.split("\n")
-											.filter((line) => line !== "");
-
-										return lines.map((line, lineIndex) => {
-											const currentLineNumber = lineNumber++;
-											let bgColor = "";
-											let textColor = "";
-											let prefix = " ";
-											let borderColor = "";
-
-											if (change.added) {
-												bgColor = "bg-success/10";
-												textColor = "text-success";
-												borderColor = "border-l-4 border-success";
-												prefix = "+";
-											} else if (change.removed) {
-												bgColor = "bg-destructive/10";
-												textColor = "text-destructive";
-												borderColor = "border-l-4 border-destructive";
-												prefix = "-";
-											} else {
-												textColor = "text-muted-foreground";
-											}
-
-											return (
-												<div
-													key={`${changeIndex}-${lineIndex}`}
-													className={`flex hover:bg-muted/50 ${bgColor} ${borderColor}`}
-												>
-													<div className="w-12 flex-shrink-0 select-none border-r bg-muted/20 px-2 py-1 text-muted-foreground text-xs">
-														{!change.removed && currentLineNumber}
-													</div>
-													<div className="w-8 flex-shrink-0 select-none px-2 py-1 text-center font-bold text-xs">
-														<span className={textColor}>{prefix}</span>
-													</div>
-													<div
-														className={`flex-1 whitespace-pre px-2 py-1 ${textColor}`}
-													>
-														{line}
-													</div>
-												</div>
-											);
-										});
-									})}
-								</div>
-							</div>
-						</div>
-					</CardContent>
-				</Card>
-			</div>
-		);
-	};
 
 	if (isLoading) {
 		return (
@@ -376,7 +232,17 @@ export default function PluginChangesPage() {
 								className="absolute top-1.5 -left-7 h-3.5 w-3.5 rounded-full bg-primary ring-4 ring-primary/15 md:-left-9"
 								aria-hidden="true"
 							/>
-							{renderDiff()}
+							<CodeDiffViewer
+								oldContent={diffData?.oldContent}
+								newContent={diffData?.newContent}
+								fileName={`${plugin?.name ?? slug}.py`}
+								copyLabel={t("copy_code")}
+								noChangesTitle={t("no_changes_title")}
+								noChangesDescription={t("no_changes_description")}
+								additionsLabel={(count) => t("additions", { count })}
+								deletionsLabel={(count) => t("deletions", { count })}
+								onCopy={copyToClipboard}
+							/>
 						</motion.div>
 					</div>
 				</div>

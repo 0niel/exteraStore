@@ -6,11 +6,10 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button } from "~/components/ui/button";
 import { Skeleton } from "~/components/ui/skeleton";
-import type { plugins } from "~/server/db/schema";
-import { api } from "~/trpc/react";
+import { api, type RouterOutputs } from "~/trpc/react";
 import { PluginCard } from "../plugin-card";
 
-type Plugin = typeof plugins.$inferSelect;
+type Plugin = RouterOutputs["plugins"]["getTrending"][number];
 
 export function TrendingPlugins() {
 	const t = useTranslations("Home");

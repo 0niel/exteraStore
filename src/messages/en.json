@@ -193,22 +193,6 @@
 		"unsubscribe_error": "Unsubscribe error: {error}",
 		"subscription_canceled": "Subscription canceled!"
 	},
-	"PluginVersionsList": {
-		"versions": "Versions",
-		"version": "Version",
-		"release_date": "Release Date",
-		"downloads": "Downloads",
-		"file_size": "File Size",
-		"stable": "Stable",
-		"beta": "Beta",
-		"no_versions": "No versions found for this plugin.",
-		"loading": "Loading versions...",
-		"download_file": "Download file",
-		"view_changes": "View changes",
-		"commit": "Commit",
-		"author": "Author",
-		"actions": "Actions"
-	},
 	"PluginVersions": {
 		"versions": "Versions",
 		"description": "Browse and download different versions of the plugin.",
@@ -1578,6 +1562,7 @@
 	},
 	"PluginChangesPage": {
 		"copied": "Copied to clipboard",
+		"copy_failed": "Could not copy to clipboard",
 		"back_to_plugin": "Back to plugin",
 		"back_to_plugin_button": "Back to plugin",
 		"breadcrumb": "latest changes",
@@ -1599,6 +1584,7 @@
 	},
 	"PluginDiffPage": {
 		"copied": "Copied to clipboard",
+		"copy_failed": "Could not copy to clipboard",
 		"back_to_plugin": "Back to plugin",
 		"back_to_plugin_button": "Back to plugin",
 		"title": "Commit comparison",

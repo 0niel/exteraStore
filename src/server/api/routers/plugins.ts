@@ -1103,8 +1103,6 @@ export const pluginsRouter = createTRPCRouter({
 			const queryLower = input.query.toLowerCase().trim();
 			const likePattern = `%${queryLower}%`;
 
-			const _wordPatterns = searchTerms.map((term) => `%${term}%`);
-
 			const whereConditions = [eq(plugins.status, "approved")];
 
 			if (input.categories && input.categories.length > 0) {
@@ -1119,42 +1117,32 @@ export const pluginsRouter = createTRPCRouter({
 
 			const relevanceScore = sql<number>`
 				CASE
-					-- Точное совпадение названия (высший приоритет)
 					WHEN LOWER(${plugins.name}) = ${queryLower} THEN 1000
-					-- Название начинается с запроса
 					WHEN LOWER(${plugins.name}) LIKE ${`${queryLower}%`} THEN 900
-					-- Название содержит запрос
 					WHEN LOWER(${plugins.name}) LIKE ${likePattern} THEN 800
 					ELSE 0
 				END +
 				CASE
-					-- Автор точно совпадает
 					WHEN LOWER(${plugins.author}) = ${queryLower} THEN 700
-					-- Автор содержит запрос
 					WHEN LOWER(${plugins.author}) LIKE ${likePattern} THEN 600
 					ELSE 0
 				END +
 				CASE
-					-- Краткое описание содержит запрос
 					WHEN LOWER(${plugins.shortDescription}) LIKE ${likePattern} THEN 500
 					ELSE 0
 				END +
 				CASE
-					-- Полное описание содержит запрос
 					WHEN LOWER(${plugins.description}) LIKE ${likePattern} THEN 400
 					ELSE 0
 				END +
 				CASE
-					-- Теги содержат запрос
 					WHEN LOWER(${plugins.tags}) LIKE ${likePattern} THEN 300
 					ELSE 0
 				END +
 				CASE
-					-- Категория содержит запрос
 					WHEN LOWER(${plugins.category}) LIKE ${likePattern} THEN 200
 					ELSE 0
 				END +
-				-- Бонусы за качество плагина
 				CASE
 					WHEN ${plugins.featured} = true THEN 100
 					ELSE 0
@@ -1165,7 +1153,6 @@ export const pluginsRouter = createTRPCRouter({
 					WHEN ${plugins.rating} >= 3.5 THEN 15
 					ELSE 0
 				END +
-				-- Бонус за популярность (ограниченный)
 				LEAST(${plugins.downloadCount} / 1000, 25)
 			`;
 

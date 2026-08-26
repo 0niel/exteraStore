@@ -39,13 +39,8 @@ import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Textarea } from "~/components/ui/textarea";
 import { UserAvatar } from "~/components/user-avatar";
-import { env } from "~/env";
+import { isAdminUser } from "~/config/admins";
 import { api } from "~/trpc/react";
-
-const ADMINS = (env.NEXT_PUBLIC_INITIAL_ADMINS ?? "i_am_oniel")
-	.split(",")
-	.map((a) => a.trim().toLowerCase())
-	.filter(Boolean);
 
 const SKELETON_KEYS = ["sk-1", "sk-2", "sk-3", "sk-4", "sk-5", "sk-6"];
 
@@ -73,10 +68,7 @@ export default function AdminUsersPage() {
 	} | null>(null);
 	const [banReason, setBanReason] = useState("");
 
-	const isAdmin =
-		session?.user?.role === "admin" ||
-		(session?.user?.telegramUsername &&
-			ADMINS.includes(session.user.telegramUsername.toLowerCase()));
+	const isAdmin = isAdminUser(session?.user);
 
 	const { data, refetch, isFetching } = api.adminUsers.getUsers.useQuery(
 		{
