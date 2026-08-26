@@ -5,7 +5,7 @@ import { safeJsonParse } from "~/lib/utils";
 import { db } from "~/server/db";
 import { pluginCategories, plugins, users } from "~/server/db/schema";
 
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 function asDate(value: number | null | undefined) {
 	return value ? new Date(value * 1000) : undefined;
