@@ -63,9 +63,9 @@
 	--radius: 0.75rem;
 	--background: oklch(0.988 0.004 40);
 	--foreground: oklch(0.15 0.012 30);
-	--card: oklch(1 0 0.002 40);
+	--card: oklch(1 0.002 40);
 	--card-foreground: oklch(0.15 0.012 30);
-	--popover: oklch(1 0 0.002 40);
+	--popover: oklch(1 0.002 40);
 	--popover-foreground: oklch(0.15 0.012 30);
 	--primary: oklch(0.52 0.22 25);
 	--primary-foreground: oklch(0.99 0 0);
@@ -685,10 +685,28 @@ html[data-telegram-mini-app="true"] .overflow-x-auto {
 	scroll-behavior: auto;
 }
 
+html[data-telegram-mini-app="true"] [data-vaul-handle] {
+	display: none;
+}
+
 @media (max-width: 768px) {
 	.container {
 		padding-left: 1rem;
 		padding-right: 1rem;
+	}
+
+	.mobile-render-card,
+	.mobile-render-compact {
+		content-visibility: auto;
+		contain: layout paint style;
+	}
+
+	.mobile-render-card {
+		contain-intrinsic-size: auto 36rem;
+	}
+
+	.mobile-render-compact {
+		contain-intrinsic-size: auto 7rem;
 	}
 
 	.card-lift:active {

@@ -119,7 +119,7 @@ function PluginArtwork({
 						quality={75}
 						aria-hidden="true"
 						className={cn(
-							"scale-125 object-cover opacity-0 blur-2xl saturate-125 transition-[opacity,transform] duration-700 ease-[var(--ease-out-expo)] group-hover:scale-[1.32]",
+							"hidden scale-125 object-cover opacity-0 blur-2xl saturate-125 transition-[opacity,transform] duration-700 ease-[var(--ease-out-expo)] group-hover:scale-[1.32] sm:block",
 							isLoaded && "opacity-55",
 						)}
 						onError={() => setHasError(true)}
@@ -320,7 +320,7 @@ export function PluginCard({
 		return (
 			<Card
 				className={cn(
-					"card-lift group relative w-full min-w-0 max-w-full gap-0 overflow-hidden bg-card py-0 focus-within:ring-2 focus-within:ring-ring/40 sm:py-0",
+					"mobile-render-compact card-lift group relative w-full min-w-0 max-w-full gap-0 overflow-hidden bg-card py-0 focus-within:ring-2 focus-within:ring-ring/40 sm:py-0",
 					className,
 				)}
 			>
@@ -413,7 +413,7 @@ export function PluginCard({
 	return (
 		<Card
 			className={cn(
-				"card-lift group relative flex h-full w-full min-w-0 max-w-full flex-col gap-0 overflow-hidden rounded-[1.5rem] bg-card py-0 focus-within:ring-2 focus-within:ring-ring/40 sm:py-0",
+				"mobile-render-card card-lift group relative flex h-full w-full min-w-0 max-w-full flex-col gap-0 overflow-hidden rounded-[1.5rem] bg-card py-0 focus-within:ring-2 focus-within:ring-ring/40 sm:py-0",
 				plugin.featured && "bg-primary/[0.055]",
 				className,
 			)}

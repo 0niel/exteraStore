@@ -11,7 +11,7 @@ function Dialog({ ...props }: React.ComponentProps<typeof Drawer.Root>) {
 		<Drawer.Root
 			data-slot="dialog"
 			direction="bottom"
-			handleOnly
+			handleOnly={false}
 			closeThreshold={0.25}
 			scrollLockTimeout={200}
 			shouldScaleBackground={false}
@@ -44,7 +44,7 @@ function DialogOverlay({
 		<Drawer.Overlay
 			data-slot="dialog-overlay"
 			className={cn(
-				"data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/72 backdrop-blur-[2px] data-[state=closed]:animate-out data-[state=open]:animate-in",
+				"data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/35 data-[state=closed]:animate-out data-[state=open]:animate-in sm:bg-black/55",
 				className,
 			)}
 			{...props}
@@ -56,10 +56,12 @@ function DialogContent({
 	className,
 	children,
 	showCloseButton = true,
+	showHandle = true,
 	closeLabel = "Close",
 	...props
 }: React.ComponentProps<typeof Drawer.Content> & {
 	showCloseButton?: boolean;
+	showHandle?: boolean;
 	closeLabel?: string;
 }) {
 	return (
@@ -76,7 +78,9 @@ function DialogContent({
 						className,
 					)}
 				>
-					<Drawer.Handle className="mx-auto mb-1 h-1.5 w-12 shrink-0 rounded-full bg-muted-foreground/55 sm:hidden" />
+					{showHandle && (
+						<Drawer.Handle className="!h-1 !w-10 !bg-muted-foreground/45 mx-auto mb-1 shrink-0 sm:hidden" />
+					)}
 					{children}
 					{showCloseButton && (
 						<Drawer.Close

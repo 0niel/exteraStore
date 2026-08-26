@@ -18,6 +18,18 @@ const navigationBridge = readFileSync(
 	new URL("../../components/telegram-navigation-bridge.tsx", import.meta.url),
 	"utf8",
 );
+const motionProvider = readFileSync(
+	new URL("../../components/telegram-motion-provider.tsx", import.meta.url),
+	"utf8",
+);
+const dialog = readFileSync(
+	new URL("../../components/ui/dialog.tsx", import.meta.url),
+	"utf8",
+);
+const searchDialog = readFileSync(
+	new URL("../../components/search-dialog.tsx", import.meta.url),
+	"utf8",
+);
 const styles = readFileSync(
 	new URL("../../styles/globals.css", import.meta.url),
 	"utf8",
@@ -45,6 +57,13 @@ test("the Telegram SDK is not loaded globally", () => {
 	);
 });
 
+test("Telegram consumers share one SDK connection", () => {
+	assert.match(telegramHook, /let telegramConnectionPromise:/);
+	assert.match(telegramHook, /if \(telegramConnectionPromise\)/);
+	assert.match(motionProvider, /useTelegramWebApp\(\)/);
+	assert.doesNotMatch(motionProvider, /setInterval/);
+});
+
 test("Telegram vertical close gestures stay disabled while content scrolls", () => {
 	assert.match(layout, /web_app_setup_swipe_behavior/);
 	assert.match(layout, /allow_vertical_swipe:false/);
@@ -70,6 +89,14 @@ test("Telegram Mini Apps avoid GPU-heavy compositing effects", () => {
 	assert.match(styles, /box-shadow: none/);
 	assert.match(styles, /filter: none/);
 	assert.match(styles, /transition: none/);
+});
+
+test("mobile dialogs have an opaque surface and one optional drag handle", () => {
+	assert.match(styles, /--popover: oklch\(1 0\.002 40\)/);
+	assert.match(dialog, /handleOnly=\{false\}/);
+	assert.match(dialog, /showHandle = true/);
+	assert.match(dialog, /bg-black\/35/);
+	assert.match(searchDialog, /showHandle=\{false\}/);
 });
 
 test("Cloudflare navigation speculation is disabled at the origin", () => {

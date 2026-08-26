@@ -73,6 +73,8 @@ declare global {
 
 type TelegramStatus = "loading" | "ready" | "unavailable";
 
+let telegramConnectionPromise: Promise<TelegramWebApp | null> | null = null;
+
 function isTelegramLaunch() {
 	if (
 		/(?:^|[&#?])tgWebApp(?:Data|Version|Platform)=/.test(location.hash) ||
@@ -143,97 +145,95 @@ function applyTelegramViewport(webApp: TelegramWebApp) {
 	}
 }
 
-export function useTelegramWebApp() {
-	const [status, setStatus] = useState<TelegramStatus>("loading");
-	const [webApp, setWebApp] = useState<TelegramWebApp | null>(null);
+function connectTelegramWebApp() {
+	if (telegramConnectionPromise) return telegramConnectionPromise;
 
-	useEffect(() => {
-		let connected: TelegramWebApp | null = null;
+	telegramConnectionPromise = new Promise<TelegramWebApp | null>((resolve) => {
 		let pollId: number | undefined;
 		let timeoutId: number | undefined;
+		let settled = false;
 		let script = document.querySelector<HTMLScriptElement>(
 			'script[src="https://telegram.org/js/telegram-web-app.js"]',
 		);
-		let createdScript = false;
 
 		const stopWaiting = () => {
 			if (pollId !== undefined) window.clearInterval(pollId);
 			if (timeoutId !== undefined) window.clearTimeout(timeoutId);
 		};
 
-		const syncTheme = () => {
-			if (connected) applyTelegramTheme(connected);
-		};
-		const syncViewport = () => {
-			if (connected) applyTelegramViewport(connected);
+		const finish = (webApp: TelegramWebApp | null) => {
+			if (settled) return;
+			settled = true;
+			stopWaiting();
+			resolve(webApp);
 		};
 
 		const connect = () => {
-			if (connected) return true;
+			if (settled) return false;
 			const candidate = window.Telegram?.WebApp;
 			if (!candidate) return false;
 
-			connected = candidate;
-			stopWaiting();
-			if (candidate.initData) {
-				applyTelegramTheme(candidate);
-				applyTelegramViewport(candidate);
-				try {
-					candidate.ready();
-				} catch {}
-				try {
-					candidate.expand();
-				} catch {}
-				try {
-					candidate.disableVerticalSwipes?.();
-				} catch {}
-				candidate.onEvent?.("themeChanged", syncTheme);
-				candidate.onEvent?.("viewportChanged", syncViewport);
-			}
-			setWebApp(candidate);
-			setStatus("ready");
+			const syncTheme = () => applyTelegramTheme(candidate);
+			const syncViewport = () => applyTelegramViewport(candidate);
+			applyTelegramTheme(candidate);
+			applyTelegramViewport(candidate);
+			try {
+				candidate.ready();
+			} catch {}
+			try {
+				candidate.expand();
+			} catch {}
+			try {
+				candidate.disableVerticalSwipes?.();
+			} catch {}
+			candidate.onEvent?.("themeChanged", syncTheme);
+			candidate.onEvent?.("viewportChanged", syncViewport);
+			finish(candidate);
 			return true;
 		};
 
-		const handleScriptLoad = () => {
-			connect();
-		};
-		const handleScriptError = () => {
-			stopWaiting();
-			setStatus("unavailable");
-		};
-
-		if (!connect()) {
-			if (!script && !isTelegramLaunch()) {
-				setStatus("unavailable");
-				return;
-			}
-
-			if (!script) {
-				script = document.createElement("script");
-				script.src = "https://telegram.org/js/telegram-web-app.js";
-				script.async = true;
-				script.fetchPriority = "high";
-				createdScript = true;
-			}
-			script?.addEventListener("load", handleScriptLoad);
-			script?.addEventListener("error", handleScriptError);
-			if (createdScript) {
-				document.head.append(script);
-			}
-			pollId = window.setInterval(connect, 100);
-			timeoutId = window.setTimeout(() => {
-				stopWaiting();
-				setStatus("unavailable");
-			}, 5000);
+		if (connect()) return;
+		if (!script && !isTelegramLaunch()) {
+			finish(null);
+			return;
 		}
 
+		const handleScriptLoad = () => connect();
+		const handleScriptError = () => finish(null);
+
+		if (!script) {
+			script = document.createElement("script");
+			script.src = "https://telegram.org/js/telegram-web-app.js";
+			script.async = true;
+			script.fetchPriority = "high";
+			script.addEventListener("load", handleScriptLoad, { once: true });
+			script.addEventListener("error", handleScriptError, { once: true });
+			document.head.append(script);
+		} else {
+			script.addEventListener("load", handleScriptLoad, { once: true });
+			script.addEventListener("error", handleScriptError, { once: true });
+		}
+		pollId = window.setInterval(connect, 100);
+		timeoutId = window.setTimeout(() => finish(null), 5000);
+	});
+
+	return telegramConnectionPromise;
+}
+
+export function useTelegramWebApp() {
+	const [status, setStatus] = useState<TelegramStatus>("loading");
+	const [webApp, setWebApp] = useState<TelegramWebApp | null>(null);
+
+	useEffect(() => {
+		let active = true;
+		void connectTelegramWebApp().then((connected) => {
+			if (!active) return;
+			setWebApp(connected);
+			setStatus(connected ? "ready" : "unavailable");
+		});
+
 		return () => {
-			stopWaiting();
-			script?.removeEventListener("load", handleScriptLoad);
-			script?.removeEventListener("error", handleScriptError);
-			connected?.offEvent?.("themeChanged", syncTheme);
-			connected?.offEvent?.("viewportChanged", syncViewport);
+			active = false;
 		};
 	}, []);
 

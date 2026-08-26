@@ -269,6 +269,7 @@ export function SearchDialog({
 			</DialogTrigger>
 			<DialogContent
 				showCloseButton={false}
+				showHandle={false}
 				className="top-0 h-dvh w-full max-w-full translate-y-0 gap-0 overflow-hidden rounded-none border-0 p-0 sm:top-[8rem] sm:h-auto sm:max-w-2xl sm:rounded-2xl"
 			>
 				<DialogTitle className="sr-only">{t("title")}</DialogTitle>

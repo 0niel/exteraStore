@@ -1,36 +1,15 @@
 "use client";
 
 import { MotionConfig } from "framer-motion";
-import { useEffect, useState } from "react";
-
-function detectTelegramMode() {
-	return (
-		typeof window !== "undefined" && Boolean(window.Telegram?.WebApp?.initData)
-	);
-}
+import { useTelegramWebApp } from "~/hooks/use-telegram-web-app";
 
 export function TelegramMotionProvider({
 	children,
 }: {
 	children: React.ReactNode;
 }) {
-	const [isTelegram, setIsTelegram] = useState(false);
-
-	useEffect(() => {
-		const sync = () => {
-			setIsTelegram(detectTelegramMode());
-		};
-		sync();
-		const interval = window.setInterval(sync, 100);
-		const timeout = window.setTimeout(
-			() => window.clearInterval(interval),
-			5000,
-		);
-		return () => {
-			window.clearInterval(interval);
-			window.clearTimeout(timeout);
-		};
-	}, []);
+	const { status, webApp } = useTelegramWebApp();
+	const isTelegram = status === "ready" && Boolean(webApp);
 
 	return (
 		<MotionConfig

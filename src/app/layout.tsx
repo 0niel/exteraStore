@@ -14,21 +14,34 @@ import { ThemeProvider } from "next-themes";
 import { Footer } from "~/components/footer";
 import { MobileTabBar } from "~/components/mobile-tab-bar";
 import { Navigation } from "~/components/navigation";
+import { StructuredData } from "~/components/structured-data";
 import { TelegramMotionProvider } from "~/components/telegram-motion-provider";
 import { TelegramNavigationBridge } from "~/components/telegram-navigation-bridge";
 import { TelegramWebAppAuth } from "~/components/telegram-web-app-auth";
 import { Toaster } from "~/components/ui/sonner";
 import { type Locale, locales } from "~/lib/i18n-config";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "~/lib/site";
 import { auth } from "~/server/auth";
 import { TRPCReactProvider } from "~/trpc/react";
 
 export const metadata: Metadata = {
+	metadataBase: new URL(SITE_URL),
 	title: {
 		default: "exteraStore — плагины для Telegram",
 		template: "%s · exteraStore",
 	},
-	description:
-		"Независимый каталог плагинов для exteraGram и совместимых расширений exteraless: находите, проверяйте и публикуйте дополнения.",
+	description: SITE_DESCRIPTION,
+	applicationName: SITE_NAME,
+	creator: "exteraStore community",
+	publisher: "exteraStore community",
+	category: "technology",
+	referrer: "strict-origin-when-cross-origin",
+	formatDetection: {
+		telephone: false,
+		address: false,
+		email: false,
+	},
+	manifest: "/manifest.webmanifest",
 	icons: [{ rel: "icon", url: "/favicon.svg", type: "image/svg+xml" }],
 	keywords: [
 		"exteraStore",
@@ -42,12 +55,29 @@ export const metadata: Metadata = {
 		"store",
 	],
 	authors: [{ name: "exteraStore community" }],
+	robots: {
+		index: true,
+		follow: true,
+		googleBot: {
+			index: true,
+			follow: true,
+			"max-image-preview": "large",
+			"max-snippet": -1,
+			"max-video-preview": -1,
+		},
+	},
 	openGraph: {
-		title: "exteraStore",
-		description: "Каталог плагинов для exteraGram и exteraless",
+		title: "exteraStore — плагины для Telegram",
+		description: SITE_DESCRIPTION,
 		type: "website",
-		locale: "en_US",
-		alternateLocale: "ru_RU",
+		siteName: SITE_NAME,
+		locale: "ru_RU",
+		alternateLocale: "en_US",
+	},
+	twitter: {
+		card: "summary_large_image",
+		title: "exteraStore — плагины для Telegram",
+		description: SITE_DESCRIPTION,
 	},
 };
 
@@ -56,6 +86,8 @@ export const viewport: Viewport = {
 	initialScale: 1,
 	viewportFit: "cover",
 	userScalable: true,
+	interactiveWidget: "resizes-content",
+	colorScheme: "light dark",
 	themeColor: [
 		{ media: "(prefers-color-scheme: light)", color: "#f8f6f4" },
 		{ media: "(prefers-color-scheme: dark)", color: "#0b0909" },
@@ -99,6 +131,36 @@ export default async function RootLayout({
 	const messages = await getMessages();
 	const locale = await getServerLocale();
 	const t = await getTranslations("Navigation");
+	const websiteData = {
+		"@context": "https://schema.org",
+		"@graph": [
+			{
+				"@type": "Organization",
+				"@id": `${SITE_URL}/#organization`,
+				name: SITE_NAME,
+				url: SITE_URL,
+				logo: `${SITE_URL}/favicon.svg`,
+				description: SITE_DESCRIPTION,
+				sameAs: [
+					"https://github.com/0niel/exteraStore",
+					"https://t.me/exteraForum",
+				],
+			},
+			{
+				"@type": "WebSite",
+				"@id": `${SITE_URL}/#website`,
+				url: SITE_URL,
+				name: SITE_NAME,
+				description: SITE_DESCRIPTION,
+				publisher: { "@id": `${SITE_URL}/#organization` },
+				potentialAction: {
+					"@type": "SearchAction",
+					target: `${SITE_URL}/plugins?search={search_term_string}`,
+					"query-input": "required name=search_term_string",
+				},
+			},
+		],
+	};
 	return (
 		<html
 			lang={locale}
@@ -106,6 +168,7 @@ export default async function RootLayout({
 			suppressHydrationWarning
 		>
 			<body className="overflow-x-hidden bg-background font-sans antialiased">
+				<StructuredData data={websiteData} />
 				<Script id="telegram-mini-app-bootstrap" strategy="beforeInteractive">
 					{`try{const s=sessionStorage.getItem("__telegram__initParams");const p=s?JSON.parse(s):null;if(/(?:^|[&#?])tgWebApp(?:Data|Version|Platform)=/.test(location.hash)||window.TelegramWebviewProxy||p?.tgWebAppData||document.referrer.startsWith("https://web.telegram.org/")){document.documentElement.dataset.telegramMiniApp="true";window.TelegramWebviewProxy?.postEvent("web_app_setup_swipe_behavior",JSON.stringify({allow_vertical_swipe:false}))}}catch{}`}
 				</Script>
