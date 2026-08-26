@@ -45,3 +45,6 @@ yarn-error.log*
 
 # idea files
 .idea
+
+/AGENTS.md
+/DEPLOYMENT.md
