@@ -155,6 +155,27 @@ jobs:
           grep -E '^(NEXT_PUBLIC_[A-Z_]+|TELEGRAM_BOT_USERNAME|TELEGRAM_POLLING|OPENROUTER_MODEL|TELEGRAM_API_BASE_URL)=' .env || echo "none"
           REMOTE
 
+      - name: Summarize translation worker
+        env:
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_PORT: ${{ secrets.SERVER_PORT }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+        run: |
+          SERVER_PORT="${SERVER_PORT:-22}"
+          metrics=$(ssh -p "$SERVER_PORT" -i ~/.ssh/deploy_key -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            "$SERVER_USER@$SERVER_HOST" "cd ~/exterastore && source scripts/docker-cmd.sh && docker_cmd compose logs --tail 150 translation-worker 2>&1 | grep -Eo '\"claimed\":[0-9]+|\"completed\":[0-9]+|\"skipped\":[0-9]+|\"failed\":[0-9]+|\"limited\":(true|false)|AI_TRANSLATION_[A-Z_]+' | tail -40" || true)
+          if [ -z "$metrics" ]; then
+            metrics="no translation metrics yet"
+          fi
+          compact=$(printf '%s' "$metrics" | tr '\n' ' ')
+          echo "::notice title=Translation worker metrics::$compact"
+          {
+            echo "### Translation worker metrics"
+            echo '```text'
+            printf '%s\n' "$metrics"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Check public health
         run: |
           curl --fail --location --retry 6 --retry-delay 5 --retry-all-errors --connect-timeout 10 --max-time 20 https://exterastore.app/api/health
