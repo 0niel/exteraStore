@@ -20,13 +20,19 @@ import {
 import { consumeAiRateLimit } from "~/server/lib/ai-rate-limiter";
 import type { ContentLocale } from "~/server/lib/content-localization";
 import {
+	BACKGROUND_TRANSLATION_BATCH_SIZE,
+	entityTypesForTranslationScope,
+	PIPELINE_TRANSLATION_BATCH_SIZE,
+	translationScopes,
+} from "~/server/lib/content-translation-policy";
+import {
 	enqueueMissingTranslations,
 	enqueueTranslationJobs,
 	processContentTranslationQueue,
 } from "~/server/lib/content-translation-queue";
 import { isCronAuthorized } from "~/server/lib/cron-auth";
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
 const STUCK_PROCESSING_SECONDS = 1_800;
@@ -65,10 +71,23 @@ const enqueueSchema = z.object({
 	limit: z.number().int().min(1).max(50).default(10),
 });
 
+const translateSchema = z.object({
+	action: z.literal("translate"),
+	scope: z.enum(translationScopes).default("all"),
+	discover: z.boolean().default(false),
+	limit: z
+		.number()
+		.int()
+		.min(1)
+		.max(12)
+		.default(BACKGROUND_TRANSLATION_BATCH_SIZE),
+});
+
 const bodySchema = z.discriminatedUnion("action", [
 	claimSchema,
 	submitSchema,
 	enqueueSchema,
+	translateSchema,
 ]);
 
 function nowSeconds() {
@@ -97,6 +116,22 @@ async function loadLatestVersion(pluginId: number) {
 	return rows[0] ?? null;
 }
 
+async function processTranslations(
+	scope: (typeof translationScopes)[number],
+	limit: number,
+	discover: boolean,
+) {
+	const enqueued = discover
+		? await enqueueMissingTranslations(db, scope)
+		: { queued: 0, totalMissing: 0, byType: {} };
+	const processed = await processContentTranslationQueue(
+		db,
+		limit,
+		entityTypesForTranslationScope(scope),
+	);
+	return { enqueued, processed };
+}
+
 async function failQueueItem(queueId: number, message: string) {
 	await db
 		.update(pluginPipelineQueue)
@@ -111,12 +146,11 @@ async function failQueueItem(queueId: number, message: string) {
 
 async function handleClaim(limit: number) {
 	const now = nowSeconds();
-	const enqueuedTranslations = await enqueueMissingTranslations(db, "all");
-	const processedTranslations = await processContentTranslationQueue(db, 2);
-	const translations = {
-		enqueued: enqueuedTranslations,
-		processed: processedTranslations,
-	};
+	const translations = await processTranslations(
+		"all",
+		PIPELINE_TRANSLATION_BATCH_SIZE,
+		false,
+	);
 
 	const candidates = await db
 		.select({
@@ -445,6 +479,15 @@ export async function POST(request: Request) {
 				return NextResponse.json({ error: "AI_RATE_LIMITED" }, { status: 429 });
 			}
 			return await handleEnqueue(body.pluginIds, body.limit);
+		}
+		if (body.action === "translate") {
+			return NextResponse.json({
+				translations: await processTranslations(
+					body.scope,
+					body.limit,
+					body.discover,
+				),
+			});
 		}
 		return await handleSubmit(body.results);
 	} catch (error) {

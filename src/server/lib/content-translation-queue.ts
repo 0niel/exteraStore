@@ -30,13 +30,12 @@ import {
 	pluginTranslationInput,
 	versionSourceHash,
 } from "~/server/lib/content-localization";
+import {
+	normalizeTranslationBatchSize,
+	type TranslationEntityType,
+} from "~/server/lib/content-translation-policy";
 
-export type TranslationEntityType =
-	| "plugin"
-	| "category"
-	| "version"
-	| "pipeline_check"
-	| "collection";
+export type { TranslationEntityType } from "~/server/lib/content-translation-policy";
 
 export type TranslationJob = {
 	entityType: TranslationEntityType;
@@ -300,66 +299,66 @@ async function runTranslationJob(
 		const row = await database.query.plugins.findFirst({
 			where: eq(plugins.id, job.entityId),
 		});
-		if (!row) return;
-		await generatePluginTranslation(
+		if (!row) throw new Error("Plugin translation source not found");
+		const result = await generatePluginTranslation(
 			database,
 			row,
 			job.targetLocale as ContentLocale,
 			subject,
 		);
-		return;
+		return { generated: result.generated, label: row.slug };
 	}
 	if (job.entityType === "category") {
 		const row = await database.query.pluginCategories.findFirst({
 			where: eq(pluginCategories.id, job.entityId),
 		});
-		if (!row) return;
-		await generateCategoryTranslation(
+		if (!row) throw new Error("Category translation source not found");
+		const result = await generateCategoryTranslation(
 			database,
 			row,
 			job.targetLocale as ContentLocale,
 			subject,
 		);
-		return;
+		return { generated: result.generated, label: row.slug };
 	}
 	if (job.entityType === "version") {
 		const row = await database.query.pluginVersions.findFirst({
 			where: eq(pluginVersions.id, job.entityId),
 		});
-		if (!row?.changelog) return;
-		await generateVersionTranslation(database, {
+		if (!row?.changelog) throw new Error("Version changelog not found");
+		const result = await generateVersionTranslation(database, {
 			versionId: row.id,
 			changelog: row.changelog,
 			targetLocale: job.targetLocale as ContentLocale,
 			subjectKey: subject,
 		});
-		return;
+		return { generated: result.generated, label: row.version };
 	}
 	if (job.entityType === "pipeline_check") {
 		const row = await database.query.pluginPipelineChecks.findFirst({
 			where: eq(pluginPipelineChecks.id, job.entityId),
 		});
-		if (!row) return;
-		await generatePipelineCheckTranslation(
+		if (!row) throw new Error("Pipeline check translation source not found");
+		const result = await generatePipelineCheckTranslation(
 			database,
 			row,
 			job.targetLocale as ContentLocale,
 			subject,
 		);
-		return;
+		return { generated: result.generated, label: row.checkType };
 	}
 	if (job.entityType === "collection") {
 		const row = await database.query.aiPluginCollections.findFirst({
 			where: eq(aiPluginCollections.id, job.entityId),
 		});
-		if (!row) return;
-		await generateCollectionTranslation(
+		if (!row) throw new Error("Collection translation source not found");
+		const result = await generateCollectionTranslation(
 			database,
 			row,
 			job.targetLocale as ContentLocale,
 			subject,
 		);
-		return;
+		return { generated: result.generated, label: row.name };
 	}
 	throw new Error("Unsupported translation entity");
 }
@@ -390,12 +389,33 @@ export async function processContentTranslationQueue(
 				),
 			),
 		)
-		.orderBy(asc(contentTranslationQueue.createdAt))
-		.limit(Math.max(1, Math.min(limit, 5)));
+		.orderBy(
+			sql<number>`CASE ${contentTranslationQueue.entityType}
+				WHEN 'plugin' THEN 0
+				WHEN 'category' THEN 1
+				WHEN 'collection' THEN 2
+				WHEN 'version' THEN 3
+				WHEN 'pipeline_check' THEN 4
+				ELSE 5
+			END`,
+			asc(contentTranslationQueue.createdAt),
+			asc(contentTranslationQueue.id),
+		)
+		.limit(normalizeTranslationBatchSize(limit));
 
 	let completed = 0;
+	let skipped = 0;
 	let failed = 0;
 	let limited = false;
+	const items: Array<{
+		queueId: number;
+		entityType: string;
+		entityId: number;
+		targetLocale: string;
+		label: string | null;
+		status: "completed" | "skipped" | "failed" | "limited";
+		error: string | null;
+	}> = [];
 	for (const candidate of candidates) {
 		const [claimed] = await database
 			.update(contentTranslationQueue)
@@ -419,7 +439,7 @@ export async function processContentTranslationQueue(
 		if (!claimed) continue;
 
 		try {
-			await runTranslationJob(database, claimed);
+			const result = await runTranslationJob(database, claimed);
 			await database
 				.update(contentTranslationQueue)
 				.set({
@@ -429,7 +449,17 @@ export async function processContentTranslationQueue(
 					updatedAt: nowSeconds(),
 				})
 				.where(eq(contentTranslationQueue.id, claimed.id));
-			completed += 1;
+			if (result.generated) completed += 1;
+			else skipped += 1;
+			items.push({
+				queueId: claimed.id,
+				entityType: claimed.entityType,
+				entityId: claimed.entityId,
+				targetLocale: claimed.targetLocale,
+				label: result.label,
+				status: result.generated ? "completed" : "skipped",
+				error: null,
+			});
 		} catch (error) {
 			const message =
 				error instanceof Error ? error.message : "Translation failed";
@@ -444,6 +474,15 @@ export async function processContentTranslationQueue(
 					})
 					.where(eq(contentTranslationQueue.id, claimed.id));
 				limited = true;
+				items.push({
+					queueId: claimed.id,
+					entityType: claimed.entityType,
+					entityId: claimed.entityId,
+					targetLocale: claimed.targetLocale,
+					label: null,
+					status: "limited",
+					error: message,
+				});
 				break;
 			}
 			const attempts = claimed.attempts + 1;
@@ -458,7 +497,16 @@ export async function processContentTranslationQueue(
 				})
 				.where(eq(contentTranslationQueue.id, claimed.id));
 			failed += 1;
+			items.push({
+				queueId: claimed.id,
+				entityType: claimed.entityType,
+				entityId: claimed.entityId,
+				targetLocale: claimed.targetLocale,
+				label: null,
+				status: "failed",
+				error: message,
+			});
 		}
 	}
-	return { claimed: candidates.length, completed, failed, limited };
+	return { claimed: items.length, completed, skipped, failed, limited, items };
 }

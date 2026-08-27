@@ -141,6 +141,55 @@ services:
       - "traefik.http.middlewares.rate-limit-api.ratelimit.burst=20"
       - "traefik.http.routers.app.middlewares=www-redirect,security-headers,rate-limit"
 
+  translation-worker:
+    image: ${APP_IMAGE:?APP_IMAGE must be a GHCR digest reference}
+    pull_policy: always
+    restart: unless-stopped
+    command:
+      - node
+      - -e
+      - |
+        const url = process.env.TRANSLATION_WORKER_URL;
+        const secret = process.env.CRON_SECRET;
+        const configuredInterval = Number.parseInt(process.env.TRANSLATION_WORKER_INTERVAL_MS || "", 10);
+        const interval = Number.isSafeInteger(configuredInterval) && configuredInterval >= 60000
+          ? configuredInterval
+          : 600000;
+        let discover = true;
+        async function run() {
+          try {
+            const response = await fetch(url, {
+              method: "POST",
+              headers: {
+                authorization: `Bearer $${secret}`,
+                "content-type": "application/json",
+              },
+              body: JSON.stringify({ action: "translate", scope: "all", limit: 12, discover }),
+              signal: AbortSignal.timeout(300000),
+            });
+            const body = await response.text();
+            if (!response.ok) throw new Error(`worker responded $${response.status}: $${body}`);
+            discover = false;
+            console.log(body);
+          } catch (error) {
+            console.error(error instanceof Error ? error.message : "translation worker failed");
+          } finally {
+            setTimeout(run, interval);
+          }
+        }
+        run();
+    environment:
+      CRON_SECRET: ${CRON_SECRET:?CRON_SECRET is required}
+      TRANSLATION_WORKER_URL: http://app:3000/api/ai-worker
+      TRANSLATION_WORKER_INTERVAL_MS: ${TRANSLATION_WORKER_INTERVAL_MS:-600000}
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - app-network
+    security_opt:
+      - no-new-privileges:true
+
   prometheus:
     image: prom/prometheus:v3.5.0
     restart: unless-stopped

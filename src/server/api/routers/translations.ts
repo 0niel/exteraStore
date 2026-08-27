@@ -20,6 +20,10 @@ import {
 	pluginTranslationInput,
 } from "~/server/lib/content-localization";
 import {
+	ADMIN_TRANSLATION_BATCH_SIZE,
+	entityTypesForTranslationScope,
+} from "~/server/lib/content-translation-policy";
+import {
 	enqueueMissingTranslations,
 	processContentTranslationQueue,
 } from "~/server/lib/content-translation-queue";
@@ -327,8 +331,8 @@ export const translationsRouter = createTRPCRouter({
 			);
 			const processed = await processContentTranslationQueue(
 				ctx.db,
-				2,
-				input.entity === "plugins" ? ["plugin"] : ["category"],
+				ADMIN_TRANSLATION_BATCH_SIZE,
+				entityTypesForTranslationScope(input.entity),
 			);
 			return { ...enqueued, processed };
 		}),

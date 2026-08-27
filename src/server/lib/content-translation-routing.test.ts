@@ -9,9 +9,7 @@ const routerSource = readFileSync(
 
 test("bulk translation starts processing the selected content immediately", () => {
 	assert.match(routerSource, /processContentTranslationQueue/);
-	assert.match(
-		routerSource,
-		/input\.entity === "plugins" \? \["plugin"\] : \["category"\]/,
-	);
+	assert.match(routerSource, /entityTypesForTranslationScope\(input\.entity\)/);
+	assert.match(routerSource, /ADMIN_TRANSLATION_BATCH_SIZE/);
 	assert.match(routerSource, /return \{ \.\.\.enqueued, processed \}/);
 });

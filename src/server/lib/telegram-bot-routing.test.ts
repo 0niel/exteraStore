@@ -38,7 +38,7 @@ test("Telegram bot localizes dynamic marketplace content", () => {
 });
 
 test("AI worker backfills all translations and preserves source language", () => {
-	assert.match(workerSource, /enqueueMissingTranslations\(db, "all"\)/);
+	assert.match(workerSource, /processTranslations\(\s*"all"/);
 	assert.match(workerSource, /contentLocale: locale/);
 	assert.match(workerSource, /targetLocale: targetLocale\(locale\)/);
 	assert.doesNotMatch(workerSource, /locale: "ru"/);

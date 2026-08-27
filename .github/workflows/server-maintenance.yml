@@ -96,7 +96,7 @@ jobs:
             export APP_IMAGE=$(sudo docker inspect --format '{{.Image}}' "$APP_ID")
           fi
           . scripts/docker-cmd.sh
-          docker_cmd compose up -d --no-deps --force-recreate app
+          docker_cmd compose up -d --no-deps --force-recreate app translation-worker
           echo "app recreated with image ${APP_IMAGE:0:60}"
           REMOTE
 
