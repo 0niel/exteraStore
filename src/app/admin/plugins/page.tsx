@@ -261,7 +261,6 @@ export default function AdminPluginsPage() {
 		downloadCount: number;
 	} | null>(null);
 	const [newDownloadCount, setNewDownloadCount] = useState("");
-	const [translationCursor, setTranslationCursor] = useState(0);
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [deletingPlugin, setDeletingPlugin] = useState<{
 		id: number;
@@ -345,16 +344,14 @@ export default function AdminPluginsPage() {
 			});
 		},
 	});
-	const backfillTranslations = api.translations.backfill.useMutation({
+	const enqueueTranslations = api.translations.enqueueMissing.useMutation({
 		onSuccess: (result) => {
-			setTranslationCursor(result.done ? 0 : result.nextCursor);
 			toast.success(
-				t("translation_batch_done", {
-					scanned: result.scanned,
-					generated: result.generated,
+				t("translation_queue_added", {
+					queued: result.queued,
+					total: result.totalMissing,
 				}),
 			);
-			if (result.limited) toast.warning(t("translation_limit_reached"));
 		},
 		onError: (error) => toast.error(error.message),
 	});
@@ -412,15 +409,10 @@ export default function AdminPluginsPage() {
 					<Button
 						variant="outline"
 						className="w-full sm:w-auto"
-						onClick={() =>
-							backfillTranslations.mutate({
-								entity: "plugins",
-								cursor: translationCursor,
-							})
-						}
-						disabled={backfillTranslations.isPending}
+						onClick={() => enqueueTranslations.mutate({ entity: "plugins" })}
+						disabled={enqueueTranslations.isPending}
 					>
-						{backfillTranslations.isPending ? (
+						{enqueueTranslations.isPending ? (
 							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 						) : (
 							<Sparkles className="mr-2 h-4 w-4" />

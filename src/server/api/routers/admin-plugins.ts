@@ -30,6 +30,8 @@ import {
 	contentLocaleSchema,
 	generateCategoryTranslation,
 	generatePluginTranslation,
+	getContentLocale,
+	localizePipelineChecks,
 } from "~/server/lib/content-localization";
 import { emitWebhookEvent } from "~/server/lib/developer-platform";
 
@@ -90,18 +92,7 @@ export const adminPluginsRouter = createTRPCRouter({
 			const [checkRows, queueRows] = pluginIds.length
 				? await Promise.all([
 						ctx.db
-							.select({
-								id: pluginPipelineChecks.id,
-								pluginId: pluginPipelineChecks.pluginId,
-								checkType: pluginPipelineChecks.checkType,
-								status: pluginPipelineChecks.status,
-								score: pluginPipelineChecks.score,
-								details: pluginPipelineChecks.details,
-								classification: pluginPipelineChecks.classification,
-								shortDescription: pluginPipelineChecks.shortDescription,
-								createdAt: pluginPipelineChecks.createdAt,
-								completedAt: pluginPipelineChecks.completedAt,
-							})
+							.select()
 							.from(pluginPipelineChecks)
 							.where(inArray(pluginPipelineChecks.pluginId, pluginIds))
 							.orderBy(desc(pluginPipelineChecks.createdAt)),
@@ -119,9 +110,14 @@ export const adminPluginsRouter = createTRPCRouter({
 							),
 					])
 				: [[], []];
-			type CheckRow = (typeof checkRows)[number];
+			const localizedCheckRows = await localizePipelineChecks(
+				ctx.db,
+				checkRows,
+				getContentLocale(ctx.headers),
+			);
+			type CheckRow = (typeof localizedCheckRows)[number];
 			const latestByPlugin = new Map<number, Record<string, CheckRow>>();
-			for (const row of checkRows) {
+			for (const row of localizedCheckRows) {
 				const bucket = latestByPlugin.get(row.pluginId) ?? {};
 				if (!bucket[row.checkType]) {
 					bucket[row.checkType] = row;

@@ -86,7 +86,6 @@ export default function AdminCategoriesPage() {
 	const [translationCategoryId, setTranslationCategoryId] = useState<
 		number | null
 	>(null);
-	const [translationCursor, setTranslationCursor] = useState(0);
 
 	const isAdmin = isAdminUser(session?.user);
 
@@ -133,16 +132,14 @@ export default function AdminCategoriesPage() {
 			toast.error(error.message);
 		},
 	});
-	const backfillTranslations = api.translations.backfill.useMutation({
+	const enqueueTranslations = api.translations.enqueueMissing.useMutation({
 		onSuccess: (result) => {
-			setTranslationCursor(result.done ? 0 : result.nextCursor);
 			toast.success(
-				t("translation_batch_done", {
-					scanned: result.scanned,
-					generated: result.generated,
+				t("translation_queue_added", {
+					queued: result.queued,
+					total: result.totalMissing,
 				}),
 			);
-			if (result.limited) toast.warning(t("translation_limit_reached"));
 		},
 		onError: (error) => toast.error(error.message),
 	});
@@ -252,14 +249,11 @@ export default function AdminCategoriesPage() {
 						<Button
 							variant="outline"
 							onClick={() =>
-								backfillTranslations.mutate({
-									entity: "categories",
-									cursor: translationCursor,
-								})
+								enqueueTranslations.mutate({ entity: "categories" })
 							}
-							disabled={backfillTranslations.isPending}
+							disabled={enqueueTranslations.isPending}
 						>
-							{backfillTranslations.isPending ? (
+							{enqueueTranslations.isPending ? (
 								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 							) : (
 								<Languages className="mr-2 h-4 w-4" />

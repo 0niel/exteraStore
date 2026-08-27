@@ -4,10 +4,15 @@ import { createHash } from "node:crypto";
 import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { resolveContentLocale } from "~/lib/locale-resolution";
+import { parsePipelineDetails } from "~/lib/plugin-pipeline-view";
 import type { Database } from "~/server/db";
 import {
+	type aiPluginCollections,
+	aiPluginCollectionTranslations,
 	categoryTranslations,
 	type pluginCategories,
+	type pluginPipelineChecks,
+	pluginPipelineCheckTranslations,
 	type plugins,
 	pluginTranslations,
 	pluginVersionTranslations,
@@ -21,6 +26,8 @@ export type TranslationOrigin = "ai" | "manual";
 
 type PluginRow = typeof plugins.$inferSelect;
 type CategoryRow = typeof pluginCategories.$inferSelect;
+type PipelineCheckRow = typeof pluginPipelineChecks.$inferSelect;
+type CollectionRow = typeof aiPluginCollections.$inferSelect;
 
 export type PluginTranslationInput = {
 	name: string;
@@ -52,6 +59,25 @@ const categoryTranslationOutputSchema = z.object({
 
 const versionTranslationOutputSchema = z.object({
 	changelog: z.string().trim().min(1).max(20_000),
+});
+
+const pipelineCheckTranslationOutputSchema = z.object({
+	shortDescription: z.string().trim().max(200).nullable(),
+	issues: z
+		.array(
+			z.object({
+				type: z.string().trim().max(100),
+				severity: z.enum(["low", "medium", "high", "critical"]),
+				description: z.string().trim().max(1_000),
+				recommendation: z.string().trim().max(1_000),
+			}),
+		)
+		.max(50),
+});
+
+const collectionTranslationOutputSchema = z.object({
+	name: z.string().trim().min(1).max(120),
+	description: z.string().trim().max(1_000).nullable(),
 });
 
 function hash(value: unknown) {
@@ -87,6 +113,21 @@ export function pluginSourceHash(plugin: PluginTranslationInput) {
 
 export function categorySourceHash(category: CategoryTranslationInput) {
 	return hash(category);
+}
+
+export function versionSourceHash(changelog: string) {
+	return hash(changelog);
+}
+
+export function pipelineCheckSourceHash(check: PipelineCheckRow) {
+	return hash({
+		shortDescription: check.shortDescription,
+		details: check.details,
+	});
+}
+
+export function collectionSourceHash(collection: CollectionRow) {
+	return hash({ name: collection.name, description: collection.description });
 }
 
 export function pluginTranslationInput(
@@ -250,7 +291,7 @@ export async function generateVersionTranslation(
 		subjectKey: string;
 	},
 ) {
-	const sourceHash = hash(input.changelog);
+	const sourceHash = versionSourceHash(input.changelog);
 	const existing = await database.query.pluginVersionTranslations.findFirst({
 		where: and(
 			eq(pluginVersionTranslations.versionId, input.versionId),
@@ -298,6 +339,219 @@ export async function generateVersionTranslation(
 		})
 		.returning();
 	return { translation, generated: true };
+}
+
+export async function generatePipelineCheckTranslation(
+	database: Database,
+	check: PipelineCheckRow,
+	targetLocale: ContentLocale,
+	subjectKey: string,
+) {
+	const sourceHash = pipelineCheckSourceHash(check);
+	const existing =
+		await database.query.pluginPipelineCheckTranslations.findFirst({
+			where: and(
+				eq(pluginPipelineCheckTranslations.checkId, check.id),
+				eq(pluginPipelineCheckTranslations.locale, targetLocale),
+			),
+		});
+	if (existing?.origin === "manual" || existing?.sourceHash === sourceHash) {
+		return { translation: existing, generated: false };
+	}
+
+	const limit = await consumeAiRateLimit(
+		database,
+		subjectKey,
+		"content_translation",
+	);
+	if (limit.limited) throw new Error("AI_TRANSLATION_RATE_LIMITED");
+
+	const parsedDetails = parsePipelineDetails(check.details);
+	const translated = await generateAIObject(
+		pipelineCheckTranslationOutputSchema,
+		`${TRANSLATION_INSTRUCTIONS} Target language: ${targetLanguage(targetLocale)}. Preserve the number, order and severity of issues.`,
+		JSON.stringify({
+			shortDescription:
+				check.shortDescription ?? parsedDetails.shortDescription ?? null,
+			issues: parsedDetails.issues,
+		}),
+		limit.grant,
+	);
+	let baseDetails: Record<string, unknown> = {};
+	if (check.details) {
+		try {
+			const parsed: unknown = JSON.parse(check.details);
+			if (
+				typeof parsed === "object" &&
+				parsed !== null &&
+				!Array.isArray(parsed)
+			) {
+				baseDetails = parsed as Record<string, unknown>;
+			}
+		} catch {}
+	}
+	const details = JSON.stringify({
+		...baseDetails,
+		shortDescription: translated.shortDescription,
+		issues: translated.issues,
+	});
+	const now = Math.floor(Date.now() / 1_000);
+	const [translation] = await database
+		.insert(pluginPipelineCheckTranslations)
+		.values({
+			checkId: check.id,
+			locale: targetLocale,
+			shortDescription: translated.shortDescription,
+			details,
+			origin: "ai",
+			sourceHash,
+			updatedAt: now,
+		})
+		.onConflictDoUpdate({
+			target: [
+				pluginPipelineCheckTranslations.checkId,
+				pluginPipelineCheckTranslations.locale,
+			],
+			set: {
+				shortDescription: translated.shortDescription,
+				details,
+				origin: "ai",
+				sourceHash,
+				updatedAt: now,
+			},
+		})
+		.returning();
+
+	return { translation, generated: true };
+}
+
+export async function generateCollectionTranslation(
+	database: Database,
+	collection: CollectionRow,
+	targetLocale: ContentLocale,
+	subjectKey: string,
+) {
+	const sourceHash = collectionSourceHash(collection);
+	const existing =
+		await database.query.aiPluginCollectionTranslations.findFirst({
+			where: and(
+				eq(aiPluginCollectionTranslations.collectionId, collection.id),
+				eq(aiPluginCollectionTranslations.locale, targetLocale),
+			),
+		});
+	if (existing?.origin === "manual" || existing?.sourceHash === sourceHash) {
+		return { translation: existing, generated: false };
+	}
+
+	const limit = await consumeAiRateLimit(
+		database,
+		subjectKey,
+		"content_translation",
+	);
+	if (limit.limited) throw new Error("AI_TRANSLATION_RATE_LIMITED");
+	const translated = await generateAIObject(
+		collectionTranslationOutputSchema,
+		`${TRANSLATION_INSTRUCTIONS} Target language: ${targetLanguage(targetLocale)}.`,
+		JSON.stringify({
+			name: collection.name,
+			description: collection.description,
+		}),
+		limit.grant,
+	);
+	const now = Math.floor(Date.now() / 1_000);
+	const [translation] = await database
+		.insert(aiPluginCollectionTranslations)
+		.values({
+			collectionId: collection.id,
+			locale: targetLocale,
+			name: translated.name,
+			description: translated.description,
+			origin: "ai",
+			sourceHash,
+			updatedAt: now,
+		})
+		.onConflictDoUpdate({
+			target: [
+				aiPluginCollectionTranslations.collectionId,
+				aiPluginCollectionTranslations.locale,
+			],
+			set: {
+				name: translated.name,
+				description: translated.description,
+				origin: "ai",
+				sourceHash,
+				updatedAt: now,
+			},
+		})
+		.returning();
+	return { translation, generated: true };
+}
+
+export async function localizePipelineChecks<T extends PipelineCheckRow>(
+	database: Database,
+	rows: T[],
+	locale: ContentLocale,
+) {
+	if (rows.length === 0) return rows;
+	const translations = await database
+		.select()
+		.from(pluginPipelineCheckTranslations)
+		.where(
+			and(
+				inArray(
+					pluginPipelineCheckTranslations.checkId,
+					rows.map((row) => row.id),
+				),
+				eq(pluginPipelineCheckTranslations.locale, locale),
+			),
+		);
+	const byCheck = new Map(translations.map((item) => [item.checkId, item]));
+	return rows.map((row) => {
+		if (row.contentLocale === locale) return row;
+		const translation = byCheck.get(row.id);
+		return translation
+			? {
+					...row,
+					shortDescription:
+						translation.shortDescription ?? row.shortDescription,
+					details: translation.details ?? row.details,
+				}
+			: row;
+	});
+}
+
+export async function localizeCollectionRows<T extends CollectionRow>(
+	database: Database,
+	rows: T[],
+	locale: ContentLocale,
+) {
+	if (rows.length === 0) return rows;
+	const translations = await database
+		.select()
+		.from(aiPluginCollectionTranslations)
+		.where(
+			and(
+				inArray(
+					aiPluginCollectionTranslations.collectionId,
+					rows.map((row) => row.id),
+				),
+				eq(aiPluginCollectionTranslations.locale, locale),
+			),
+		);
+	const byCollection = new Map(
+		translations.map((item) => [item.collectionId, item]),
+	);
+	return rows.map((row) => {
+		if (row.contentLocale === locale) return row;
+		const translation = byCollection.get(row.id);
+		return translation
+			? {
+					...row,
+					name: translation.name,
+					description: translation.description,
+				}
+			: row;
+	});
 }
 
 export async function localizePluginRows<T extends PluginRow>(

@@ -18,6 +18,10 @@ import {
 	pluginVersions,
 } from "~/server/db/schema";
 import { consumeAiRateLimit } from "~/server/lib/ai-rate-limiter";
+import {
+	enqueueTranslationJobs,
+	processContentTranslationQueue,
+} from "~/server/lib/content-translation-queue";
 import { isCronAuthorized } from "~/server/lib/cron-auth";
 
 export const maxDuration = 60;
@@ -97,6 +101,7 @@ async function failQueueItem(queueId: number, message: string) {
 
 async function handleClaim(limit: number) {
 	const now = nowSeconds();
+	const translations = await processContentTranslationQueue(db, 2);
 
 	const candidates = await db
 		.select({
@@ -117,7 +122,7 @@ async function handleClaim(limit: number) {
 		.limit(limit);
 
 	if (candidates.length === 0) {
-		return NextResponse.json({ jobs: [] });
+		return NextResponse.json({ jobs: [], translations });
 	}
 
 	await db
@@ -191,7 +196,7 @@ async function handleClaim(limit: number) {
 		});
 	}
 
-	return NextResponse.json({ jobs });
+	return NextResponse.json({ jobs, translations });
 }
 
 async function insertErrorCheck(
@@ -260,18 +265,30 @@ async function handleSubmit(
 					"ru",
 				);
 
-				await db.insert(pluginPipelineChecks).values({
-					pluginId: queueItem.pluginId,
-					checkType: check.checkType,
-					status: "completed",
-					score: parsed.score,
-					classification: parsed.classification,
-					shortDescription: parsed.shortDescription,
-					details: parsed.details,
-					llmModel: env.OPENROUTER_MODEL,
-					llmPrompt: `Version: ${version}`,
-					completedAt: nowSeconds(),
-				});
+				const [createdCheck] = await db
+					.insert(pluginPipelineChecks)
+					.values({
+						pluginId: queueItem.pluginId,
+						checkType: check.checkType,
+						status: "completed",
+						score: parsed.score,
+						classification: parsed.classification,
+						shortDescription: parsed.shortDescription,
+						details: parsed.details,
+						llmModel: env.OPENROUTER_MODEL,
+						llmPrompt: `Version: ${version}`,
+						completedAt: nowSeconds(),
+					})
+					.returning({ id: pluginPipelineChecks.id });
+				if (createdCheck) {
+					await enqueueTranslationJobs(db, [
+						{
+							entityType: "pipeline_check",
+							entityId: createdCheck.id,
+							targetLocale: "en",
+						},
+					]);
+				}
 
 				succeeded += 1;
 				if (ALERT_CLASSIFICATIONS.has(parsed.classification)) {

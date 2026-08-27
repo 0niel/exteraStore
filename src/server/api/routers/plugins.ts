@@ -36,6 +36,7 @@ import {
 	generatePluginTranslation,
 	getContentLocale,
 	localizeCategoryRows,
+	localizePipelineChecks,
 	localizePluginRows,
 } from "~/server/lib/content-localization";
 import { emitWebhookEvent } from "~/server/lib/developer-platform";
@@ -151,8 +152,13 @@ export const pluginsRouter = createTRPCRouter({
 							desc(pluginPipelineChecks.createdAt),
 						)
 				: [];
+			const localizedSecurityChecks = await localizePipelineChecks(
+				ctx.db,
+				latestSecurityChecks,
+				locale,
+			);
 			const securityByPlugin = new Map(
-				latestSecurityChecks.map((check) => [check.pluginId, check]),
+				localizedSecurityChecks.map((check) => [check.pluginId, check]),
 			);
 			const pluginsWithSecurity = pluginsList.map((plugin) => ({
 				...plugin,
@@ -217,11 +223,17 @@ export const pluginsRouter = createTRPCRouter({
 						: Promise.resolve([{ ...selectedPlugin, localizedLocale: null }]),
 				]);
 			const localizedPlugin = localizedRows[0] ?? selectedPlugin;
+			const localizedChecks = await localizePipelineChecks(
+				ctx.db,
+				latestChecks,
+				locale,
+			);
 
 			return {
 				...localizedPlugin,
 				latestSecurityCheck:
-					latestChecks.find((check) => check.checkType === "security") ?? null,
+					localizedChecks.find((check) => check.checkType === "security") ??
+					null,
 				checkSummary: summarizePluginChecks(
 					latestChecks,
 					latestQueue[0]?.status,
@@ -335,7 +347,7 @@ export const pluginsRouter = createTRPCRouter({
 				reviewId: z.number(),
 				rating: z.number().min(1).max(5).optional(),
 				title: z.string().min(1).max(256).optional(),
-				comment: z.string().max(2000).optional(),
+				comment: z.string().trim().max(2000).optional(),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
@@ -364,7 +376,8 @@ export const pluginsRouter = createTRPCRouter({
 				.set({
 					rating: input.rating ?? undefined,
 					title: input.title ?? undefined,
-					comment: input.comment ?? undefined,
+					comment:
+						input.comment === undefined ? undefined : input.comment || null,
 					updatedAt: sql`extract(epoch from now())`,
 				})
 				.where(eq(pluginReviews.id, input.reviewId))
@@ -455,7 +468,7 @@ export const pluginsRouter = createTRPCRouter({
 				pluginId: z.number(),
 				rating: z.number().min(1).max(5),
 				title: z.string().min(1).max(256).optional(),
-				comment: z.string().max(2000).optional(),
+				comment: z.string().trim().max(2000).optional(),
 				captchaToken: z.string().min(1),
 			}),
 		)
@@ -490,7 +503,7 @@ export const pluginsRouter = createTRPCRouter({
 					userId: ctx.session.user.id,
 					rating: input.rating,
 					title: input.title,
-					comment: input.comment,
+					comment: input.comment || null,
 				})
 				.returning();
 

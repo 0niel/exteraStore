@@ -132,6 +132,7 @@ export default function PluginDetailPage() {
 			toast.success(t("review_added"));
 			setReviewComment("");
 			setReviewRating(5);
+			setReviewCaptchaToken("");
 			void utils.plugins.getReviews.invalidate();
 			void utils.plugins.getBySlug.invalidate({ slug });
 		},
@@ -1002,6 +1003,9 @@ export default function PluginDetailPage() {
 															rows={3}
 															className="resize-none"
 														/>
+														<p className="text-muted-foreground text-xs leading-5">
+															{t("review_text_optional")}
+														</p>
 														<SmartCaptcha
 															onSuccess={setReviewCaptchaToken}
 															onError={() => setReviewCaptchaToken("")}
@@ -1011,7 +1015,6 @@ export default function PluginDetailPage() {
 																onClick={handleAddReview}
 																disabled={
 																	addReviewMutation.isPending ||
-																	!reviewComment.trim() ||
 																	!reviewCaptchaToken
 																}
 																size="sm"

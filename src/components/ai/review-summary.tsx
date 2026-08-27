@@ -2,7 +2,7 @@
 
 import { AlertTriangle, CheckCircle2, Sparkles } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { cn } from "~/lib/utils";
 import { api } from "~/trpc/react";
 
@@ -12,10 +12,11 @@ interface ReviewSummaryProps {
 
 export function ReviewSummary({ pluginId }: ReviewSummaryProps) {
 	const t = useTranslations("AI");
+	const locale = useLocale();
 	const { status } = useSession();
 
 	const { data, isLoading, isError } = api.ai.summarizeReviews.useQuery(
-		{ pluginId },
+		{ pluginId, locale: locale === "ru" ? "ru" : "en" },
 		{
 			enabled: pluginId > 0 && status === "authenticated",
 			staleTime: 5 * 60 * 1000,

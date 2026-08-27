@@ -19,6 +19,7 @@ import {
 } from "~/server/api/trpc";
 import {
 	aiPluginCollections,
+	contentTranslationQueue,
 	notifications,
 	pluginPipelineChecks,
 	pluginPipelineQueue,
@@ -33,6 +34,13 @@ import {
 	type AiBudgetGrant,
 	consumeAiRateLimit,
 } from "~/server/lib/ai-rate-limiter";
+import {
+	getContentLocale,
+	localizeCollectionRows,
+	localizePipelineChecks,
+	localizePluginRows,
+} from "~/server/lib/content-localization";
+import { enqueueTranslationJobs } from "~/server/lib/content-translation-queue";
 import { emitWebhookEvent } from "~/server/lib/developer-platform";
 import { sendTelegramMessage } from "~/server/lib/telegram-client";
 import {
@@ -234,6 +242,13 @@ export async function processQueueItem(
 						completedAt: Math.floor(Date.now() / 1000),
 					})
 					.where(eq(pluginPipelineChecks.id, createdCheck.id));
+				await enqueueTranslationJobs(ctx.db, [
+					{
+						entityType: "pipeline_check",
+						entityId: createdCheck.id,
+						targetLocale: "en",
+					},
+				]);
 			} catch {
 				if (checkId !== null) {
 					await ctx.db
@@ -339,7 +354,7 @@ export const pluginPipelineRouter = createTRPCRouter({
 	getChecks: publicProcedure
 		.input(z.object({ pluginId: z.number() }))
 		.query(async ({ ctx, input }) => {
-			return ctx.db
+			const checks = await ctx.db
 				.select({ ...getTableColumns(pluginPipelineChecks) })
 				.from(pluginPipelineChecks)
 				.innerJoin(plugins, eq(pluginPipelineChecks.pluginId, plugins.id))
@@ -351,6 +366,11 @@ export const pluginPipelineRouter = createTRPCRouter({
 				)
 				.orderBy(desc(pluginPipelineChecks.createdAt))
 				.limit(12);
+			return localizePipelineChecks(
+				ctx.db,
+				checks,
+				getContentLocale(ctx.headers),
+			);
 		}),
 
 	runChecks: protectedProcedure
@@ -792,11 +812,15 @@ export async function generateAndSaveAICollections(
 
 	if (generatedCollections.length > 0) {
 		const savedCollections = await database.transaction(async (transaction) => {
+			await transaction
+				.delete(contentTranslationQueue)
+				.where(eq(contentTranslationQueue.entityType, "collection"));
 			await transaction.delete(aiPluginCollections);
 			return transaction
 				.insert(aiPluginCollections)
 				.values(
 					generatedCollections.map(({ collection }) => ({
+						contentLocale: locale,
 						name: collection.collectionName,
 						description: collection.collectionDescription,
 						pluginIds: collection.pluginIds,
@@ -804,6 +828,14 @@ export async function generateAndSaveAICollections(
 				)
 				.returning();
 		});
+		await enqueueTranslationJobs(
+			database,
+			savedCollections.map((collection) => ({
+				entityType: "collection" as const,
+				entityId: collection.id,
+				targetLocale: locale === "ru" ? ("en" as const) : ("ru" as const),
+			})),
+		);
 
 		let savedIndex = 0;
 		for (const result of results) {
@@ -853,15 +885,21 @@ export const aiCollectionsRouter = createTRPCRouter({
 			}),
 		)
 		.query(async ({ ctx, input }) => {
-			const collections = await ctx.db
+			const locale = getContentLocale(ctx.headers);
+			const collectionRows = await ctx.db
 				.select()
 				.from(aiPluginCollections)
 				.orderBy(desc(aiPluginCollections.generatedAt))
 				.limit(input.limit);
 
-			if (collections.length === 0) {
+			if (collectionRows.length === 0) {
 				return [];
 			}
+			const collections = await localizeCollectionRows(
+				ctx.db,
+				collectionRows,
+				locale,
+			);
 
 			const pluginIds = [
 				...new Set(collections.flatMap((collection) => collection.pluginIds)),
@@ -878,11 +916,16 @@ export const aiCollectionsRouter = createTRPCRouter({
 							),
 						)
 				: [];
+			const localizedPlugins = await localizePluginRows(
+				ctx.db,
+				pluginRows.map((row) => ({
+					...row.plugin,
+					authorImage: row.authorImage,
+				})),
+				locale,
+			);
 			const pluginsById = new Map(
-				pluginRows.map((row) => [
-					row.plugin.id,
-					{ ...row.plugin, authorImage: row.authorImage },
-				]),
+				localizedPlugins.map((plugin) => [plugin.id, plugin]),
 			);
 
 			return collections.map((collection) => ({

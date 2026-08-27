@@ -306,6 +306,41 @@ export const pluginVersionTranslations = pgTable(
 	],
 );
 
+export const contentTranslationQueue = pgTable(
+	"extera_plugins_content_translation_queue",
+	{
+		id: serial("id").primaryKey(),
+		entityType: varchar("entity_type", { length: 32 }).notNull(),
+		entityId: integer("entity_id").notNull(),
+		targetLocale: varchar("target_locale", { length: 8 }).notNull(),
+		status: varchar("status", { length: 24 }).default("pending").notNull(),
+		attempts: integer("attempts").default(0).notNull(),
+		availableAt: integer("available_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+		startedAt: integer("started_at"),
+		completedAt: integer("completed_at"),
+		errorMessage: text("error_message"),
+		requestedById: text("requested_by_id").references(() => users.id, {
+			onDelete: "set null",
+		}),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+		updatedAt: integer("updated_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+	},
+	(t) => [
+		uniqueIndex("content_translation_queue_entity_idx").on(
+			t.entityType,
+			t.entityId,
+			t.targetLocale,
+		),
+		index("content_translation_queue_status_idx").on(t.status, t.availableAt),
+	],
+);
+
 export const pluginFiles = pgTable(
 	"extera_plugins_plugin_file",
 	{
@@ -687,6 +722,9 @@ export const pluginPipelineChecks = pgTable(
 			.notNull()
 			.references(() => plugins.id, { onDelete: "cascade" }),
 		checkType: text("check_type").notNull(),
+		contentLocale: varchar("content_locale", { length: 8 })
+			.default("ru")
+			.notNull(),
 		status: text("status").default("pending").notNull(),
 		score: real("score"),
 		details: text("details"),
@@ -711,6 +749,34 @@ export const pluginPipelineChecks = pgTable(
 			t.checkType,
 			t.createdAt,
 		),
+	],
+);
+
+export const pluginPipelineCheckTranslations = pgTable(
+	"extera_plugins_plugin_pipeline_check_translation",
+	{
+		id: serial("id").primaryKey(),
+		checkId: integer("check_id")
+			.notNull()
+			.references(() => pluginPipelineChecks.id, { onDelete: "cascade" }),
+		locale: varchar("locale", { length: 8 }).notNull(),
+		shortDescription: text("short_description"),
+		details: text("details"),
+		origin: varchar("origin", { length: 16 }).default("ai").notNull(),
+		sourceHash: text("source_hash").notNull(),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+		updatedAt: integer("updated_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+	},
+	(t) => [
+		uniqueIndex("pipeline_check_translation_locale_idx").on(
+			t.checkId,
+			t.locale,
+		),
+		index("pipeline_check_translation_check_idx").on(t.checkId),
 	],
 );
 
@@ -853,6 +919,9 @@ export const aiPluginCollections = pgTable(
 	"extera_plugins_ai_plugin_collection",
 	{
 		id: serial("id").primaryKey(),
+		contentLocale: varchar("content_locale", { length: 8 })
+			.default("ru")
+			.notNull(),
 		name: text("name").notNull(),
 		description: text("description"),
 		pluginIds: integer("plugin_ids").array().notNull(),
@@ -866,6 +935,34 @@ export const aiPluginCollections = pgTable(
 	(t) => [
 		index("ai_collection_name_idx").on(t.name),
 		index("ai_collection_generated_at_idx").on(t.generatedAt),
+	],
+);
+
+export const aiPluginCollectionTranslations = pgTable(
+	"extera_plugins_ai_plugin_collection_translation",
+	{
+		id: serial("id").primaryKey(),
+		collectionId: integer("collection_id")
+			.notNull()
+			.references(() => aiPluginCollections.id, { onDelete: "cascade" }),
+		locale: varchar("locale", { length: 8 }).notNull(),
+		name: text("name").notNull(),
+		description: text("description"),
+		origin: varchar("origin", { length: 16 }).default("ai").notNull(),
+		sourceHash: text("source_hash").notNull(),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+		updatedAt: integer("updated_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+	},
+	(t) => [
+		uniqueIndex("ai_collection_translation_locale_idx").on(
+			t.collectionId,
+			t.locale,
+		),
+		index("ai_collection_translation_collection_idx").on(t.collectionId),
 	],
 );
 

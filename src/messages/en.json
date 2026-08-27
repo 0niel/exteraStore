@@ -352,7 +352,8 @@
 		"documentation": "Documentation",
 		"open_github": "Open GitHub repository",
 		"open_docs": "Open documentation",
-		"review_placeholder": "Share your opinion about this plugin...",
+		"review_placeholder": "Comment on your rating (optional)",
+		"review_text_optional": "You can submit a rating without writing a comment.",
 		"your_rating": "Your rating",
 		"community_reviews": "Community reviews",
 		"reviews_count": "{count, plural, one {# review} other {# reviews}}",
@@ -364,7 +365,7 @@
 		"next_reviews_page": "Next review page",
 		"review_page": "Go to review page {page}",
 		"sending": "Sending...",
-		"submit_review": "Submit review",
+		"submit_review": "Save rating",
 		"rate_star_aria": "Rate {star}",
 		"edit_rating_aria": "Change rating to {star}",
 		"edit": "Edit",
@@ -851,9 +852,8 @@
 		"toast_checks_error": "Failed to start AI checks",
 		"ai_queued_hint": "Queued: the checks run on a GitHub Actions worker and usually finish within ~10 minutes.",
 		"toast_checks_queued_description": "The plugin was added to the queue. Results appear once the worker picks it up, usually within ~10 minutes.",
-		"translate_missing": "Translate missing",
-		"translation_batch_done": "Scanned: {scanned}, translations created: {generated}",
-		"translation_limit_reached": "The hourly translation limit has been reached"
+		"translate_missing": "Queue every missing translation",
+		"translation_queue_added": "Queued {queued} of {total} missing translations"
 	},
 	"PluginVersionsPage": {
 		"back_to_plugin": "Back to plugin",
@@ -903,9 +903,8 @@
 		"source_language": "Original language",
 		"source_language_help": "AI creates the second language version, which remains fully editable.",
 		"translations": "Category translations",
-		"translate_missing": "Translate missing",
-		"translation_batch_done": "Scanned: {scanned}, translations created: {generated}",
-		"translation_limit_reached": "The hourly translation limit has been reached"
+		"translate_missing": "Queue every missing translation",
+		"translation_queue_added": "Queued {queued} of {total} missing translations"
 	},
 	"AdminLayout": {
 		"admin_panel": "Admin Panel",

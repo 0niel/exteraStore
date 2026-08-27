@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { and, asc, eq, gt } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { safeJsonParse } from "~/lib/utils";
@@ -19,6 +19,7 @@ import {
 	pluginSourceHash,
 	pluginTranslationInput,
 } from "~/server/lib/content-localization";
+import { enqueueMissingTranslations } from "~/server/lib/content-translation-queue";
 
 const nullableText = (max: number) =>
 	z
@@ -308,76 +309,18 @@ export const translationsRouter = createTRPCRouter({
 			);
 		}),
 
-	backfill: protectedProcedure
+	enqueueMissing: protectedProcedure
 		.input(
 			z.object({
 				entity: z.enum(["plugins", "categories"]),
-				cursor: z.number().int().nonnegative().default(0),
-				limit: z.number().int().min(1).max(5).default(5),
 			}),
 		)
 		.mutation(async ({ ctx, input }) => {
 			assertAdmin(ctx.session.user.role);
-			const rows =
-				input.entity === "plugins"
-					? await ctx.db
-							.select()
-							.from(plugins)
-							.where(
-								and(
-									gt(plugins.id, input.cursor),
-									eq(plugins.status, "approved"),
-								),
-							)
-							.orderBy(asc(plugins.id))
-							.limit(input.limit)
-					: await ctx.db
-							.select()
-							.from(pluginCategories)
-							.where(gt(pluginCategories.id, input.cursor))
-							.orderBy(asc(pluginCategories.id))
-							.limit(input.limit);
-
-			let generated = 0;
-			let limited = false;
-			for (const row of rows) {
-				if (row.contentLocale !== "ru" && row.contentLocale !== "en") continue;
-				try {
-					const targetLocale = row.contentLocale === "ru" ? "en" : "ru";
-					const result =
-						input.entity === "plugins"
-							? await generatePluginTranslation(
-									ctx.db,
-									row as typeof plugins.$inferSelect,
-									targetLocale,
-									`user:${ctx.session.user.id}`,
-								)
-							: await generateCategoryTranslation(
-									ctx.db,
-									row as typeof pluginCategories.$inferSelect,
-									targetLocale,
-									`user:${ctx.session.user.id}`,
-								);
-					if (result.generated) generated += 1;
-				} catch (error) {
-					if (
-						error instanceof Error &&
-						error.message === "AI_TRANSLATION_RATE_LIMITED"
-					) {
-						limited = true;
-						break;
-					}
-				}
-			}
-
-			revalidatePath("/plugins");
-			revalidatePath("/categories");
-			return {
-				scanned: rows.length,
-				generated,
-				limited,
-				nextCursor: rows.at(-1)?.id ?? input.cursor,
-				done: rows.length < input.limit,
-			};
+			return enqueueMissingTranslations(
+				ctx.db,
+				input.entity,
+				ctx.session.user.id,
+			);
 		}),
 });
