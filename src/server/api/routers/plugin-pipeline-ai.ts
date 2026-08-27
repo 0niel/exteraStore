@@ -1,6 +1,12 @@
 import { z } from "zod";
-import { generateAIObject, generateAIText } from "~/server/lib/ai-client";
+import { generateAIObject } from "~/server/lib/ai-client";
 import type { AiBudgetGrant } from "~/server/lib/ai-rate-limiter";
+import {
+	buildEditorImprovementInstructions,
+	buildEditorImprovementPrompt,
+	type EditorTextType,
+	editorTextOutputSchema,
+} from "~/server/lib/editor-text";
 
 const CHUNK_SIZE = 90_000;
 const CHUNK_OVERLAP = 4_000;
@@ -238,17 +244,6 @@ export function parseCheckResults(
 }
 
 export class PluginAIChecker {
-	private getTextImprovementPrompt(
-		textType: "description" | "changelog",
-		locale: AILocale,
-	): string {
-		if (textType === "description") {
-			return `Улучши описание плагина ExteraGram: сделай его привлекательным, информативным и технически точным, используй Markdown, заголовки и списки уместно. Верни только улучшенный текст. ${languageDirective(locale)}`;
-		}
-
-		return `Улучши changelog плагина ExteraGram: сделай изменения конкретными и понятными, сгруппируй их по типам, используй Markdown. Верни только улучшенный текст. ${languageDirective(locale)}`;
-	}
-
 	private getAICollectionPrompt(locale: AILocale) {
 		return `Создай полезную тематическую подборку из 8–12 одобренных плагинов для exteraGram и exteraless. Поле exteralessCompatible показывает подтверждённую совместимость с exteraless. Не называй несовместимый или непроверенный плагин подходящим для exteraless. Выбирай только идентификаторы из предоставленного списка, учитывай релевантность, качество, популярность и разнообразие. ${languageDirective(locale)} Название и описание подборки должны быть на этом языке.`;
 	}
@@ -288,18 +283,17 @@ export class PluginAIChecker {
 
 	async improveText(
 		text: string,
-		textType: "description" | "changelog",
+		textType: EditorTextType,
 		budget: AiBudgetGrant,
 		pluginName?: string,
 		locale: AILocale = "ru",
 	): Promise<{ improvedText: string }> {
-		const improvedText = await generateAIText(
-			this.getTextImprovementPrompt(textType, locale),
-			`${pluginName ? `Плагин: ${pluginName}\n\n` : ""}Исходный текст:\n${text}`,
+		return generateAIObject(
+			editorTextOutputSchema(textType),
+			buildEditorImprovementInstructions(textType, locale),
+			buildEditorImprovementPrompt({ text, textType, pluginName }),
 			budget,
 		);
-
-		return { improvedText };
 	}
 
 	async checkSecurity(

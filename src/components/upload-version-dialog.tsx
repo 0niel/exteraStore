@@ -42,6 +42,7 @@ interface UploadVersionDialogProps {
 	pluginId: number;
 	onUploadSuccess: () => void;
 	pluginName?: string;
+	locale?: "ru" | "en";
 }
 
 interface UploadVersionForm {
@@ -55,6 +56,7 @@ export function UploadVersionDialog({
 	pluginId,
 	onUploadSuccess,
 	pluginName,
+	locale,
 }: UploadVersionDialogProps) {
 	const t = useTranslations("UploadVersionDialog");
 	const [open, setOpen] = useState(false);
@@ -291,6 +293,7 @@ export function UploadVersionDialog({
 											showImproveButton={true}
 											textType="changelog"
 											pluginName={pluginName}
+											improvementLocale={locale}
 										/>
 									</FormControl>
 									<FormDescription className="text-xs sm:text-sm">

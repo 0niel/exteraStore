@@ -33,6 +33,7 @@ import { PageHeader } from "~/components/page-header";
 import { PluginDependencyPicker } from "~/components/plugin-dependency-picker";
 import { ScreenshotUploader } from "~/components/screenshot-uploader";
 import { TagInput } from "~/components/tag-input";
+import { TextImprovementButton } from "~/components/text-improvement-button";
 import { Button } from "~/components/ui/button";
 import {
 	Card,
@@ -166,6 +167,7 @@ export default function UploadPluginPage() {
 
 	const watchedName = form.watch("name");
 	const watchedShortDescription = form.watch("shortDescription");
+	const watchedSourceLocale = form.watch("sourceLocale");
 	const [debouncedName] = useDebounce(watchedName, 300);
 	const { data: similar } = api.plugins.similarByName.useQuery(
 		{ name: debouncedName || "", limit: 5 },
@@ -524,15 +526,25 @@ export default function UploadPluginPage() {
 											name="shortDescription"
 											render={({ field }) => (
 												<FormItem>
-													<FormLabel>
-														{t("short_description_label")}
-														<span
-															className="text-destructive"
-															aria-hidden="true"
-														>
-															*
-														</span>
-													</FormLabel>
+													<div className="flex items-center justify-between gap-3">
+														<FormLabel>
+															{t("short_description_label")}
+															<span
+																className="text-destructive"
+																aria-hidden="true"
+															>
+																*
+															</span>
+														</FormLabel>
+														<TextImprovementButton
+															text={field.value}
+															textType="shortDescription"
+															pluginName={watchedName}
+															locale={watchedSourceLocale}
+															onImprovedText={field.onChange}
+															variant="ghost"
+														/>
+													</div>
 													<FormControl>
 														<Input
 															className="min-h-11"
@@ -567,7 +579,8 @@ export default function UploadPluginPage() {
 															height={300}
 															showImproveButton={true}
 															textType="description"
-															pluginName={form.watch("name")}
+															pluginName={watchedName}
+															improvementLocale={watchedSourceLocale}
 														/>
 													</FormControl>
 													<FormDescription className="text-xs">
@@ -638,7 +651,8 @@ export default function UploadPluginPage() {
 															placeholder={t("changelog_placeholder")}
 															showImproveButton={true}
 															textType="changelog"
-															pluginName={form.watch("name")}
+															pluginName={watchedName}
+															improvementLocale={watchedSourceLocale}
 														/>
 													</FormControl>
 													<FormDescription className="text-xs">

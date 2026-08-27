@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { MarkdownEditor } from "~/components/markdown-editor";
 import { TagInput } from "~/components/tag-input";
+import { TextImprovementButton } from "~/components/text-improvement-button";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import {
@@ -218,9 +219,21 @@ export function PluginTranslationEditor({ pluginId }: { pluginId: number }) {
 						/>
 					</div>
 					<div className="space-y-2">
-						<Label htmlFor={`translation-short-${activeLocale}`}>
-							{t("short_description")}
-						</Label>
+						<div className="flex items-center justify-between gap-3">
+							<Label htmlFor={`translation-short-${activeLocale}`}>
+								{t("short_description")}
+							</Label>
+							<TextImprovementButton
+								text={form.shortDescription}
+								textType="shortDescription"
+								pluginName={form.name}
+								locale={activeLocale}
+								onImprovedText={(shortDescription) =>
+									setForm((current) => ({ ...current, shortDescription }))
+								}
+								variant="ghost"
+							/>
+						</div>
 						<Input
 							id={`translation-short-${activeLocale}`}
 							value={form.shortDescription}
@@ -240,7 +253,9 @@ export function PluginTranslationEditor({ pluginId }: { pluginId: number }) {
 							onChange={(description) =>
 								setForm((current) => ({ ...current, description }))
 							}
-							showImproveButton={false}
+							showImproveButton={true}
+							pluginName={form.name}
+							improvementLocale={activeLocale}
 						/>
 					</div>
 					<div className="space-y-2">
@@ -268,9 +283,21 @@ export function PluginTranslationEditor({ pluginId }: { pluginId: number }) {
 							/>
 						</div>
 						<div className="space-y-2">
-							<Label htmlFor={`translation-changelog-${activeLocale}`}>
-								{t("changelog")}
-							</Label>
+							<div className="flex items-center justify-between gap-3">
+								<Label htmlFor={`translation-changelog-${activeLocale}`}>
+									{t("changelog")}
+								</Label>
+								<TextImprovementButton
+									text={form.changelog}
+									textType="changelog"
+									pluginName={form.name}
+									locale={activeLocale}
+									onImprovedText={(changelog) =>
+										setForm((current) => ({ ...current, changelog }))
+									}
+									variant="ghost"
+								/>
+							</div>
 							<Textarea
 								id={`translation-changelog-${activeLocale}`}
 								value={form.changelog}

@@ -42,6 +42,7 @@ import {
 } from "~/server/lib/content-localization";
 import { enqueueTranslationJobs } from "~/server/lib/content-translation-queue";
 import { emitWebhookEvent } from "~/server/lib/developer-platform";
+import { EDITOR_TEXT_TYPES } from "~/server/lib/editor-text";
 import { sendTelegramMessage } from "~/server/lib/telegram-client";
 import {
 	type AILocale,
@@ -550,7 +551,7 @@ export const pluginPipelineRouter = createTRPCRouter({
 					.string()
 					.min(1, "Текст не может быть пустым")
 					.max(20_000, "Текст слишком длинный"),
-				textType: z.enum(["description", "changelog"]),
+				textType: z.enum(EDITOR_TEXT_TYPES),
 				pluginName: z.string().max(256).optional(),
 				locale: z.enum(["en", "ru"]).default("ru"),
 			}),

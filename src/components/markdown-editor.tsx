@@ -18,6 +18,7 @@ import { TextImprovementButton } from "~/components/text-improvement-button";
 import { Button } from "~/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import { Textarea } from "~/components/ui/textarea";
+import type { EditorTextType } from "~/server/lib/editor-text";
 
 interface MarkdownEditorProps {
 	value: string;
@@ -25,8 +26,9 @@ interface MarkdownEditorProps {
 	height?: number;
 	placeholder?: string;
 	showImproveButton?: boolean;
-	textType?: "description" | "changelog";
+	textType?: EditorTextType;
 	pluginName?: string;
+	improvementLocale?: "ru" | "en";
 }
 
 export function MarkdownEditor({
@@ -37,6 +39,7 @@ export function MarkdownEditor({
 	showImproveButton = false,
 	textType = "description",
 	pluginName,
+	improvementLocale,
 }: MarkdownEditorProps) {
 	const t = useTranslations("MarkdownEditor");
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -110,6 +113,7 @@ export function MarkdownEditor({
 								text={value}
 								textType={textType}
 								pluginName={pluginName}
+								locale={improvementLocale}
 								onImprovedText={onChange}
 								size="sm"
 								variant="ghost"
@@ -137,6 +141,7 @@ export function MarkdownEditor({
 								text={value}
 								textType={textType}
 								pluginName={pluginName}
+								locale={improvementLocale}
 								onImprovedText={onChange}
 								size="sm"
 								variant="ghost"

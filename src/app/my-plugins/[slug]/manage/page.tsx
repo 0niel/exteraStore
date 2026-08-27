@@ -29,6 +29,7 @@ import { PluginManageVersions } from "~/components/plugin-manage-versions";
 import { PluginTranslationEditor } from "~/components/plugin-translation-editor";
 import { ScreenshotUploader } from "~/components/screenshot-uploader";
 import { TagInput } from "~/components/tag-input";
+import { TextImprovementButton } from "~/components/text-improvement-button";
 import {
 	AlertDialog,
 	AlertDialogAction,
@@ -338,9 +339,24 @@ export default function PluginManagePage() {
 											</p>
 										</div>
 										<div className="space-y-2">
-											<Label htmlFor="shortDescription">
-												{t("short_description_label")}
-											</Label>
+											<div className="flex items-center justify-between gap-3">
+												<Label htmlFor="shortDescription">
+													{t("short_description_label")}
+												</Label>
+												<TextImprovementButton
+													text={formData.shortDescription}
+													textType="shortDescription"
+													pluginName={formData.name}
+													locale={plugin.contentLocale === "en" ? "en" : "ru"}
+													onImprovedText={(shortDescription) =>
+														setFormData((current) => ({
+															...current,
+															shortDescription,
+														}))
+													}
+													variant="ghost"
+												/>
+											</div>
 											<Input
 												id="shortDescription"
 												className="min-h-11"
@@ -373,6 +389,9 @@ export default function PluginManagePage() {
 												showImproveButton={true}
 												textType="description"
 												pluginName={formData.name}
+												improvementLocale={
+													plugin.contentLocale === "en" ? "en" : "ru"
+												}
 											/>
 											<p className="text-muted-foreground text-xs">
 												{t("description_hint")}
@@ -602,6 +621,7 @@ export default function PluginManagePage() {
 									pluginId={plugin.id}
 									onUploadSuccess={() => refetch()}
 									pluginName={plugin.name}
+									locale={plugin.contentLocale === "en" ? "en" : "ru"}
 								/>
 							</CardHeader>
 							<CardContent>

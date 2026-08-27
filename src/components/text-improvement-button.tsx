@@ -6,12 +6,14 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
+import type { EditorTextType } from "~/server/lib/editor-text";
 import { api } from "~/trpc/react";
 
 interface TextImprovementButtonProps {
 	text: string;
-	textType: "description" | "changelog";
+	textType: EditorTextType;
 	pluginName?: string;
+	locale?: "ru" | "en";
 	onImprovedText: (improvedText: string) => void;
 	disabled?: boolean;
 	size?: "default" | "sm" | "lg" | "icon";
@@ -29,6 +31,7 @@ export function TextImprovementButton({
 	text,
 	textType,
 	pluginName,
+	locale: requestedLocale,
 	onImprovedText,
 	disabled = false,
 	size = "sm",
@@ -37,7 +40,8 @@ export function TextImprovementButton({
 }: TextImprovementButtonProps) {
 	const t = useTranslations("TextImprovement");
 	const tAi = useTranslations("AI");
-	const locale = useLocale();
+	const interfaceLocale = useLocale();
+	const locale = requestedLocale ?? (interfaceLocale === "en" ? "en" : "ru");
 	const [isImproving, setIsImproving] = useState(false);
 
 	const improveTextMutation = api.pluginPipeline.improveText.useMutation({
@@ -67,7 +71,7 @@ export function TextImprovementButton({
 			text: text.trim(),
 			textType,
 			pluginName,
-			locale: locale === "en" ? "en" : "ru",
+			locale,
 		});
 	};
 
