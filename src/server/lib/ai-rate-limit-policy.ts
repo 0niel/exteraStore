@@ -12,7 +12,7 @@ export const AI_FEATURE_LIMITS = {
 	worker_pipeline: { hourly: 50, daily: 200 },
 	collections: { hourly: 12, daily: 24 },
 	classification: { hourly: 5, daily: 20 },
-	content_translation: { hourly: 12, daily: 40 },
+	content_translation: { hourly: 12, daily: 80 },
 } as const;
 
 export type AiRateLimitFeature = keyof typeof AI_FEATURE_LIMITS;
