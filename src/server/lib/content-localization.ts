@@ -19,7 +19,11 @@ import {
 } from "~/server/db/schema";
 import { generateAIObject } from "~/server/lib/ai-client";
 import { consumeAiRateLimit } from "~/server/lib/ai-rate-limiter";
-import { isTranslationLanguageValid } from "~/server/lib/content-translation-quality";
+import {
+	areFieldsInTargetLanguage,
+	areTranslationFieldsValid,
+	isTranslationLanguageValid,
+} from "~/server/lib/content-translation-quality";
 
 export const contentLocaleSchema = z.enum(["ru", "en"]);
 export type ContentLocale = z.infer<typeof contentLocaleSchema>;
@@ -176,25 +180,35 @@ export function isPluginTranslationUsable(
 	>,
 	targetLocale: ContentLocale,
 ) {
-	return isTranslationLanguageValid({
-		source: translationText([
-			source.name,
+	return areTranslationFieldsValid(
+		[
+			{
+				source: source.shortDescription,
+				translated: translation.shortDescription,
+			},
+			{ source: source.description, translated: translation.description },
+			{ source: source.requirements, translated: translation.requirements },
+			{ source: source.changelog, translated: translation.changelog },
+			{ source: source.tags, translated: translation.tags },
+		],
+		targetLocale,
+	);
+}
+
+export function isPluginContentUsable(
+	source: PluginTranslationInput,
+	targetLocale: ContentLocale,
+) {
+	return areFieldsInTargetLanguage(
+		[
 			source.shortDescription,
 			source.description,
 			source.requirements,
 			source.changelog,
 			source.tags,
-		]),
-		translated: translationText([
-			translation.name,
-			translation.shortDescription,
-			translation.description,
-			translation.requirements,
-			translation.changelog,
-			translation.tags,
-		]),
+		],
 		targetLocale,
-	});
+	);
 }
 
 export function isCategoryTranslationUsable(
@@ -207,6 +221,16 @@ export function isCategoryTranslationUsable(
 		translated: translationText([translation.name, translation.description]),
 		targetLocale,
 	});
+}
+
+export function isCategoryContentUsable(
+	source: CategoryTranslationInput,
+	targetLocale: ContentLocale,
+) {
+	return areFieldsInTargetLanguage(
+		[source.name, source.description],
+		targetLocale,
+	);
 }
 
 export function isVersionTranslationUsable(
@@ -274,9 +298,8 @@ export async function generatePluginTranslation(
 	});
 
 	if (
-		existing?.origin === "manual" ||
-		(existing?.sourceHash === sourceHash &&
-			isPluginTranslationUsable(source, existing, targetLocale))
+		existing?.sourceHash === sourceHash &&
+		isPluginTranslationUsable(source, existing, targetLocale)
 	) {
 		return { translation: existing, generated: false };
 	}
@@ -354,9 +377,8 @@ export async function generateCategoryTranslation(
 	});
 
 	if (
-		existing?.origin === "manual" ||
-		(existing?.sourceHash === sourceHash &&
-			isCategoryTranslationUsable(source, existing, targetLocale))
+		existing?.sourceHash === sourceHash &&
+		isCategoryTranslationUsable(source, existing, targetLocale)
 	) {
 		return { translation: existing, generated: false };
 	}
@@ -734,17 +756,13 @@ export async function localizePluginRows<T extends PluginRow>(
 	const byPlugin = new Map(translations.map((item) => [item.pluginId, item]));
 
 	return rows.map((row) => {
-		if (row.contentLocale === locale)
+		const source = pluginTranslationInput(row);
+		if (row.contentLocale === locale && isPluginContentUsable(source, locale))
 			return { ...row, localizedLocale: locale };
 		const translation = byPlugin.get(row.id);
 		if (
 			!translation ||
-			(translation.origin !== "manual" &&
-				!isPluginTranslationUsable(
-					pluginTranslationInput(row),
-					translation,
-					locale,
-				))
+			!isPluginTranslationUsable(source, translation, locale)
 		) {
 			return { ...row, localizedLocale: null };
 		}
@@ -784,17 +802,13 @@ export async function localizeCategoryRows<T extends CategoryRow>(
 	);
 
 	return rows.map((row) => {
-		if (row.contentLocale === locale)
+		const source = categoryTranslationInput(row);
+		if (row.contentLocale === locale && isCategoryContentUsable(source, locale))
 			return { ...row, localizedLocale: locale };
 		const translation = byCategory.get(row.id);
 		if (
 			!translation ||
-			(translation.origin !== "manual" &&
-				!isCategoryTranslationUsable(
-					categoryTranslationInput(row),
-					translation,
-					locale,
-				))
+			!isCategoryTranslationUsable(source, translation, locale)
 		) {
 			return { ...row, localizedLocale: null };
 		}

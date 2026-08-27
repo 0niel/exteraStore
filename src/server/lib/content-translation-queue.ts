@@ -25,9 +25,11 @@ import {
 	generatePipelineCheckTranslation,
 	generatePluginTranslation,
 	generateVersionTranslation,
+	isCategoryContentUsable,
 	isCategoryTranslationUsable,
 	isCollectionTranslationUsable,
 	isPipelineCheckTranslationUsable,
+	isPluginContentUsable,
 	isPluginTranslationUsable,
 	isVersionTranslationUsable,
 	pipelineCheckSourceHash,
@@ -114,21 +116,25 @@ async function missingPluginJobs(database: Database) {
 		translations.map((row) => [`${row.pluginId}:${row.locale}`, row]),
 	);
 	return rows.flatMap((row): TranslationJob[] => {
-		const target = targetLocale(row.contentLocale);
-		const translation = target ? existing.get(`${row.id}:${target}`) : null;
-		const stale =
-			translation?.origin === "ai" &&
-			target &&
-			(translation.sourceHash !==
-				pluginSourceHash(pluginTranslationInput(row)) ||
-				!isPluginTranslationUsable(
-					pluginTranslationInput(row),
-					translation,
-					target,
-				));
-		return target && (!translation || stale)
-			? [{ entityType: "plugin", entityId: row.id, targetLocale: target }]
-			: [];
+		const source = pluginTranslationInput(row);
+		const declared =
+			row.contentLocale === "ru" || row.contentLocale === "en"
+				? row.contentLocale
+				: null;
+		const targets = [
+			targetLocale(row.contentLocale),
+			declared && !isPluginContentUsable(source, declared) ? declared : null,
+		].filter((target): target is ContentLocale => Boolean(target));
+		return targets.flatMap((target): TranslationJob[] => {
+			const translation = existing.get(`${row.id}:${target}`);
+			const stale =
+				translation?.origin === "ai" &&
+				(translation.sourceHash !== pluginSourceHash(source) ||
+					!isPluginTranslationUsable(source, translation, target));
+			return !translation || stale
+				? [{ entityType: "plugin", entityId: row.id, targetLocale: target }]
+				: [];
+		});
 	});
 }
 
@@ -141,21 +147,25 @@ async function missingCategoryJobs(database: Database) {
 		translations.map((row) => [`${row.categoryId}:${row.locale}`, row]),
 	);
 	return rows.flatMap((row): TranslationJob[] => {
-		const target = targetLocale(row.contentLocale);
-		const translation = target ? existing.get(`${row.id}:${target}`) : null;
-		const stale =
-			translation?.origin === "ai" &&
-			target &&
-			(translation.sourceHash !==
-				categorySourceHash(categoryTranslationInput(row)) ||
-				!isCategoryTranslationUsable(
-					categoryTranslationInput(row),
-					translation,
-					target,
-				));
-		return target && (!translation || stale)
-			? [{ entityType: "category", entityId: row.id, targetLocale: target }]
-			: [];
+		const source = categoryTranslationInput(row);
+		const declared =
+			row.contentLocale === "ru" || row.contentLocale === "en"
+				? row.contentLocale
+				: null;
+		const targets = [
+			targetLocale(row.contentLocale),
+			declared && !isCategoryContentUsable(source, declared) ? declared : null,
+		].filter((target): target is ContentLocale => Boolean(target));
+		return targets.flatMap((target): TranslationJob[] => {
+			const translation = existing.get(`${row.id}:${target}`);
+			const stale =
+				translation?.origin === "ai" &&
+				(translation.sourceHash !== categorySourceHash(source) ||
+					!isCategoryTranslationUsable(source, translation, target));
+			return !translation || stale
+				? [{ entityType: "category", entityId: row.id, targetLocale: target }]
+				: [];
+		});
 	});
 }
 

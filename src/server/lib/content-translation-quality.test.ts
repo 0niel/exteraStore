@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isTranslationLanguageValid } from "./content-translation-quality";
+import {
+	areFieldsInTargetLanguage,
+	areTranslationFieldsValid,
+	isTargetLanguageValid,
+	isTranslationLanguageValid,
+} from "./content-translation-quality";
 
 test("rejects unchanged Russian content stored as English", () => {
 	assert.equal(
@@ -59,5 +64,58 @@ test("allows language-neutral identifiers", () => {
 			targetLocale: "ru",
 		}),
 		true,
+	);
+});
+
+test("validates the requested language without a source translation", () => {
+	assert.equal(
+		isTargetLanguageValid("Добавляет панель инструментов", "en"),
+		false,
+	);
+	assert.equal(isTargetLanguageValid("Adds a text toolbar", "en"), true);
+	assert.equal(isTargetLanguageValid("Adds a text toolbar", "ru"), false);
+	assert.equal(
+		isTargetLanguageValid("Добавляет панель инструментов", "ru"),
+		true,
+	);
+});
+
+test("rejects a missing translated field", () => {
+	assert.equal(
+		isTranslationLanguageValid({
+			source: "Добавляет панель инструментов",
+			translated: "",
+			targetLocale: "en",
+		}),
+		false,
+	);
+});
+
+test("rejects a mixed-language field even when the other fields are translated", () => {
+	assert.equal(
+		areTranslationFieldsValid(
+			[
+				{
+					source: "Описание плагина",
+					translated: "Plugin description",
+				},
+				{
+					source: "Панель инструментов",
+					translated: "Панель инструментов",
+				},
+			],
+			"en",
+		),
+		false,
+	);
+});
+
+test("detects mixed-language source fields for same-locale normalization", () => {
+	assert.equal(
+		areFieldsInTargetLanguage(
+			["Plugin description", '["автоматизация", "текст"]'],
+			"en",
+		),
+		false,
 	);
 });
