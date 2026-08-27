@@ -42,9 +42,13 @@ export function resolveContentLocale(input: {
 	const explicit = input.explicit?.toLowerCase();
 	if (isSupportedLocale(explicit)) return explicit;
 
-	const cookieLocale = input.cookie?.match(
+	const currentCookieLocale = input.cookie?.match(
+		/(?:^|;\s*)locale=(ru|en)(?:;|$)/,
+	)?.[1];
+	const legacyCookieLocale = input.cookie?.match(
 		/(?:^|;\s*)NEXT_LOCALE=(ru|en)(?:;|$)/,
 	)?.[1];
+	const cookieLocale = currentCookieLocale ?? legacyCookieLocale;
 	if (isSupportedLocale(cookieLocale)) return cookieLocale;
 
 	return resolveLocaleFromAcceptLanguage(input.acceptLanguage ?? null);

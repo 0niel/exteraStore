@@ -18,7 +18,9 @@ import {
 	pluginVersions,
 } from "~/server/db/schema";
 import { consumeAiRateLimit } from "~/server/lib/ai-rate-limiter";
+import type { ContentLocale } from "~/server/lib/content-localization";
 import {
+	enqueueMissingTranslations,
 	enqueueTranslationJobs,
 	processContentTranslationQueue,
 } from "~/server/lib/content-translation-queue";
@@ -73,6 +75,14 @@ function nowSeconds() {
 	return Math.floor(Date.now() / 1000);
 }
 
+function contentLocale(value: string): ContentLocale {
+	return value === "en" ? "en" : "ru";
+}
+
+function targetLocale(locale: ContentLocale): ContentLocale {
+	return locale === "ru" ? "en" : "ru";
+}
+
 async function loadLatestVersion(pluginId: number) {
 	const rows = await db
 		.select({
@@ -101,7 +111,12 @@ async function failQueueItem(queueId: number, message: string) {
 
 async function handleClaim(limit: number) {
 	const now = nowSeconds();
-	const translations = await processContentTranslationQueue(db, 2);
+	const enqueuedTranslations = await enqueueMissingTranslations(db, "all");
+	const processedTranslations = await processContentTranslationQueue(db, 2);
+	const translations = {
+		enqueued: enqueuedTranslations,
+		processed: processedTranslations,
+	};
 
 	const candidates = await db
 		.select({
@@ -152,6 +167,7 @@ async function handleClaim(limit: number) {
 				description: plugins.description,
 				category: plugins.category,
 				slug: plugins.slug,
+				contentLocale: plugins.contentLocale,
 			})
 			.from(plugins)
 			.where(eq(plugins.id, candidate.pluginId))
@@ -190,7 +206,7 @@ async function handleClaim(limit: number) {
 					category: plugin.category,
 					version: latestVersion.version,
 					code: latestVersion.fileContent,
-					locale: "ru",
+					locale: contentLocale(plugin.contentLocale),
 				}),
 			})),
 		});
@@ -204,6 +220,7 @@ async function insertErrorCheck(
 	checkType: CheckType,
 	version: string,
 	message: string,
+	locale: ContentLocale,
 ) {
 	await db.insert(pluginPipelineChecks).values({
 		pluginId,
@@ -212,6 +229,7 @@ async function insertErrorCheck(
 		errorMessage: message.slice(0, 500),
 		llmModel: env.OPENROUTER_MODEL,
 		llmPrompt: `Version: ${version}`,
+		contentLocale: locale,
 		completedAt: nowSeconds(),
 	});
 }
@@ -227,8 +245,10 @@ async function handleSubmit(
 			.select({
 				id: pluginPipelineQueue.id,
 				pluginId: pluginPipelineQueue.pluginId,
+				contentLocale: plugins.contentLocale,
 			})
 			.from(pluginPipelineQueue)
+			.innerJoin(plugins, eq(pluginPipelineQueue.pluginId, plugins.id))
 			.where(eq(pluginPipelineQueue.id, result.queueId))
 			.limit(1);
 
@@ -239,6 +259,7 @@ async function handleSubmit(
 
 		const latestVersion = await loadLatestVersion(queueItem.pluginId);
 		const version = latestVersion?.version ?? "unknown";
+		const locale = contentLocale(queueItem.contentLocale);
 
 		if (result.error) {
 			for (const checkType of CHECK_TYPES) {
@@ -247,6 +268,7 @@ async function handleSubmit(
 					checkType,
 					version,
 					result.error,
+					locale,
 				);
 			}
 			await failQueueItem(queueItem.id, result.error);
@@ -262,7 +284,7 @@ async function handleSubmit(
 				const parsed = parseCheckResults(
 					check.checkType,
 					check.responses,
-					"ru",
+					locale,
 				);
 
 				const [createdCheck] = await db
@@ -277,6 +299,7 @@ async function handleSubmit(
 						details: parsed.details,
 						llmModel: env.OPENROUTER_MODEL,
 						llmPrompt: `Version: ${version}`,
+						contentLocale: locale,
 						completedAt: nowSeconds(),
 					})
 					.returning({ id: pluginPipelineChecks.id });
@@ -285,7 +308,7 @@ async function handleSubmit(
 						{
 							entityType: "pipeline_check",
 							entityId: createdCheck.id,
-							targetLocale: "en",
+							targetLocale: targetLocale(locale),
 						},
 					]);
 				}
@@ -300,6 +323,7 @@ async function handleSubmit(
 					check.checkType,
 					version,
 					"Failed to parse AI response",
+					locale,
 				);
 			}
 		}

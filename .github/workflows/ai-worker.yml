@@ -129,6 +129,7 @@ jobs:
           }
 
           const jobs = Array.isArray(claim?.jobs) ? claim.jobs : [];
+          console.log(`translation queue: ${JSON.stringify(claim?.translations ?? {})}`);
           console.log(`claimed ${jobs.length} job(s), model ${model}`);
           if (jobs.length === 0) {
             process.exit(0);

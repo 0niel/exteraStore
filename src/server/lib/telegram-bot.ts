@@ -1,4 +1,4 @@
-import { and, desc, eq, like, or, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { env } from "~/env";
 import { getCategoryEmoji } from "~/lib/category-icon";
 import { createValidDate, escapeHtml } from "~/lib/utils";
@@ -8,10 +8,15 @@ import {
 	pluginCategories,
 	pluginDownloads,
 	plugins,
+	pluginTranslations,
 	pluginVersions,
 	userPluginSubscriptions,
 	users,
 } from "~/server/db/schema";
+import {
+	localizeCategoryRows,
+	localizePluginRows,
+} from "~/server/lib/content-localization";
 import { getPluginInstallPlan } from "~/server/lib/plugin-dependencies";
 import { checkDownloadRateLimit, hashIp } from "~/server/lib/rate-limiter";
 import {
@@ -271,7 +276,7 @@ async function handlePluginDownload(
 			.limit(1);
 		const internalUserId = telegramUser[0]?.id;
 		const rateLimitIp = internalUserId ? null : `telegram:${userId}`;
-		const installPlan = await getPluginInstallPlan(db, plugin[0].id);
+		const installPlan = await getPluginInstallPlan(db, plugin[0].id, locale);
 		const packages = await Promise.all(
 			installPlan.map(async (planPlugin) => {
 				const requestedVersion = planPlugin.isRequestedPlugin
@@ -865,8 +870,17 @@ async function handleUnsubscribe(
 			);
 
 		const plugin = await db
-			.select({ name: plugins.name })
+			.select({
+				name: sql<string>`coalesce(${pluginTranslations.name}, ${plugins.name})`,
+			})
 			.from(plugins)
+			.leftJoin(
+				pluginTranslations,
+				and(
+					eq(pluginTranslations.pluginId, plugins.id),
+					eq(pluginTranslations.locale, locale),
+				),
+			)
 			.where(eq(plugins.id, pluginId))
 			.limit(1);
 
@@ -897,23 +911,40 @@ async function handleSearch(
 	try {
 		const limit = 5;
 		const offset = page * limit;
+		const safeQuery = escapeHtml(query);
 
-		const searchResults = await db
-			.select()
+		const searchRows = await db
+			.select({ plugin: plugins })
 			.from(plugins)
+			.leftJoin(
+				pluginTranslations,
+				and(
+					eq(pluginTranslations.pluginId, plugins.id),
+					eq(pluginTranslations.locale, locale),
+				),
+			)
 			.where(
 				and(
 					eq(plugins.status, "approved"),
 					or(
-						like(plugins.name, `%${query}%`),
-						like(plugins.description, `%${query}%`),
-						like(plugins.shortDescription, `%${query}%`),
-						like(plugins.tags, `%${query}%`),
+						ilike(plugins.name, `%${query}%`),
+						ilike(plugins.description, `%${query}%`),
+						ilike(plugins.shortDescription, `%${query}%`),
+						ilike(plugins.tags, `%${query}%`),
+						ilike(pluginTranslations.name, `%${query}%`),
+						ilike(pluginTranslations.description, `%${query}%`),
+						ilike(pluginTranslations.shortDescription, `%${query}%`),
+						ilike(pluginTranslations.tags, `%${query}%`),
 					),
 				),
 			)
 			.limit(limit + 1)
 			.offset(offset);
+		const searchResults = await localizePluginRows(
+			db,
+			searchRows.map((row) => row.plugin),
+			locale,
+		);
 
 		const hasMore = searchResults.length > limit;
 		const results = hasMore ? searchResults.slice(0, limit) : searchResults;
@@ -921,8 +952,8 @@ async function handleSearch(
 		if (results.length === 0) {
 			const message = botText(
 				locale,
-				`🔍 <b>Поиск: "${query}"</b>\n\n❌ Плагины не найдены.\n\nПопробуйте изменить запрос.`,
-				`🔍 <b>Search: "${query}"</b>\n\n❌ No plugins found.\n\nTry a different query.`,
+				`🔍 <b>Поиск: "${safeQuery}"</b>\n\n❌ Плагины не найдены.\n\nПопробуйте изменить запрос.`,
+				`🔍 <b>Search: "${safeQuery}"</b>\n\n❌ No plugins found.\n\nTry a different query.`,
 			);
 			const keyboard = {
 				inline_keyboard: [
@@ -945,8 +976,8 @@ async function handleSearch(
 
 		let message = botText(
 			locale,
-			`🔍 <b>Поиск: "${query}"</b>\n\n📦 Найдено ${results.length} ${pluginCountLabel(results.length, locale)}:\n\n`,
-			`🔍 <b>Search: "${query}"</b>\n\n📦 Found ${results.length} ${pluginCountLabel(results.length, locale)}:\n\n`,
+			`🔍 <b>Поиск: "${safeQuery}"</b>\n\n📦 Найдено ${results.length} ${pluginCountLabel(results.length, locale)}:\n\n`,
+			`🔍 <b>Search: "${safeQuery}"</b>\n\n📦 Found ${results.length} ${pluginCountLabel(results.length, locale)}:\n\n`,
 		);
 
 		results.forEach((plugin: typeof Plugin.$inferSelect, index: number) => {
@@ -1038,7 +1069,11 @@ async function showCategories(
 			.offset(offset);
 
 		const hasMore = categories.length > limit;
-		const pageCategories = hasMore ? categories.slice(0, limit) : categories;
+		const pageCategories = await localizeCategoryRows(
+			db,
+			hasMore ? categories.slice(0, limit) : categories,
+			locale,
+		);
 
 		const totalCount = await db
 			.select({ count: sql<number>`count(*)` })
@@ -1147,7 +1182,8 @@ async function showPluginsByCategory(
 			return;
 		}
 
-		const category = categoryInfo[0];
+		const [category] = await localizeCategoryRows(db, categoryInfo, locale);
+		if (!category) return;
 
 		const categoryPlugins = await db
 			.select()
@@ -1159,12 +1195,16 @@ async function showPluginsByCategory(
 			.offset(offset);
 
 		const hasMore = categoryPlugins.length > limit;
-		const results = hasMore ? categoryPlugins.slice(0, limit) : categoryPlugins;
+		const results = await localizePluginRows(
+			db,
+			hasMore ? categoryPlugins.slice(0, limit) : categoryPlugins,
+			locale,
+		);
 
 		let message = `${getCategoryEmoji(category.icon, category.slug)} <b>${botText(locale, "Категория", "Category")}: ${escapeHtml(category.name)}</b>\n\n`;
 
 		if (category.description) {
-			message += `${category.description}\n\n`;
+			message += `${escapeHtml(category.description)}\n\n`;
 		}
 
 		if (results.length === 0) {
@@ -1181,8 +1221,12 @@ async function showPluginsByCategory(
 			);
 
 			results.forEach((plugin: typeof Plugin.$inferSelect, index: number) => {
-				message += `${index + 1 + offset}. <b>${plugin.name}</b>\n`;
-				message += `   📝 ${plugin.shortDescription || plugin.description.substring(0, 50)}...\n`;
+				const safeName = escapeHtml(plugin.name);
+				const safeDescription = escapeHtml(
+					plugin.shortDescription || plugin.description.substring(0, 50),
+				);
+				message += `${index + 1 + offset}. <b>${safeName}</b>\n`;
+				message += `   📝 ${safeDescription}...\n`;
 				message += `   ${pluginRating(plugin, locale)} • ⬇️ ${plugin.downloadCount}\n\n`;
 			});
 		}
@@ -1270,7 +1314,11 @@ async function showPopularPlugins(
 			.offset(offset);
 
 		const hasMore = popularPlugins.length > limit;
-		const results = hasMore ? popularPlugins.slice(0, limit) : popularPlugins;
+		const results = await localizePluginRows(
+			db,
+			hasMore ? popularPlugins.slice(0, limit) : popularPlugins,
+			locale,
+		);
 
 		let message = botText(
 			locale,
@@ -1370,7 +1418,11 @@ async function showRecentPlugins(
 			.offset(offset);
 
 		const hasMore = recentPlugins.length > limit;
-		const results = hasMore ? recentPlugins.slice(0, limit) : recentPlugins;
+		const results = await localizePluginRows(
+			db,
+			hasMore ? recentPlugins.slice(0, limit) : recentPlugins,
+			locale,
+		);
 
 		let message = botText(
 			locale,
@@ -1567,7 +1619,8 @@ async function showPluginDetails(
 			return;
 		}
 
-		const p = plugin[0];
+		const [p] = await localizePluginRows(db, plugin, locale);
+		if (!p) return;
 		const safeName = escapeHtml(p.name);
 		const safeDesc = escapeHtml(p.description);
 		const safeAuthor = escapeHtml(p.author);

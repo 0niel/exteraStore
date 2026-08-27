@@ -26,10 +26,24 @@ test("content locale uses explicit, cookie and language preferences in order", (
 	);
 	assert.equal(
 		resolveContentLocale({
-			cookie: "theme=dark; NEXT_LOCALE=ru",
+			cookie: "theme=dark; locale=ru",
 			acceptLanguage: "en-US",
 		}),
 		"ru",
+	);
+	assert.equal(
+		resolveContentLocale({
+			cookie: "NEXT_LOCALE=ru",
+			acceptLanguage: "en-US",
+		}),
+		"ru",
+	);
+	assert.equal(
+		resolveContentLocale({
+			cookie: "NEXT_LOCALE=ru; locale=en",
+			acceptLanguage: "ru-RU",
+		}),
+		"en",
 	);
 	assert.equal(
 		resolveContentLocale({ acceptLanguage: "ru;q=0.4, en;q=0.9" }),

@@ -10,6 +10,10 @@ const apiRoot = readFileSync(
 	new URL("../api/root.ts", import.meta.url),
 	"utf8",
 );
+const workerSource = readFileSync(
+	new URL("../../app/api/ai-worker/route.ts", import.meta.url),
+	"utf8",
+);
 
 test("Telegram responses derive locale from the sender language", () => {
 	assert.match(botSource, /callbackQuery\.from\.language_code/);
@@ -21,4 +25,21 @@ test("Telegram responses derive locale from the sender language", () => {
 test("the spoofable legacy Telegram tRPC router is not exposed", () => {
 	assert.doesNotMatch(apiRoot, /telegramBotRouter/);
 	assert.doesNotMatch(apiRoot, /telegramBot:/);
+});
+
+test("Telegram bot localizes dynamic marketplace content", () => {
+	assert.match(botSource, /localizePluginRows/);
+	assert.match(botSource, /localizeCategoryRows/);
+	assert.match(
+		botSource,
+		/getPluginInstallPlan\(db, plugin\[0\]\.id, locale\)/,
+	);
+	assert.match(botSource, /eq\(pluginTranslations\.locale, locale\)/);
+});
+
+test("AI worker backfills all translations and preserves source language", () => {
+	assert.match(workerSource, /enqueueMissingTranslations\(db, "all"\)/);
+	assert.match(workerSource, /contentLocale: locale/);
+	assert.match(workerSource, /targetLocale: targetLocale\(locale\)/);
+	assert.doesNotMatch(workerSource, /locale: "ru"/);
 });
