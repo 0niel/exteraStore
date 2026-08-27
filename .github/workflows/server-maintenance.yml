@@ -133,7 +133,7 @@ jobs:
           if [ -n "$WORKER_ID" ]; then
             docker_cmd inspect --format 'status={{.State.Status}} started={{.State.StartedAt}} restarts={{.RestartCount}} oom={{.State.OOMKilled}} exit={{.State.ExitCode}} error={{.State.Error}}' "$WORKER_ID"
             docker_cmd stats --no-stream --format 'cpu={{.CPUPerc}} memory={{.MemUsage}} memory_percent={{.MemPerc}} pids={{.PIDs}}' "$WORKER_ID"
-            docker_cmd compose logs --tail 100 translation-worker 2>&1 | grep -Eo '"claimed":[0-9]+|"completed":[0-9]+|"skipped":[0-9]+|"failed":[0-9]+|"limited":(true|false)|AI_TRANSLATION_[A-Z_]+' | tail -30 || echo "no translation metrics yet"
+            docker_cmd compose logs --tail 100 translation-worker 2>&1 | grep -Eo '"claimed":[0-9]+|"completed":[0-9]+|"skipped":[0-9]+|"failed":[0-9]+|"limited":(true|false)|AI_TRANSLATION_[A-Z_]+(:[0-9]+)?' | tail -30 || echo "no translation metrics yet"
           else
             echo "translation worker container not found"
           fi
@@ -163,7 +163,7 @@ jobs:
         run: |
           SERVER_PORT="${SERVER_PORT:-22}"
           metrics=$(ssh -p "$SERVER_PORT" -i ~/.ssh/deploy_key -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
-            "$SERVER_USER@$SERVER_HOST" "cd ~/exterastore && source scripts/docker-cmd.sh && docker_cmd compose logs --tail 150 translation-worker 2>&1 | grep -Eio '\"claimed\":[0-9]+|\"completed\":[0-9]+|\"skipped\":[0-9]+|\"failed\":[0-9]+|\"limited\":(true|false)|AI_TRANSLATION_[A-Z_]+|translation worker (requesting|failed)|worker responded [0-9]+|operation was aborted|timed? ?out|fetch failed' | tail -40" || true)
+            "$SERVER_USER@$SERVER_HOST" "cd ~/exterastore && source scripts/docker-cmd.sh && docker_cmd compose logs --tail 150 translation-worker 2>&1 | grep -Eio '\"claimed\":[0-9]+|\"completed\":[0-9]+|\"skipped\":[0-9]+|\"failed\":[0-9]+|\"limited\":(true|false)|AI_TRANSLATION_[A-Z_]+(:[0-9]+)?|translation worker (requesting|failed)|worker responded [0-9]+|operation was aborted|timed? ?out|fetch failed' | tail -40" || true)
           if [ -z "$metrics" ]; then
             metrics="no translation metrics yet"
           fi

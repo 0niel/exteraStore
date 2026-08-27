@@ -19,6 +19,7 @@ import {
 } from "~/server/db/schema";
 import { generateAIObject } from "~/server/lib/ai-client";
 import { consumeAiRateLimit } from "~/server/lib/ai-rate-limiter";
+import { ContentTranslationRateLimitError } from "~/server/lib/content-translation-policy";
 import {
 	areFieldsInTargetLanguage,
 	areTranslationFieldsValid,
@@ -309,7 +310,9 @@ export async function generatePluginTranslation(
 		subjectKey,
 		"content_translation",
 	);
-	if (limit.limited) throw new Error("AI_TRANSLATION_RATE_LIMITED");
+	if (limit.limited) {
+		throw new ContentTranslationRateLimitError(limit.resetAt);
+	}
 
 	const translated = await generateAIObject(
 		pluginTranslationOutputSchema,
@@ -388,7 +391,9 @@ export async function generateCategoryTranslation(
 		subjectKey,
 		"content_translation",
 	);
-	if (limit.limited) throw new Error("AI_TRANSLATION_RATE_LIMITED");
+	if (limit.limited) {
+		throw new ContentTranslationRateLimitError(limit.resetAt);
+	}
 
 	const translated = await generateAIObject(
 		categoryTranslationOutputSchema,
@@ -455,7 +460,9 @@ export async function generateVersionTranslation(
 		input.subjectKey,
 		"content_translation",
 	);
-	if (limit.limited) throw new Error("AI_TRANSLATION_RATE_LIMITED");
+	if (limit.limited) {
+		throw new ContentTranslationRateLimitError(limit.resetAt);
+	}
 	const translated = await generateAIObject(
 		versionTranslationOutputSchema,
 		`${TRANSLATION_INSTRUCTIONS} Target language: ${targetLanguage(input.targetLocale)}.`,
@@ -521,7 +528,9 @@ export async function generatePipelineCheckTranslation(
 		subjectKey,
 		"content_translation",
 	);
-	if (limit.limited) throw new Error("AI_TRANSLATION_RATE_LIMITED");
+	if (limit.limited) {
+		throw new ContentTranslationRateLimitError(limit.resetAt);
+	}
 
 	const parsedDetails = parsePipelineDetails(check.details);
 	const translated = await generateAIObject(
@@ -618,7 +627,9 @@ export async function generateCollectionTranslation(
 		subjectKey,
 		"content_translation",
 	);
-	if (limit.limited) throw new Error("AI_TRANSLATION_RATE_LIMITED");
+	if (limit.limited) {
+		throw new ContentTranslationRateLimitError(limit.resetAt);
+	}
 	const translated = await generateAIObject(
 		collectionTranslationOutputSchema,
 		`${TRANSLATION_INSTRUCTIONS} Target language: ${targetLanguage(targetLocale)}.`,

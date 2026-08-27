@@ -38,8 +38,10 @@ import {
 	versionSourceHash,
 } from "~/server/lib/content-localization";
 import {
+	ContentTranslationRateLimitError,
 	normalizeTranslationBatchSize,
 	type TranslationEntityType,
+	translationRetryAt,
 } from "~/server/lib/content-translation-policy";
 
 export type { TranslationEntityType } from "~/server/lib/content-translation-policy";
@@ -468,12 +470,13 @@ export async function processContentTranslationQueue(
 		} catch (error) {
 			const message =
 				error instanceof Error ? error.message : "Translation failed";
-			if (message === "AI_TRANSLATION_RATE_LIMITED") {
+			if (error instanceof ContentTranslationRateLimitError) {
+				const resetAt = translationRetryAt(nowSeconds(), error.resetAt);
 				await database
 					.update(contentTranslationQueue)
 					.set({
 						status: "pending",
-						availableAt: nowSeconds() + 10 * 60,
+						availableAt: resetAt,
 						errorMessage: null,
 						updatedAt: nowSeconds(),
 					})
@@ -486,7 +489,7 @@ export async function processContentTranslationQueue(
 					targetLocale: claimed.targetLocale,
 					label: null,
 					status: "limited",
-					error: message,
+					error: `${message}:${resetAt}`,
 				});
 				break;
 			}

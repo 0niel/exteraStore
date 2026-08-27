@@ -16,6 +16,21 @@ export const ADMIN_TRANSLATION_BATCH_SIZE = 1;
 export const BACKGROUND_TRANSLATION_BATCH_SIZE = 2;
 export const PIPELINE_TRANSLATION_BATCH_SIZE = 1;
 export const MAX_TRANSLATION_BATCH_SIZE = 12;
+export const MIN_TRANSLATION_RETRY_SECONDS = 60;
+
+export class ContentTranslationRateLimitError extends Error {
+	readonly resetAt: number;
+
+	constructor(resetAt: number) {
+		super("AI_TRANSLATION_RATE_LIMITED");
+		this.name = "ContentTranslationRateLimitError";
+		this.resetAt = resetAt;
+	}
+}
+
+export function translationRetryAt(now: number, resetAt: number) {
+	return Math.max(now + MIN_TRANSLATION_RETRY_SECONDS, resetAt);
+}
 
 export function entityTypesForTranslationScope(
 	scope: TranslationScope,
