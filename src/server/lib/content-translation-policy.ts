@@ -12,9 +12,9 @@ export const translationEntityTypes = [
 
 export type TranslationEntityType = (typeof translationEntityTypes)[number];
 
-export const ADMIN_TRANSLATION_BATCH_SIZE = 5;
-export const BACKGROUND_TRANSLATION_BATCH_SIZE = 12;
-export const PIPELINE_TRANSLATION_BATCH_SIZE = 5;
+export const ADMIN_TRANSLATION_BATCH_SIZE = 1;
+export const BACKGROUND_TRANSLATION_BATCH_SIZE = 2;
+export const PIPELINE_TRANSLATION_BATCH_SIZE = 1;
 export const MAX_TRANSLATION_BATCH_SIZE = 12;
 
 export function entityTypesForTranslationScope(

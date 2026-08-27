@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+	ADMIN_TRANSLATION_BATCH_SIZE,
+	BACKGROUND_TRANSLATION_BATCH_SIZE,
 	entityTypesForTranslationScope,
 	MAX_TRANSLATION_BATCH_SIZE,
 	normalizeTranslationBatchSize,
+	PIPELINE_TRANSLATION_BATCH_SIZE,
 } from "./content-translation-policy";
 
 test("translation scopes prioritize visible marketplace content", () => {
@@ -25,4 +28,11 @@ test("translation batch size stays within the configured spending boundary", () 
 		normalizeTranslationBatchSize(MAX_TRANSLATION_BATCH_SIZE + 10),
 		MAX_TRANSLATION_BATCH_SIZE,
 	);
+});
+
+test("translation request batches finish within their HTTP timeout budgets", () => {
+	assert.equal(ADMIN_TRANSLATION_BATCH_SIZE, 1);
+	assert.equal(BACKGROUND_TRANSLATION_BATCH_SIZE, 2);
+	assert.equal(PIPELINE_TRANSLATION_BATCH_SIZE, 1);
+	assert.equal(BACKGROUND_TRANSLATION_BATCH_SIZE * 6, 12);
 });

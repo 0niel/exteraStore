@@ -158,13 +158,14 @@ services:
         let discover = true;
         async function run() {
           try {
+            console.log(`translation worker requesting $${discover ? "discovery" : "batch"}`);
             const response = await fetch(url, {
               method: "POST",
               headers: {
                 authorization: `Bearer $${secret}`,
                 "content-type": "application/json",
               },
-              body: JSON.stringify({ action: "translate", scope: "all", limit: 12, discover }),
+              body: JSON.stringify({ action: "translate", scope: "all", limit: 2, discover }),
               signal: AbortSignal.timeout(300000),
             });
             const body = await response.text();
