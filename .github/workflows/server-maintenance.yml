@@ -128,6 +128,15 @@ jobs:
           else
             echo "app container not found"
           fi
+          echo "=== translation worker ==="
+          WORKER_ID=$(docker_cmd compose ps -q translation-worker)
+          if [ -n "$WORKER_ID" ]; then
+            docker_cmd inspect --format 'status={{.State.Status}} started={{.State.StartedAt}} restarts={{.RestartCount}} oom={{.State.OOMKilled}} exit={{.State.ExitCode}} error={{.State.Error}}' "$WORKER_ID"
+            docker_cmd stats --no-stream --format 'cpu={{.CPUPerc}} memory={{.MemUsage}} memory_percent={{.MemPerc}} pids={{.PIDs}}' "$WORKER_ID"
+            docker_cmd compose logs --tail 100 translation-worker 2>&1 | grep -Eo '"claimed":[0-9]+|"completed":[0-9]+|"skipped":[0-9]+|"failed":[0-9]+|"limited":(true|false)|AI_TRANSLATION_[A-Z_]+' | tail -30 || echo "no translation metrics yet"
+          else
+            echo "translation worker container not found"
+          fi
           echo "=== local health ==="
           if [ -n "$APP_ID" ]; then
             docker_cmd exec "$APP_ID" node -e "fetch('http://127.0.0.1:3000/api/health',{signal:AbortSignal.timeout(8000)}).then(async r=>{console.log(r.status,await r.text())}).catch(e=>{console.error(e);process.exit(1)})" || echo "local health check failed"
