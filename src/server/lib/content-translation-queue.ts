@@ -25,6 +25,11 @@ import {
 	generatePipelineCheckTranslation,
 	generatePluginTranslation,
 	generateVersionTranslation,
+	isCategoryTranslationUsable,
+	isCollectionTranslationUsable,
+	isPipelineCheckTranslationUsable,
+	isPluginTranslationUsable,
+	isVersionTranslationUsable,
 	pipelineCheckSourceHash,
 	pluginSourceHash,
 	pluginTranslationInput,
@@ -104,14 +109,7 @@ async function missingPluginJobs(database: Database) {
 		.select()
 		.from(plugins)
 		.where(eq(plugins.status, "approved"));
-	const translations = await database
-		.select({
-			pluginId: pluginTranslations.pluginId,
-			locale: pluginTranslations.locale,
-			origin: pluginTranslations.origin,
-			sourceHash: pluginTranslations.sourceHash,
-		})
-		.from(pluginTranslations);
+	const translations = await database.select().from(pluginTranslations);
 	const existing = new Map(
 		translations.map((row) => [`${row.pluginId}:${row.locale}`, row]),
 	);
@@ -120,7 +118,14 @@ async function missingPluginJobs(database: Database) {
 		const translation = target ? existing.get(`${row.id}:${target}`) : null;
 		const stale =
 			translation?.origin === "ai" &&
-			translation.sourceHash !== pluginSourceHash(pluginTranslationInput(row));
+			target &&
+			(translation.sourceHash !==
+				pluginSourceHash(pluginTranslationInput(row)) ||
+				!isPluginTranslationUsable(
+					pluginTranslationInput(row),
+					translation,
+					target,
+				));
 		return target && (!translation || stale)
 			? [{ entityType: "plugin", entityId: row.id, targetLocale: target }]
 			: [];
@@ -130,14 +135,7 @@ async function missingPluginJobs(database: Database) {
 async function missingCategoryJobs(database: Database) {
 	const [rows, translations] = await Promise.all([
 		database.select().from(pluginCategories),
-		database
-			.select({
-				categoryId: categoryTranslations.categoryId,
-				locale: categoryTranslations.locale,
-				origin: categoryTranslations.origin,
-				sourceHash: categoryTranslations.sourceHash,
-			})
-			.from(categoryTranslations),
+		database.select().from(categoryTranslations),
 	]);
 	const existing = new Map(
 		translations.map((row) => [`${row.categoryId}:${row.locale}`, row]),
@@ -147,8 +145,14 @@ async function missingCategoryJobs(database: Database) {
 		const translation = target ? existing.get(`${row.id}:${target}`) : null;
 		const stale =
 			translation?.origin === "ai" &&
-			translation.sourceHash !==
-				categorySourceHash(categoryTranslationInput(row));
+			target &&
+			(translation.sourceHash !==
+				categorySourceHash(categoryTranslationInput(row)) ||
+				!isCategoryTranslationUsable(
+					categoryTranslationInput(row),
+					translation,
+					target,
+				));
 		return target && (!translation || stale)
 			? [{ entityType: "category", entityId: row.id, targetLocale: target }]
 			: [];
@@ -164,14 +168,7 @@ async function missingVersionJobs(database: Database) {
 		.from(pluginVersions)
 		.innerJoin(plugins, eq(pluginVersions.pluginId, plugins.id))
 		.where(eq(plugins.status, "approved"));
-	const translations = await database
-		.select({
-			versionId: pluginVersionTranslations.versionId,
-			locale: pluginVersionTranslations.locale,
-			origin: pluginVersionTranslations.origin,
-			sourceHash: pluginVersionTranslations.sourceHash,
-		})
-		.from(pluginVersionTranslations);
+	const translations = await database.select().from(pluginVersionTranslations);
 	const existing = new Map(
 		translations.map((row) => [`${row.versionId}:${row.locale}`, row]),
 	);
@@ -183,7 +180,13 @@ async function missingVersionJobs(database: Database) {
 		const stale =
 			translation?.origin === "ai" &&
 			row.version.changelog &&
-			translation.sourceHash !== versionSourceHash(row.version.changelog);
+			target &&
+			(translation.sourceHash !== versionSourceHash(row.version.changelog) ||
+				!isVersionTranslationUsable(
+					row.version.changelog,
+					translation,
+					target,
+				));
 		return row.version.changelog?.trim() && target && (!translation || stale)
 			? [
 					{
@@ -203,12 +206,7 @@ async function missingPipelineCheckJobs(database: Database) {
 		.innerJoin(plugins, eq(pluginPipelineChecks.pluginId, plugins.id))
 		.where(eq(plugins.status, "approved"));
 	const translations = await database
-		.select({
-			checkId: pluginPipelineCheckTranslations.checkId,
-			locale: pluginPipelineCheckTranslations.locale,
-			origin: pluginPipelineCheckTranslations.origin,
-			sourceHash: pluginPipelineCheckTranslations.sourceHash,
-		})
+		.select()
 		.from(pluginPipelineCheckTranslations);
 	const existing = new Map(
 		translations.map((row) => [`${row.checkId}:${row.locale}`, row]),
@@ -220,7 +218,9 @@ async function missingPipelineCheckJobs(database: Database) {
 			: null;
 		const stale =
 			translation?.origin === "ai" &&
-			translation.sourceHash !== pipelineCheckSourceHash(row.check);
+			target &&
+			(translation.sourceHash !== pipelineCheckSourceHash(row.check) ||
+				!isPipelineCheckTranslationUsable(row.check, translation, target));
 		return (row.check.details || row.check.shortDescription) &&
 			target &&
 			(!translation || stale)
@@ -238,14 +238,7 @@ async function missingPipelineCheckJobs(database: Database) {
 async function missingCollectionJobs(database: Database) {
 	const [rows, translations] = await Promise.all([
 		database.select().from(aiPluginCollections),
-		database
-			.select({
-				collectionId: aiPluginCollectionTranslations.collectionId,
-				locale: aiPluginCollectionTranslations.locale,
-				origin: aiPluginCollectionTranslations.origin,
-				sourceHash: aiPluginCollectionTranslations.sourceHash,
-			})
-			.from(aiPluginCollectionTranslations),
+		database.select().from(aiPluginCollectionTranslations),
 	]);
 	const existing = new Map(
 		translations.map((row) => [`${row.collectionId}:${row.locale}`, row]),
@@ -255,7 +248,9 @@ async function missingCollectionJobs(database: Database) {
 		const translation = target ? existing.get(`${row.id}:${target}`) : null;
 		const stale =
 			translation?.origin === "ai" &&
-			translation.sourceHash !== collectionSourceHash(row);
+			target &&
+			(translation.sourceHash !== collectionSourceHash(row) ||
+				!isCollectionTranslationUsable(row, translation, target));
 		return target && (!translation || stale)
 			? [{ entityType: "collection", entityId: row.id, targetLocale: target }]
 			: [];

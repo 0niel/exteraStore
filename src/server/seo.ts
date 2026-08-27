@@ -3,51 +3,22 @@ import "server-only";
 import { and, count, eq, sql } from "drizzle-orm";
 import { cache } from "react";
 import { db } from "~/server/db";
+import { pluginCategories, plugins, users } from "~/server/db/schema";
 import {
-	categoryTranslations,
-	pluginCategories,
-	plugins,
-	pluginTranslations,
-	users,
-} from "~/server/db/schema";
-import type { ContentLocale } from "~/server/lib/content-localization";
+	type ContentLocale,
+	localizeCategoryRows,
+	localizePluginRows,
+} from "~/server/lib/content-localization";
 
 export const getPublicPluginSeo = cache(
 	async (slug: string, locale: ContentLocale) => {
 		const rows = await db
-			.select({
-				name: sql<string>`COALESCE(${pluginTranslations.name}, ${plugins.name})`,
-				slug: plugins.slug,
-				description: sql<string>`COALESCE(${pluginTranslations.description}, ${plugins.description})`,
-				shortDescription: sql<
-					string | null
-				>`COALESCE(${pluginTranslations.shortDescription}, ${plugins.shortDescription})`,
-				version: plugins.version,
-				author: plugins.author,
-				authorId: plugins.authorId,
-				category: plugins.category,
-				tags: sql<
-					string | null
-				>`COALESCE(${pluginTranslations.tags}, ${plugins.tags})`,
-				downloadCount: plugins.downloadCount,
-				rating: plugins.rating,
-				ratingCount: plugins.ratingCount,
-				price: plugins.price,
-				screenshots: plugins.screenshots,
-				createdAt: plugins.createdAt,
-				updatedAt: plugins.updatedAt,
-			})
+			.select()
 			.from(plugins)
-			.leftJoin(
-				pluginTranslations,
-				and(
-					eq(pluginTranslations.pluginId, plugins.id),
-					eq(pluginTranslations.locale, locale),
-				),
-			)
 			.where(and(eq(plugins.slug, slug), eq(plugins.status, "approved")))
 			.limit(1);
-		return rows[0] ?? null;
+		const localized = await localizePluginRows(db, rows, locale);
+		return localized[0] ?? null;
 	},
 );
 
@@ -55,21 +26,17 @@ export const getPublicCategorySeo = cache(
 	async (slug: string, locale: ContentLocale) => {
 		const rows = await db
 			.select({
-				name: sql<string>`COALESCE(${categoryTranslations.name}, ${pluginCategories.name})`,
+				id: pluginCategories.id,
+				name: pluginCategories.name,
+				contentLocale: pluginCategories.contentLocale,
 				slug: pluginCategories.slug,
-				description: sql<
-					string | null
-				>`COALESCE(${categoryTranslations.description}, ${pluginCategories.description})`,
+				description: pluginCategories.description,
+				icon: pluginCategories.icon,
+				color: pluginCategories.color,
+				createdAt: pluginCategories.createdAt,
 				pluginCount: count(plugins.id),
 			})
 			.from(pluginCategories)
-			.leftJoin(
-				categoryTranslations,
-				and(
-					eq(categoryTranslations.categoryId, pluginCategories.id),
-					eq(categoryTranslations.locale, locale),
-				),
-			)
 			.leftJoin(
 				plugins,
 				and(
@@ -78,13 +45,10 @@ export const getPublicCategorySeo = cache(
 				),
 			)
 			.where(eq(pluginCategories.slug, slug))
-			.groupBy(
-				pluginCategories.id,
-				categoryTranslations.name,
-				categoryTranslations.description,
-			)
+			.groupBy(pluginCategories.id)
 			.limit(1);
-		return rows[0] ?? null;
+		const localized = await localizeCategoryRows(db, rows, locale);
+		return localized[0] ?? null;
 	},
 );
 

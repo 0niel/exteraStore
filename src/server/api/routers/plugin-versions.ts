@@ -14,7 +14,10 @@ import {
 	pluginVersionTranslations,
 	users,
 } from "~/server/db/schema";
-import { getContentLocale } from "~/server/lib/content-localization";
+import {
+	getContentLocale,
+	isVersionTranslationUsable,
+} from "~/server/lib/content-localization";
 import { checkDownloadRateLimit, hashIp } from "~/server/lib/rate-limiter";
 
 export const pluginVersionsRouter = createTRPCRouter({
@@ -85,12 +88,21 @@ export const pluginVersionsRouter = createTRPCRouter({
 				translations.map((translation) => [translation.versionId, translation]),
 			);
 
-			return versions.map((version) => ({
-				...version,
-				changelog:
-					translationByVersion.get(version.id)?.changelog ?? version.changelog,
-				isCurrent: version.version === currentVersion,
-			}));
+			return versions.map((version) => {
+				const translation = translationByVersion.get(version.id);
+				const translatedChangelog =
+					version.changelog &&
+					translation &&
+					(translation.origin === "manual" ||
+						isVersionTranslationUsable(version.changelog, translation, locale))
+						? translation.changelog
+						: version.changelog;
+				return {
+					...version,
+					changelog: translatedChangelog,
+					isCurrent: version.version === currentVersion,
+				};
+			});
 		}),
 
 	getVersion: publicProcedure
@@ -144,7 +156,16 @@ export const pluginVersionsRouter = createTRPCRouter({
 				});
 			return {
 				...version[0],
-				changelog: translation?.changelog ?? version[0].changelog,
+				changelog:
+					translation &&
+					(translation.origin === "manual" ||
+						isVersionTranslationUsable(
+							version[0].changelog,
+							translation,
+							locale,
+						))
+						? translation.changelog
+						: version[0].changelog,
 			};
 		}),
 
