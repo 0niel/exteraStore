@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import {
 	createTRPCRouter,
@@ -11,8 +11,10 @@ import {
 	pluginPipelineChecks,
 	plugins,
 	pluginVersions,
+	pluginVersionTranslations,
 	users,
 } from "~/server/db/schema";
+import { getContentLocale } from "~/server/lib/content-localization";
 import { checkDownloadRateLimit, hashIp } from "~/server/lib/rate-limiter";
 
 export const pluginVersionsRouter = createTRPCRouter({
@@ -20,7 +22,11 @@ export const pluginVersionsRouter = createTRPCRouter({
 		.input(z.object({ pluginSlug: z.string() }))
 		.query(async ({ ctx, input }) => {
 			const plugin = await ctx.db
-				.select({ id: plugins.id, currentVersion: plugins.version })
+				.select({
+					id: plugins.id,
+					currentVersion: plugins.version,
+					contentLocale: plugins.contentLocale,
+				})
 				.from(plugins)
 				.where(
 					and(
@@ -59,8 +65,30 @@ export const pluginVersionsRouter = createTRPCRouter({
 				.where(eq(pluginVersions.pluginId, plugin[0].id))
 				.orderBy(desc(pluginVersions.createdAt));
 
+			const locale = getContentLocale(ctx.headers);
+			const translations =
+				plugin[0].contentLocale !== locale && versions.length > 0
+					? await ctx.db
+							.select()
+							.from(pluginVersionTranslations)
+							.where(
+								and(
+									inArray(
+										pluginVersionTranslations.versionId,
+										versions.map((version) => version.id),
+									),
+									eq(pluginVersionTranslations.locale, locale),
+								),
+							)
+					: [];
+			const translationByVersion = new Map(
+				translations.map((translation) => [translation.versionId, translation]),
+			);
+
 			return versions.map((version) => ({
 				...version,
+				changelog:
+					translationByVersion.get(version.id)?.changelog ?? version.changelog,
 				isCurrent: version.version === currentVersion,
 			}));
 		}),
@@ -74,7 +102,7 @@ export const pluginVersionsRouter = createTRPCRouter({
 		)
 		.query(async ({ ctx, input }) => {
 			const plugin = await ctx.db
-				.select({ id: plugins.id })
+				.select({ id: plugins.id, contentLocale: plugins.contentLocale })
 				.from(plugins)
 				.where(
 					and(
@@ -103,7 +131,21 @@ export const pluginVersionsRouter = createTRPCRouter({
 				throw new Error("Version not found");
 			}
 
-			return version[0];
+			const locale = getContentLocale(ctx.headers);
+			if (plugin[0].contentLocale === locale || !version[0].changelog) {
+				return version[0];
+			}
+			const translation =
+				await ctx.db.query.pluginVersionTranslations.findFirst({
+					where: and(
+						eq(pluginVersionTranslations.versionId, version[0].id),
+						eq(pluginVersionTranslations.locale, locale),
+					),
+				});
+			return {
+				...version[0],
+				changelog: translation?.changelog ?? version[0].changelog,
+			};
 		}),
 
 	downloadVersion: publicProcedure

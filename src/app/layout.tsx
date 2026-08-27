@@ -23,62 +23,70 @@ import { auth } from "~/server/auth";
 import { getServerLocale } from "~/server/locale";
 import { TRPCReactProvider } from "~/trpc/react";
 
-export const metadata: Metadata = {
-	metadataBase: new URL(SITE_URL),
-	title: {
-		default: "exteraStore — плагины для Telegram",
-		template: "%s · exteraStore",
-	},
-	description: SITE_DESCRIPTION,
-	applicationName: SITE_NAME,
-	creator: "exteraStore community",
-	publisher: "exteraStore community",
-	category: "technology",
-	referrer: "strict-origin-when-cross-origin",
-	formatDetection: {
-		telephone: false,
-		address: false,
-		email: false,
-	},
-	manifest: "/manifest.webmanifest",
-	icons: [{ rel: "icon", url: "/favicon.svg", type: "image/svg+xml" }],
-	keywords: [
-		"exteraStore",
-		"exteraGram",
-		"exteraless",
-		"Telegram",
-		"plugins",
-		"Python",
-		"Xposed",
-		"modifications",
-		"store",
-	],
-	authors: [{ name: "exteraStore community" }],
-	robots: {
-		index: true,
-		follow: true,
-		googleBot: {
+export async function generateMetadata(): Promise<Metadata> {
+	const locale = await getServerLocale();
+	const description =
+		locale === "ru"
+			? SITE_DESCRIPTION
+			: "An independent catalog for exteraGram plugins and exteraless-compatible extensions.";
+	const title =
+		locale === "ru"
+			? "exteraStore — плагины для Telegram"
+			: "exteraStore — Telegram plugins";
+	return {
+		metadataBase: new URL(SITE_URL),
+		title: { default: title, template: "%s · exteraStore" },
+		description,
+		applicationName: SITE_NAME,
+		creator: "exteraStore community",
+		publisher: "exteraStore community",
+		category: "technology",
+		referrer: "strict-origin-when-cross-origin",
+		formatDetection: {
+			telephone: false,
+			address: false,
+			email: false,
+		},
+		manifest: "/manifest.webmanifest",
+		icons: [{ rel: "icon", url: "/favicon.svg", type: "image/svg+xml" }],
+		keywords: [
+			"exteraStore",
+			"exteraGram",
+			"exteraless",
+			"Telegram",
+			"plugins",
+			"Python",
+			"Xposed",
+			"modifications",
+			"store",
+		],
+		authors: [{ name: "exteraStore community" }],
+		robots: {
 			index: true,
 			follow: true,
-			"max-image-preview": "large",
-			"max-snippet": -1,
-			"max-video-preview": -1,
+			googleBot: {
+				index: true,
+				follow: true,
+				"max-image-preview": "large",
+				"max-snippet": -1,
+				"max-video-preview": -1,
+			},
 		},
-	},
-	openGraph: {
-		title: "exteraStore — плагины для Telegram",
-		description: SITE_DESCRIPTION,
-		type: "website",
-		siteName: SITE_NAME,
-		locale: "ru_RU",
-		alternateLocale: "en_US",
-	},
-	twitter: {
-		card: "summary_large_image",
-		title: "exteraStore — плагины для Telegram",
-		description: SITE_DESCRIPTION,
-	},
-};
+		openGraph: {
+			title,
+			description,
+			type: "website",
+			siteName: SITE_NAME,
+			locale: locale === "ru" ? "ru_RU" : "en_US",
+			alternateLocale: locale === "ru" ? "en_US" : "ru_RU",
+		},
+		twitter: {
+			card: "summary_large_image",
+			title,
+			description,
+		},
+	};
+}
 
 export const viewport: Viewport = {
 	width: "device-width",
@@ -99,6 +107,10 @@ export default async function RootLayout({
 	const session = await auth();
 	const messages = await getMessages();
 	const locale = await getServerLocale();
+	const siteDescription =
+		locale === "ru"
+			? SITE_DESCRIPTION
+			: "An independent catalog for exteraGram plugins and exteraless-compatible extensions.";
 	const t = await getTranslations("Navigation");
 	const websiteData = {
 		"@context": "https://schema.org",
@@ -109,7 +121,7 @@ export default async function RootLayout({
 				name: SITE_NAME,
 				url: SITE_URL,
 				logo: `${SITE_URL}/favicon.svg`,
-				description: SITE_DESCRIPTION,
+				description: siteDescription,
 				sameAs: [
 					"https://github.com/0niel/exteraStore",
 					"https://t.me/exteraForum",
@@ -120,7 +132,7 @@ export default async function RootLayout({
 				"@id": `${SITE_URL}/#website`,
 				url: SITE_URL,
 				name: SITE_NAME,
-				description: SITE_DESCRIPTION,
+				description: siteDescription,
 				publisher: { "@id": `${SITE_URL}/#organization` },
 				potentialAction: {
 					"@type": "SearchAction",

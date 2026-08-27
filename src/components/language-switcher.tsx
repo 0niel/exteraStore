@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { Globe } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useLocale } from "next-intl";
@@ -27,6 +28,7 @@ const languageFlags: Record<Locale, string> = {
 
 function useLocaleSwitch() {
 	const router = useRouter();
+	const queryClient = useQueryClient();
 	const currentLocale = useLocale() as Locale;
 	const [isPending, startTransition] = useTransition();
 	const [clientLocale, setClientLocale] = useState<Locale>(currentLocale);
@@ -36,9 +38,11 @@ function useLocaleSwitch() {
 	}, []);
 
 	function switchLocale(locale: Locale) {
-		startTransition(() => {
-			setLocaleCookie(locale);
+		startTransition(async () => {
+			await setLocaleCookie(locale);
+			document.documentElement.lang = locale;
 			setClientLocale(locale);
+			queryClient.clear();
 			router.refresh();
 		});
 	}

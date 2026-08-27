@@ -2,6 +2,10 @@ import { and, count, desc, eq, ilike, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { createTRPCRouter, publicProcedure } from "~/server/api/trpc";
 import { plugins, users } from "~/server/db/schema";
+import {
+	getContentLocale,
+	localizePluginRows,
+} from "~/server/lib/content-localization";
 
 export const developersRouter = createTRPCRouter({
 	getDevelopers: publicProcedure
@@ -91,6 +95,7 @@ export const developersRouter = createTRPCRouter({
 			}),
 		)
 		.query(async ({ ctx, input }) => {
+			const locale = getContentLocale(ctx.headers);
 			const developer = await ctx.db
 				.select({
 					id: users.id,
@@ -114,26 +119,9 @@ export const developersRouter = createTRPCRouter({
 				throw new Error("Developer not found");
 			}
 
-			const developerPlugins = await ctx.db
+			const developerPluginRows = await ctx.db
 				.select({
-					id: plugins.id,
-					name: plugins.name,
-					slug: plugins.slug,
-					description: plugins.description,
-					shortDescription: plugins.shortDescription,
-					version: plugins.version,
-					category: plugins.category,
-					tags: plugins.tags,
-					author: plugins.author,
-					authorId: plugins.authorId,
-					price: plugins.price,
-					downloadCount: plugins.downloadCount,
-					rating: plugins.rating,
-					ratingCount: plugins.ratingCount,
-					featured: plugins.featured,
-					verified: plugins.verified,
-					screenshots: plugins.screenshots,
-					createdAt: plugins.createdAt,
+					plugin: plugins,
 					authorImage: users.image,
 				})
 				.from(plugins)
@@ -142,6 +130,14 @@ export const developersRouter = createTRPCRouter({
 					and(eq(plugins.authorId, input.id), eq(plugins.status, "approved")),
 				)
 				.orderBy(desc(plugins.createdAt));
+			const developerPlugins = await localizePluginRows(
+				ctx.db,
+				developerPluginRows.map((row) => ({
+					...row.plugin,
+					authorImage: row.authorImage,
+				})),
+				locale,
+			);
 
 			const stats = await ctx.db
 				.select({

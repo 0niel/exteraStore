@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getLocale } from "next-intl/server";
 import { StructuredData } from "~/components/structured-data";
 import {
 	absoluteUrl,
@@ -15,32 +16,49 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
 	const { id } = await params;
+	const locale = await getLocale();
 	const developer = await getPublicDeveloperSeo(id);
 	if (!developer) {
 		return {
-			title: "Разработчик не найден",
+			title: locale === "ru" ? "Разработчик не найден" : "Developer not found",
 			robots: { index: false, follow: false },
 		};
 	}
 
-	const name = developer.name || developer.telegramUsername || "Разработчик";
+	const name =
+		developer.name ||
+		developer.telegramUsername ||
+		(locale === "ru" ? "Разработчик" : "Developer");
 	const description =
 		seoDescription(developer.bio) ||
-		`${name}: ${developer.pluginCount} плагинов и ${developer.totalDownloads} загрузок в exteraStore.`;
+		(locale === "ru"
+			? `${name}: ${developer.pluginCount} плагинов и ${developer.totalDownloads} загрузок в exteraStore.`
+			: `${name}: ${developer.pluginCount} plugins and ${developer.totalDownloads} downloads on exteraStore.`);
 	const url = absoluteUrl(`/developers/${developer.id}`);
 	return {
-		title: { absolute: `${name} — разработчик · exteraStore` },
+		title: {
+			absolute:
+				locale === "ru"
+					? `${name} — разработчик · exteraStore`
+					: `${name} — developer · exteraStore`,
+		},
 		description,
 		alternates: { canonical: `/developers/${developer.id}` },
 		openGraph: {
-			title: `${name} — разработчик exteraStore`,
+			title:
+				locale === "ru"
+					? `${name} — разработчик exteraStore`
+					: `${name} — exteraStore developer`,
 			description,
 			url,
 			images: developer.image ? [developer.image] : [OPEN_GRAPH_IMAGE],
 		},
 		twitter: {
 			card: "summary",
-			title: `${name} — разработчик exteraStore`,
+			title:
+				locale === "ru"
+					? `${name} — разработчик exteraStore`
+					: `${name} — exteraStore developer`,
 			description,
 			images: developer.image ? [developer.image] : [TWITTER_IMAGE],
 		},
@@ -49,9 +67,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function DeveloperLayout({ children, params }: Props) {
 	const { id } = await params;
+	const locale = await getLocale();
 	const developer = await getPublicDeveloperSeo(id);
 	if (!developer) return children;
-	const name = developer.name || developer.telegramUsername || "Разработчик";
+	const name =
+		developer.name ||
+		developer.telegramUsername ||
+		(locale === "ru" ? "Разработчик" : "Developer");
 	const url = absoluteUrl(`/developers/${developer.id}`);
 	const sameAs = [
 		developer.website,

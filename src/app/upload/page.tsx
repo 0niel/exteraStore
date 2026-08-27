@@ -19,7 +19,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useMemo, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useForm } from "react-hook-form";
@@ -110,6 +110,7 @@ const buildFormSchema = (t: (key: string) => string) =>
 				},
 			),
 		exteralessCompatible: z.enum(["unspecified", "yes", "no"]),
+		sourceLocale: z.enum(["ru", "en"]),
 		minExteralessVersion: z
 			.string()
 			.optional()
@@ -130,6 +131,7 @@ export default function UploadPluginPage() {
 	const { data: session } = useSession();
 	const router = useRouter();
 	const t = useTranslations("UploadPage");
+	const locale = useLocale();
 	const reduceMotion = useReducedMotion();
 	const [fileContent, setFileContent] = useState("");
 	const [fileName, setFileName] = useState<string | null>(null);
@@ -157,6 +159,7 @@ export default function UploadPluginPage() {
 			documentationUrl: "",
 			minExteraVersion: "",
 			exteralessCompatible: "unspecified",
+			sourceLocale: locale === "ru" ? "ru" : "en",
 			minExteralessVersion: "",
 		},
 	});
@@ -429,6 +432,32 @@ export default function UploadPluginPage() {
 										</CardTitle>
 									</CardHeader>
 									<CardContent className="space-y-4 sm:space-y-6">
+										<FormField
+											control={form.control}
+											name="sourceLocale"
+											render={({ field }) => (
+												<FormItem>
+													<FormLabel>{t("source_language_label")}</FormLabel>
+													<Select
+														value={field.value}
+														onValueChange={field.onChange}
+													>
+														<FormControl>
+															<SelectTrigger className="min-h-11 w-full">
+																<SelectValue />
+															</SelectTrigger>
+														</FormControl>
+														<SelectContent>
+															<SelectItem value="ru">Русский</SelectItem>
+															<SelectItem value="en">English</SelectItem>
+														</SelectContent>
+													</Select>
+													<FormDescription className="text-xs">
+														{t("source_language_hint")}
+													</FormDescription>
+												</FormItem>
+											)}
+										/>
 										<FormField
 											control={form.control}
 											name="name"

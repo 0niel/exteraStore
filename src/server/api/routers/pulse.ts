@@ -8,6 +8,10 @@ import {
 	pluginVersions,
 	users,
 } from "~/server/db/schema";
+import {
+	getContentLocale,
+	localizePluginRows,
+} from "~/server/lib/content-localization";
 
 export const pulseRouter = createTRPCRouter({
 	get: publicProcedure
@@ -87,9 +91,38 @@ export const pulseRouter = createTRPCRouter({
 
 			const [items, totalRes] = await Promise.all([listQuery, totalQuery]);
 			const total = totalRes[0]?.total ?? 0;
+			const pluginIds = [
+				...new Set(
+					items
+						.map((item) => item.plugin?.id)
+						.filter((id): id is number => id !== null),
+				),
+			];
+			const pluginRows = pluginIds.length
+				? await ctx.db
+						.select()
+						.from(plugins)
+						.where(inArray(plugins.id, pluginIds))
+				: [];
+			const localizedPlugins = await localizePluginRows(
+				ctx.db,
+				pluginRows,
+				getContentLocale(ctx.headers),
+			);
+			const localizedNameById = new Map(
+				localizedPlugins.map((plugin) => [plugin.id, plugin.name]),
+			);
 
 			return {
-				items,
+				items: items.map((item) => ({
+					...item,
+					plugin: item.plugin
+						? {
+								...item.plugin,
+								name: localizedNameById.get(item.plugin.id) ?? item.plugin.name,
+							}
+						: null,
+				})),
 				pagination: {
 					page: input.page,
 					limit: input.limit,

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getLocale } from "next-intl/server";
 import { StructuredData } from "~/components/structured-data";
 import { absoluteUrl, OPEN_GRAPH_IMAGE, seoDescription } from "~/lib/site";
 import { getPublicCategorySeo } from "~/server/seo";
@@ -10,23 +11,34 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
 	const { slug } = await params;
-	const category = await getPublicCategorySeo(slug);
+	const locale = (await getLocale()) === "ru" ? "ru" : "en";
+	const category = await getPublicCategorySeo(slug, locale);
 	if (!category) {
 		return {
-			title: "Категория не найдена",
+			title: locale === "ru" ? "Категория не найдена" : "Category not found",
 			robots: { index: false, follow: false },
 		};
 	}
 
 	const description =
 		seoDescription(category.description) ||
-		`Плагины категории «${category.name}»: ${category.pluginCount} дополнений для exteraGram и exteraless.`;
+		(locale === "ru"
+			? `Плагины категории «${category.name}»: ${category.pluginCount} дополнений для exteraGram и exteraless.`
+			: `${category.name} plugins: ${category.pluginCount} extensions for exteraGram and exteraless.`);
 	return {
-		title: { absolute: `${category.name} — плагины · exteraStore` },
+		title: {
+			absolute:
+				locale === "ru"
+					? `${category.name} — плагины · exteraStore`
+					: `${category.name} — plugins · exteraStore`,
+		},
 		description,
 		alternates: { canonical: `/categories/${category.slug}` },
 		openGraph: {
-			title: `${category.name} — плагины exteraStore`,
+			title:
+				locale === "ru"
+					? `${category.name} — плагины exteraStore`
+					: `${category.name} — exteraStore plugins`,
 			description,
 			url: absoluteUrl(`/categories/${category.slug}`),
 			images: [OPEN_GRAPH_IMAGE],
@@ -36,7 +48,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CategoryLayout({ children, params }: Props) {
 	const { slug } = await params;
-	const category = await getPublicCategorySeo(slug);
+	const locale = (await getLocale()) === "ru" ? "ru" : "en";
+	const category = await getPublicCategorySeo(slug, locale);
 	if (!category) return children;
 	const url = absoluteUrl(`/categories/${category.slug}`);
 
@@ -59,7 +72,7 @@ export default async function CategoryLayout({ children, params }: Props) {
 								{
 									"@type": "ListItem",
 									position: 1,
-									name: "Категории",
+									name: locale === "ru" ? "Категории" : "Categories",
 									item: absoluteUrl("/categories"),
 								},
 								{

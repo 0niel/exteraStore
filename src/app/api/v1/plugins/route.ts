@@ -3,13 +3,18 @@ import { safeJsonParse } from "~/lib/utils";
 import { db } from "~/server/db";
 import { plugins, users } from "~/server/db/schema";
 import {
+	getContentLocale,
+	localizePluginRows,
+} from "~/server/lib/content-localization";
+import {
 	authorizeApiRequest,
 	recordApiUsage,
 } from "~/server/lib/developer-platform";
 
 const headers = {
 	"access-control-allow-origin": "*",
-	"access-control-allow-headers": "authorization, content-type",
+	"access-control-allow-headers":
+		"authorization, content-type, x-content-locale",
 	"access-control-allow-methods": "GET, OPTIONS",
 };
 
@@ -40,6 +45,11 @@ export async function GET(request: Request) {
 		);
 		const search = params.get("search")?.trim().slice(0, 100);
 		const category = params.get("category")?.trim().slice(0, 100);
+		const localeParam = params.get("locale");
+		const locale =
+			localeParam === "ru" || localeParam === "en"
+				? localeParam
+				: getContentLocale(request.headers);
 		const where = and(
 			eq(plugins.status, "approved"),
 			category ? eq(plugins.category, category) : undefined,
@@ -54,18 +64,7 @@ export async function GET(request: Request) {
 		const [items, totalRows] = await Promise.all([
 			db
 				.select({
-					id: plugins.id,
-					name: plugins.name,
-					slug: plugins.slug,
-					description: plugins.shortDescription,
-					version: plugins.version,
-					category: plugins.category,
-					tags: plugins.tags,
-					downloads: plugins.downloadCount,
-					rating: plugins.rating,
-					ratingCount: plugins.ratingCount,
-					exteralessCompatible: plugins.exteralessCompatible,
-					updatedAt: plugins.updatedAt,
+					plugin: plugins,
 					author: {
 						id: users.id,
 						name: users.name,
@@ -80,12 +79,28 @@ export async function GET(request: Request) {
 				.offset((page - 1) * limit),
 			db.select({ total: sql<number>`COUNT(*)` }).from(plugins).where(where),
 		]);
+		const localizedItems = await localizePluginRows(
+			db,
+			items.map((item) => item.plugin),
+			locale,
+		);
 		return Response.json(
 			{
-				data: items.map((item) => ({
-					...item,
+				data: localizedItems.map((item, index) => ({
+					id: item.id,
+					name: item.name,
+					slug: item.slug,
+					description: item.shortDescription,
+					version: item.version,
+					category: item.category,
 					tags: safeJsonParse<string[]>(item.tags ?? "[]", []),
+					downloads: item.downloadCount,
 					rating: item.ratingCount > 0 ? item.rating : null,
+					ratingCount: item.ratingCount,
+					exteralessCompatible: item.exteralessCompatible,
+					updatedAt: item.updatedAt,
+					author: items[index]?.author ?? null,
+					locale: item.localizedLocale ?? item.contentLocale,
 				})),
 				pagination: {
 					page,

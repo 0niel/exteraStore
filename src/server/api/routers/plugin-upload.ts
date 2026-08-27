@@ -16,6 +16,11 @@ import {
 	pluginVersions,
 } from "~/server/db/schema";
 import { verifyCaptcha } from "~/server/lib/captcha";
+import {
+	contentLocaleSchema,
+	generatePluginTranslation,
+	generateVersionTranslation,
+} from "~/server/lib/content-localization";
 import { emitWebhookEvent } from "~/server/lib/developer-platform";
 import {
 	notifyDependencyAuthors,
@@ -53,6 +58,7 @@ const createPluginSchema = z.object({
 		.regex(/^\d+(\.\d+)*$/)
 		.optional(),
 	dependencyPluginIds: z.array(z.number()).max(20).default([]),
+	sourceLocale: contentLocaleSchema,
 	captchaToken: z.string().min(1),
 });
 
@@ -131,6 +137,7 @@ export const pluginUploadRouter = createTRPCRouter({
 				.insert(plugins)
 				.values({
 					name: input.name,
+					contentLocale: input.sourceLocale,
 					slug: baseSlug,
 					description: input.description,
 					shortDescription: input.shortDescription,
@@ -211,6 +218,16 @@ export const pluginUploadRouter = createTRPCRouter({
 					data: JSON.stringify({ slug: finalSlug, version: input.version }),
 				});
 			} catch {}
+			if (version && input.changelog?.trim()) {
+				try {
+					await generateVersionTranslation(ctx.db, {
+						versionId: version.id,
+						changelog: input.changelog,
+						targetLocale: input.sourceLocale === "ru" ? "en" : "ru",
+						subjectKey: `user:${ctx.session.user.id}`,
+					});
+				} catch {}
+			}
 
 			try {
 				await emitWebhookEvent(ctx.db, plugin.authorId, "plugin.created", {
@@ -220,6 +237,21 @@ export const pluginUploadRouter = createTRPCRouter({
 					version: input.version,
 					status: plugin.status,
 				});
+			} catch {}
+
+			let translationGenerated = false;
+			try {
+				const localizedPlugin = {
+					...plugin,
+					contentLocale: input.sourceLocale,
+				};
+				const result = await generatePluginTranslation(
+					ctx.db,
+					localizedPlugin,
+					input.sourceLocale === "ru" ? "en" : "ru",
+					`user:${ctx.session.user.id}`,
+				);
+				translationGenerated = Boolean(result.translation);
 			} catch {}
 
 			try {
@@ -232,7 +264,7 @@ export const pluginUploadRouter = createTRPCRouter({
 				console.error("Failed to auto-run security checks:", error);
 			}
 
-			return { ...plugin, slug: finalSlug };
+			return { ...plugin, slug: finalSlug, translationGenerated };
 		}),
 
 	createVersion: protectedProcedure
@@ -357,6 +389,20 @@ export const pluginUploadRouter = createTRPCRouter({
 					await pipelineRouter.runChecks({ pluginId: input.pluginId });
 				} catch (error) {
 					console.error("Failed to auto-run security checks:", error);
+				}
+
+				if (
+					input.changelog?.trim() &&
+					(plugin.contentLocale === "ru" || plugin.contentLocale === "en")
+				) {
+					try {
+						await generateVersionTranslation(ctx.db, {
+							versionId: version.id,
+							changelog: input.changelog,
+							targetLocale: plugin.contentLocale === "ru" ? "en" : "ru",
+							subjectKey: `user:${ctx.session.user.id}`,
+						});
+					} catch {}
 				}
 			}
 

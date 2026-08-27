@@ -113,6 +113,13 @@
       "when": 1787681897284,
       "tag": "0015_goofy_blob",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1787834637759,
+      "tag": "0016_lumpy_strong_guy",
+      "breakpoints": true
     }
   ]
 }

@@ -1,20 +1,28 @@
 import type { Metadata } from "next";
+import { getLocale } from "next-intl/server";
 import { absoluteUrl, OPEN_GRAPH_IMAGE } from "~/lib/site";
 
-const description =
-	"Свежие публикации, обновления, отзывы и активность сообщества плагинов exteraStore.";
-
-export const metadata: Metadata = {
-	title: "Пульс сообщества",
-	description,
-	alternates: { canonical: "/pulse" },
-	openGraph: {
-		title: "Пульс сообщества exteraStore",
+export async function generateMetadata(): Promise<Metadata> {
+	const locale = await getLocale();
+	const description =
+		locale === "ru"
+			? "Свежие публикации, обновления, отзывы и активность сообщества плагинов exteraStore."
+			: "Recent releases, updates, reviews and activity from the exteraStore plugin community.";
+	return {
+		title: locale === "ru" ? "Пульс сообщества" : "Community pulse",
 		description,
-		url: absoluteUrl("/pulse"),
-		images: [OPEN_GRAPH_IMAGE],
-	},
-};
+		alternates: { canonical: "/pulse" },
+		openGraph: {
+			title:
+				locale === "ru"
+					? "Пульс сообщества exteraStore"
+					: "exteraStore community pulse",
+			description,
+			url: absoluteUrl("/pulse"),
+			images: [OPEN_GRAPH_IMAGE],
+		},
+	};
+}
 
 export default function PulseLayout({
 	children,

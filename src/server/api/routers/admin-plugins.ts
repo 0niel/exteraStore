@@ -26,6 +26,11 @@ import {
 	plugins,
 	users,
 } from "~/server/db/schema";
+import {
+	contentLocaleSchema,
+	generateCategoryTranslation,
+	generatePluginTranslation,
+} from "~/server/lib/content-localization";
 import { emitWebhookEvent } from "~/server/lib/developer-platform";
 
 const ADMINS = (env.INITIAL_ADMINS ?? "i_am_oniel")
@@ -176,6 +181,19 @@ export const adminPluginsRouter = createTRPCRouter({
 			if (!updatedPlugin) {
 				throw new Error("Plugin not found");
 			}
+			if (
+				updatedPlugin.contentLocale === "ru" ||
+				updatedPlugin.contentLocale === "en"
+			) {
+				try {
+					await generatePluginTranslation(
+						ctx.db,
+						updatedPlugin,
+						updatedPlugin.contentLocale === "ru" ? "en" : "ru",
+						`user:${ctx.session.user.id}`,
+					);
+				} catch {}
+			}
 
 			try {
 				await ctx.db.insert(pluginActivities).values({
@@ -313,6 +331,7 @@ export const adminPluginsRouter = createTRPCRouter({
 			.select({
 				id: pluginCategories.id,
 				name: pluginCategories.name,
+				contentLocale: pluginCategories.contentLocale,
 				slug: pluginCategories.slug,
 				description: pluginCategories.description,
 				icon: pluginCategories.icon,
@@ -336,6 +355,7 @@ export const adminPluginsRouter = createTRPCRouter({
 				name: z.string().min(1).max(50),
 				slug: z.string().min(1).max(50),
 				description: z.string().optional(),
+				sourceLocale: contentLocaleSchema.default("ru"),
 				icon: categoryIconSchema,
 				color: z.string().optional(),
 			}),
@@ -359,6 +379,7 @@ export const adminPluginsRouter = createTRPCRouter({
 				.insert(pluginCategories)
 				.values({
 					name: input.name,
+					contentLocale: input.sourceLocale,
 					slug: input.slug,
 					description: input.description,
 					icon: input.icon,
@@ -366,6 +387,16 @@ export const adminPluginsRouter = createTRPCRouter({
 				})
 				.returning();
 
+			if (category) {
+				try {
+					await generateCategoryTranslation(
+						ctx.db,
+						category,
+						input.sourceLocale === "ru" ? "en" : "ru",
+						`user:${ctx.session.user.id}`,
+					);
+				} catch {}
+			}
 			return category;
 		}),
 	updateCategory: protectedProcedure
@@ -375,6 +406,7 @@ export const adminPluginsRouter = createTRPCRouter({
 				name: z.string().min(1).max(50),
 				slug: z.string().min(1).max(50),
 				description: z.string().optional(),
+				sourceLocale: contentLocaleSchema.default("ru"),
 				icon: categoryIconSchema,
 				color: z.string().optional(),
 			}),
@@ -403,6 +435,7 @@ export const adminPluginsRouter = createTRPCRouter({
 				.update(pluginCategories)
 				.set({
 					name: input.name,
+					contentLocale: input.sourceLocale,
 					slug: input.slug,
 					description: input.description,
 					icon: input.icon,
@@ -411,6 +444,16 @@ export const adminPluginsRouter = createTRPCRouter({
 				.where(eq(pluginCategories.id, input.id))
 				.returning();
 
+			if (category) {
+				try {
+					await generateCategoryTranslation(
+						ctx.db,
+						category,
+						input.sourceLocale === "ru" ? "en" : "ru",
+						`user:${ctx.session.user.id}`,
+					);
+				} catch {}
+			}
 			return category;
 		}),
 	deleteCategory: protectedProcedure

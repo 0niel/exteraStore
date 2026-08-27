@@ -261,6 +261,7 @@ export default function AdminPluginsPage() {
 		downloadCount: number;
 	} | null>(null);
 	const [newDownloadCount, setNewDownloadCount] = useState("");
+	const [translationCursor, setTranslationCursor] = useState(0);
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [deletingPlugin, setDeletingPlugin] = useState<{
 		id: number;
@@ -344,6 +345,19 @@ export default function AdminPluginsPage() {
 			});
 		},
 	});
+	const backfillTranslations = api.translations.backfill.useMutation({
+		onSuccess: (result) => {
+			setTranslationCursor(result.done ? 0 : result.nextCursor);
+			toast.success(
+				t("translation_batch_done", {
+					scanned: result.scanned,
+					generated: result.generated,
+				}),
+			);
+			if (result.limited) toast.warning(t("translation_limit_reached"));
+		},
+		onError: (error) => toast.error(error.message),
+	});
 
 	const openEditDialog = (plugin: AdminPlugin) => {
 		setEditingPlugin({
@@ -381,18 +395,38 @@ export default function AdminPluginsPage() {
 	return (
 		<div className="py-8">
 			<div className="container mx-auto max-w-6xl px-4">
-				<div className="mb-6 animate-fade-up">
-					<span className="eyebrow mb-2">{t("eyebrow")}</span>
-					<div className="flex flex-wrap items-center gap-3">
-						<h1 className="font-bold text-3xl tracking-tight md:text-4xl">
-							{t("title")}
-						</h1>
-						{data ? (
-							<span className="inline-flex h-8 items-center rounded-full border border-primary/15 bg-primary/5 px-3 font-mono font-semibold text-primary text-sm">
-								{data.plugins.length}
-							</span>
-						) : null}
+				<div className="mb-6 flex animate-fade-up flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+					<div>
+						<span className="eyebrow mb-2">{t("eyebrow")}</span>
+						<div className="flex flex-wrap items-center gap-3">
+							<h1 className="font-bold text-3xl tracking-tight md:text-4xl">
+								{t("title")}
+							</h1>
+							{data ? (
+								<span className="inline-flex h-8 items-center rounded-full border border-primary/15 bg-primary/5 px-3 font-mono font-semibold text-primary text-sm">
+									{data.plugins.length}
+								</span>
+							) : null}
+						</div>
 					</div>
+					<Button
+						variant="outline"
+						className="w-full sm:w-auto"
+						onClick={() =>
+							backfillTranslations.mutate({
+								entity: "plugins",
+								cursor: translationCursor,
+							})
+						}
+						disabled={backfillTranslations.isPending}
+					>
+						{backfillTranslations.isPending ? (
+							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+						) : (
+							<Sparkles className="mr-2 h-4 w-4" />
+						)}
+						{t("translate_missing")}
+					</Button>
 				</div>
 
 				<div className="relative mb-6 max-w-md">

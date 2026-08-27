@@ -3,6 +3,10 @@ import { safeJsonParse } from "~/lib/utils";
 import { db } from "~/server/db";
 import { plugins, users } from "~/server/db/schema";
 import {
+	getContentLocale,
+	localizePluginRows,
+} from "~/server/lib/content-localization";
+import {
 	authorizeApiRequest,
 	recordApiUsage,
 } from "~/server/lib/developer-platform";
@@ -36,16 +40,24 @@ export async function GET(
 				{ status: statusCode, headers: authorization.responseHeaders },
 			);
 		}
+		const localeParam = new URL(request.url).searchParams.get("locale");
+		const locale =
+			localeParam === "ru" || localeParam === "en"
+				? localeParam
+				: getContentLocale(request.headers);
+		const localizedRows = await localizePluginRows(db, [plugin.plugin], locale);
+		const localizedPlugin = localizedRows[0] ?? plugin.plugin;
 		return Response.json(
 			{
 				data: {
-					...plugin.plugin,
-					tags: safeJsonParse<string[]>(plugin.plugin.tags ?? "[]", []),
+					...localizedPlugin,
+					tags: safeJsonParse<string[]>(localizedPlugin.tags ?? "[]", []),
 					screenshots: safeJsonParse<string[]>(
-						plugin.plugin.screenshots ?? "[]",
+						localizedPlugin.screenshots ?? "[]",
 						[],
 					),
-					rating: plugin.plugin.ratingCount > 0 ? plugin.plugin.rating : null,
+					rating:
+						localizedPlugin.ratingCount > 0 ? localizedPlugin.rating : null,
 					author: {
 						id: plugin.authorId,
 						name: plugin.authorName,

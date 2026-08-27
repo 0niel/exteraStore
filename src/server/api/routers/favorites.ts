@@ -2,6 +2,10 @@ import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 import { pluginFavorites, plugins, users } from "~/server/db/schema";
+import {
+	getContentLocale,
+	localizePluginRows,
+} from "~/server/lib/content-localization";
 
 export const favoritesRouter = createTRPCRouter({
 	add: protectedProcedure
@@ -116,31 +120,14 @@ export const favoritesRouter = createTRPCRouter({
 		)
 		.query(async ({ ctx, input }) => {
 			const offset = (input.page - 1) * input.limit;
+			const locale = getContentLocale(ctx.headers);
 
 			const favorites = await ctx.db
 				.select({
 					id: pluginFavorites.id,
 					createdAt: pluginFavorites.createdAt,
-					plugin: {
-						id: plugins.id,
-						name: plugins.name,
-						slug: plugins.slug,
-						shortDescription: plugins.shortDescription,
-						description: plugins.description,
-						version: plugins.version,
-						author: plugins.author,
-						category: plugins.category,
-						downloadCount: plugins.downloadCount,
-						rating: plugins.rating,
-						ratingCount: plugins.ratingCount,
-						price: plugins.price,
-						featured: plugins.featured,
-						verified: plugins.verified,
-						screenshots: plugins.screenshots,
-						tags: plugins.tags,
-						createdAt: plugins.createdAt,
-						authorImage: users.image,
-					},
+					plugin: plugins,
+					authorImage: users.image,
 				})
 				.from(pluginFavorites)
 				.innerJoin(plugins, eq(pluginFavorites.pluginId, plugins.id))
@@ -156,9 +143,17 @@ export const favoritesRouter = createTRPCRouter({
 				.where(eq(pluginFavorites.userId, ctx.session.user.id));
 
 			const total = totalResult.length;
+			const localizedPlugins = await localizePluginRows(
+				ctx.db,
+				favorites.map((favorite) => ({
+					...favorite.plugin,
+					authorImage: favorite.authorImage,
+				})),
+				locale,
+			);
 
 			return {
-				favorites: favorites.map((f: (typeof favorites)[0]) => f.plugin),
+				favorites: localizedPlugins,
 				pagination: {
 					page: input.page,
 					limit: input.limit,

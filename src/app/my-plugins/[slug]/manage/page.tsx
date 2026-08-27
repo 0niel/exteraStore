@@ -8,6 +8,7 @@ import {
 	FileText,
 	GitBranch,
 	Info,
+	Languages,
 	Loader2,
 	Save,
 	Settings,
@@ -25,6 +26,7 @@ import { MarkdownEditor } from "~/components/markdown-editor";
 import { PageHeader } from "~/components/page-header";
 import { PluginDependencyPicker } from "~/components/plugin-dependency-picker";
 import { PluginManageVersions } from "~/components/plugin-manage-versions";
+import { PluginTranslationEditor } from "~/components/plugin-translation-editor";
 import { ScreenshotUploader } from "~/components/screenshot-uploader";
 import { TagInput } from "~/components/tag-input";
 import {
@@ -120,7 +122,7 @@ export default function PluginManagePage() {
 		isLoading: isPluginLoading,
 		error,
 		refetch,
-	} = api.plugins.getBySlug.useQuery({ slug });
+	} = api.plugins.getBySlug.useQuery({ slug, localized: false });
 	const { data: categories, isLoading: areCategoriesLoading } =
 		api.categories.getAll.useQuery();
 
@@ -293,6 +295,10 @@ export default function PluginManagePage() {
 						<TabsTrigger value="versions" className="min-h-9 gap-2">
 							<GitBranch className="h-4 w-4" />
 							{t("tab_versions")}
+						</TabsTrigger>
+						<TabsTrigger value="translations" className="min-h-9 gap-2">
+							<Languages className="h-4 w-4" />
+							{t("tab_translations")}
 						</TabsTrigger>
 						<TabsTrigger value="settings" className="min-h-9 gap-2">
 							<Settings className="h-4 w-4" />
@@ -605,6 +611,10 @@ export default function PluginManagePage() {
 								/>
 							</CardContent>
 						</Card>
+					</TabsContent>
+
+					<TabsContent value="translations">
+						<PluginTranslationEditor pluginId={plugin.id} />
 					</TabsContent>
 
 					<TabsContent value="settings">

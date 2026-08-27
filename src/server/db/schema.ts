@@ -36,6 +36,7 @@ export const plugins = pgTable(
 	{
 		id: serial("id").primaryKey(),
 		name: text("name").notNull(),
+		contentLocale: text("content_locale").default("und").notNull(),
 		slug: text("slug").notNull().unique(),
 		description: text("description").notNull(),
 		shortDescription: text("short_description"),
@@ -131,6 +132,7 @@ export const pluginCategories = pgTable(
 	{
 		id: serial("id").primaryKey(),
 		name: text("name").notNull().unique(),
+		contentLocale: text("content_locale").default("und").notNull(),
 		slug: text("slug").notNull().unique(),
 		description: text("description"),
 		icon: text("icon"),
@@ -166,6 +168,61 @@ export const pluginDownloads = pgTable(
 		index("download_date_idx").on(t.downloadedAt),
 		index("download_ip_hash_idx").on(t.ipHash),
 		index("download_unique_user_version_idx").on(t.userId, t.versionId),
+	],
+);
+
+export const pluginTranslations = pgTable(
+	"extera_plugins_plugin_translation",
+	{
+		id: serial("id").primaryKey(),
+		pluginId: integer("plugin_id")
+			.notNull()
+			.references(() => plugins.id, { onDelete: "cascade" }),
+		locale: text("locale").notNull(),
+		name: text("name").notNull(),
+		shortDescription: text("short_description"),
+		description: text("description").notNull(),
+		requirements: text("requirements"),
+		changelog: text("changelog"),
+		tags: text("tags"),
+		origin: text("origin").default("ai").notNull(),
+		sourceHash: text("source_hash").notNull(),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+		updatedAt: integer("updated_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+	},
+	(t) => [
+		uniqueIndex("plugin_translation_locale_idx").on(t.pluginId, t.locale),
+		index("plugin_translation_plugin_idx").on(t.pluginId),
+		index("plugin_translation_locale_search_idx").on(t.locale, t.name),
+	],
+);
+
+export const categoryTranslations = pgTable(
+	"extera_plugins_category_translation",
+	{
+		id: serial("id").primaryKey(),
+		categoryId: integer("category_id")
+			.notNull()
+			.references(() => pluginCategories.id, { onDelete: "cascade" }),
+		locale: text("locale").notNull(),
+		name: text("name").notNull(),
+		description: text("description"),
+		origin: text("origin").default("ai").notNull(),
+		sourceHash: text("source_hash").notNull(),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+		updatedAt: integer("updated_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+	},
+	(t) => [
+		uniqueIndex("category_translation_locale_idx").on(t.categoryId, t.locale),
+		index("category_translation_category_idx").on(t.categoryId),
 	],
 );
 
@@ -219,6 +276,33 @@ export const pluginVersions = pgTable(
 		index("version_created_idx").on(t.createdAt),
 		index("version_stable_idx").on(t.isStable),
 		index("version_unique_idx").on(t.pluginId, t.version),
+	],
+);
+
+export const pluginVersionTranslations = pgTable(
+	"extera_plugins_plugin_version_translation",
+	{
+		id: serial("id").primaryKey(),
+		versionId: integer("version_id")
+			.notNull()
+			.references(() => pluginVersions.id, { onDelete: "cascade" }),
+		locale: text("locale").notNull(),
+		changelog: text("changelog").notNull(),
+		origin: text("origin").default("ai").notNull(),
+		sourceHash: text("source_hash").notNull(),
+		createdAt: integer("created_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+		updatedAt: integer("updated_at")
+			.default(sql`extract(epoch from now())`)
+			.notNull(),
+	},
+	(t) => [
+		uniqueIndex("plugin_version_translation_locale_idx").on(
+			t.versionId,
+			t.locale,
+		),
+		index("plugin_version_translation_version_idx").on(t.versionId),
 	],
 );
 
@@ -368,7 +452,28 @@ export const pluginsRelations = relations(plugins, ({ one, many }) => ({
 	dependents: many(pluginDependencies, {
 		relationName: "plugin_dependency_target",
 	}),
+	translations: many(pluginTranslations),
 }));
+
+export const pluginTranslationsRelations = relations(
+	pluginTranslations,
+	({ one }) => ({
+		plugin: one(plugins, {
+			fields: [pluginTranslations.pluginId],
+			references: [plugins.id],
+		}),
+	}),
+);
+
+export const categoryTranslationsRelations = relations(
+	categoryTranslations,
+	({ one }) => ({
+		category: one(pluginCategories, {
+			fields: [categoryTranslations.categoryId],
+			references: [pluginCategories.id],
+		}),
+	}),
+);
 
 export const pluginDependenciesRelations = relations(
 	pluginDependencies,
@@ -398,6 +503,17 @@ export const pluginVersionsRelations = relations(
 			references: [users.id],
 		}),
 		files: many(pluginFiles),
+		translations: many(pluginVersionTranslations),
+	}),
+);
+
+export const pluginVersionTranslationsRelations = relations(
+	pluginVersionTranslations,
+	({ one }) => ({
+		version: one(pluginVersions, {
+			fields: [pluginVersionTranslations.versionId],
+			references: [pluginVersions.id],
+		}),
 	}),
 );
 

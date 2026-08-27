@@ -28,9 +28,16 @@ import {
 	pluginPipelineQueue,
 	pluginReviews,
 	plugins,
+	pluginTranslations,
 	users,
 } from "~/server/db/schema";
 import { verifyCaptcha } from "~/server/lib/captcha";
+import {
+	generatePluginTranslation,
+	getContentLocale,
+	localizeCategoryRows,
+	localizePluginRows,
+} from "~/server/lib/content-localization";
 import { emitWebhookEvent } from "~/server/lib/developer-platform";
 import {
 	getDirectPluginDependencies,
@@ -58,11 +65,17 @@ export const pluginsRouter = createTRPCRouter({
 		)
 		.query(async ({ ctx, input }) => {
 			const offset = (input.page - 1) * input.limit;
+			const locale = getContentLocale(ctx.headers);
 
 			const whereConditions = and(
 				eq(plugins.status, "approved"),
 				input.category ? eq(plugins.category, input.category) : undefined,
-				input.search ? ilike(plugins.name, `%${input.search}%`) : undefined,
+				input.search
+					? or(
+							ilike(plugins.name, `%${input.search}%`),
+							sql`exists (select 1 from ${pluginTranslations} pt where pt.plugin_id = ${plugins.id} and pt.locale = ${locale} and pt.name ilike ${`%${input.search}%`})`,
+						)
+					: undefined,
 				input.featured ? eq(plugins.featured, true) : undefined,
 				input.exteralessOnly
 					? eq(plugins.exteralessCompatible, true)
@@ -110,10 +123,15 @@ export const pluginsRouter = createTRPCRouter({
 					.where(whereConditions)
 					.then((result: { count: number }[]) => result[0]?.count ?? 0),
 			]);
-			const pluginsList = pluginRows.map((row) => ({
+			const rawPluginsList = pluginRows.map((row) => ({
 				...row.plugin,
 				authorImage: row.authorImage,
 			}));
+			const pluginsList = await localizePluginRows(
+				ctx.db,
+				rawPluginsList,
+				locale,
+			);
 
 			const latestSecurityChecks = pluginsList.length
 				? await ctx.db
@@ -150,8 +168,14 @@ export const pluginsRouter = createTRPCRouter({
 		}),
 
 	getBySlug: publicProcedure
-		.input(z.object({ slug: z.string().trim().min(1).max(200) }))
+		.input(
+			z.object({
+				slug: z.string().trim().min(1).max(200),
+				localized: z.boolean().default(true),
+			}),
+		)
 		.query(async ({ ctx, input }) => {
+			const locale = getContentLocale(ctx.headers);
 			const plugin = await ctx.db
 				.select()
 				.from(plugins)
@@ -171,26 +195,31 @@ export const pluginsRouter = createTRPCRouter({
 				throw new TRPCError({ code: "NOT_FOUND", message: "Plugin not found" });
 			}
 
-			const [latestChecks, latestQueue, dependencies] = await Promise.all([
-				ctx.db
-					.selectDistinctOn([pluginPipelineChecks.checkType])
-					.from(pluginPipelineChecks)
-					.where(eq(pluginPipelineChecks.pluginId, selectedPlugin.id))
-					.orderBy(
-						pluginPipelineChecks.checkType,
-						desc(pluginPipelineChecks.createdAt),
-					),
-				ctx.db
-					.select({ status: pluginPipelineQueue.status })
-					.from(pluginPipelineQueue)
-					.where(eq(pluginPipelineQueue.pluginId, selectedPlugin.id))
-					.orderBy(desc(pluginPipelineQueue.createdAt))
-					.limit(1),
-				getDirectPluginDependencies(ctx.db, selectedPlugin.id),
-			]);
+			const [latestChecks, latestQueue, dependencies, localizedRows] =
+				await Promise.all([
+					ctx.db
+						.selectDistinctOn([pluginPipelineChecks.checkType])
+						.from(pluginPipelineChecks)
+						.where(eq(pluginPipelineChecks.pluginId, selectedPlugin.id))
+						.orderBy(
+							pluginPipelineChecks.checkType,
+							desc(pluginPipelineChecks.createdAt),
+						),
+					ctx.db
+						.select({ status: pluginPipelineQueue.status })
+						.from(pluginPipelineQueue)
+						.where(eq(pluginPipelineQueue.pluginId, selectedPlugin.id))
+						.orderBy(desc(pluginPipelineQueue.createdAt))
+						.limit(1),
+					getDirectPluginDependencies(ctx.db, selectedPlugin.id, locale),
+					input.localized
+						? localizePluginRows(ctx.db, [selectedPlugin], locale)
+						: Promise.resolve([{ ...selectedPlugin, localizedLocale: null }]),
+				]);
+			const localizedPlugin = localizedRows[0] ?? selectedPlugin;
 
 			return {
-				...selectedPlugin,
+				...localizedPlugin,
 				latestSecurityCheck:
 					latestChecks.find((check) => check.checkType === "security") ?? null,
 				checkSummary: summarizePluginChecks(
@@ -211,15 +240,9 @@ export const pluginsRouter = createTRPCRouter({
 		)
 		.query(async ({ ctx, input }) => {
 			const search = input.search.trim();
-			return ctx.db
-				.select({
-					id: plugins.id,
-					name: plugins.name,
-					slug: plugins.slug,
-					shortDescription: plugins.shortDescription,
-					version: plugins.version,
-					author: plugins.author,
-				})
+			const locale = getContentLocale(ctx.headers);
+			const rows = await ctx.db
+				.select()
 				.from(plugins)
 				.where(
 					and(
@@ -238,12 +261,25 @@ export const pluginsRouter = createTRPCRouter({
 				)
 				.orderBy(desc(plugins.downloadCount), asc(plugins.name))
 				.limit(input.limit);
+			const localized = await localizePluginRows(ctx.db, rows, locale);
+			return localized.map((plugin) => ({
+				id: plugin.id,
+				name: plugin.name,
+				slug: plugin.slug,
+				shortDescription: plugin.shortDescription,
+				version: plugin.version,
+				author: plugin.author,
+			}));
 		}),
 
 	getInstallPlan: publicProcedure
 		.input(z.object({ pluginId: z.number() }))
 		.query(async ({ ctx, input }) => {
-			return getPluginInstallPlan(ctx.db, input.pluginId);
+			return getPluginInstallPlan(
+				ctx.db,
+				input.pluginId,
+				getContentLocale(ctx.headers),
+			);
 		}),
 
 	getReviews: publicProcedure
@@ -639,10 +675,15 @@ export const pluginsRouter = createTRPCRouter({
 		}),
 
 	getCategories: publicProcedure.query(async ({ ctx }) => {
-		return await ctx.db
+		const categories = await ctx.db
 			.select()
 			.from(pluginCategories)
 			.orderBy(asc(pluginCategories.name));
+		return localizeCategoryRows(
+			ctx.db,
+			categories,
+			getContentLocale(ctx.headers),
+		);
 	}),
 
 	getFeatured: publicProcedure
@@ -655,10 +696,15 @@ export const pluginsRouter = createTRPCRouter({
 				.where(and(eq(plugins.featured, true), eq(plugins.status, "approved")))
 				.orderBy(desc(plugins.rating))
 				.limit(input.limit);
-			return rows.map((row) => ({
+			const featured = rows.map((row) => ({
 				...row.plugin,
 				authorImage: row.authorImage,
 			}));
+			return localizePluginRows(
+				ctx.db,
+				featured,
+				getContentLocale(ctx.headers),
+			);
 		}),
 
 	getPopular: publicProcedure
@@ -710,10 +756,15 @@ export const pluginsRouter = createTRPCRouter({
 						),
 					),
 				);
-			const allPlugins = pluginRows.map((row) => ({
+			const rawPlugins = pluginRows.map((row) => ({
 				...row.plugin,
 				authorImage: row.authorImage,
 			}));
+			const allPlugins = await localizePluginRows(
+				ctx.db,
+				rawPlugins,
+				getContentLocale(ctx.headers),
+			);
 
 			const pluginsWithScore = allPlugins.map(
 				(plugin: typeof plugins.$inferSelect) => {
@@ -854,10 +905,15 @@ export const pluginsRouter = createTRPCRouter({
 				.where(
 					and(eq(plugins.status, "approved"), inArray(plugins.id, pluginIds)),
 				);
-			const allPlugins = pluginRows.map((row) => ({
+			const rawPlugins = pluginRows.map((row) => ({
 				...row.plugin,
 				authorImage: row.authorImage,
 			}));
+			const allPlugins = await localizePluginRows(
+				ctx.db,
+				rawPlugins,
+				getContentLocale(ctx.headers),
+			);
 
 			const pluginsWithTrendScore = allPlugins.map(
 				(plugin: typeof plugins.$inferSelect) => {
@@ -1033,6 +1089,19 @@ export const pluginsRouter = createTRPCRouter({
 						},
 					);
 				} catch {}
+				if (
+					updatedPlugin.contentLocale === "ru" ||
+					updatedPlugin.contentLocale === "en"
+				) {
+					try {
+						await generatePluginTranslation(
+							ctx.db,
+							updatedPlugin,
+							updatedPlugin.contentLocale === "ru" ? "en" : "ru",
+							`user:${ctx.session.user.id}`,
+						);
+					} catch {}
+				}
 			}
 
 			revalidatePath(`/plugins/${finalSlug}`);
@@ -1090,6 +1159,7 @@ export const pluginsRouter = createTRPCRouter({
 			}),
 		)
 		.query(async ({ ctx, input }) => {
+			const locale = getContentLocale(ctx.headers);
 			const searchTerms = input.query
 				.toLowerCase()
 				.trim()
@@ -1153,6 +1223,12 @@ export const pluginsRouter = createTRPCRouter({
 					WHEN ${plugins.rating} >= 3.5 THEN 15
 					ELSE 0
 				END +
+				CASE WHEN EXISTS (
+					SELECT 1 FROM ${pluginTranslations} pt
+					WHERE pt.plugin_id = ${plugins.id}
+						AND pt.locale = ${locale}
+						AND LOWER(pt.name) LIKE ${likePattern}
+				) THEN 800 ELSE 0 END +
 				LEAST(${plugins.downloadCount} / 1000, 25)
 			`;
 
@@ -1179,7 +1255,18 @@ export const pluginsRouter = createTRPCRouter({
 						)})`
 					: sql``;
 
-			const finalSearchCondition = sql`(${searchCondition} ${wordsCondition})`;
+			const translatedSearchCondition = sql`EXISTS (
+				SELECT 1 FROM ${pluginTranslations} pt
+				WHERE pt.plugin_id = ${plugins.id}
+					AND pt.locale = ${locale}
+					AND (
+						LOWER(pt.name) LIKE ${likePattern} OR
+						LOWER(pt.short_description) LIKE ${likePattern} OR
+						LOWER(pt.description) LIKE ${likePattern} OR
+						LOWER(pt.tags) LIKE ${likePattern}
+					)
+			)`;
+			const finalSearchCondition = sql`((${searchCondition} ${wordsCondition}) OR ${translatedSearchCondition})`;
 			whereConditions.push(finalSearchCondition);
 
 			let orderBy;
@@ -1205,20 +1292,7 @@ export const pluginsRouter = createTRPCRouter({
 
 			const resultsQuery = ctx.db
 				.select({
-					id: plugins.id,
-					name: plugins.name,
-					slug: plugins.slug,
-					shortDescription: plugins.shortDescription,
-					description: input.includeContent ? plugins.description : sql`NULL`,
-					author: plugins.author,
-					category: plugins.category,
-					tags: plugins.tags,
-					rating: plugins.rating,
-					ratingCount: plugins.ratingCount,
-					downloadCount: plugins.downloadCount,
-					featured: plugins.featured,
-					screenshots: plugins.screenshots,
-					createdAt: plugins.createdAt,
+					plugin: plugins,
 					relevanceScore:
 						input.sortBy === "relevance" ? relevanceScore : sql`NULL`,
 				})
@@ -1242,6 +1316,11 @@ export const pluginsRouter = createTRPCRouter({
 				resultsQuery,
 				suggestionQuery,
 			]);
+			const localizedResults = await localizePluginRows(
+				ctx.db,
+				results.map((result) => result.plugin),
+				locale,
+			);
 
 			const suggestions = categoryStats.map(
 				(stat: { category: string; count: number }) => ({
@@ -1252,7 +1331,23 @@ export const pluginsRouter = createTRPCRouter({
 			);
 
 			return {
-				plugins: results,
+				plugins: localizedResults.map((plugin, index) => ({
+					id: plugin.id,
+					name: plugin.name,
+					slug: plugin.slug,
+					shortDescription: plugin.shortDescription,
+					description: input.includeContent ? plugin.description : null,
+					author: plugin.author,
+					category: plugin.category,
+					tags: plugin.tags,
+					rating: plugin.rating,
+					ratingCount: plugin.ratingCount,
+					downloadCount: plugin.downloadCount,
+					featured: plugin.featured,
+					screenshots: plugin.screenshots,
+					createdAt: plugin.createdAt,
+					relevanceScore: results[index]?.relevanceScore ?? null,
+				})),
 				suggestions,
 				searchTerms,
 				totalFound: results.length,
@@ -1263,21 +1358,17 @@ export const pluginsRouter = createTRPCRouter({
 		.input(z.object({ query: z.string().min(1).max(100) }))
 		.query(async ({ ctx, input }) => {
 			const likePattern = `%${input.query.toLowerCase()}%`;
+			const locale = getContentLocale(ctx.headers);
 
-			const [pluginSuggestions, categorySuggestions, authorSuggestions] =
+			const [pluginRows, categorySuggestions, authorSuggestions] =
 				await Promise.all([
 					ctx.db
-						.select({
-							type: sql`'plugin'`,
-							value: plugins.name,
-							slug: plugins.slug,
-							extra: plugins.category,
-						})
+						.select()
 						.from(plugins)
 						.where(
 							and(
 								eq(plugins.status, "approved"),
-								sql`LOWER(${plugins.name}) LIKE ${likePattern}`,
+								sql`LOWER(${plugins.name}) LIKE ${likePattern} OR EXISTS (SELECT 1 FROM ${pluginTranslations} pt WHERE pt.plugin_id = ${plugins.id} AND pt.locale = ${locale} AND LOWER(pt.name) LIKE ${likePattern})`,
 							),
 						)
 						.orderBy(desc(plugins.downloadCount))
@@ -1319,6 +1410,17 @@ export const pluginsRouter = createTRPCRouter({
 						.orderBy(desc(sql`COUNT(*)`))
 						.limit(3),
 				]);
+			const localizedPlugins = await localizePluginRows(
+				ctx.db,
+				pluginRows,
+				locale,
+			);
+			const pluginSuggestions = localizedPlugins.map((plugin) => ({
+				type: "plugin" as const,
+				value: plugin.name,
+				slug: plugin.slug,
+				extra: plugin.category,
+			}));
 
 			return [
 				...pluginSuggestions,
@@ -1359,18 +1461,13 @@ export const pluginsRouter = createTRPCRouter({
 		)
 		.query(async ({ ctx, input }) => {
 			const likePattern = `%${input.name.trim().toLowerCase()}%`;
+			const locale = getContentLocale(ctx.headers);
 			const list = await ctx.db
-				.select({
-					id: plugins.id,
-					name: plugins.name,
-					slug: plugins.slug,
-					shortDescription: plugins.shortDescription,
-					category: plugins.category,
-					rating: plugins.rating,
-					ratingCount: plugins.ratingCount,
-				})
+				.select()
 				.from(plugins)
-				.where(sql`LOWER(${plugins.name}) LIKE ${likePattern}`)
+				.where(
+					sql`LOWER(${plugins.name}) LIKE ${likePattern} OR EXISTS (SELECT 1 FROM ${pluginTranslations} pt WHERE pt.plugin_id = ${plugins.id} AND pt.locale = ${locale} AND LOWER(pt.name) LIKE ${likePattern})`,
+				)
 				.orderBy(
 					desc(plugins.rating),
 					desc(plugins.ratingCount),
@@ -1378,6 +1475,15 @@ export const pluginsRouter = createTRPCRouter({
 				)
 				.limit(input.limit);
 
-			return list;
+			const localized = await localizePluginRows(ctx.db, list, locale);
+			return localized.map((plugin) => ({
+				id: plugin.id,
+				name: plugin.name,
+				slug: plugin.slug,
+				shortDescription: plugin.shortDescription,
+				category: plugin.category,
+				rating: plugin.rating,
+				ratingCount: plugin.ratingCount,
+			}));
 		}),
 });

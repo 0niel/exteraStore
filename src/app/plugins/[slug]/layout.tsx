@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getLocale } from "next-intl/server";
 import { StructuredData } from "~/components/structured-data";
 import {
 	absoluteUrl,
@@ -16,17 +17,20 @@ type Props = {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
 	const { slug } = await params;
-	const plugin = await getPublicPluginSeo(slug);
+	const locale = (await getLocale()) === "ru" ? "ru" : "en";
+	const plugin = await getPublicPluginSeo(slug, locale);
 	if (!plugin) {
 		return {
-			title: "Плагин не найден",
+			title: locale === "ru" ? "Плагин не найден" : "Plugin not found",
 			robots: { index: false, follow: false },
 		};
 	}
 
 	const description =
 		seoDescription(plugin.shortDescription || plugin.description) ||
-		`Плагин ${plugin.name} в каталоге exteraStore.`;
+		(locale === "ru"
+			? `Плагин ${plugin.name} в каталоге exteraStore.`
+			: `${plugin.name} plugin in the exteraStore catalog.`);
 	const screenshots = safeJsonParse<string[]>(plugin.screenshots ?? "[]", [])
 		.filter((image) => image.startsWith("https://"))
 		.slice(0, 4);
@@ -34,12 +38,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 	const url = absoluteUrl(`/plugins/${plugin.slug}`);
 
 	return {
-		title: { absolute: `${plugin.name} — плагин для Telegram · exteraStore` },
+		title: {
+			absolute:
+				locale === "ru"
+					? `${plugin.name} — плагин для Telegram · exteraStore`
+					: `${plugin.name} — Telegram plugin · exteraStore`,
+		},
 		description,
 		keywords: [plugin.name, plugin.category, plugin.author, ...tags],
 		alternates: { canonical: `/plugins/${plugin.slug}` },
 		openGraph: {
-			title: `${plugin.name} — плагин для Telegram`,
+			title:
+				locale === "ru"
+					? `${plugin.name} — плагин для Telegram`
+					: `${plugin.name} — Telegram plugin`,
 			description,
 			url,
 			type: "website",
@@ -56,7 +68,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function PluginLayout({ children, params }: Props) {
 	const { slug } = await params;
-	const plugin = await getPublicPluginSeo(slug);
+	const locale = (await getLocale()) === "ru" ? "ru" : "en";
+	const plugin = await getPublicPluginSeo(slug, locale);
 	if (!plugin) return children;
 
 	const url = absoluteUrl(`/plugins/${plugin.slug}`);
@@ -114,7 +127,7 @@ export default async function PluginLayout({ children, params }: Props) {
 			{
 				"@type": "ListItem",
 				position: 1,
-				name: "Плагины",
+				name: locale === "ru" ? "Плагины" : "Plugins",
 				item: absoluteUrl("/plugins"),
 			},
 			{

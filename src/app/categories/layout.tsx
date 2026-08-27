@@ -1,20 +1,28 @@
 import type { Metadata } from "next";
+import { getLocale } from "next-intl/server";
 import { absoluteUrl, OPEN_GRAPH_IMAGE } from "~/lib/site";
 
-const description =
-	"Категории плагинов exteraStore: безопасность, автоматизация, интерфейс, медиа, продуктивность и другие направления.";
-
-export const metadata: Metadata = {
-	title: "Категории плагинов",
-	description,
-	alternates: { canonical: "/categories" },
-	openGraph: {
-		title: "Категории плагинов exteraStore",
+export async function generateMetadata(): Promise<Metadata> {
+	const locale = await getLocale();
+	const description =
+		locale === "ru"
+			? "Категории плагинов exteraStore: безопасность, автоматизация, интерфейс, медиа, продуктивность и другие направления."
+			: "Browse exteraStore plugins by security, automation, interface, media, productivity and other categories.";
+	return {
+		title: locale === "ru" ? "Категории плагинов" : "Plugin categories",
 		description,
-		url: absoluteUrl("/categories"),
-		images: [OPEN_GRAPH_IMAGE],
-	},
-};
+		alternates: { canonical: "/categories" },
+		openGraph: {
+			title:
+				locale === "ru"
+					? "Категории плагинов exteraStore"
+					: "exteraStore plugin categories",
+			description,
+			url: absoluteUrl("/categories"),
+			images: [OPEN_GRAPH_IMAGE],
+		},
+	};
+}
 
 export default function CategoriesLayout({
 	children,

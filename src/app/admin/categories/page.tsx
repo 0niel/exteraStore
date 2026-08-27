@@ -1,10 +1,11 @@
 "use client";
 
-import { Edit, Loader2, Plus, Trash2 } from "lucide-react";
+import { Edit, Languages, Loader2, Plus, Trash2 } from "lucide-react";
 import { useSession } from "next-auth/react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
+import { CategoryTranslationDialog } from "~/components/category-translation-dialog";
 import {
 	AlertDialog,
 	AlertDialogCancel,
@@ -49,6 +50,7 @@ interface Category {
 	icon: string | null;
 	color: string | null;
 	createdAt: number;
+	contentLocale: string;
 	pluginCount?: number;
 }
 
@@ -65,6 +67,7 @@ function CategoriesSkeleton() {
 export default function AdminCategoriesPage() {
 	const { data: session } = useSession();
 	const t = useTranslations("AdminCategories");
+	const locale = useLocale();
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
 	const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 	const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -77,6 +80,13 @@ export default function AdminCategoriesPage() {
 	const [description, setDescription] = useState("");
 	const [icon, setIcon] = useState("");
 	const [color, setColor] = useState("");
+	const [sourceLocale, setSourceLocale] = useState<"ru" | "en">(
+		locale === "ru" ? "ru" : "en",
+	);
+	const [translationCategoryId, setTranslationCategoryId] = useState<
+		number | null
+	>(null);
+	const [translationCursor, setTranslationCursor] = useState(0);
 
 	const isAdmin = isAdminUser(session?.user);
 
@@ -123,6 +133,19 @@ export default function AdminCategoriesPage() {
 			toast.error(error.message);
 		},
 	});
+	const backfillTranslations = api.translations.backfill.useMutation({
+		onSuccess: (result) => {
+			setTranslationCursor(result.done ? 0 : result.nextCursor);
+			toast.success(
+				t("translation_batch_done", {
+					scanned: result.scanned,
+					generated: result.generated,
+				}),
+			);
+			if (result.limited) toast.warning(t("translation_limit_reached"));
+		},
+		onError: (error) => toast.error(error.message),
+	});
 
 	const resetForm = () => {
 		setName("");
@@ -130,6 +153,7 @@ export default function AdminCategoriesPage() {
 		setDescription("");
 		setIcon("");
 		setColor("");
+		setSourceLocale(locale === "ru" ? "ru" : "en");
 		setEditingCategory(null);
 	};
 
@@ -141,6 +165,7 @@ export default function AdminCategoriesPage() {
 			setDescription(category.description || "");
 			setIcon(getCategoryEmoji(category.icon, category.slug));
 			setColor(category.color || "");
+			setSourceLocale(category.contentLocale === "en" ? "en" : "ru");
 		} else {
 			resetForm();
 		}
@@ -167,6 +192,7 @@ export default function AdminCategoriesPage() {
 				name,
 				slug,
 				description: description || undefined,
+				sourceLocale,
 				icon: normalizedIcon,
 				color: color || undefined,
 			});
@@ -175,6 +201,7 @@ export default function AdminCategoriesPage() {
 				name,
 				slug,
 				description: description || undefined,
+				sourceLocale,
 				icon: normalizedIcon,
 				color: color || undefined,
 			});
@@ -221,13 +248,29 @@ export default function AdminCategoriesPage() {
 							) : null}
 						</div>
 					</div>
-					<Button
-						onClick={() => handleOpenDialog()}
-						className="press-scale w-full md:w-auto"
-					>
-						<Plus className="mr-2 h-4 w-4" />
-						{t("add_category")}
-					</Button>
+					<div className="grid w-full gap-2 sm:grid-cols-2 md:flex md:w-auto">
+						<Button
+							variant="outline"
+							onClick={() =>
+								backfillTranslations.mutate({
+									entity: "categories",
+									cursor: translationCursor,
+								})
+							}
+							disabled={backfillTranslations.isPending}
+						>
+							{backfillTranslations.isPending ? (
+								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+							) : (
+								<Languages className="mr-2 h-4 w-4" />
+							)}
+							{t("translate_missing")}
+						</Button>
+						<Button onClick={() => handleOpenDialog()} className="press-scale">
+							<Plus className="mr-2 h-4 w-4" />
+							{t("add_category")}
+						</Button>
+					</div>
 				</div>
 
 				{isLoading ? (
@@ -284,6 +327,14 @@ export default function AdminCategoriesPage() {
 											<Button
 												size="sm"
 												variant="outline"
+												aria-label={t("translations")}
+												onClick={() => setTranslationCategoryId(category.id)}
+											>
+												<Languages className="h-4 w-4" />
+											</Button>
+											<Button
+												size="sm"
+												variant="outline"
 												aria-label={t("edit_category")}
 												onClick={() => handleOpenDialog(category)}
 											>
@@ -319,6 +370,28 @@ export default function AdminCategoriesPage() {
 						</DialogHeader>
 
 						<form onSubmit={handleSubmit} className="space-y-4">
+							<div className="space-y-2">
+								<Label>{t("source_language")}</Label>
+								<div className="grid grid-cols-2 rounded-xl bg-muted p-1">
+									{(["ru", "en"] as const).map((item) => (
+										<button
+											key={item}
+											type="button"
+											onClick={() => setSourceLocale(item)}
+											className={`min-h-10 rounded-lg font-semibold text-sm transition-colors ${
+												sourceLocale === item
+													? "bg-background text-foreground shadow-sm"
+													: "text-muted-foreground"
+											}`}
+										>
+											{item === "ru" ? "Русский" : "English"}
+										</button>
+									))}
+								</div>
+								<p className="text-muted-foreground text-xs">
+									{t("source_language_help")}
+								</p>
+							</div>
 							<div className="space-y-2">
 								<Label htmlFor="name">{t("name")} *</Label>
 								<Input
@@ -466,6 +539,14 @@ export default function AdminCategoriesPage() {
 						</AlertDialogFooter>
 					</AlertDialogContent>
 				</AlertDialog>
+
+				<CategoryTranslationDialog
+					categoryId={translationCategoryId}
+					open={translationCategoryId !== null}
+					onOpenChange={(open) => {
+						if (!open) setTranslationCategoryId(null);
+					}}
+				/>
 			</div>
 		</div>
 	);

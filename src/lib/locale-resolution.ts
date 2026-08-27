@@ -33,3 +33,19 @@ export function resolveLocaleFromAcceptLanguage(
 
 	return DEFAULT_LOCALE;
 }
+
+export function resolveContentLocale(input: {
+	explicit?: string | null;
+	cookie?: string | null;
+	acceptLanguage?: string | null;
+}): Locale {
+	const explicit = input.explicit?.toLowerCase();
+	if (isSupportedLocale(explicit)) return explicit;
+
+	const cookieLocale = input.cookie?.match(
+		/(?:^|;\s*)NEXT_LOCALE=(ru|en)(?:;|$)/,
+	)?.[1];
+	if (isSupportedLocale(cookieLocale)) return cookieLocale;
+
+	return resolveLocaleFromAcceptLanguage(input.acceptLanguage ?? null);
+}

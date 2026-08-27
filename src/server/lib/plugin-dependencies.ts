@@ -1,6 +1,11 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import type { Database } from "~/server/db";
-import { notifications, pluginDependencies, plugins } from "~/server/db/schema";
+import {
+	notifications,
+	pluginDependencies,
+	plugins,
+	pluginTranslations,
+} from "~/server/db/schema";
 
 export type PluginDependencyEdge = {
 	pluginId: number;
@@ -205,8 +210,9 @@ export async function notifyDependencyAuthors(
 export async function getDirectPluginDependencies(
 	database: Database,
 	pluginId: number,
+	locale?: "ru" | "en",
 ) {
-	return database
+	const rows = await database
 		.select({
 			id: plugins.id,
 			name: plugins.name,
@@ -226,11 +232,32 @@ export async function getDirectPluginDependencies(
 			),
 		)
 		.orderBy(asc(pluginDependencies.id));
+	if (!locale || rows.length === 0) return rows;
+	const translations = await database
+		.select()
+		.from(pluginTranslations)
+		.where(
+			and(
+				inArray(
+					pluginTranslations.pluginId,
+					rows.map((row) => row.id),
+				),
+				eq(pluginTranslations.locale, locale),
+			),
+		);
+	const byPlugin = new Map(translations.map((item) => [item.pluginId, item]));
+	return rows.map((row) => ({
+		...row,
+		name: byPlugin.get(row.id)?.name ?? row.name,
+		shortDescription:
+			byPlugin.get(row.id)?.shortDescription ?? row.shortDescription,
+	}));
 }
 
 export async function getPluginInstallPlan(
 	database: Database,
 	rootPluginId: number,
+	locale?: "ru" | "en",
 ) {
 	const edges = await loadDependencyEdges(database, [rootPluginId]);
 	const installIds = orderPluginInstallIds(rootPluginId, edges);
@@ -249,7 +276,36 @@ export async function getPluginInstallPlan(
 		.where(
 			and(inArray(plugins.id, installIds), eq(plugins.status, "approved")),
 		);
-	const pluginsById = new Map(pluginRows.map((plugin) => [plugin.id, plugin]));
+	const translations = locale
+		? await database
+				.select()
+				.from(pluginTranslations)
+				.where(
+					and(
+						inArray(pluginTranslations.pluginId, installIds),
+						eq(pluginTranslations.locale, locale),
+					),
+				)
+		: [];
+	const translationsByPlugin = new Map(
+		translations.map((translation) => [translation.pluginId, translation]),
+	);
+	const pluginsById = new Map(
+		pluginRows.map((plugin) => {
+			const translation = translationsByPlugin.get(plugin.id);
+			return [
+				plugin.id,
+				translation
+					? {
+							...plugin,
+							name: translation.name,
+							shortDescription: translation.shortDescription,
+							description: translation.description,
+						}
+					: plugin,
+			] as const;
+		}),
+	);
 
 	if (pluginRows.length !== installIds.length) {
 		throw new Error("Одна из обязательных зависимостей сейчас недоступна");

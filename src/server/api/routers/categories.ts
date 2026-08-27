@@ -8,17 +8,25 @@ import {
 	plugins,
 	users,
 } from "~/server/db/schema";
+import {
+	getContentLocale,
+	localizeCategoryRows,
+	localizePluginRows,
+} from "~/server/lib/content-localization";
 
 export const categoriesRouter = createTRPCRouter({
 	getAll: publicProcedure.query(async ({ ctx }) => {
+		const locale = getContentLocale(ctx.headers);
 		const categories = await ctx.db
 			.select({
 				id: pluginCategories.id,
 				name: pluginCategories.name,
+				contentLocale: pluginCategories.contentLocale,
 				slug: pluginCategories.slug,
 				description: pluginCategories.description,
 				icon: pluginCategories.icon,
 				color: pluginCategories.color,
+				createdAt: pluginCategories.createdAt,
 				pluginCount: count(plugins.id),
 			})
 			.from(pluginCategories)
@@ -31,7 +39,8 @@ export const categoriesRouter = createTRPCRouter({
 			)
 			.groupBy(pluginCategories.id);
 
-		return categories.map((category) => ({
+		const localized = await localizeCategoryRows(ctx.db, categories, locale);
+		return localized.map((category) => ({
 			...category,
 			icon: getCategoryEmoji(category.icon, category.slug),
 		}));
@@ -46,6 +55,7 @@ export const categoriesRouter = createTRPCRouter({
 			}),
 		)
 		.query(async ({ ctx, input }) => {
+			const locale = getContentLocale(ctx.headers);
 			const where = and(
 				eq(plugins.category, input.slug),
 				eq(plugins.status, "approved"),
@@ -73,10 +83,15 @@ export const categoriesRouter = createTRPCRouter({
 				throw new Error("Категория не найдена");
 			}
 
-			const categoryPlugins = pluginRows.map((row) => ({
+			const rawCategoryPlugins = pluginRows.map((row) => ({
 				...row.plugin,
 				authorImage: row.authorImage,
 			}));
+			const categoryPlugins = await localizePluginRows(
+				ctx.db,
+				rawCategoryPlugins,
+				locale,
+			);
 			const latestSecurityChecks = categoryPlugins.length
 				? await ctx.db
 						.selectDistinctOn([pluginPipelineChecks.pluginId])
@@ -100,8 +115,11 @@ export const categoriesRouter = createTRPCRouter({
 			);
 			const total = totalRows[0]?.count ?? 0;
 
+			const localizedCategory = (
+				await localizeCategoryRows(ctx.db, [category], locale)
+			)[0];
 			return {
-				...category,
+				...(localizedCategory ?? category),
 				icon: getCategoryEmoji(category.icon, category.slug),
 				plugins: categoryPlugins.map((plugin) => ({
 					...plugin,

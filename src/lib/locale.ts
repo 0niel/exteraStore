@@ -34,11 +34,11 @@ export function getCurrentLocale(): Locale {
 	return getLocaleFromBrowser();
 }
 
-export function setLocaleCookie(locale: Locale) {
+export async function setLocaleCookie(locale: Locale) {
 	if (typeof document === "undefined") return;
 
 	if (typeof cookieStore !== "undefined") {
-		void cookieStore.set({
+		await cookieStore.set({
 			name: "locale",
 			value: locale,
 			path: "/",
