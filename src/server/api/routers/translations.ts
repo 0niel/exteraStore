@@ -19,7 +19,10 @@ import {
 	pluginSourceHash,
 	pluginTranslationInput,
 } from "~/server/lib/content-localization";
-import { enqueueMissingTranslations } from "~/server/lib/content-translation-queue";
+import {
+	enqueueMissingTranslations,
+	processContentTranslationQueue,
+} from "~/server/lib/content-translation-queue";
 
 const nullableText = (max: number) =>
 	z
@@ -317,10 +320,16 @@ export const translationsRouter = createTRPCRouter({
 		)
 		.mutation(async ({ ctx, input }) => {
 			assertAdmin(ctx.session.user.role);
-			return enqueueMissingTranslations(
+			const enqueued = await enqueueMissingTranslations(
 				ctx.db,
 				input.entity,
 				ctx.session.user.id,
 			);
+			const processed = await processContentTranslationQueue(
+				ctx.db,
+				2,
+				input.entity === "plugins" ? ["plugin"] : ["category"],
+			);
+			return { ...enqueued, processed };
 		}),
 });

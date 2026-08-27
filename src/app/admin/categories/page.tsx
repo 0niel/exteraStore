@@ -138,7 +138,11 @@ export default function AdminCategoriesPage() {
 				t("translation_queue_added", {
 					queued: result.queued,
 					total: result.totalMissing,
+					processed: result.processed.completed,
 				}),
+				{
+					description: t("translation_queue_progress"),
+				},
 			);
 		},
 		onError: (error) => toast.error(error.message),

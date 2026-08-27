@@ -852,8 +852,9 @@
 		"toast_checks_error": "Не удалось запустить AI-проверки",
 		"ai_queued_hint": "В очереди: проверки выполняет воркер GitHub Actions, обычно это занимает до 10 минут.",
 		"toast_checks_queued_description": "Плагин добавлен в очередь. Результаты появятся после обработки воркером, обычно в течение 10 минут.",
-		"translate_missing": "Добавить все переводы в очередь",
-		"translation_queue_added": "В очередь добавлено: {queued} из {total} отсутствующих переводов"
+		"translate_missing": "Запустить перевод всех отсутствующих",
+		"translation_queue_added": "Сразу переведено: {processed}. В очереди: {queued} из {total}",
+		"translation_queue_progress": "Остальные переводы продолжат обрабатываться в фоне с безопасным ограничением расходов."
 	},
 	"PluginVersionsPage": {
 		"back_to_plugin": "Назад к плагину",
@@ -903,8 +904,9 @@
 		"source_language": "Язык оригинала",
 		"source_language_help": "ИИ создаст вторую языковую версию, которую всегда можно отредактировать вручную.",
 		"translations": "Переводы категории",
-		"translate_missing": "Добавить все переводы в очередь",
-		"translation_queue_added": "В очередь добавлено: {queued} из {total} отсутствующих переводов"
+		"translate_missing": "Запустить перевод всех отсутствующих",
+		"translation_queue_added": "Сразу переведено: {processed}. В очереди: {queued} из {total}",
+		"translation_queue_progress": "Остальные переводы продолжат обрабатываться в фоне с безопасным ограничением расходов."
 	},
 	"AdminLayout": {
 		"admin_panel": "Панель администратора",

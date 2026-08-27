@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, eq, lte, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, lte, or, sql } from "drizzle-orm";
 import type { Database } from "~/server/db";
 import {
 	aiPluginCollections,
@@ -367,20 +367,26 @@ async function runTranslationJob(
 export async function processContentTranslationQueue(
 	database: Database,
 	limit = 2,
+	entityTypes?: TranslationEntityType[],
 ) {
 	const now = nowSeconds();
 	const candidates = await database
 		.select()
 		.from(contentTranslationQueue)
 		.where(
-			or(
-				and(
-					eq(contentTranslationQueue.status, "pending"),
-					lte(contentTranslationQueue.availableAt, now),
-				),
-				and(
-					eq(contentTranslationQueue.status, "processing"),
-					lte(contentTranslationQueue.startedAt, now - STUCK_SECONDS),
+			and(
+				entityTypes?.length
+					? inArray(contentTranslationQueue.entityType, entityTypes)
+					: undefined,
+				or(
+					and(
+						eq(contentTranslationQueue.status, "pending"),
+						lte(contentTranslationQueue.availableAt, now),
+					),
+					and(
+						eq(contentTranslationQueue.status, "processing"),
+						lte(contentTranslationQueue.startedAt, now - STUCK_SECONDS),
+					),
 				),
 			),
 		)

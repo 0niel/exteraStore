@@ -852,8 +852,9 @@
 		"toast_checks_error": "Failed to start AI checks",
 		"ai_queued_hint": "Queued: the checks run on a GitHub Actions worker and usually finish within ~10 minutes.",
 		"toast_checks_queued_description": "The plugin was added to the queue. Results appear once the worker picks it up, usually within ~10 minutes.",
-		"translate_missing": "Queue every missing translation",
-		"translation_queue_added": "Queued {queued} of {total} missing translations"
+		"translate_missing": "Translate all missing content",
+		"translation_queue_added": "Translated now: {processed}. Queued: {queued} of {total}",
+		"translation_queue_progress": "The remaining translations will continue in the background under the spending safety limit."
 	},
 	"PluginVersionsPage": {
 		"back_to_plugin": "Back to plugin",
@@ -903,8 +904,9 @@
 		"source_language": "Original language",
 		"source_language_help": "AI creates the second language version, which remains fully editable.",
 		"translations": "Category translations",
-		"translate_missing": "Queue every missing translation",
-		"translation_queue_added": "Queued {queued} of {total} missing translations"
+		"translate_missing": "Translate all missing content",
+		"translation_queue_added": "Translated now: {processed}. Queued: {queued} of {total}",
+		"translation_queue_progress": "The remaining translations will continue in the background under the spending safety limit."
 	},
 	"AdminLayout": {
 		"admin_panel": "Admin Panel",
