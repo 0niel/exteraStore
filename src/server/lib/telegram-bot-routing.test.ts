@@ -43,3 +43,9 @@ test("AI worker backfills all translations and preserves source language", () =>
 	assert.match(workerSource, /targetLocale: targetLocale\(locale\)/);
 	assert.doesNotMatch(workerSource, /locale: "ru"/);
 });
+
+test("AI worker can prioritize translations for requested plugins", () => {
+	assert.match(workerSource, /pluginIds: z\.array/);
+	assert.match(workerSource, /enqueuePluginTranslations\(db, pluginIds\)/);
+	assert.match(workerSource, /body\.pluginIds/);
+});

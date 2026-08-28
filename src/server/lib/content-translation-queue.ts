@@ -108,12 +108,23 @@ export async function enqueueTranslationJobs(
 	return { queued: inserted.length };
 }
 
-async function missingPluginJobs(database: Database) {
+async function missingPluginJobs(database: Database, pluginIds?: number[]) {
 	const rows = await database
 		.select()
 		.from(plugins)
-		.where(eq(plugins.status, "approved"));
-	const translations = await database.select().from(pluginTranslations);
+		.where(
+			pluginIds?.length
+				? and(eq(plugins.status, "approved"), inArray(plugins.id, pluginIds))
+				: eq(plugins.status, "approved"),
+		);
+	const translations = await database
+		.select()
+		.from(pluginTranslations)
+		.where(
+			pluginIds?.length
+				? inArray(pluginTranslations.pluginId, pluginIds)
+				: undefined,
+		);
 	const existing = new Map(
 		translations.map((row) => [`${row.pluginId}:${row.locale}`, row]),
 	);
@@ -138,6 +149,16 @@ async function missingPluginJobs(database: Database) {
 				: [];
 		});
 	});
+}
+
+export async function enqueuePluginTranslations(
+	database: Database,
+	pluginIds: number[],
+	requestedById?: string | null,
+) {
+	const jobs = await missingPluginJobs(database, pluginIds);
+	const result = await enqueueTranslationJobs(database, jobs, requestedById);
+	return { ...result, totalMissing: jobs.length };
 }
 
 async function missingCategoryJobs(database: Database) {
@@ -374,6 +395,7 @@ export async function processContentTranslationQueue(
 	database: Database,
 	limit = 2,
 	entityTypes?: TranslationEntityType[],
+	pluginIds?: number[],
 ) {
 	const now = nowSeconds();
 	const candidates = await database
@@ -381,6 +403,12 @@ export async function processContentTranslationQueue(
 		.from(contentTranslationQueue)
 		.where(
 			and(
+				pluginIds?.length
+					? and(
+							eq(contentTranslationQueue.entityType, "plugin"),
+							inArray(contentTranslationQueue.entityId, pluginIds),
+						)
+					: undefined,
 				entityTypes?.length
 					? inArray(contentTranslationQueue.entityType, entityTypes)
 					: undefined,

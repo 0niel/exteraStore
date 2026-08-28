@@ -9,6 +9,10 @@ on:
         description: Max queue items to claim in one run
         required: false
         default: "3"
+      translation_plugin_ids:
+        description: Comma-separated plugin IDs to translate first
+        required: false
+        default: ""
 
 concurrency:
   group: ai-worker
@@ -36,6 +40,7 @@ jobs:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
           OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
           CLAIM_LIMIT: ${{ inputs.limit }}
+          TRANSLATION_PLUGIN_IDS: ${{ inputs.translation_plugin_ids }}
         run: |
           cat > "$RUNNER_TEMP/ai-worker.mjs" <<'NODE'
           const workerUrl = process.env.WORKER_URL;
@@ -43,6 +48,11 @@ jobs:
           const apiKey = process.env.OPENROUTER_API_KEY;
           const model = process.env.OPENROUTER_MODEL || "google/gemini-3.6-flash";
           const limit = Number.parseInt(process.env.CLAIM_LIMIT || "", 10) || 3;
+          const translationPluginIds = (process.env.TRANSLATION_PLUGIN_IDS || "")
+            .split(",")
+            .map((value) => Number.parseInt(value.trim(), 10))
+            .filter((value) => Number.isInteger(value) && value > 0)
+            .slice(0, 20);
 
           const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
           const MAX_ATTEMPTS = 3;
@@ -119,6 +129,21 @@ jobs:
               }
             }
             throw new Error(lastError);
+          }
+
+          if (translationPluginIds.length > 0) {
+            try {
+              const response = await callWorker({
+                action: "translate",
+                scope: "plugins",
+                discover: true,
+                limit: Math.min(translationPluginIds.length, 12),
+                pluginIds: translationPluginIds,
+              });
+              console.log(`requested translations: ${JSON.stringify(response?.translations ?? {})}`);
+            } catch (error) {
+              fail(`translation request failed: ${reason(error)}`);
+            }
           }
 
           let claim;

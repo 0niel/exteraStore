@@ -27,6 +27,7 @@ import {
 } from "~/server/lib/content-translation-policy";
 import {
 	enqueueMissingTranslations,
+	enqueuePluginTranslations,
 	enqueueTranslationJobs,
 	processContentTranslationQueue,
 } from "~/server/lib/content-translation-queue";
@@ -75,6 +76,7 @@ const translateSchema = z.object({
 	action: z.literal("translate"),
 	scope: z.enum(translationScopes).default("all"),
 	discover: z.boolean().default(false),
+	pluginIds: z.array(z.number().int().positive()).min(1).max(20).optional(),
 	limit: z
 		.number()
 		.int()
@@ -120,14 +122,20 @@ async function processTranslations(
 	scope: (typeof translationScopes)[number],
 	limit: number,
 	discover: boolean,
+	pluginIds?: number[],
 ) {
-	const enqueued = discover
-		? await enqueueMissingTranslations(db, scope)
-		: { queued: 0, totalMissing: 0, byType: {} };
+	const enqueued = pluginIds?.length
+		? await enqueuePluginTranslations(db, pluginIds)
+		: discover
+			? await enqueueMissingTranslations(db, scope)
+			: { queued: 0, totalMissing: 0, byType: {} };
 	const processed = await processContentTranslationQueue(
 		db,
 		limit,
-		entityTypesForTranslationScope(scope),
+		pluginIds?.length
+			? entityTypesForTranslationScope("plugins")
+			: entityTypesForTranslationScope(scope),
+		pluginIds,
 	);
 	return { enqueued, processed };
 }
@@ -486,6 +494,7 @@ export async function POST(request: Request) {
 					body.scope,
 					body.limit,
 					body.discover,
+					body.pluginIds,
 				),
 			});
 		}
