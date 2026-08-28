@@ -18,6 +18,7 @@ import {
 	generatePluginTranslation,
 	pluginSourceHash,
 	pluginTranslationInput,
+	saveManualPluginTranslation,
 } from "~/server/lib/content-localization";
 import {
 	ADMIN_TRANSLATION_BATCH_SIZE,
@@ -129,36 +130,7 @@ export const translationsRouter = createTRPCRouter({
 					})
 					.where(eq(plugins.id, plugin.id));
 			} else {
-				const sourceHash = pluginSourceHash(pluginTranslationInput(plugin));
-				await ctx.db
-					.insert(pluginTranslations)
-					.values({
-						pluginId: plugin.id,
-						locale: input.locale,
-						name: input.name,
-						shortDescription: input.shortDescription,
-						description: input.description,
-						requirements: input.requirements,
-						changelog: input.changelog,
-						tags: JSON.stringify(input.tags),
-						origin: "manual",
-						sourceHash,
-						updatedAt: now,
-					})
-					.onConflictDoUpdate({
-						target: [pluginTranslations.pluginId, pluginTranslations.locale],
-						set: {
-							name: input.name,
-							shortDescription: input.shortDescription,
-							description: input.description,
-							requirements: input.requirements,
-							changelog: input.changelog,
-							tags: JSON.stringify(input.tags),
-							origin: "manual",
-							sourceHash,
-							updatedAt: now,
-						},
-					});
+				await saveManualPluginTranslation(ctx.db, plugin, input);
 			}
 
 			revalidatePath(`/plugins/${plugin.slug}`);

@@ -56,7 +56,7 @@ export type CategoryTranslationInput = {
 	description: string | null;
 };
 
-const pluginTranslationOutputSchema = z.object({
+export const pluginTranslationFieldsSchema = z.object({
 	name: z.string().trim().min(1).max(256),
 	shortDescription: z.string().trim().max(500).nullable(),
 	description: z.string().trim().min(1).max(50_000),
@@ -64,6 +64,8 @@ const pluginTranslationOutputSchema = z.object({
 	changelog: z.string().trim().max(20_000).nullable(),
 	tags: z.array(z.string().trim().min(1).max(50)).max(30),
 });
+
+const pluginTranslationOutputSchema = pluginTranslationFieldsSchema;
 
 const categoryTranslationOutputSchema = z.object({
 	name: z.string().trim().min(1).max(80),
@@ -210,6 +212,51 @@ export function isPluginContentUsable(
 		],
 		targetLocale,
 	);
+}
+
+export async function saveManualPluginTranslation(
+	database: Database,
+	plugin: PluginRow,
+	translation: z.infer<typeof pluginTranslationFieldsSchema> & {
+		locale: ContentLocale;
+	},
+) {
+	if (plugin.contentLocale === translation.locale) {
+		throw new Error("Translation locale matches source locale");
+	}
+	const sourceHash = pluginSourceHash(pluginTranslationInput(plugin));
+	const now = Math.floor(Date.now() / 1_000);
+	const [saved] = await database
+		.insert(pluginTranslations)
+		.values({
+			pluginId: plugin.id,
+			locale: translation.locale,
+			name: translation.name,
+			shortDescription: translation.shortDescription,
+			description: translation.description,
+			requirements: translation.requirements,
+			changelog: translation.changelog,
+			tags: JSON.stringify(translation.tags),
+			origin: "manual",
+			sourceHash,
+			updatedAt: now,
+		})
+		.onConflictDoUpdate({
+			target: [pluginTranslations.pluginId, pluginTranslations.locale],
+			set: {
+				name: translation.name,
+				shortDescription: translation.shortDescription,
+				description: translation.description,
+				requirements: translation.requirements,
+				changelog: translation.changelog,
+				tags: JSON.stringify(translation.tags),
+				origin: "manual",
+				sourceHash,
+				updatedAt: now,
+			},
+		})
+		.returning();
+	return saved;
 }
 
 export function isCategoryTranslationUsable(

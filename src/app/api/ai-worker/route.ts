@@ -18,7 +18,12 @@ import {
 	pluginVersions,
 } from "~/server/db/schema";
 import { consumeAiRateLimit } from "~/server/lib/ai-rate-limiter";
-import type { ContentLocale } from "~/server/lib/content-localization";
+import {
+	type ContentLocale,
+	contentLocaleSchema,
+	pluginTranslationFieldsSchema,
+	saveManualPluginTranslation,
+} from "~/server/lib/content-localization";
 import {
 	BACKGROUND_TRANSLATION_BATCH_SIZE,
 	entityTypesForTranslationScope,
@@ -85,11 +90,18 @@ const translateSchema = z.object({
 		.default(BACKGROUND_TRANSLATION_BATCH_SIZE),
 });
 
+const saveTranslationSchema = pluginTranslationFieldsSchema.extend({
+	action: z.literal("save_translation"),
+	pluginId: z.number().int().positive(),
+	locale: contentLocaleSchema,
+});
+
 const bodySchema = z.discriminatedUnion("action", [
 	claimSchema,
 	submitSchema,
 	enqueueSchema,
 	translateSchema,
+	saveTranslationSchema,
 ]);
 
 function nowSeconds() {
@@ -497,6 +509,19 @@ export async function POST(request: Request) {
 					body.pluginIds,
 				),
 			});
+		}
+		if (body.action === "save_translation") {
+			const plugin = await db.query.plugins.findFirst({
+				where: eq(plugins.id, body.pluginId),
+			});
+			if (plugin?.status !== "approved") {
+				return NextResponse.json(
+					{ error: "Plugin not found" },
+					{ status: 404 },
+				);
+			}
+			const translation = await saveManualPluginTranslation(db, plugin, body);
+			return NextResponse.json({ translation });
 		}
 		return await handleSubmit(body.results);
 	} catch (error) {

@@ -49,3 +49,9 @@ test("AI worker can prioritize translations for requested plugins", () => {
 	assert.match(workerSource, /enqueuePluginTranslations\(db, pluginIds\)/);
 	assert.match(workerSource, /body\.pluginIds/);
 });
+
+test("AI worker validates protected manual translation overrides", () => {
+	assert.match(workerSource, /action: z\.literal\("save_translation"\)/);
+	assert.match(workerSource, /pluginTranslationFieldsSchema\.extend/);
+	assert.match(workerSource, /saveManualPluginTranslation\(db, plugin, body\)/);
+});

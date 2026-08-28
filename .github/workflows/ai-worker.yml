@@ -13,6 +13,10 @@ on:
         description: Comma-separated plugin IDs to translate first
         required: false
         default: ""
+      translation_override:
+        description: Validated manual plugin translation JSON
+        required: false
+        default: ""
 
 concurrency:
   group: ai-worker
@@ -41,6 +45,7 @@ jobs:
           OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
           CLAIM_LIMIT: ${{ inputs.limit }}
           TRANSLATION_PLUGIN_IDS: ${{ inputs.translation_plugin_ids }}
+          TRANSLATION_OVERRIDE: ${{ inputs.translation_override }}
         run: |
           cat > "$RUNNER_TEMP/ai-worker.mjs" <<'NODE'
           const workerUrl = process.env.WORKER_URL;
@@ -53,6 +58,7 @@ jobs:
             .map((value) => Number.parseInt(value.trim(), 10))
             .filter((value) => Number.isInteger(value) && value > 0)
             .slice(0, 20);
+          const translationOverride = process.env.TRANSLATION_OVERRIDE?.trim();
 
           const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
           const MAX_ATTEMPTS = 3;
@@ -143,6 +149,16 @@ jobs:
               console.log(`requested translations: ${JSON.stringify(response?.translations ?? {})}`);
             } catch (error) {
               fail(`translation request failed: ${reason(error)}`);
+            }
+          }
+
+          if (translationOverride) {
+            try {
+              const translation = JSON.parse(translationOverride);
+              const response = await callWorker({ action: "save_translation", ...translation });
+              console.log(`saved translation for plugin ${response?.translation?.pluginId ?? "unknown"}`);
+            } catch (error) {
+              fail(`translation override failed: ${reason(error)}`);
             }
           }
 
