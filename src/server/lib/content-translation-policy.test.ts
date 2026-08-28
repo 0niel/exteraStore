@@ -5,9 +5,11 @@ import {
 	BACKGROUND_TRANSLATION_BATCH_SIZE,
 	ContentTranslationRateLimitError,
 	entityTypesForTranslationScope,
+	MAX_AI_TRANSLATION_BATCH_SIZE,
 	MAX_TRANSLATION_BATCH_SIZE,
 	normalizeTranslationBatchSize,
 	PIPELINE_TRANSLATION_BATCH_SIZE,
+	splitAiTranslationBatch,
 	translationRetryAt,
 } from "./content-translation-policy";
 
@@ -34,9 +36,27 @@ test("translation batch size stays within the configured spending boundary", () 
 
 test("translation request batches finish within their HTTP timeout budgets", () => {
 	assert.equal(ADMIN_TRANSLATION_BATCH_SIZE, 1);
-	assert.equal(BACKGROUND_TRANSLATION_BATCH_SIZE, 2);
+	assert.equal(BACKGROUND_TRANSLATION_BATCH_SIZE, 6);
 	assert.equal(PIPELINE_TRANSLATION_BATCH_SIZE, 1);
-	assert.equal(BACKGROUND_TRANSLATION_BATCH_SIZE * 6, 12);
+	assert.equal(
+		BACKGROUND_TRANSLATION_BATCH_SIZE,
+		MAX_AI_TRANSLATION_BATCH_SIZE,
+	);
+	assert.equal(BACKGROUND_TRANSLATION_BATCH_SIZE * 6, 36);
+});
+
+test("AI translation batches preserve every item within the model boundary", () => {
+	const batches = splitAiTranslationBatch(
+		Array.from(
+			{ length: MAX_AI_TRANSLATION_BATCH_SIZE * 2 + 1 },
+			(_, id) => id,
+		),
+	);
+	assert.deepEqual(
+		batches.map((batch) => batch.length),
+		[MAX_AI_TRANSLATION_BATCH_SIZE, MAX_AI_TRANSLATION_BATCH_SIZE, 1],
+	);
+	assert.deepEqual(batches.flat(), [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
 });
 
 test("rate-limited jobs wait for the exact budget reset", () => {

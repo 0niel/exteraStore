@@ -13,9 +13,10 @@ export const translationEntityTypes = [
 export type TranslationEntityType = (typeof translationEntityTypes)[number];
 
 export const ADMIN_TRANSLATION_BATCH_SIZE = 1;
-export const BACKGROUND_TRANSLATION_BATCH_SIZE = 2;
+export const BACKGROUND_TRANSLATION_BATCH_SIZE = 6;
 export const PIPELINE_TRANSLATION_BATCH_SIZE = 1;
 export const MAX_TRANSLATION_BATCH_SIZE = 12;
+export const MAX_AI_TRANSLATION_BATCH_SIZE = 6;
 export const MIN_TRANSLATION_RETRY_SECONDS = 60;
 
 export class ContentTranslationRateLimitError extends Error {
@@ -42,4 +43,15 @@ export function entityTypesForTranslationScope(
 
 export function normalizeTranslationBatchSize(limit: number) {
 	return Math.max(1, Math.min(limit, MAX_TRANSLATION_BATCH_SIZE));
+}
+
+export function splitAiTranslationBatch<T>(items: T[]) {
+	return Array.from(
+		{ length: Math.ceil(items.length / MAX_AI_TRANSLATION_BATCH_SIZE) },
+		(_, index) =>
+			items.slice(
+				index * MAX_AI_TRANSLATION_BATCH_SIZE,
+				(index + 1) * MAX_AI_TRANSLATION_BATCH_SIZE,
+			),
+	);
 }

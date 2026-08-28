@@ -165,7 +165,7 @@ services:
                 authorization: `Bearer $${secret}`,
                 "content-type": "application/json",
               },
-              body: JSON.stringify({ action: "translate", scope: "all", limit: 2, discover }),
+              body: JSON.stringify({ action: "translate", scope: "all", limit: 6, discover }),
               signal: AbortSignal.timeout(300000),
             });
             const body = await response.text();

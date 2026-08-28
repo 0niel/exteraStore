@@ -143,7 +143,7 @@ jobs:
                 action: "translate",
                 scope: "plugins",
                 discover: true,
-                limit: Math.min(translationPluginIds.length, 12),
+                limit: Math.min(translationPluginIds.length, 6),
                 pluginIds: translationPluginIds,
               });
               console.log(`requested translations: ${JSON.stringify(response?.translations ?? {})}`);

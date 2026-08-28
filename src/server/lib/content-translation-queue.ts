@@ -22,8 +22,10 @@ import {
 	collectionSourceHash,
 	generateCategoryTranslation,
 	generateCollectionTranslation,
+	generateCollectionTranslationBatch,
 	generatePipelineCheckTranslation,
 	generatePluginTranslation,
+	generatePluginTranslationBatch,
 	generateVersionTranslation,
 	isCategoryContentUsable,
 	isCategoryTranslationUsable,
@@ -40,6 +42,7 @@ import {
 import {
 	ContentTranslationRateLimitError,
 	normalizeTranslationBatchSize,
+	splitAiTranslationBatch,
 	type TranslationEntityType,
 	translationRetryAt,
 } from "~/server/lib/content-translation-policy";
@@ -391,6 +394,113 @@ async function runTranslationJob(
 	throw new Error("Unsupported translation entity");
 }
 
+type QueueRow = typeof contentTranslationQueue.$inferSelect;
+
+type TranslationRunResult = {
+	job: QueueRow;
+	generated: boolean;
+	label: string | null;
+	error: Error | null;
+};
+
+async function runTranslationJobs(
+	database: Database,
+	jobs: QueueRow[],
+): Promise<TranslationRunResult[]> {
+	if (jobs.length === 0) return [];
+	const target = jobs[0]?.targetLocale as ContentLocale;
+	if (jobs.every((job) => job.entityType === "plugin")) {
+		const rows = await database
+			.select()
+			.from(plugins)
+			.where(
+				inArray(
+					plugins.id,
+					jobs.map((job) => job.entityId),
+				),
+			);
+		const byId = new Map(rows.map((row) => [row.id, row]));
+		const presentRows = jobs.flatMap((job) => {
+			const row = byId.get(job.entityId);
+			return row ? [row] : [];
+		});
+		const batchResults = await generatePluginTranslationBatch(
+			database,
+			presentRows,
+			target,
+			"system:content-translation-worker",
+		);
+		const byResult = new Map(
+			batchResults.map((result) => [result.entityId, result]),
+		);
+		return jobs.map((job) => {
+			const row = byId.get(job.entityId);
+			const result = byResult.get(job.entityId);
+			return {
+				job,
+				generated: result?.generated ?? false,
+				label: row?.slug ?? null,
+				error:
+					result?.error ??
+					(row ? null : new Error("Plugin translation source not found")),
+			};
+		});
+	}
+	if (jobs.every((job) => job.entityType === "collection")) {
+		const rows = await database
+			.select()
+			.from(aiPluginCollections)
+			.where(
+				inArray(
+					aiPluginCollections.id,
+					jobs.map((job) => job.entityId),
+				),
+			);
+		const byId = new Map(rows.map((row) => [row.id, row]));
+		const presentRows = jobs.flatMap((job) => {
+			const row = byId.get(job.entityId);
+			return row ? [row] : [];
+		});
+		const batchResults = await generateCollectionTranslationBatch(
+			database,
+			presentRows,
+			target,
+			"system:content-translation-worker",
+		);
+		const byResult = new Map(
+			batchResults.map((result) => [result.entityId, result]),
+		);
+		return jobs.map((job) => {
+			const row = byId.get(job.entityId);
+			const result = byResult.get(job.entityId);
+			return {
+				job,
+				generated: result?.generated ?? false,
+				label: row?.name ?? null,
+				error:
+					result?.error ??
+					(row ? null : new Error("Collection translation source not found")),
+			};
+		});
+	}
+
+	const results: TranslationRunResult[] = [];
+	for (const job of jobs) {
+		try {
+			const result = await runTranslationJob(database, job);
+			results.push({ job, ...result, error: null });
+		} catch (error) {
+			results.push({
+				job,
+				generated: false,
+				label: null,
+				error: error instanceof Error ? error : new Error("Translation failed"),
+			});
+		}
+	}
+	return results;
+}
+
 export async function processContentTranslationQueue(
 	database: Database,
 	limit = 2,
@@ -426,9 +536,9 @@ export async function processContentTranslationQueue(
 		)
 		.orderBy(
 			sql<number>`CASE ${contentTranslationQueue.entityType}
-				WHEN 'plugin' THEN 0
-				WHEN 'category' THEN 1
-				WHEN 'collection' THEN 2
+				WHEN 'collection' THEN 0
+				WHEN 'plugin' THEN 1
+				WHEN 'category' THEN 2
 				WHEN 'version' THEN 3
 				WHEN 'pipeline_check' THEN 4
 				ELSE 5
@@ -438,19 +548,7 @@ export async function processContentTranslationQueue(
 		)
 		.limit(normalizeTranslationBatchSize(limit));
 
-	let completed = 0;
-	let skipped = 0;
-	let failed = 0;
-	let limited = false;
-	const items: Array<{
-		queueId: number;
-		entityType: string;
-		entityId: number;
-		targetLocale: string;
-		label: string | null;
-		status: "completed" | "skipped" | "failed" | "limited";
-		error: string | null;
-	}> = [];
+	const claimedJobs: QueueRow[] = [];
 	for (const candidate of candidates) {
 		const [claimed] = await database
 			.update(contentTranslationQueue)
@@ -471,77 +569,153 @@ export async function processContentTranslationQueue(
 				),
 			)
 			.returning();
-		if (!claimed) continue;
+		if (claimed) claimedJobs.push(claimed);
+	}
 
-		try {
-			const result = await runTranslationJob(database, claimed);
-			await database
-				.update(contentTranslationQueue)
-				.set({
-					status: "completed",
-					completedAt: nowSeconds(),
-					errorMessage: null,
-					updatedAt: nowSeconds(),
-				})
-				.where(eq(contentTranslationQueue.id, claimed.id));
-			if (result.generated) completed += 1;
-			else skipped += 1;
+	let completed = 0;
+	let skipped = 0;
+	let failed = 0;
+	let limited = false;
+	const items: Array<{
+		queueId: number;
+		entityType: string;
+		entityId: number;
+		targetLocale: string;
+		label: string | null;
+		status: "completed" | "skipped" | "failed" | "limited";
+		error: string | null;
+	}> = [];
+
+	const grouped = new Map<string, QueueRow[]>();
+	for (const job of claimedJobs) {
+		const key = `${job.entityType}:${job.targetLocale}`;
+		const group = grouped.get(key) ?? [];
+		group.push(job);
+		grouped.set(key, group);
+	}
+	const groups = [...grouped.values()].flatMap(splitAiTranslationBatch);
+
+	async function completeResult(result: TranslationRunResult) {
+		await database
+			.update(contentTranslationQueue)
+			.set({
+				status: "completed",
+				completedAt: nowSeconds(),
+				errorMessage: null,
+				updatedAt: nowSeconds(),
+			})
+			.where(eq(contentTranslationQueue.id, result.job.id));
+		if (result.generated) completed += 1;
+		else skipped += 1;
+		items.push({
+			queueId: result.job.id,
+			entityType: result.job.entityType,
+			entityId: result.job.entityId,
+			targetLocale: result.job.targetLocale,
+			label: result.label,
+			status: result.generated ? "completed" : "skipped",
+			error: null,
+		});
+	}
+
+	async function failResult(result: TranslationRunResult, error: Error) {
+		const attempts = result.job.attempts + 1;
+		await database
+			.update(contentTranslationQueue)
+			.set({
+				status: attempts >= MAX_ATTEMPTS ? "failed" : "pending",
+				attempts,
+				availableAt: nowSeconds() + Math.min(60 * 60, 60 * 2 ** attempts),
+				errorMessage: error.message.slice(0, 500),
+				updatedAt: nowSeconds(),
+			})
+			.where(eq(contentTranslationQueue.id, result.job.id));
+		failed += 1;
+		items.push({
+			queueId: result.job.id,
+			entityType: result.job.entityType,
+			entityId: result.job.entityId,
+			targetLocale: result.job.targetLocale,
+			label: result.label,
+			status: "failed",
+			error: error.message,
+		});
+	}
+
+	async function deferLimitedJobs(
+		jobs: QueueRow[],
+		error: ContentTranslationRateLimitError,
+	) {
+		if (jobs.length === 0) return;
+		const resetAt = translationRetryAt(nowSeconds(), error.resetAt);
+		await database
+			.update(contentTranslationQueue)
+			.set({
+				status: "pending",
+				availableAt: resetAt,
+				errorMessage: null,
+				updatedAt: nowSeconds(),
+			})
+			.where(
+				inArray(
+					contentTranslationQueue.id,
+					jobs.map((job) => job.id),
+				),
+			);
+		limited = true;
+		for (const job of jobs) {
 			items.push({
-				queueId: claimed.id,
-				entityType: claimed.entityType,
-				entityId: claimed.entityId,
-				targetLocale: claimed.targetLocale,
-				label: result.label,
-				status: result.generated ? "completed" : "skipped",
-				error: null,
+				queueId: job.id,
+				entityType: job.entityType,
+				entityId: job.entityId,
+				targetLocale: job.targetLocale,
+				label: null,
+				status: "limited",
+				error: `${error.message}:${resetAt}`,
 			});
+		}
+	}
+
+	groupLoop: for (
+		let groupIndex = 0;
+		groupIndex < groups.length;
+		groupIndex += 1
+	) {
+		const group = groups[groupIndex] ?? [];
+		let results: TranslationRunResult[];
+		try {
+			results = await runTranslationJobs(database, group);
 		} catch (error) {
-			const message =
-				error instanceof Error ? error.message : "Translation failed";
 			if (error instanceof ContentTranslationRateLimitError) {
-				const resetAt = translationRetryAt(nowSeconds(), error.resetAt);
-				await database
-					.update(contentTranslationQueue)
-					.set({
-						status: "pending",
-						availableAt: resetAt,
-						errorMessage: null,
-						updatedAt: nowSeconds(),
-					})
-					.where(eq(contentTranslationQueue.id, claimed.id));
-				limited = true;
-				items.push({
-					queueId: claimed.id,
-					entityType: claimed.entityType,
-					entityId: claimed.entityId,
-					targetLocale: claimed.targetLocale,
-					label: null,
-					status: "limited",
-					error: `${message}:${resetAt}`,
-				});
+				await deferLimitedJobs(groups.slice(groupIndex).flat(), error);
 				break;
 			}
-			const attempts = claimed.attempts + 1;
-			await database
-				.update(contentTranslationQueue)
-				.set({
-					status: attempts >= MAX_ATTEMPTS ? "failed" : "pending",
-					attempts,
-					availableAt: nowSeconds() + Math.min(60 * 60, 60 * 2 ** attempts),
-					errorMessage: message.slice(0, 500),
-					updatedAt: nowSeconds(),
-				})
-				.where(eq(contentTranslationQueue.id, claimed.id));
-			failed += 1;
-			items.push({
-				queueId: claimed.id,
-				entityType: claimed.entityType,
-				entityId: claimed.entityId,
-				targetLocale: claimed.targetLocale,
-				label: null,
-				status: "failed",
-				error: message,
-			});
+			const failure =
+				error instanceof Error ? error : new Error("Translation failed");
+			for (const job of group) {
+				await failResult(
+					{ job, generated: false, label: null, error: failure },
+					failure,
+				);
+			}
+			continue;
+		}
+
+		for (let resultIndex = 0; resultIndex < results.length; resultIndex += 1) {
+			const result = results[resultIndex];
+			if (!result) continue;
+			if (result.error instanceof ContentTranslationRateLimitError) {
+				await deferLimitedJobs(
+					[
+						...results.slice(resultIndex).map((item) => item.job),
+						...groups.slice(groupIndex + 1).flat(),
+					],
+					result.error,
+				);
+				break groupLoop;
+			}
+			if (result.error) await failResult(result, result.error);
+			else await completeResult(result);
 		}
 	}
 	return { claimed: items.length, completed, skipped, failed, limited, items };
