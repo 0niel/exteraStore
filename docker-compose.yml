@@ -197,6 +197,33 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  pipeline-worker:
+    image: ${APP_IMAGE:?APP_IMAGE must be a GHCR digest reference}
+    pull_policy: always
+    restart: unless-stopped
+    command: ["node", "scripts/ai-worker.mjs"]
+    environment:
+      WORKER_URL: http://app:3000/api/ai-worker
+      CRON_SECRET: ${CRON_SECRET:?CRON_SECRET is required}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:?OPENROUTER_API_KEY is required}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:?OPENROUTER_MODEL is required}
+      CLAIM_LIMIT: ${PIPELINE_WORKER_CLAIM_LIMIT:-3}
+      WORKER_DAEMON: "true"
+      WORKER_INTERVAL_MS: ${PIPELINE_WORKER_INTERVAL_MS:-15000}
+    depends_on:
+      app:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "process.kill(1, 0)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - app-network
+    security_opt:
+      - no-new-privileges:true
+
   prometheus:
     image: prom/prometheus:v3.5.0
     restart: unless-stopped

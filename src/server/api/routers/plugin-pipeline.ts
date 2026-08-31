@@ -400,6 +400,7 @@ export const pluginPipelineRouter = createTRPCRouter({
 					id: pluginVersions.id,
 					version: pluginVersions.version,
 					fileHash: pluginVersions.fileHash,
+					fileContent: pluginVersions.fileContent,
 				})
 				.from(pluginVersions)
 				.where(eq(pluginVersions.pluginId, input.pluginId))
@@ -447,7 +448,11 @@ export const pluginPipelineRouter = createTRPCRouter({
 				throw new Error("Проверки этого плагина уже выполняются");
 			}
 
-			await enforcePipelineAiRateLimit(ctx, "pipeline_checks");
+			await enforcePipelineAiRateLimit(
+				ctx,
+				"pipeline_checks",
+				getAiCheckRequestCost(latestVersion[0].fileContent),
+			);
 
 			const [queueItem] = await ctx.db
 				.insert(pluginPipelineQueue)

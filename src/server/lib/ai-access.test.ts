@@ -52,4 +52,8 @@ test("pipeline checks cap paid requests for oversized plugin sources", () => {
 	assert.match(pipelineAi, /const MAX_CHECK_CHUNKS = 4/);
 	assert.match(pipelineAi, /code\.length > MAX_AI_CHECK_CODE_CHARS/);
 	assert.match(pipelineAi, /return splitCode\(code\)\.length \* 2/);
+	assert.match(
+		pipelineRouter,
+		/getAiCheckRequestCost\(latestVersion\[0\]\.fileContent\)/,
+	);
 });

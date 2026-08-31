@@ -105,7 +105,7 @@ if [ "$healthy" -ne 1 ]; then
 	exit 1
 fi
 
-docker_cmd compose up -d --no-deps translation-worker
+docker_cmd compose up -d --no-deps translation-worker pipeline-worker
 
 printf '%s\n' "$APP_IMAGE" > "$CURRENT_IMAGE"
 chmod 600 "$CURRENT_IMAGE" 2>/dev/null || true

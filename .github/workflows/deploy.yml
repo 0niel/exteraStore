@@ -164,8 +164,8 @@ jobs:
           HEALTHCHECK_URL="${HEALTHCHECK_URL:-https://exterastore.app/api/health}"
           curl --fail --location --retry 12 --retry-delay 5 --retry-all-errors --connect-timeout 10 --max-time 20 "$HEALTHCHECK_URL"
 
-      - name: Check translation worker
-        id: translation-worker
+      - name: Check AI workers
+        id: ai_workers
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
           SERVER_PORT: ${{ secrets.SERVER_PORT }}
@@ -180,11 +180,13 @@ jobs:
           export APP_IMAGE=$(cat .deploy-state/current-image)
           . scripts/docker-cmd.sh
           docker_cmd compose ps --status running --services | grep -qx translation-worker
+          docker_cmd compose ps --status running --services | grep -qx pipeline-worker
           docker_cmd compose logs --tail 5 translation-worker
+          docker_cmd compose logs --tail 10 pipeline-worker
           REMOTE
 
       - name: Roll back after deployment check failure
-        if: ${{ failure() && steps.deploy.outcome == 'success' && (steps.health.outcome == 'failure' || steps.translation-worker.outcome == 'failure') }}
+        if: ${{ failure() && steps.deploy.outcome == 'success' && (steps.health.outcome == 'failure' || steps.ai_workers.outcome == 'failure') }}
         env:
           SERVER_HOST: ${{ secrets.SERVER_HOST }}
           SERVER_PORT: ${{ secrets.SERVER_PORT }}

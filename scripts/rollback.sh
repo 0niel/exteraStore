@@ -46,6 +46,11 @@ if [ "$healthy" -ne 1 ]; then
 fi
 
 docker_cmd compose up -d --no-deps translation-worker
+if docker_cmd compose run --rm --no-deps pipeline-worker test -f /app/scripts/ai-worker.mjs; then
+	docker_cmd compose up -d --no-deps pipeline-worker
+else
+	docker_cmd compose stop pipeline-worker >/dev/null 2>&1 || true
+fi
 
 mkdir -p "$STATE_DIR" 2>/dev/null || true
 printf '%s\n' "$APP_IMAGE" > "$CURRENT_IMAGE"

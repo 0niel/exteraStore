@@ -850,7 +850,7 @@
 		"severity_critical": "Critical",
 		"toast_checks_started": "AI checks started",
 		"toast_checks_error": "Failed to start AI checks",
-		"ai_queued_hint": "Queued: the checks run on a GitHub Actions worker and usually finish within ~10 minutes.",
+		"ai_queued_hint": "The check starts automatically within 15 seconds. Analysis time depends on the plugin size.",
 		"toast_checks_queued_description": "The plugin was added to the queue. Results appear once the worker picks it up, usually within ~10 minutes.",
 		"translate_missing": "Translate all missing content",
 		"translation_queue_added": "Translated now: {processed}. Queued: {queued} of {total}",

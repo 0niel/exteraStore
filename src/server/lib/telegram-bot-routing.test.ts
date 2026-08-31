@@ -14,6 +14,14 @@ const workerSource = readFileSync(
 	new URL("../../app/api/ai-worker/route.ts", import.meta.url),
 	"utf8",
 );
+const workerScriptSource = readFileSync(
+	new URL("../../../scripts/ai-worker.mjs", import.meta.url),
+	"utf8",
+);
+const composeSource = readFileSync(
+	new URL("../../../docker-compose.yml", import.meta.url),
+	"utf8",
+);
 
 test("Telegram responses derive locale from the sender language", () => {
 	assert.match(botSource, /callbackQuery\.from\.language_code/);
@@ -38,7 +46,8 @@ test("Telegram bot localizes dynamic marketplace content", () => {
 });
 
 test("AI worker backfills all translations and preserves source language", () => {
-	assert.match(workerSource, /processTranslations\(\s*"all"/);
+	assert.match(workerSource, /body\.action === "translate"/);
+	assert.match(composeSource, /action: "translate", scope: "all"/);
 	assert.match(workerSource, /contentLocale: locale/);
 	assert.match(workerSource, /targetLocale: targetLocale\(locale\)/);
 	assert.doesNotMatch(workerSource, /locale: "ru"/);
@@ -54,4 +63,15 @@ test("AI worker validates protected manual translation overrides", () => {
 	assert.match(workerSource, /action: z\.literal\("save_translation"\)/);
 	assert.match(workerSource, /pluginTranslationFieldsSchema\.extend/);
 	assert.match(workerSource, /saveManualPluginTranslation\(db, plugin, body\)/);
+});
+
+test("pipeline checks run continuously without sharing the translation claim", () => {
+	const claimStart = workerSource.indexOf("async function handleClaim");
+	const claimEnd = workerSource.indexOf("async function insertErrorCheck");
+	const claimSource = workerSource.slice(claimStart, claimEnd);
+	assert.doesNotMatch(claimSource, /processTranslations/);
+	assert.match(workerScriptSource, /WORKER_DAEMON/);
+	assert.match(workerScriptSource, /action: "claim"/);
+	assert.match(composeSource, /pipeline-worker:/);
+	assert.match(composeSource, /WORKER_INTERVAL_MS/);
 });

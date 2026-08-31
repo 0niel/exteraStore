@@ -27,7 +27,6 @@ import {
 import {
 	BACKGROUND_TRANSLATION_BATCH_SIZE,
 	entityTypesForTranslationScope,
-	PIPELINE_TRANSLATION_BATCH_SIZE,
 	translationScopes,
 } from "~/server/lib/content-translation-policy";
 import {
@@ -166,11 +165,6 @@ async function failQueueItem(queueId: number, message: string) {
 
 async function handleClaim(limit: number) {
 	const now = nowSeconds();
-	const translations = await processTranslations(
-		"all",
-		PIPELINE_TRANSLATION_BATCH_SIZE,
-		false,
-	);
 
 	const candidates = await db
 		.select({
@@ -190,19 +184,33 @@ async function handleClaim(limit: number) {
 		.orderBy(desc(pluginPipelineQueue.priority), pluginPipelineQueue.createdAt)
 		.limit(limit);
 
-	if (candidates.length === 0) {
-		return NextResponse.json({ jobs: [], translations });
+	const claimedCandidates: typeof candidates = [];
+	for (const candidate of candidates) {
+		const [claimed] = await db
+			.update(pluginPipelineQueue)
+			.set({ status: "processing", startedAt: now, completedAt: null })
+			.where(
+				and(
+					eq(pluginPipelineQueue.id, candidate.id),
+					or(
+						eq(pluginPipelineQueue.status, "queued"),
+						and(
+							eq(pluginPipelineQueue.status, "processing"),
+							sql`coalesce(${pluginPipelineQueue.startedAt}, ${pluginPipelineQueue.createdAt}) < ${now - STUCK_PROCESSING_SECONDS}`,
+						),
+					),
+				),
+			)
+			.returning({
+				id: pluginPipelineQueue.id,
+				pluginId: pluginPipelineQueue.pluginId,
+			});
+		if (claimed) claimedCandidates.push(claimed);
 	}
 
-	await db
-		.update(pluginPipelineQueue)
-		.set({ status: "processing", startedAt: now, completedAt: null })
-		.where(
-			inArray(
-				pluginPipelineQueue.id,
-				candidates.map((candidate) => candidate.id),
-			),
-		);
+	if (claimedCandidates.length === 0) {
+		return NextResponse.json({ jobs: [] });
+	}
 
 	const jobs: {
 		queueId: number;
@@ -214,7 +222,7 @@ async function handleClaim(limit: number) {
 		}[];
 	}[] = [];
 
-	for (const candidate of candidates) {
+	for (const candidate of claimedCandidates) {
 		const pluginRows = await db
 			.select({
 				name: plugins.name,
@@ -266,7 +274,7 @@ async function handleClaim(limit: number) {
 		});
 	}
 
-	return NextResponse.json({ jobs, translations });
+	return NextResponse.json({ jobs });
 }
 
 async function insertErrorCheck(

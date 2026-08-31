@@ -41,6 +41,7 @@ COPY --from=builder /app/next.config.js ./next.config.js
 COPY --from=builder /app/drizzle ./drizzle
 COPY --from=builder /app/drizzle.config.ts ./drizzle.config.ts
 COPY --from=builder /app/scripts/migrate.mjs ./scripts/migrate.mjs
+COPY --from=builder /app/scripts/ai-worker.mjs ./scripts/ai-worker.mjs
 COPY --from=builder /app/src/env.js ./src/env.js
 
 RUN corepack enable && corepack prepare pnpm@10.25.0 --activate
